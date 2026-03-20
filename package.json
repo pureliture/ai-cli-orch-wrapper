@@ -1,0 +1,37 @@
+{
+  "name": "ai-cli-orch-wrapper",
+  "version": "0.1.0",
+  "description": "AI CLI Orchestration Wrapper - consumes registry-hub and leaf registries",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "wrapper": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/cli.js",
+    "test": "node --test",
+    "lint": "eslint src/",
+    "registry:sync": "node dist/cli.js registry sync",
+    "registry:search": "node dist/cli.js registry search",
+    "registry:install": "node dist/cli.js registry install",
+    "registry:lock": "node dist/cli.js registry lock"
+  },
+  "keywords": [
+    "ai",
+    "cli",
+    "orchestration",
+    "registry",
+    "skill"
+  ],
+  "author": "skillinterop",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
