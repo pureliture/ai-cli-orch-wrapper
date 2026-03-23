@@ -1,7 +1,7 @@
 {
   "name": "ai-cli-orch-wrapper",
-  "version": "0.1.0",
-  "description": "AI CLI Orchestration Wrapper - consumes registry-hub and leaf registries",
+  "version": "0.2.0",
+  "description": "Lightweight URL downloader with lock-file tracking",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -12,18 +12,14 @@
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "node --test",
-    "lint": "eslint src/",
-    "registry:sync": "node dist/cli.js registry sync",
-    "registry:search": "node dist/cli.js registry search",
-    "registry:install": "node dist/cli.js registry install",
-    "registry:lock": "node dist/cli.js registry lock"
+    "lint": "tsc --noEmit"
   },
   "keywords": [
     "ai",
     "cli",
     "orchestration",
-    "registry",
-    "skill"
+    "downloader",
+    "lockfile"
   ],
   "author": "skillinterop",
   "license": "MIT",

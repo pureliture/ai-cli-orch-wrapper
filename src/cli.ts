@@ -3,7 +3,7 @@
 /**
  * AI CLI Orchestration Wrapper
  *
- * CLI entry point for the download command.
+ * CLI entry point for the lightweight URL downloader.
  */
 
 import { downloadCommand } from './commands/download.js';
@@ -30,7 +30,7 @@ async function main(): Promise<void> {
 
 function printHelp(): void {
   console.log(`
-ai-cli-orch-wrapper - AI CLI Orchestration Wrapper
+ai-cli-orch-wrapper - Lightweight URL downloader
 
 Usage: wrapper <command> [options]
 
