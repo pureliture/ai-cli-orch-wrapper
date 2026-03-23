@@ -1,15 +1,24 @@
 {
   "lockVersion": "1.0.0",
+  "catalogSource": "https://raw.githubusercontent.com/skillinterop/registry-hub/main/registry-catalog.jsonld",
   "items": [
     {
-      "url": "https://example.com/config.json",
-      "localPath": ".wrapper/downloads/config.json",
-      "downloadedAt": "2026-03-23T05:30:00.000Z"
+      "identifier": "skill/org/workmux-router@1.0.0",
+      "registryType": "skill",
+      "catalogUrl": "https://raw.githubusercontent.com/skillinterop/skill-registry/main/index.jsonld",
+      "contentUrl": "https://raw.githubusercontent.com/skillinterop/skill-registry/main/skills/workmux-router/SKILL.md",
+      "channel": "stable",
+      "status": "active",
+      "lockedAt": "2026-03-23T05:34:44Z"
     },
     {
-      "url": "https://example.com/prompts/system.md",
-      "localPath": ".wrapper/downloads/system.md",
-      "downloadedAt": "2026-03-23T05:31:00.000Z"
+      "identifier": "cao-profile/org/default-cao@0.1.0",
+      "registryType": "cao-profile",
+      "catalogUrl": "https://raw.githubusercontent.com/skillinterop/cao-profile-registry/main/index.jsonld",
+      "contentUrl": "https://raw.githubusercontent.com/skillinterop/cao-profile-registry/main/profiles/default-cao/PROFILE.md",
+      "channel": "experimental",
+      "status": "active",
+      "lockedAt": "2026-03-23T05:34:45Z"
     }
   ]
 }
