@@ -1,25 +1,15 @@
 {
   "lockVersion": "1.0.0",
-  "generatedAt": "2026-03-20T07:00:00Z",
-  "hubSource": "https://github.com/skillinterop/registry-hub",
   "items": [
     {
-      "canonicalId": "skill/org/[MASKED_EMAIL]",
-      "registryType": "skill",
-      "name": "workmux-router",
-      "version": "1.0.0",
-      "sourceRepo": "https://github.com/skillinterop/skill-registry",
-      "sourceRef": "aed97ffabc123456789012345678901234567890",
-      "installedAt": "2026-03-20T07:00:00Z"
+      "url": "https://example.com/config.json",
+      "localPath": ".wrapper/downloads/config.json",
+      "downloadedAt": "2026-03-23T05:30:00.000Z"
     },
     {
-      "canonicalId": "cao-profile/org/[MASKED_EMAIL]",
-      "registryType": "cao-profile",
-      "name": "default-cao",
-      "version": "0.1.0",
-      "sourceRepo": "https://github.com/skillinterop/cao-profile-registry",
-      "sourceRef": "729070dabc123456789012345678901234567890",
-      "installedAt": "2026-03-20T07:01:00Z"
+      "url": "https://example.com/prompts/system.md",
+      "localPath": ".wrapper/downloads/system.md",
+      "downloadedAt": "2026-03-23T05:31:00.000Z"
     }
   ]
 }

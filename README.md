@@ -1,15 +1,16 @@
 # ai-cli-orch-wrapper
 
-AI CLI Orchestration Wrapper — consumes registry-hub and leaf registries.
+Lightweight CLI for downloading URL-based resources and recording where they were stored locally.
 
 ## Overview
 
-This wrapper CLI provides commands to interact with the skillinterop registry ecosystem:
+The current implementation is intentionally small:
 
-- **sync** — Fetch and cache registry manifests
-- **search** — Search for skills, profiles, and gates
-- **install** — Install items and track in lock file
-- **lock** — Manage reproducible lock file
+- downloads a resource from a URL with `wrapper download <url>`
+- stores the response body under `.wrapper/downloads/`
+- records the downloaded URL and local file path in `wrapper.lock`
+
+This repository no longer implements the earlier registry sync/search/install flow.
 
 ## Installation
 
@@ -21,100 +22,68 @@ npm run build
 ## Quick Start
 
 ```bash
-# Add the registry hub
-wrapper registry add github:skillinterop/registry-hub
+wrapper download https://example.com/config.json
+cat wrapper.lock
+```
 
-# Search for items
-wrapper registry search router
+Example output:
 
-# Install a skill
-wrapper registry install skill/org/workmux-router
-
-# View lock file
-wrapper registry lock --show
+```text
+Downloading: https://example.com/config.json...
+Saved to: .wrapper/downloads/config.json
+Updated wrapper.lock
 ```
 
 ## Commands
 
-### `wrapper registry sync`
+### `wrapper download <url>`
 
-Fetch hub-config and all leaf manifests, cache locally.
+Fetches the URL, saves the response body to `.wrapper/downloads/<filename>`, and updates `wrapper.lock`.
 
-```bash
-wrapper registry sync [--hub <url>]
-```
+Filename resolution:
 
-### `wrapper registry search <query>`
+- uses the basename from the URL path when present
+- falls back to `downloaded-file` when the URL has no filename segment
 
-Search across all registries.
+Current behavior notes:
 
-```bash
-wrapper registry search <query> [options]
+- the response is stored as text (`response.text()`)
+- re-downloading the same URL replaces the existing lock-file entry for that URL
+- the lock file tracks location and download time, not a content hash
 
-Options:
-  --type <type>       Filter by type (skill, cao-profile, reprogate)
-  --channel <channel> Filter by channel (stable, experimental)
-  --refresh           Force refresh from remote
-```
+### `wrapper help`
 
-### `wrapper registry install <id|name>`
+Shows the CLI help text.
 
-Install an item by canonical ID or name.
+### `wrapper version`
 
-```bash
-wrapper registry install <id|name> [options]
-
-Options:
-  --dry-run    Preview without installing
-  --force      Install even if deprecated
-```
-
-### `wrapper registry lock`
-
-Manage the lock file.
-
-```bash
-wrapper registry lock [options]
-
-Options:
-  --show       Display current lock file
-  --generate   Regenerate lock file
-```
-
-## Architecture
-
-```
-registry-hub (aggregator)
-    │
-    ├── skill-registry (leaf)
-    ├── cao-profile-registry (leaf)
-    └── reprogate-registry (leaf)
-           │
-           ▼
-    ai-cli-orch-wrapper (consumer)
-```
-
-The wrapper:
-1. Fetches `hub-config.json` from registry-hub
-2. Resolves each leaf registry's `manifest.json`
-3. Aggregates and caches items locally
-4. Provides search/install with lock file tracking
+Shows the CLI version.
 
 ## Lock File
 
-The `wrapper.lock` file ensures reproducible installations:
+`wrapper.lock` tracks downloaded resources with a minimal schema:
 
 ```json
 {
   "lockVersion": "1.0.0",
-  "hubSource": "https://github.com/skillinterop/registry-hub",
   "items": [
     {
-      "canonicalId": "skill/org/[MASKED_EMAIL]",
-      "sourceRef": "aed97ff..."
+      "url": "https://example.com/config.json",
+      "localPath": ".wrapper/downloads/config.json",
+      "downloadedAt": "2026-03-23T05:30:00.000Z"
     }
   ]
 }
+```
+
+## Project Layout
+
+```text
+src/
+  cli.ts                 CLI entry point
+  commands/download.ts   URL download command
+  registry/lockfile.ts   lock-file helpers
+  registry/types.ts      lock-file types
 ```
 
 ## Development
@@ -123,19 +92,22 @@ The `wrapper.lock` file ensures reproducible installations:
 # Install dependencies
 npm install
 
-# Build
+# Build TypeScript
 npm run build
 
-# Run CLI
-node dist/cli.js registry sync
+# Run the CLI
+node dist/cli.js download https://example.com/config.json
+
+# Run the lightweight checks used in this repo
+npm test
+npm run lint
 ```
 
-## Related Repos
+## Known Limitations
 
-- [`registry-hub`](https://github.com/skillinterop/registry-hub) — Top-level aggregator
-- [`skill-registry`](https://github.com/skillinterop/skill-registry) — Skill packages
-- [`cao-profile-registry`](https://github.com/skillinterop/cao-profile-registry) — CAO profiles
-- [`reprogate-registry`](https://github.com/skillinterop/reprogate-registry) — ReproGate packages
+- binary downloads are not handled yet; the current implementation writes text responses
+- lock entries do not yet include integrity hashes or upstream version metadata
+- there is no custom output-path option yet
 
 ## License
 
