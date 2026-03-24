@@ -14,9 +14,28 @@ const REQUIRED_TOOLS = ['cao', 'tmux', 'workmux'];
 const AI_CLI_CONF_CONTENT = [
   '# ai-cli-orch-wrapper tmux config',
   '# Managed by wrapper setup — do not edit manually.',
-  '# Phase 2 will populate CLI alias bindings here.',
+  '# CLI alias bindings are managed via .wrapper.json in the project root.',
   '',
 ].join('\n');
+
+const WRAPPER_CONFIG_FILE = '.wrapper.json';
+
+const DEFAULT_WRAPPER_CONFIG =
+  JSON.stringify(
+    {
+      aliases: {
+        claude: { provider: 'claude_code', agent: 'developer' },
+        gemini: { provider: 'gemini_cli', agent: 'developer' },
+        codex: { provider: 'codex', agent: 'developer' },
+      },
+      roles: {
+        orchestrator: 'claude_code',
+        reviewer: 'gemini_cli',
+      },
+    },
+    null,
+    2,
+  ) + '\n';
 
 function isOnPath(tool: string): boolean {
   const result = spawnSync('which', [tool], { encoding: 'utf8' });
@@ -60,6 +79,15 @@ export async function setupCommand(): Promise<void> {
       appendFileSync(tmuxConf, '\n' + sourceLine + '\n', 'utf8');
       console.log('✓ ~/.tmux.conf: source line added');
     }
+  }
+
+  // Step 4: Scaffold .wrapper.json if not present (per D-07, D-08 — idempotent)
+  const wrapperConfigPath = join(process.cwd(), WRAPPER_CONFIG_FILE);
+  if (existsSync(wrapperConfigPath)) {
+    console.log('✓ .wrapper.json: already exists');
+  } else {
+    writeFileSync(wrapperConfigPath, DEFAULT_WRAPPER_CONFIG, 'utf8');
+    console.log('✓ .wrapper.json: created with default aliases');
   }
 
   console.log('Setup complete.');
