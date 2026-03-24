@@ -13,7 +13,7 @@ Three phases that build the wrapper from the ground up. Phase 1 establishes a wo
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation + Environment Setup** - Working CLI binary and single-command idempotent environment bootstrap (completed 2026-03-24)
-- [ ] **Phase 2: CLI Aliases + Workflow Config** - Configurable alias-to-CLI mappings and declarative role→CLI workflow config
+- [x] **Phase 2: CLI Aliases + Workflow Config** - Configurable alias-to-CLI mappings and declarative role→CLI workflow config (completed 2026-03-24)
 - [ ] **Phase 3: Plan→Review Orchestration Loop** - File-based inter-CLI plan→review loop with configurable exit conditions
 
 ## Phase Details
@@ -48,7 +48,7 @@ Plans:
 - [x] 02-01-PLAN.md — Wave 0 test scaffold: update setup.test.ts stale assertion, create config.test.ts and alias.test.ts as failing stubs
 - [x] 02-02-PLAN.md — Core implementation: src/config/wrapper-config.ts and src/commands/alias.ts
 - [x] 02-03-PLAN.md — Wire everything: update src/cli.ts dynamic dispatch, fix setup.ts comment (D-07), scaffold .wrapper.json, create committed .wrapper.json
-- [ ] 02-04-PLAN.md — Build, run full test suite, and smoke-test alias dispatch on real machine
+- [x] 02-04-PLAN.md — Build, run full test suite, and smoke-test alias dispatch on real machine
 
 ### Phase 3: Plan→Review Orchestration Loop
 **Goal**: Users can run a structured plan→review workflow where two AI CLIs iterate until the reviewer approves or the iteration limit is reached
@@ -59,7 +59,13 @@ Plans:
   2. The loop terminates when the reviewer CLI emits an approval signal or when the configured max iteration count is hit
   3. Plan output is written to a file; the reviewer CLI reads from that file — no direct inter-process signaling
   4. User can specify planner and reviewer CLI roles per workflow invocation via a flag or config entry
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [x] 03-01-PLAN.md — Lock workflow config resolution and strict review.status.json parsing
+- [x] 03-02-PLAN.md — Lock repo-local artifact layout and planner/reviewer prompt contract
+- [ ] 03-03-PLAN.md — Implement the CAO execution seam and shared planner→reviewer loop engine
+- [ ] 03-04-PLAN.md — Expose the workflow loop through the CLI and verify it end-to-end
 
 ## Progress
 
@@ -69,5 +75,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation + Environment Setup | 2/2 | Complete    | 2026-03-24 |
-| 2. CLI Aliases + Workflow Config | 0/4 | Not started | - |
-| 3. Plan→Review Orchestration Loop | 0/TBD | Not started | - |
+| 2. CLI Aliases + Workflow Config | 4/4 | Complete    | 2026-03-24 |
+| 3. Plan→Review Orchestration Loop | 2/4 | In Progress | - |
