@@ -98,7 +98,7 @@ export class CaoHttpClient {
     while (Date.now() - startedAt <= timeoutMs) {
       const terminal = await this.getTerminal(terminalId);
 
-      if (terminal.status === 'completed') {
+      if (terminal.status === 'completed' || terminal.status === 'idle') {
         return terminal;
       }
 
