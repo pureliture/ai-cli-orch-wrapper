@@ -9,10 +9,10 @@
 
 ### Setup
 
-- [ ] **SETUP-01**: User can run `wrapper setup` to bootstrap the full environment with a single command
-- [ ] **SETUP-02**: `wrapper setup` is idempotent — safe to re-run on an already-configured machine without side effects
-- [ ] **SETUP-03**: `wrapper setup` checks for required prerequisites (cao, tmux, workmux) and exits with a clear, actionable error message if any are missing
-- [ ] **SETUP-04**: `wrapper setup` writes `~/.config/tmux/ai-cli.conf` and injects exactly one `source-file` line into `~/.tmux.conf` (never overwrites `~/.tmux.conf` directly)
+- [x] **SETUP-01**: User can run `wrapper setup` to bootstrap the full environment with a single command
+- [x] **SETUP-02**: `wrapper setup` is idempotent — safe to re-run on an already-configured machine without side effects
+- [x] **SETUP-03**: `wrapper setup` checks for required prerequisites (cao, tmux, workmux) and exits with a clear, actionable error message if any are missing
+- [x] **SETUP-04**: `wrapper setup` writes `~/.config/tmux/ai-cli.conf` and injects exactly one `source-file` line into `~/.tmux.conf` (never overwrites `~/.tmux.conf` directly)
 
 ### CLI Aliases
 
@@ -66,10 +66,10 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SETUP-01 | Phase 1 | Pending |
-| SETUP-02 | Phase 1 | Pending |
-| SETUP-03 | Phase 1 | Pending |
-| SETUP-04 | Phase 1 | Pending |
+| SETUP-01 | Phase 1 | Complete |
+| SETUP-02 | Phase 1 | Complete |
+| SETUP-03 | Phase 1 | Complete |
+| SETUP-04 | Phase 1 | Complete |
 | ALIAS-01 | Phase 2 | Pending |
 | ALIAS-02 | Phase 2 | Pending |
 | CONFIG-01 | Phase 2 | Pending |

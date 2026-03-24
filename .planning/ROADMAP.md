@@ -30,7 +30,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Delete PoC files, rewrite src/cli.ts, create src/commands/setup.ts and test scaffold
+- [x] 01-01-PLAN.md — Delete PoC files, rewrite src/cli.ts, create src/commands/setup.ts and test scaffold
 - [ ] 01-02-PLAN.md — Build, run tests, and smoke-test wrapper setup on real machine
 
 ### Phase 2: CLI Aliases + Workflow Config
