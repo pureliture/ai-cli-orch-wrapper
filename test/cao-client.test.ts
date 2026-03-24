@@ -206,3 +206,39 @@ test('CaoHttpClient waitForCompletion rejects waiting_user_answer terminals', as
     await close();
   }
 });
+
+test('CaoHttpClient waitForCompletion treats idle terminals as completed work', async () => {
+  const terminalId = 'terminal-3';
+  let readCount = 0;
+  const { baseUrl, close } = await startServer((req, res) => {
+    const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
+
+    if (req.method === 'GET' && url.pathname === `/terminals/${terminalId}`) {
+      readCount += 1;
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({
+        id: terminalId,
+        name: 'planner-session',
+        provider: 'claude_code',
+        session_name: 'plan-review-run-01-planner-01',
+        agent_profile: 'developer',
+        status: readCount === 1 ? 'processing' : 'idle',
+      }));
+      return;
+    }
+
+    res.writeHead(404);
+    res.end();
+  });
+
+  try {
+    const { CaoHttpClient } = await import('../dist/orchestration/cao-client.js');
+    const client = new CaoHttpClient(baseUrl);
+    const terminal = await client.waitForCompletion(terminalId, { pollIntervalMs: 1, timeoutMs: 50 });
+
+    assert.equal(terminal.status, 'idle');
+    assert.ok(readCount >= 2);
+  } finally {
+    await close();
+  }
+});
