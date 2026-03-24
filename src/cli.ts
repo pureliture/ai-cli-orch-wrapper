@@ -8,6 +8,8 @@
 
 import { setupCommand } from './commands/setup.js';
 import { aliasCommand } from './commands/alias.js';
+import { workflowCommand } from './commands/workflow.js';
+import { workflowRunCommand } from './commands/workflow-run.js';
 import { readWrapperConfig } from './config/wrapper-config.js';
 import type { WrapperConfig } from './config/wrapper-config.js';
 
@@ -23,6 +25,10 @@ async function main(): Promise<void> {
     printHelp(config);
   } else if (command === 'version' || command === '--version' || command === '-V') {
     console.log('ai-cli-orch-wrapper v0.3.0');
+  } else if (command === 'workflow') {
+    await workflowCommand(args.slice(1));
+  } else if (command === 'workflow-run') {
+    await workflowRunCommand(args.slice(1));
   } else if (command && config.aliases[command]) {
     await aliasCommand(command, config.aliases[command], args.slice(1));
   } else {
@@ -45,6 +51,8 @@ Commands:
   setup    Bootstrap the AI CLI orchestration environment
   help     Show this help
   version  Show version
+  workflow     Run named workflow from .wrapper.json
+  workflow-run Run ad-hoc workflow with runtime overrides
 ${aliasLines ? '\nAliases:\n' + aliasLines : ''}
 `);
 }
