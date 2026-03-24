@@ -42,7 +42,13 @@ Plans:
   2. User can edit a config file to add or remap an alias without any code change
   3. User can declare `orchestrator: claude_code`, `reviewer: gemini_cli` (and other cao-supported providers) in a config file and the wrapper respects those mappings
   4. Config uses cao's native workflow format wherever applicable — no parallel wrapper DSL is invented
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Wave 0 test scaffold: update setup.test.ts stale assertion, create config.test.ts and alias.test.ts as failing stubs
+- [ ] 02-02-PLAN.md — Core implementation: src/config/wrapper-config.ts and src/commands/alias.ts
+- [ ] 02-03-PLAN.md — Wire everything: update src/cli.ts dynamic dispatch, fix setup.ts comment (D-07), scaffold .wrapper.json, create committed .wrapper.json
+- [ ] 02-04-PLAN.md — Build, run full test suite, and smoke-test alias dispatch on real machine
 
 ### Phase 3: Plan→Review Orchestration Loop
 **Goal**: Users can run a structured plan→review workflow where two AI CLIs iterate until the reviewer approves or the iteration limit is reached
@@ -63,5 +69,5 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation + Environment Setup | 2/2 | Complete    | 2026-03-24 |
-| 2. CLI Aliases + Workflow Config | 0/TBD | Not started | - |
+| 2. CLI Aliases + Workflow Config | 0/4 | Not started | - |
 | 3. Plan→Review Orchestration Loop | 0/TBD | Not started | - |
