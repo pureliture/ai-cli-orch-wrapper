@@ -27,7 +27,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Re-running `wrapper setup` on an already-configured machine produces no side effects and exits cleanly
   3. Running `wrapper setup` on a machine missing cao, tmux, or workmux exits with a clear error naming the missing tool and a path to fix it
   4. `~/.config/tmux/ai-cli.conf` exists after setup and `~/.tmux.conf` contains exactly one added `source-file` line pointing to it
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Delete PoC files, rewrite src/cli.ts, create src/commands/setup.ts and test scaffold
+- [ ] 01-02-PLAN.md — Build, run tests, and smoke-test wrapper setup on real machine
 
 ### Phase 2: CLI Aliases + Workflow Config
 **Goal**: Users can invoke AI CLIs via short wrapper aliases and declare role→CLI mappings in a config file without touching source code
@@ -58,6 +62,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation + Environment Setup | 0/TBD | Not started | - |
+| 1. Foundation + Environment Setup | 0/2 | Ready to execute | - |
 | 2. CLI Aliases + Workflow Config | 0/TBD | Not started | - |
 | 3. Plan→Review Orchestration Loop | 0/TBD | Not started | - |
