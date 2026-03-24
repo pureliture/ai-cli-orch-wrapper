@@ -30,7 +30,7 @@
 
 - [x] **CONFIG-01**: User can declare role→CLI mappings in a config file (e.g., `orchestrator: claude_code`, `reviewer: gemini_cli`)
 - [x] **CONFIG-02**: Config supports all cao-supported AI CLI providers (claude_code, gemini_cli, codex, copilot_cli, and others cao adds over time)
-- [ ] **CONFIG-03**: Workflow definitions use cao's native format wherever possible — wrapper does not invent a parallel workflow DSL
+- [x] **CONFIG-03**: Workflow definitions use cao's native format wherever possible — wrapper does not invent a parallel workflow DSL
 
 ---
 
@@ -74,7 +74,7 @@
 | ALIAS-02 | Phase 2 | Complete |
 | CONFIG-01 | Phase 2 | Complete |
 | CONFIG-02 | Phase 2 | Complete |
-| CONFIG-03 | Phase 2 | Pending |
+| CONFIG-03 | Phase 2 | Complete |
 | ORCH-01 | Phase 3 | Pending |
 | ORCH-02 | Phase 3 | Pending |
 | ORCH-03 | Phase 3 | Pending |

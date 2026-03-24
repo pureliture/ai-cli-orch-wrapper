@@ -46,7 +46,7 @@ Plans:
 
 Plans:
 - [x] 02-01-PLAN.md — Wave 0 test scaffold: update setup.test.ts stale assertion, create config.test.ts and alias.test.ts as failing stubs
-- [ ] 02-02-PLAN.md — Core implementation: src/config/wrapper-config.ts and src/commands/alias.ts
+- [x] 02-02-PLAN.md — Core implementation: src/config/wrapper-config.ts and src/commands/alias.ts
 - [ ] 02-03-PLAN.md — Wire everything: update src/cli.ts dynamic dispatch, fix setup.ts comment (D-07), scaffold .wrapper.json, create committed .wrapper.json
 - [ ] 02-04-PLAN.md — Build, run full test suite, and smoke-test alias dispatch on real machine
 
