@@ -3,22 +3,17 @@
 /**
  * AI CLI Orchestration Wrapper
  *
- * CLI entry point for the lightweight URL downloader.
+ * CLI entry point — dispatches to command handlers.
  */
 
-import { downloadCommand } from './commands/download.js';
+import { setupCommand } from './commands/setup.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
 
 async function main(): Promise<void> {
-  if (command === 'download') {
-    const url = args[1];
-    if (!url) {
-      console.error('Usage: wrapper download <url>');
-      process.exit(1);
-    }
-    await downloadCommand(url);
+  if (command === 'setup') {
+    await setupCommand();
   } else if (command === 'help' || command === '--help' || command === '-h') {
     printHelp();
   } else if (command === 'version' || command === '--version' || command === '-V') {
@@ -30,14 +25,14 @@ async function main(): Promise<void> {
 
 function printHelp(): void {
   console.log(`
-ai-cli-orch-wrapper - Lightweight URL downloader
+ai-cli-orch-wrapper - AI CLI orchestration environment setup
 
-Usage: wrapper <command> [options]
+Usage: wrapper <command>
 
 Commands:
-  download <url>   Download a file from a URL
-  help             Show this help
-  version          Show version
+  setup    Bootstrap the AI CLI orchestration environment
+  help     Show this help
+  version  Show version
 `);
 }
 
