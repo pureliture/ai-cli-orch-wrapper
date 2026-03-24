@@ -13,14 +13,14 @@ cao(AWS Labs CLI Agent Orchestrator) + tmux + workmux를 조합하여 Claude Cod
 
 ### Validated
 
-(None yet — ship to validate)
+**Setup** — Validated in Phase 1: Foundation + Environment Setup
+- [x] 단일 명령어로 전체 환경 셋업 완료 (tmux conf 병합 포함)
+- [x] `~/.config/tmux/ai-cli.conf` 생성 및 base tmux conf에 source 라인 추가 (최소 침습)
+- [x] 이미 설치된 cao / tmux / workmux를 전제로 동작 (직접 설치 불포함)
 
 ### Active
 
-**Setup**
-- [ ] 단일 명령어로 전체 환경 셋업 완료 (tmux conf 병합 포함)
-- [ ] `~/.config/tmux/ai-cli.conf` 생성 및 base tmux conf에 source 라인 추가 (최소 침습)
-- [ ] 이미 설치된 cao / tmux / workmux를 전제로 동작 (직접 설치 불포함)
+**Setup** — moved to Validated (Phase 1 complete)
 
 **AI CLI 오케스트레이션**
 - [ ] 워크플로우별 오케스트레이터 CLI 지정 가능 (e.g. 이 작업은 Claude Code가 오케스트레이터)
@@ -70,7 +70,7 @@ cao(AWS Labs CLI Agent Orchestrator) + tmux + workmux를 조합하여 Claude Cod
 | tmux conf 모듈식 분리 (`~/.config/tmux/ai-cli.conf`) | ghostty-tmux-wrapping과 `~/.tmux.conf` 소유권 충돌 방지 | — Pending |
 | registry-hub 결합 금지 | registry-hub는 독립 프로젝트로 병렬 개발 중, 래퍼가 종속되면 양쪽 개발 속도에 영향 | — Pending |
 | cmux 제외 | 이번 목표 범위에서 불필요 | — Pending |
-| 현재 src/ 코드 재작성 | 기존 코드는 관련 없는 PoC | — Pending |
+| 현재 src/ 코드 재작성 | 기존 코드는 관련 없는 PoC | — Completed Phase 1 |
 
 ## Evolution
 
@@ -90,4 +90,4 @@ cao(AWS Labs CLI Agent Orchestrator) + tmux + workmux를 조합하여 Claude Cod
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-24 after initialization*
+*Last updated: 2026-03-24 after Phase 1 completion*
