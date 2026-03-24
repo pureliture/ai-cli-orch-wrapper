@@ -16,8 +16,8 @@
 
 ### CLI Aliases
 
-- [ ] **ALIAS-01**: User can invoke AI CLIs via short wrapper aliases (e.g., `wrapper claude`, `wrapper gemini`) that map to the appropriate `cao` invocation
-- [ ] **ALIAS-02**: Alias-to-CLI mappings are configurable (not hardcoded in source) so users can add or remap aliases without code changes
+- [x] **ALIAS-01**: User can invoke AI CLIs via short wrapper aliases (e.g., `wrapper claude`, `wrapper gemini`) that map to the appropriate `cao` invocation
+- [x] **ALIAS-02**: Alias-to-CLI mappings are configurable (not hardcoded in source) so users can add or remap aliases without code changes
 
 ### Plan→Review Loop (cao gap)
 
@@ -28,8 +28,8 @@
 
 ### Workflow Config
 
-- [ ] **CONFIG-01**: User can declare role→CLI mappings in a config file (e.g., `orchestrator: claude_code`, `reviewer: gemini_cli`)
-- [ ] **CONFIG-02**: Config supports all cao-supported AI CLI providers (claude_code, gemini_cli, codex, copilot_cli, and others cao adds over time)
+- [x] **CONFIG-01**: User can declare role→CLI mappings in a config file (e.g., `orchestrator: claude_code`, `reviewer: gemini_cli`)
+- [x] **CONFIG-02**: Config supports all cao-supported AI CLI providers (claude_code, gemini_cli, codex, copilot_cli, and others cao adds over time)
 - [ ] **CONFIG-03**: Workflow definitions use cao's native format wherever possible — wrapper does not invent a parallel workflow DSL
 
 ---
@@ -70,10 +70,10 @@
 | SETUP-02 | Phase 1 | Complete |
 | SETUP-03 | Phase 1 | Complete |
 | SETUP-04 | Phase 1 | Complete |
-| ALIAS-01 | Phase 2 | Pending |
-| ALIAS-02 | Phase 2 | Pending |
-| CONFIG-01 | Phase 2 | Pending |
-| CONFIG-02 | Phase 2 | Pending |
+| ALIAS-01 | Phase 2 | Complete |
+| ALIAS-02 | Phase 2 | Complete |
+| CONFIG-01 | Phase 2 | Complete |
+| CONFIG-02 | Phase 2 | Complete |
 | CONFIG-03 | Phase 2 | Pending |
 | ORCH-01 | Phase 3 | Pending |
 | ORCH-02 | Phase 3 | Pending |
