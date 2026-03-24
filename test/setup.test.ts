@@ -37,7 +37,7 @@ test('ai-cli.conf is created with correct header content', async () => {
     const content = readFileSync(confPath, 'utf8');
     assert.ok(content.includes('# ai-cli-orch-wrapper tmux config'), 'should include title comment');
     assert.ok(content.includes('# Managed by wrapper setup'), 'should include managed-by comment');
-    assert.ok(content.includes('# Phase 2 will populate CLI alias bindings here.'), 'should include phase 2 comment');
+    assert.ok(content.includes('# CLI alias bindings are managed via .wrapper.json in the project root.'), 'should include wrapper.json reference comment');
   } finally {
     restoreHome();
   }
