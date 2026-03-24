@@ -12,7 +12,7 @@ Three phases that build the wrapper from the ground up. Phase 1 establishes a wo
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation + Environment Setup** - Working CLI binary and single-command idempotent environment bootstrap
+- [x] **Phase 1: Foundation + Environment Setup** - Working CLI binary and single-command idempotent environment bootstrap (completed 2026-03-24)
 - [ ] **Phase 2: CLI Aliases + Workflow Config** - Configurable alias-to-CLI mappings and declarative role→CLI workflow config
 - [ ] **Phase 3: Plan→Review Orchestration Loop** - File-based inter-CLI plan→review loop with configurable exit conditions
 
@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 Plans:
 - [x] 01-01-PLAN.md — Delete PoC files, rewrite src/cli.ts, create src/commands/setup.ts and test scaffold
-- [ ] 01-02-PLAN.md — Build, run tests, and smoke-test wrapper setup on real machine
+- [x] 01-02-PLAN.md — Build, run tests, and smoke-test wrapper setup on real machine
 
 ### Phase 2: CLI Aliases + Workflow Config
 **Goal**: Users can invoke AI CLIs via short wrapper aliases and declare role→CLI mappings in a config file without touching source code
@@ -62,6 +62,6 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation + Environment Setup | 0/2 | Ready to execute | - |
+| 1. Foundation + Environment Setup | 2/2 | Complete   | 2026-03-24 |
 | 2. CLI Aliases + Workflow Config | 0/TBD | Not started | - |
 | 3. Plan→Review Orchestration Loop | 0/TBD | Not started | - |
