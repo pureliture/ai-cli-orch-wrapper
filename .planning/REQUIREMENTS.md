@@ -22,9 +22,9 @@
 ### Plan→Review Loop (cao gap)
 
 - [ ] **ORCH-01**: User can run a plan→review workflow where CLI A generates a plan, CLI B reviews it, and the loop repeats until B approves or max iterations is reached
-- [ ] **ORCH-02**: The plan→review loop has a configurable exit condition: explicit approval signal from reviewer CLI and/or configurable max iteration count
-- [ ] **ORCH-03**: Inter-CLI handoff uses file-based message passing (plan output written to file, reviewer reads from file)
-- [ ] **ORCH-04**: User can specify which CLI plays which role (planner, reviewer) per workflow invocation via config or flag
+- [x] **ORCH-02**: The plan→review loop has a configurable exit condition: explicit approval signal from reviewer CLI and/or configurable max iteration count
+- [x] **ORCH-03**: Inter-CLI handoff uses file-based message passing (plan output written to file, reviewer reads from file)
+- [x] **ORCH-04**: User can specify which CLI plays which role (planner, reviewer) per workflow invocation via config or flag
 
 ### Workflow Config
 
@@ -76,9 +76,9 @@
 | CONFIG-02 | Phase 2 | Complete |
 | CONFIG-03 | Phase 2 | Complete |
 | ORCH-01 | Phase 3 | Pending |
-| ORCH-02 | Phase 3 | Pending |
-| ORCH-03 | Phase 3 | Pending |
-| ORCH-04 | Phase 3 | Pending |
+| ORCH-02 | Phase 3 | Complete |
+| ORCH-03 | Phase 3 | Complete |
+| ORCH-04 | Phase 3 | Complete |
 
 **Coverage:**
 - v1 requirements: 13 total
