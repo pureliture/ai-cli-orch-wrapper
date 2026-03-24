@@ -55,7 +55,7 @@ export async function runWorkflow(
   },
 ): Promise<WorkflowRunResult> {
   const repoRoot = resolve(options?.repoRoot ?? process.cwd());
-  const client = options?.client ?? new CaoHttpClient();
+  const client = options?.client ?? new CaoHttpClient(process.env.WRAPPER_CAO_BASE_URL);
   const runArtifacts = createWorkflowRunArtifacts(repoRoot, workflow.workflowName);
   const runId = basename(runArtifacts.runDir);
   const startedAt = now();
