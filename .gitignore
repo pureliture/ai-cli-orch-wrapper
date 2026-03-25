@@ -30,5 +30,10 @@ temp/
 # Wrapper cache (local only)
 .wrapper/
 
+# Local agent/runtime state
+.omc/
+.omx/
+*.cao_backup
+
 # Lock file is committed for reproducibility
 # !wrapper.lock
