@@ -137,11 +137,49 @@ class FakeCaoClient {
     };
   }
 
+  async getTerminal(terminalId: string): Promise<FakeTerminal> {
+    return {
+      id: terminalId,
+      name: terminalId,
+      provider: terminalId.includes('1') ? 'claude_code' : 'gemini_cli',
+      session_name: `${terminalId}-session`,
+      agent_profile: null,
+      status: 'processing',
+    };
+  }
+
   async getOutput(): Promise<{ output: string; mode: 'last' }> {
     return { output: 'done', mode: 'last' };
   }
 
   async exitTerminal(): Promise<void> {}
+}
+
+class DelayedPlannerArtifactClient extends FakeCaoClient {
+  async sendInput(terminalId: string, message: string): Promise<void> {
+    this.promptsByTerminal.set(terminalId, message);
+
+    if (message.includes('planner for this workflow iteration')) {
+      const planPath = parseRequiredPath(message, 'exact file: ');
+      setTimeout(() => {
+        writeFileSync(planPath, `Generated delayed plan for ${terminalId}\n`, 'utf8');
+      }, 10);
+      return;
+    }
+
+    await super.sendInput(terminalId, message);
+  }
+
+  async getTerminal(terminalId: string): Promise<FakeTerminal> {
+    return {
+      id: terminalId,
+      name: terminalId,
+      provider: terminalId.includes('1') ? 'claude_code' : 'gemini_cli',
+      session_name: `${terminalId}-session`,
+      agent_profile: null,
+      status: terminalId === 'terminal-1' ? 'idle' : 'processing',
+    };
+  }
 }
 
 test('runWorkflow returns exit code 0 when review is approved on the first iteration', async () => {
@@ -241,4 +279,20 @@ test('runWorkflow returns exit code 1 when review.status.json is malformed', asy
   assert.equal(result.exitCode, 1);
   assert.equal(result.finalStatus, 'failed');
   assert.equal(state.finalStatus, 'failed');
+});
+
+test('runWorkflow waits for the planner artifact when terminal status goes idle early', async () => {
+  const { runWorkflow } = await import('../dist/orchestration/workflow-runner.js');
+
+  const repoRoot = makeTempDir();
+  const result = await runWorkflow(createWorkflowDefinition(2), {
+    repoRoot,
+    client: new DelayedPlannerArtifactClient(['approved']),
+    pollIntervalMs: 1,
+    timeoutMs: 100,
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.ok(existsSync(join(result.runDir, 'iterations', '01', 'plan.md')));
+  assert.ok(existsSync(join(result.runDir, 'iterations', '01', 'review.status.json')));
 });

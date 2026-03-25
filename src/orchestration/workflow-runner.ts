@@ -26,7 +26,7 @@ export interface WorkflowRunResult {
 
 type WorkflowClient = Pick<
   CaoHttpClient,
-  'checkHealth' | 'createSession' | 'sendInput' | 'waitForCompletion' | 'getOutput' | 'exitTerminal'
+  'checkHealth' | 'createSession' | 'sendInput' | 'waitForCompletion' | 'getOutput' | 'getTerminal' | 'exitTerminal'
 >;
 
 function writeJsonFile(path: string, data: Record<string, unknown>): void {
@@ -37,12 +37,49 @@ function now(): string {
   return new Date().toISOString();
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 async function safeExitTerminal(client: WorkflowClient, terminalId?: string): Promise<void> {
   if (!terminalId) {
     return;
   }
 
   await client.exitTerminal(terminalId);
+}
+
+async function waitForArtifacts(
+  client: WorkflowClient,
+  terminalId: string,
+  artifacts: Array<{ label: string; path: string }>,
+  options?: { pollIntervalMs?: number; timeoutMs?: number },
+): Promise<void> {
+  const pollIntervalMs = options?.pollIntervalMs ?? 1000;
+  const timeoutMs = options?.timeoutMs ?? 300000;
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt <= timeoutMs) {
+    const missingArtifact = artifacts.find(artifact => !existsSync(artifact.path));
+    if (!missingArtifact) {
+      return;
+    }
+
+    const terminal = await client.getTerminal(terminalId);
+
+    if (terminal.status === 'error') {
+      throw new Error(`CAO terminal ${terminalId} entered error state before writing ${missingArtifact.label}.`);
+    }
+
+    if (terminal.status === 'waiting_user_answer') {
+      throw new Error(`CAO terminal ${terminalId} entered waiting_user_answer state before writing ${missingArtifact.label}.`);
+    }
+
+    await sleep(pollIntervalMs);
+  }
+
+  const missingArtifact = artifacts.find(artifact => !existsSync(artifact.path));
+  throw new Error(`Missing ${missingArtifact?.label ?? 'workflow artifact'}: ${missingArtifact?.path ?? dirname(artifacts[0].path)}`);
 }
 
 export async function runWorkflow(
@@ -149,14 +186,15 @@ export async function runWorkflow(
       plannerTerminalId = plannerTerminal.id;
 
       await client.sendInput(plannerTerminal.id, plannerPrompt);
-      await client.waitForCompletion(plannerTerminal.id, {
+      await waitForArtifacts(client, plannerTerminal.id, [{
+        label: 'plan artifact',
+        path: iterationArtifacts.planPath,
+      }], {
         pollIntervalMs: options?.pollIntervalMs,
         timeoutMs: options?.timeoutMs,
       });
-
-      if (!existsSync(iterationArtifacts.planPath)) {
-        throw new Error(`Missing plan artifact: ${iterationArtifacts.planPath}`);
-      }
+      await safeExitTerminal(client, plannerTerminalId);
+      plannerTerminalId = undefined;
 
       const reviewerPrompt = buildReviewerPrompt({
         workflowName: workflow.workflowName,
@@ -177,10 +215,21 @@ export async function runWorkflow(
       reviewerTerminalId = reviewerTerminal.id;
 
       await client.sendInput(reviewerTerminal.id, reviewerPrompt);
-      await client.waitForCompletion(reviewerTerminal.id, {
+      await waitForArtifacts(client, reviewerTerminal.id, [
+        {
+          label: 'review artifact',
+          path: iterationArtifacts.reviewPath,
+        },
+        {
+          label: 'review.status.json',
+          path: iterationArtifacts.reviewStatusPath,
+        },
+      ], {
         pollIntervalMs: options?.pollIntervalMs,
         timeoutMs: options?.timeoutMs,
       });
+      await safeExitTerminal(client, reviewerTerminalId);
+      reviewerTerminalId = undefined;
 
       const reviewStatus = readReviewStatusFile(iterationArtifacts.reviewStatusPath);
       const iterationCompletedAt = now();
