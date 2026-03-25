@@ -1,0 +1,42 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Environment
+.env
+.env.local
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Wrapper cache (local only)
+.wrapper/
+
+# Local agent/runtime state
+.omc/
+.omx/
+*.cao_backup
+.claude/worktrees/
+.codex/worktrees/
+.gemini/worktrees/
+
+# Lock file is committed for reproducibility
+# !wrapper.lock

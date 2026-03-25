@@ -1,0 +1,31 @@
+{
+  "aliases": {
+    "claude": {
+      "provider": "claude_code",
+      "agent": "developer"
+    },
+    "gemini": {
+      "provider": "gemini_cli",
+      "agent": "developer"
+    },
+    "codex": {
+      "provider": "codex",
+      "agent": "developer"
+    }
+  },
+  "roles": {
+    "orchestrator": "claude_code",
+    "reviewer": "gemini_cli"
+  },
+  "workflows": {
+    "plan-review": {
+      "plannerRole": "orchestrator",
+      "plannerAgent": "developer",
+      "reviewerRole": "reviewer",
+      "reviewerAgent": "reviewer",
+      "maxIterations": 3,
+      "plannerLaunchArgs": [],
+      "reviewerLaunchArgs": []
+    }
+  }
+}
