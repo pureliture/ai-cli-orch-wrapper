@@ -114,11 +114,14 @@ test('buildPlannerPrompt and buildReviewerPrompt mention exact artifact paths an
   assert.ok(plannerPrompt.includes('/repo/.wrapper/workflows/plan-review/runs/run-01/iterations/02/plan.md'));
   assert.ok(plannerPrompt.includes('/repo/.wrapper/workflows/plan-review/runs/run-01/iterations/01/review.md'));
   assert.ok(plannerPrompt.includes('write the deliverable to'));
+  assert.ok(plannerPrompt.includes('Write the file directly'));
+  assert.ok(plannerPrompt.includes('Do not spend time exploring unrelated files'));
 
   assert.ok(reviewerPrompt.includes('/repo/.wrapper/workflows/plan-review/runs/run-01/iterations/02/plan.md'));
   assert.ok(reviewerPrompt.includes('/repo/.wrapper/workflows/plan-review/runs/run-01/iterations/02/review.md'));
   assert.ok(reviewerPrompt.includes('/repo/.wrapper/workflows/plan-review/runs/run-01/iterations/02/review.status.json'));
   assert.ok(reviewerPrompt.includes('review.status.json'));
+  assert.ok(reviewerPrompt.includes('Write both files directly'));
   assert.ok(reviewerPrompt.includes('approved'));
   assert.ok(reviewerPrompt.includes('changes_requested'));
 });

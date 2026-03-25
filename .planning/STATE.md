@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Ready to execute
-stopped_at: Awaiting 03-04 human verification (claude_code auth/403)
-last_updated: "2026-03-24T21:23:42.975Z"
+status: v1.0 milestone complete
+stopped_at: Ready for next milestone definition via $gsd-new-milestone
+last_updated: "2026-03-25T00:31:00.000Z"
 progress:
   total_phases: 3
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 9
+  completed_plans: 10
 ---
 
 # Project State
@@ -19,12 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-24)
 
 **Core value:** Any machine, one command, same AI CLI orchestration environment instantly restored
-**Current focus:** Phase 03 — plan-review-orchestration-loop
+**Current focus:** v1.0 archived — ready for `$gsd-new-milestone`
 
 ## Current Position
 
-Phase: 03 (plan-review-orchestration-loop) — EXECUTING
-Plan: 4 of 4
+Phase: None active
+Plan: None active
 
 ## Performance Metrics
 
@@ -77,6 +77,9 @@ Recent decisions affecting current work:
 - [Phase 02-02]: result.error checked before result.status in aliasCommand — correct order avoids null dereference when cao not on PATH
 - [Phase 02-cli-aliases-workflow-config]: readWrapperConfig() called with no argument in cli.ts — reads .wrapper.json from process.cwd() at runtime, correct for portability
 - [Phase 02-cli-aliases-workflow-config]: .wrapper.json committed to repo (not gitignored) — portability-first principle, D-01
+- [Phase 03-04]: Artifact existence is the authoritative completion signal for live workflow runs — transient CAO terminal states are not sufficient
+- [Phase 03-04]: Planner/reviewer prompts must tell providers to write files directly before exploring unrelated repo state
+- [Phase 03-04]: Five-minute live timeout budget is safer than two minutes for real CAO smoke runs in this environment
 
 ### Pending Todos
 
@@ -84,11 +87,10 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 3 (tmux Session Manager in research context, now part of Phase 3 here): shell readiness polling behavior with zsh + oh-my-zsh needs verified patterns before implementing send-keys in the orchestration loop
-- Phase 3: cao handoff/assign signal format for plan→review loop is not fully documented — design must remain flexible until planning
+None currently.
 
 ## Session Continuity
 
-Last session: 2026-03-24T21:23:42.972Z
-Stopped at: Awaiting 03-04 human verification (claude_code auth/403)
+Last session: 2026-03-25T00:31:00.000Z
+Stopped at: Ready for next milestone definition via $gsd-new-milestone
 Resume file: None
