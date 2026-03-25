@@ -34,6 +34,9 @@ temp/
 .omc/
 .omx/
 *.cao_backup
+.claude/worktrees/
+.codex/worktrees/
+.gemini/worktrees/
 
 # Lock file is committed for reproducibility
 # !wrapper.lock
