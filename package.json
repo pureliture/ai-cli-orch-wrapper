@@ -1,0 +1,33 @@
+{
+  "name": "ai-cli-orch-wrapper",
+  "version": "0.2.0",
+  "description": "Lightweight URL downloader with lock-file tracking",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "wrapper": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/cli.js",
+    "test": "node --test",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "ai",
+    "cli",
+    "orchestration",
+    "downloader",
+    "lockfile"
+  ],
+  "author": "skillinterop",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
