@@ -92,13 +92,22 @@ export class CaoHttpClient {
     options?: { pollIntervalMs?: number; timeoutMs?: number },
   ): Promise<CaoTerminal> {
     const pollIntervalMs = options?.pollIntervalMs ?? 1000;
-    const timeoutMs = options?.timeoutMs ?? 120000;
+    const timeoutMs = options?.timeoutMs ?? 300000;
     const startedAt = Date.now();
+    let sawActiveState = false;
 
     while (Date.now() - startedAt <= timeoutMs) {
       const terminal = await this.getTerminal(terminalId);
 
-      if (terminal.status === 'completed' || terminal.status === 'idle') {
+      if (terminal.status === 'processing') {
+        sawActiveState = true;
+      }
+
+      if (terminal.status === 'completed') {
+        return terminal;
+      }
+
+      if (terminal.status === 'idle' && sawActiveState) {
         return terminal;
       }
 
