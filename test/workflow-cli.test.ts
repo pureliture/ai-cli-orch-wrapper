@@ -143,7 +143,7 @@ test('built-ins help and version still win over config-defined workflow names an
   const versionResult = runCli(['version'], dir);
 
   assert.equal(helpResult.status, 0);
-  assert.ok(helpResult.stdout.includes('Usage: wrapper <command>'));
+  assert.ok(helpResult.stdout.includes('Usage: aco <command>'));
   assert.equal(versionResult.status, 0);
-  assert.ok(versionResult.stdout.includes('ai-cli-orch-wrapper v0.3.0'));
+  assert.ok(versionResult.stdout.startsWith('aco v'));
 });
