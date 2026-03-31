@@ -15,7 +15,7 @@
 
 - [ ] **WRAP-01**: User can run `wrapper setup` and get repo-local config initialized through the `.wrapper.json` contract without manual renaming
 - [ ] **WRAP-02**: User can run alias and workflow entrypoints through `wrapper` while artifacts continue to be stored under the expected `.wrapper/` paths
-- [ ] **WRAP-03**: User receives direct remediation telling them to use `wrapper` when they hit a stale command invocation or packaging assumption
+- [x] **WRAP-03**: User receives direct remediation telling them to use `wrapper` when they hit a stale command invocation or packaging assumption
 
 ## Future Requirements
 
@@ -55,7 +55,7 @@
 |-------------|-------|--------|
 | CMD-01 | Phase 04 | Complete |
 | CMD-02 | Phase 04 | Complete |
-| WRAP-03 | Phase 04 | Pending |
+| WRAP-03 | Phase 04 | Complete |
 | CMD-03 | Phase 05 | Pending |
 | WRAP-01 | Phase 05 | Pending |
 | WRAP-02 | Phase 05 | Pending |

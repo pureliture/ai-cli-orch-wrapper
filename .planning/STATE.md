@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Wrapper Command Consolidation
-status: Ready to execute
-stopped_at: Completed 04-01-PLAN.md
-last_updated: "2026-03-31T02:22:43.729Z"
+status: Phase complete — ready for verification
+stopped_at: Completed 04-02-PLAN.md
+last_updated: "2026-03-31T02:28:43.321Z"
 progress:
   total_phases: 2
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -39,6 +39,7 @@ Plan: 2 of 2
 | v1.0 | 3/3 | 10/10 | Shipped |
 | v1.1 | 0/2 | 0/TBD | Roadmap ready |
 | Phase 04 P01 | 5min | 2 tasks | 6 files |
+| Phase 04 P02 | 5min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -52,6 +53,9 @@ Recent decisions affecting current work:
 - [v1.1 roadmap]: Defer guide / architecture cleanup to v1.2 and keep workspace/runtime expansion queued for v1.3.
 - [Phase 04]: Centralized public command strings in src/cli-surface.ts so help, version, and unknown-command output reuse one source of truth.
 - [Phase 04]: Displayed CLI version now reads package.json at runtime to eliminate help/version drift during the aco cutover.
+- [Phase 04]: Rejected wrapper as a compatibility alias and fail fast only when the invoked executable basename is wrapper.
+- [Phase 04]: Reuse cli-surface recovery helpers so aco help/setup remediation stays centralized.
+- [Phase 04]: Keep .wrapper.json and related runtime-contract identifiers deferred to Phase 05.
 
 ### Pending Todos
 
@@ -63,7 +67,7 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-03-31T02:22:43.727Z
-Stopped at: Completed 04-01-PLAN.md
+Last session: 2026-03-31T02:28:43.315Z
+Stopped at: Completed 04-02-PLAN.md
 Resume file: None
 Next command: `/gsd:plan-phase 04`

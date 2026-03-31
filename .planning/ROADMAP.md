@@ -13,7 +13,7 @@ v1.1 is a narrowing milestone. Before this wrapper grows into workspace manageme
 
 ## Phases
 
-- [ ] **Phase 04: Canonical Command Surface** - Standardize `aco` as the single visible CLI name and recovery path.
+- [x] **Phase 04: Canonical Command Surface** - Standardize `aco` as the single visible CLI name and recovery path. (completed 2026-03-31)
 - [ ] **Phase 05: Wrapper Runtime Contract** - Keep setup, alias, and workflow behaviors consistent with the existing `.wrapper*` repo-local contract.
 
 ## Phase Details
@@ -29,7 +29,7 @@ v1.1 is a narrowing milestone. Before this wrapper grows into workspace manageme
 **Plans**: 2 plans
 Plans:
 - [x] 04-01-PLAN.md — Cut over the install/help/version surface and public quick-start guidance to `aco`
-- [ ] 04-02-PLAN.md — Fail fast on stale `wrapper` entrypaths and align setup-managed wording to `aco`
+- [x] 04-02-PLAN.md — Fail fast on stale `wrapper` entrypaths and align setup-managed wording to `aco`
 
 ### Phase 05: Wrapper Runtime Contract
 **Goal**: Users can trust the existing v1.0 runtime flows to keep working once `wrapper` is treated as the canonical command contract.
@@ -48,5 +48,5 @@ Plans:
 | 01. Foundation + Environment Setup | v1.0 | 2/2 | Complete | 2026-03-25 |
 | 02. CLI Aliases + Workflow Config | v1.0 | 4/4 | Complete | 2026-03-25 |
 | 03. Plan→Review Orchestration Loop | v1.0 | 4/4 | Complete | 2026-03-25 |
-| 04. Canonical Command Surface | v1.1 | 1/2 | In Progress|  |
+| 04. Canonical Command Surface | v1.1 | 2/2 | Complete   | 2026-03-31 |
 | 05. Wrapper Runtime Contract | v1.1 | 0/TBD | Not started | - |
