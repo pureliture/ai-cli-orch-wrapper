@@ -4,7 +4,7 @@
  * Resolves a committed workflow from .wrapper.json and executes it.
  */
 
-import { readWrapperConfig } from '../config/wrapper-config.js';
+import { readAcoConfig } from '../config/aco-config.js';
 import { resolveNamedWorkflow } from '../orchestration/workflow-config.js';
 import { runWorkflow } from '../orchestration/workflow-runner.js';
 import { parseWorkflowOverrides } from './workflow-run.js';
@@ -15,7 +15,7 @@ export async function workflowCommand(args: string[]): Promise<void> {
     throw new Error('missing workflow name');
   }
 
-  const config = readWrapperConfig();
+  const config = readAcoConfig();
   if (!config.workflows || !config.workflows[workflowName]) {
     throw new Error(`unknown workflow '${workflowName}'`);
   }

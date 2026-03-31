@@ -5,7 +5,7 @@
  * configurations with provider mappings derived from config.roles.
  */
 
-import type { WrapperConfig } from '../config/wrapper-config.js';
+import type { AcoConfig } from '../config/aco-config.js';
 
 export interface WorkflowDefinitionInput {
   plannerRole: string;
@@ -71,7 +71,7 @@ function resolveProvider(
 }
 
 export function resolveNamedWorkflow(
-  config: WrapperConfig,
+  config: AcoConfig,
   workflowName: string,
   overrides?: WorkflowOverrides,
 ): ResolvedWorkflowDefinition {
@@ -117,7 +117,7 @@ export function resolveNamedWorkflow(
 }
 
 export function resolveAdHocWorkflow(
-  config: WrapperConfig,
+  config: AcoConfig,
   overrides: WorkflowOverrides,
 ): ResolvedWorkflowDefinition {
   const def: Partial<WorkflowDefinitionInput> = {

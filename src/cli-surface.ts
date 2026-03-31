@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { WrapperConfig } from './config/wrapper-config.js';
+import type { AcoConfig } from './config/aco-config.js';
 
 export const CANONICAL_COMMAND = 'aco';
 export const LEGACY_COMMAND = 'wrapper';
@@ -31,7 +31,7 @@ export function formatVersionLine(): string {
   return `${CANONICAL_COMMAND} v${getPackageVersion()}`;
 }
 
-export function formatHelp(config: WrapperConfig): string {
+export function formatHelp(config: AcoConfig): string {
   const aliasLines = Object.keys(config.aliases)
     .map(name => `  ${name.padEnd(8)} Launch ${config.aliases[name].provider} via cao`)
     .join('\n');

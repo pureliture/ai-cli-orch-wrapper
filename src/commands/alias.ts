@@ -5,7 +5,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import type { AliasEntry } from '../config/wrapper-config.js';
+import type { AliasEntry } from '../config/aco-config.js';
 
 export async function aliasCommand(
   aliasName: string,

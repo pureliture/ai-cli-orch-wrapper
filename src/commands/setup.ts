@@ -12,17 +12,18 @@ import { homedir } from 'node:os';
 const REQUIRED_TOOLS = ['cao', 'tmux', 'workmux'];
 
 const AI_CLI_CONF_CONTENT = [
-  '# ai-cli-orch-wrapper tmux config',
+  '# aco tmux config',
   '# Managed by aco setup — do not edit manually.',
   '# CLI alias bindings are managed via .wrapper.json in the project root.',
   '',
 ].join('\n');
 
-const WRAPPER_CONFIG_FILE = '.wrapper.json';
+const ACO_CONFIG_FILE = '.wrapper.json';
 
-const DEFAULT_WRAPPER_CONFIG =
+const DEFAULT_ACO_CONFIG =
   JSON.stringify(
     {
+      _comment: 'Managed by aco setup — do not edit manually.',
       aliases: {
         claude: { provider: 'claude_code', agent: 'developer' },
         gemini: { provider: 'gemini_cli', agent: 'developer' },
@@ -82,13 +83,13 @@ export async function setupCommand(): Promise<void> {
   }
 
   // Step 4: Scaffold .wrapper.json if not present (per D-07, D-08 — idempotent)
-  const wrapperConfigPath = join(process.cwd(), WRAPPER_CONFIG_FILE);
+  const wrapperConfigPath = join(process.cwd(), ACO_CONFIG_FILE);
   if (existsSync(wrapperConfigPath)) {
     console.log('✓ .wrapper.json: already exists');
   } else {
-    writeFileSync(wrapperConfigPath, DEFAULT_WRAPPER_CONFIG, 'utf8');
+    writeFileSync(wrapperConfigPath, DEFAULT_ACO_CONFIG, 'utf8');
     console.log('✓ .wrapper.json: created with default aliases');
   }
 
-  console.log('Setup complete.');
+  console.log('aco setup complete.');
 }
