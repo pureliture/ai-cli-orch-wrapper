@@ -1,4 +1,5 @@
 {
+  "_comment": "Managed by aco setup — do not edit manually.",
   "aliases": {
     "claude": {
       "provider": "claude_code",
@@ -16,16 +17,5 @@
   "roles": {
     "orchestrator": "claude_code",
     "reviewer": "gemini_cli"
-  },
-  "workflows": {
-    "plan-review": {
-      "plannerRole": "orchestrator",
-      "plannerAgent": "developer",
-      "reviewerRole": "reviewer",
-      "reviewerAgent": "reviewer",
-      "maxIterations": 3,
-      "plannerLaunchArgs": [],
-      "reviewerLaunchArgs": []
-    }
   }
 }
