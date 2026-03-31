@@ -13,7 +13,7 @@ const REQUIRED_TOOLS = ['cao', 'tmux', 'workmux'];
 
 const AI_CLI_CONF_CONTENT = [
   '# ai-cli-orch-wrapper tmux config',
-  '# Managed by wrapper setup — do not edit manually.',
+  '# Managed by aco setup — do not edit manually.',
   '# CLI alias bindings are managed via .wrapper.json in the project root.',
   '',
 ].join('\n');
