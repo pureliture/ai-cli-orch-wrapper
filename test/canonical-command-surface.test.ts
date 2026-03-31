@@ -137,7 +137,7 @@ test('readme quick-start guidance uses aco and avoids raw node invocation for us
   assert.ok(!readme.includes('node dist/cli.js --help'));
 });
 
-test('alias conflict with built-in command causes immediate exit 1', () => {
+test('reserved alias definitions do not block built-ins or appear in help aliases', () => {
   const dir = makeTempDir();
   writeFileSync(join(dir, '.wrapper.json'), JSON.stringify({
     aliases: {
@@ -151,6 +151,7 @@ test('alias conflict with built-in command causes immediate exit 1', () => {
 
   const result = runCli(['help'], dir);
 
-  assert.equal(result.status, 1);
-  assert.ok(result.stderr.includes("Error: alias 'setup' in .wrapper.json conflicts with a built-in command."));
+  assert.equal(result.status, 0);
+  assert.ok(result.stdout.includes('Usage: aco <command>'));
+  assert.ok(!result.stdout.includes('  setup    Launch claude_code via cao'));
 });

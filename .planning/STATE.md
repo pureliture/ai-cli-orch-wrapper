@@ -2,42 +2,42 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Wrapper Command Consolidation
-status: Milestone complete
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-03-31T08:44:08.798Z"
+status: v1.1 shipped
+stopped_at: Milestone archived and tagged locally
+last_updated: "2026-04-01T08:55:00+09:00"
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 7
-  completed_plans: 7
+  total_phases: 5
+  completed_phases: 5
+  total_plans: 17
+  completed_plans: 17
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-31)
+See: .planning/PROJECT.md (updated 2026-04-01)
 
 **Core value:** Any machine, one command, same AI CLI orchestration environment instantly restored
-**Current focus:** v1.1 milestone wrap-up after Phase 04 canonical-command-surface gap closure
+**Current focus:** Plan the v1.2 documentation and architecture cleanup milestone
 
 ## Current Position
 
-Phase: 04 (canonical-command-surface) — COMPLETE
-Plan: 3 of 3 completed
+Milestone: v1.1 — SHIPPED
+Next step: `$gsd-new-milestone`
 
 ## Performance Metrics
 
-- Shipped milestones: 1
-- Historical completed phases: 3
-- Historical completed plans: 10
-- Active milestone phases: 2
-- Active milestone plans: 0 planned so far
+- Shipped milestones: 2
+- Historical completed phases: 5
+- Historical completed plans: 17
+- Active milestone phases: 0
+- Active milestone plans: 0
 
 | Milestone | Phases | Plans | Status |
 |-----------|--------|-------|--------|
 | v1.0 | 3/3 | 10/10 | Shipped |
-| v1.1 | 1/2 | 2/2 | Active |
+| v1.1 | 2/2 | 7/7 | Shipped |
 | Phase 04 P01 | 5min | 2 tasks | 6 files |
 | Phase 04 P02 | 5min | 2 tasks | 4 files |
 | Phase 05 P01 | 15m | 2 tasks | 1 files |
@@ -68,18 +68,19 @@ Recent decisions affecting current work:
 - [Phase 05-wrapper-runtime-contract]: [D-08] Protect built-in command names from alias overrides
 - [Phase 04]: Treat stale wrapper shims as package-owned only when their resolved targets match this package's dist/cli.js or the canonical aco shim target.
 - [Phase 04]: Expose cleanup:legacy-bin as the single refresh path and reuse the same script from postinstall without reintroducing wrapper in package metadata.
+- [Milestone v1.1]: Reserved alias names are inert and must never block built-in `aco` commands.
 
 ### Pending Todos
 
-None yet.
+Define fresh v1.2 requirements and roadmap.
 
 ### Blockers/Concerns
 
-None currently.
+No shipping blockers. Remaining concerns are documentation drift and partial validation hygiene noted in the milestone audit.
 
 ## Session Continuity
 
-Last session: 2026-03-31T08:44:08.795Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-04-01T08:55:00+09:00
+Stopped at: v1.1 completion wrap-up
 Resume file: None
-Next command: `/gsd:complete-milestone`
+Next command: `$gsd-new-milestone`

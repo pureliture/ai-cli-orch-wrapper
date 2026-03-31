@@ -11,6 +11,7 @@ import type { AcoConfig } from './config/aco-config.js';
 
 export const CANONICAL_COMMAND = 'aco';
 export const LEGACY_COMMAND = 'wrapper';
+export const BUILTIN_COMMANDS = ['setup', 'help', 'version', 'workflow', 'workflow-run', 'alias'];
 
 interface PackageMetadata {
   version?: string;
@@ -33,6 +34,7 @@ export function formatVersionLine(): string {
 
 export function formatHelp(config: AcoConfig): string {
   const aliasLines = Object.keys(config.aliases)
+    .filter(name => !BUILTIN_COMMANDS.includes(name))
     .map(name => `  ${name.padEnd(8)} Launch ${config.aliases[name].provider} via cao`)
     .join('\n');
 

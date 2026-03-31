@@ -12,6 +12,7 @@ import { aliasCommand } from './commands/alias.js';
 import { workflowCommand } from './commands/workflow.js';
 import { workflowRunCommand } from './commands/workflow-run.js';
 import {
+  BUILTIN_COMMANDS,
   LEGACY_COMMAND,
   formatHelp,
   formatUnknownCommand,
@@ -24,19 +25,9 @@ import { readAcoConfig } from './config/aco-config.js';
 const args = process.argv.slice(2);
 const command = args[0];
 
-const BUILTIN_COMMANDS = ['setup', 'help', 'version', 'workflow', 'workflow-run', 'alias'];
-
 async function main(): Promise<void> {
   const invokedName = path.basename(process.argv[1] ?? '');
   const config = readAcoConfig();
-
-  // Check for conflicts
-  for (const alias of Object.keys(config.aliases)) {
-    if (BUILTIN_COMMANDS.includes(alias)) {
-      console.error(`Error: alias '${alias}' in .wrapper.json conflicts with a built-in command.`);
-      process.exit(1);
-    }
-  }
 
   if (invokedName === LEGACY_COMMAND) {
     console.error(formatUseCanonicalCommand(selectRecoveryNextStep(command)));

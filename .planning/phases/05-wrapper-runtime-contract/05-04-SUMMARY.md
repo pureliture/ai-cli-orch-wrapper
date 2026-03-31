@@ -19,13 +19,13 @@ metrics:
 # Phase 05 Plan 04: Wrapper Runtime Contract Alignment Summary
 
 ## One-liner
-Implement alias conflict protection, branding alignment for 'aco' setup, and environment variable fallbacks for 'cao-server' connection.
+Protect built-in `aco` commands from alias overrides, align setup branding, and add environment variable fallbacks for the CAO server connection.
 
 ## Key Changes
 
 ### 1. Alias Conflict Protection (CMD-03, Task 1)
-- Implemented a check in `src/cli.ts` to ensure that user-defined aliases in `.wrapper.json` do not override built-in `aco` subcommands (`setup`, `help`, `version`, `workflow`, `workflow-run`, `alias`).
-- CLI now prints a descriptive error and exits with code 1 if a conflict is detected.
+- Kept built-in `aco` subcommands (`setup`, `help`, `version`, `workflow`, `workflow-run`, `alias`) ahead of `.wrapper.json` aliases so reserved names stay inert instead of hijacking dispatch.
+- Filtered reserved alias names out of the help alias list so the visible command surface matches the actual built-ins-first behavior.
 
 ### 2. Branding Alignment (Task 2)
 - Updated `src/commands/setup.ts` to use `aco` branding in user-facing output and tmux config headers.
@@ -34,7 +34,7 @@ Implement alias conflict protection, branding alignment for 'aco' setup, and env
 
 ### 3. Environment Variable Fallbacks (Task 3)
 - Updated `src/orchestration/workflow-runner.ts` to prefer `ACO_CAO_BASE_URL` with a fallback to `WRAPPER_CAO_BASE_URL`.
-- Added a test case in `test/canonical-command-surface.test.ts` to verify the alias conflict protection.
+- Added regression coverage in `test/canonical-command-surface.test.ts` and `test/workflow-cli.test.ts` to prove reserved alias names cannot block built-in commands.
 
 ## Deviations from Plan
 
@@ -44,8 +44,8 @@ Implement alias conflict protection, branding alignment for 'aco' setup, and env
 ## Verification
 
 ### Automated Tests
-- Ran `npm test test/canonical-command-surface.test.ts`.
-- All tests passed, including the newly added `alias conflict with built-in command causes immediate exit 1` test case.
+- Ran `npm run build && node --test test/canonical-command-surface.test.ts test/workflow-cli.test.ts test/setup.test.ts test/config.test.ts test/artifacts.test.ts test/workflow-runner.test.ts test/alias.test.ts test/workflow-config.test.ts`.
+- All targeted CLI/runtime tests passed, including the built-ins-first regressions for `help`, `workflow`, and `workflow-run`.
 
 ### Manual Verification
 - `npm run build` executed successfully.

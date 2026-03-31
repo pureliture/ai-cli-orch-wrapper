@@ -42,7 +42,7 @@
 
 ### Active
 
-- None. v1.1 requirements are validated; the next active scope begins in the deferred documentation and workspace milestones.
+- None. `v1.1` is shipped. The next active scope should be defined by a fresh `v1.2` requirements file.
 
 ### Out of Scope
 
@@ -56,19 +56,56 @@
 
 - **cao**: [AWS Labs CLI Agent Orchestrator](https://github.com/awslabs/cli-agent-orchestrator) — 외부 툴. 이 래퍼는 cao를 설정하고 활용하는 레이어.
 - **registry-hub + cao-profile-registry**: 별도 병렬 개발 중. Claude Code Marketplace처럼 MD 파일 또는 MD 포함 패키지를 제공하는 구조. 지금은 "특정 URL에서 파일을 내려주는 서비스"로만 가정.
-- **현재 코드 상태**: 약 2,749 LOC(TypeScript/JS 기준). `setup`, alias dispatch, workflow config resolution, artifact/prompt helpers, CAO HTTP client, workflow runner, `workflow` / `workflow-run` CLI surface까지 구현 완료.
+- **현재 코드 상태**: 약 3,261 LOC(TypeScript/JS 기준). `setup`, alias dispatch, workflow config resolution, artifact/prompt helpers, CAO HTTP client, workflow runner, `workflow` / `workflow-run` CLI surface까지 구현 완료.
 - **ghostty-tmux-wrapping**: 동일 작업자의 별도 프로젝트. base tmux 환경 담당. tmux conf 충돌 방지를 위해 모듈식 구조 협의 완료.
-- **마일스톤 재배치**: `v1.1`은 `aco` public command surface 정리와 `.wrapper*` runtime contract 고정, `v1.2`는 가이드/아키텍처 문서 정비, 기존에 초안이 있던 workspace 확장 범위는 `v1.3`으로 뒤로 미룸.
-- **현재 rename 성격**: public command surface는 `aco`로 고정됐고, repo-local runtime contract는 `.wrapper*`로 유지된다. v1.1 runtime scope는 완료됐고, 남은 follow-up은 milestone wrap-up 및 v1.2 문서 정비다.
+- **마일스톤 재배치**: `v1.1`은 `aco` public command surface 정리와 `.wrapper*` runtime contract 고정, `v1.2`는 가이드/아키텍처 문서 정비, 기존 workspace 확장 범위는 `v1.3`으로 뒤로 미룸.
+- **현 상태 요약**: public command surface는 `aco`로 고정됐고 repo-local runtime contract는 `.wrapper*`로 유지된다. 다음 중요한 작업은 문서/아키텍처 정합성 회복이다.
 
 ## Current State
 
-- **Shipped version:** v1.0
-- **Milestone status:** v1.0 shipped, v1.1 phases complete and ready for milestone wrap-up, v1.2/v1.3 queued
-- **Active milestone:** v1.1 Wrapper Command Consolidation
+- **Shipped version:** v1.1
+- **Milestone status:** v1.0 and v1.1 shipped
+- **Active milestone:** none
 - **Next milestones:** v1.2 Documentation + Architecture Cleanup, v1.3 Isolated Workspaces + Workflow Ergonomics
-- **Runtime coverage:** build, lint, full automated tests, named workflow smoke test, ad-hoc workflow smoke test
+- **Latest verification:** `npm run build && node --test test/canonical-command-surface.test.ts test/workflow-cli.test.ts test/setup.test.ts test/config.test.ts test/artifacts.test.ts test/workflow-runner.test.ts test/alias.test.ts test/workflow-config.test.ts` passed (45/45)
+- **Audit status:** v1.1 shipped with non-blocking validation debt; see `.planning/milestones/v1.1-MILESTONE-AUDIT.md`
 - **Operational note:** 실환경에서는 artifact 존재 여부를 workflow step 완료 신호로 취급해야 안정적임
+
+## Next Milestone Goals
+
+### v1.2 Documentation + Architecture Cleanup
+
+- README와 설치 가이드를 shipped `aco` surface 기준으로 정리
+- wrapper architecture, config files, workflow lifecycle를 문서에서 추적 가능하게 만들기
+- planning/project docs가 실제 shipped runtime contract와 이후 milestone 경계에 맞게 정렬되도록 정리
+
+### v1.3 Isolated Workspaces + Workflow Ergonomics
+
+- isolated workspace lifecycle
+- richer workflow restart/reviewer controls
+- provider preflight and lighter bootstrap guidance
+
+## Constraints
+
+- **전제 조건**: cao, tmux, workmux는 이미 설치된 환경에서만 동작
+- **tmux conf 비침습**: `~/.tmux.conf` 직접 수정 금지. `~/.config/tmux/ai-cli.conf`에만 작성하고 source 라인 한 줄만 추가
+- **registry 결합 금지**: registry-hub URL은 설정값으로만 참조, 이 래퍼에 하드코딩 또는 의존 금지
+- **이식성 우선**: 환경 상태는 이 레포 안에서 완전히 재현 가능해야 함
+
+## Key Decisions
+
+| Decision | Rationale | Outcome |
+|----------|-----------|---------|
+| `aco`를 canonical CLI 이름으로 고정 | command surface가 흔들리면 이후 docs/workspace milestone이 다시 중복 정리를 요구하게 됨 | ✓ Shipped in v1.1 |
+| public CLI rename과 `.wrapper*` disk contract를 분리 | rename migration risk를 줄이고 기존 repo-local state를 깨지 않기 위해 | ✓ Shipped in v1.1 |
+| reserved alias names는 inert 처리 | built-ins-first contract를 유지해야 CLI surface가 config에 의해 깨지지 않음 | ✓ Shipped in v1.1 |
+| 문서 정비를 별도 v1.2로 분리 | rename milestone의 acceptance를 runtime contract 중심으로 유지해야 범위가 작고 검증 가능함 | — Next |
+| tmux conf 모듈식 분리 (`~/.config/tmux/ai-cli.conf`) | ghostty-tmux-wrapping과 `~/.tmux.conf` 소유권 충돌 방지 | ✓ Validated |
+| registry-hub 결합 금지 | registry-hub는 독립 프로젝트로 병렬 개발 중, 래퍼가 종속되면 양쪽 개발 속도에 영향 | — Ongoing |
+| workflow 완료 판정은 artifact 기준 | 실환경 CAO terminal state만으로는 조기 완료 오판 가능 | ✓ Validated |
+
+<details>
+<summary>Archived v1.1 Milestone Framing</summary>
 
 ## Current Milestone: v1.1 Wrapper Command Consolidation
 
@@ -83,26 +120,7 @@
 - v1.2 guide / architecture / planning document alignment
 - v1.3 isolated workspace lifecycle, richer workflow control, and provider readiness expansion
 
-## Constraints
-
-- **전제 조건**: cao, tmux, workmux는 이미 설치된 환경에서만 동작
-- **tmux conf 비침습**: `~/.tmux.conf` 직접 수정 금지. `~/.config/tmux/ai-cli.conf`에만 작성하고 source 라인 한 줄만 추가
-- **registry 결합 금지**: registry-hub URL은 설정값으로만 참조, 이 래퍼에 하드코딩 또는 의존 금지
-- **이식성 우선**: 환경 상태는 이 레포 안에서 완전히 재현 가능해야 함
-
-## Key Decisions
-
-| Decision | Rationale | Outcome |
-|----------|-----------|---------|
-| `aco`를 다음 확장 전 canonical CLI 이름으로 고정 | command surface가 흔들리면 이후 docs/workspace milestone이 다시 중복 정리를 요구하게 됨 | — Completed Phase 4 |
-| 문서 정비를 별도 v1.2로 분리 | rename milestone의 acceptance를 runtime contract 중심으로 유지해야 범위가 작고 검증 가능함 | — Pending |
-| tmux conf 모듈식 분리 (`~/.config/tmux/ai-cli.conf`) | ghostty-tmux-wrapping과 `~/.tmux.conf` 소유권 충돌 방지 | — Pending |
-| registry-hub 결합 금지 | registry-hub는 독립 프로젝트로 병렬 개발 중, 래퍼가 종속되면 양쪽 개발 속도에 영향 | — Pending |
-| cmux 제외 | 이번 목표 범위에서 불필요 | — Pending |
-| 현재 src/ 코드 재작성 | 기존 코드는 관련 없는 PoC | — Completed Phase 1 |
-| wrapper DSL 미도입 | cao native workflow/provider 개념을 유지해야 portability와 상호운용성이 높음 | — Completed Phase 2 |
-| workflow 완료 판정은 artifact 기준 | 실환경 CAO terminal state만으로는 조기 완료 오판 가능 | — Completed Phase 3 |
-| planner/reviewer direct-write prompt 강화 | 실환경 provider가 먼저 파일을 쓰지 않으면 smoke test가 불안정해짐 | — Completed Phase 3 |
+</details>
 
 ## Evolution
 
@@ -122,4 +140,4 @@
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 after Phase 04 gap closure and milestone sync*
+*Last updated: 2026-04-01 after v1.1 milestone completion*
