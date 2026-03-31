@@ -13,7 +13,7 @@ v1.1 is a narrowing milestone. Before this wrapper grows into workspace manageme
 
 ## Phases
 
-- [x] **Phase 04: Canonical Command Surface** - Standardize `aco` as the single visible CLI name and recovery path. (completed 2026-03-31)
+- [ ] **Phase 04: Canonical Command Surface** - Standardize `aco` as the single visible CLI name and recovery path. (gap closure pending 2026-03-31)
 - [x] **Phase 05: Wrapper Runtime Contract** - Keep setup, alias, and workflow behaviors consistent with the existing `.wrapper*` repo-local contract under the `aco` public command. (completed 2026-03-31)
 
 ## Phase Details
@@ -26,10 +26,11 @@ v1.1 is a narrowing milestone. Before this wrapper grows into workspace manageme
   1. User can invoke the installed CLI with the canonical `aco` command on a supported machine.
   2. Help, usage, version, and command error output all identify the tool as `aco`.
   3. If the user reaches a stale command invocation path, the CLI tells them directly to use `aco`.
-**Plans**: 2 plans
+**Plans**: 3 plans
 Plans:
 - [x] 04-01-PLAN.md — Cut over the install/help/version surface and public quick-start guidance to `aco`
 - [x] 04-02-PLAN.md — Fail fast on stale `wrapper` entrypaths and align setup-managed wording to `aco`
+- [ ] 04-03-PLAN.md — Remove stale package-owned `wrapper` shims during install/relink and verify the real machine surface is `aco`-only
 
 ### Phase 05: Wrapper Runtime Contract
 **Goal**: Users can trust the existing v1.0 runtime flows to keep working once `aco` is the canonical public command while the `.wrapper*` repo-local contract remains in place.
@@ -53,5 +54,5 @@ Plans:
 | 01. Foundation + Environment Setup | v1.0 | 2/2 | Complete | 2026-03-25 |
 | 02. CLI Aliases + Workflow Config | v1.0 | 4/4 | Complete | 2026-03-25 |
 | 03. Plan→Review Orchestration Loop | v1.0 | 4/4 | Complete | 2026-03-25 |
-| 04. Canonical Command Surface | v1.1 | 2/2 | Complete    | 2026-03-31 |
+| 04. Canonical Command Surface | v1.1 | 2/3 | Gap closure pending | — |
 | 05. Wrapper Runtime Contract | v1.1 | 4/4 | Complete    | 2026-03-31 |
