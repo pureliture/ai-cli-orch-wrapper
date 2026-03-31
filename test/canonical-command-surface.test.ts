@@ -5,7 +5,7 @@
  */
 
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
@@ -60,6 +60,39 @@ test('help output uses aco as the visible command name', () => {
   assert.ok(!result.stdout.includes('Usage: wrapper <command>'));
 });
 
+test('stale wrapper help invocation fails fast with aco help remediation', () => {
+  const dir = makeTempDir();
+  writeConfig(dir);
+  const staleCliPath = join(dir, 'wrapper');
+  symlinkSync(CLI_PATH, staleCliPath);
+
+  const result = spawnSync(process.execPath, [staleCliPath, 'help'], {
+    cwd: dir,
+    env: process.env,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr.trim(), 'Use aco help.');
+  assert.ok(!result.stdout.includes('Usage: wrapper <command>'));
+});
+
+test('stale wrapper setup invocation fails fast with aco setup remediation', () => {
+  const dir = makeTempDir();
+  writeConfig(dir);
+  const staleCliPath = join(dir, 'wrapper');
+  symlinkSync(CLI_PATH, staleCliPath);
+
+  const result = spawnSync(process.execPath, [staleCliPath, 'setup'], {
+    cwd: dir,
+    env: process.env,
+    encoding: 'utf8',
+  });
+
+  assert.equal(result.status, 1);
+  assert.equal(result.stderr.trim(), 'Use aco setup.');
+});
+
 test('version output reads from package.json and uses aco branding', () => {
   const packageJson = JSON.parse(readFileSync(PACKAGE_JSON_PATH, 'utf8'));
   const dir = makeTempDir();
@@ -72,14 +105,25 @@ test('version output reads from package.json and uses aco branding', () => {
   assert.ok(!result.stdout.includes('ai-cli-orch-wrapper'));
 });
 
+test('bare invocation exits with aco help remediation instead of undefined unknown-command output', () => {
+  const dir = makeTempDir();
+  writeConfig(dir);
+
+  const result = runCli([], dir);
+
+  assert.equal(result.status, 1);
+  assert.ok(result.stderr.includes('Use aco help.'));
+  assert.ok(!result.stderr.includes("unknown command 'undefined'"));
+});
+
 test('ordinary unknown-command output points users to aco help only', () => {
   const dir = makeTempDir();
   writeConfig(dir);
 
-  const result = runCli(['not-a-real-command'], dir);
+  const result = runCli(['typo-command'], dir);
 
   assert.equal(result.status, 1);
-  assert.ok(result.stderr.includes("unknown command 'not-a-real-command'"));
+  assert.ok(result.stderr.includes("unknown command 'typo-command'"));
   assert.ok(result.stderr.trim().endsWith('Use aco help.'));
   assert.ok(!result.stderr.includes('wrapper'));
   assert.ok(!result.stderr.includes('ai-cli-orch-wrapper'));
