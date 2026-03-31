@@ -5,7 +5,7 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "wrapper": "dist/cli.js"
+    "aco": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
