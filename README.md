@@ -87,6 +87,19 @@ aco help
 aco version
 ```
 
+## Refreshing a Pre-`aco` Global Link
+
+If this machine was linked or installed before the command-surface cutover, it can still have a stale package-owned `wrapper` executable in the global npm bin directory even though the package now exposes only `aco`.
+
+Use this one refresh path to remove only the stale package-owned shim and then relink the current package:
+
+```bash
+npm run cleanup:legacy-bin
+npm link
+```
+
+After the relink, `aco help` should work from the global install state and any unrelated `wrapper` executable should be left untouched.
+
 ## Intended Resolution Flow
 
 1. fetch `registry-hub/registry-catalog.jsonld`
