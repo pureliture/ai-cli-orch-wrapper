@@ -28,7 +28,7 @@ v1.1 is a narrowing milestone. Before this wrapper grows into workspace manageme
   3. If the user reaches a stale command invocation path, the CLI tells them directly to use `aco`.
 **Plans**: 2 plans
 Plans:
-- [ ] 04-01-PLAN.md — Cut over the install/help/version surface and public quick-start guidance to `aco`
+- [x] 04-01-PLAN.md — Cut over the install/help/version surface and public quick-start guidance to `aco`
 - [ ] 04-02-PLAN.md — Fail fast on stale `wrapper` entrypaths and align setup-managed wording to `aco`
 
 ### Phase 05: Wrapper Runtime Contract
@@ -48,5 +48,5 @@ Plans:
 | 01. Foundation + Environment Setup | v1.0 | 2/2 | Complete | 2026-03-25 |
 | 02. CLI Aliases + Workflow Config | v1.0 | 4/4 | Complete | 2026-03-25 |
 | 03. Plan→Review Orchestration Loop | v1.0 | 4/4 | Complete | 2026-03-25 |
-| 04. Canonical Command Surface | v1.1 | 0/TBD | Not started | - |
+| 04. Canonical Command Surface | v1.1 | 1/2 | In Progress|  |
 | 05. Wrapper Runtime Contract | v1.1 | 0/TBD | Not started | - |

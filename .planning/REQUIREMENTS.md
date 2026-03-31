@@ -7,8 +7,8 @@
 
 ### Canonical Command
 
-- [ ] **CMD-01**: User can invoke the installed CLI through the canonical `wrapper` command on a supported machine
-- [ ] **CMD-02**: User sees `wrapper` in help, usage, version, and command error output instead of legacy command labels
+- [x] **CMD-01**: User can invoke the installed CLI through the canonical `wrapper` command on a supported machine
+- [x] **CMD-02**: User sees `wrapper` in help, usage, version, and command error output instead of legacy command labels
 - [ ] **CMD-03**: User can rely on built-in subcommands continuing to override alias names after the command surface is consolidated
 
 ### Wrapper Runtime Contract
@@ -53,8 +53,8 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CMD-01 | Phase 04 | Pending |
-| CMD-02 | Phase 04 | Pending |
+| CMD-01 | Phase 04 | Complete |
+| CMD-02 | Phase 04 | Complete |
 | WRAP-03 | Phase 04 | Pending |
 | CMD-03 | Phase 05 | Pending |
 | WRAP-01 | Phase 05 | Pending |

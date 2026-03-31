@@ -2,16 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Wrapper Command Consolidation
-status: Ready to plan Phase 04
-stopped_at: Phase 04 context gathered
-last_updated: "2026-03-31T01:40:51.962Z"
-last_activity: 2026-03-31 — v1.1 roadmap created with 2 phases and 6 mapped requirements
+status: Ready to execute
+stopped_at: Completed 04-01-PLAN.md
+last_updated: "2026-03-31T02:22:43.729Z"
 progress:
   total_phases: 2
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_plans: 2
+  completed_plans: 1
 ---
 
 # Project State
@@ -21,16 +19,12 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Any machine, one command, same AI CLI orchestration environment instantly restored
-**Current focus:** Phase 04 planning for the canonical `aco` command surface
+**Current focus:** Phase 04 — canonical-command-surface
 
 ## Current Position
 
-Milestone: v1.1 Wrapper Command Consolidation
-Phase: 04 of 05 total project phases (1 of 2 in v1.1)
-Plan: 0 of 0 (phase plan not created yet)
-Status: Ready to plan Phase 04
-Last activity: 2026-03-31 — v1.1 roadmap created with 2 phases and 6 mapped requirements
-Progress: [□□□□□□□□□□] 0% active milestone progress
+Phase: 04 (canonical-command-surface) — EXECUTING
+Plan: 2 of 2
 
 ## Performance Metrics
 
@@ -44,6 +38,7 @@ Progress: [□□□□□□□□□□] 0% active milestone progress
 |-----------|--------|-------|--------|
 | v1.0 | 3/3 | 10/10 | Shipped |
 | v1.1 | 0/2 | 0/TBD | Roadmap ready |
+| Phase 04 P01 | 5min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -55,6 +50,8 @@ Recent decisions affecting current work:
 - [v1.0]: Treat workflow artifacts on disk as the authoritative completion signal for live runs.
 - [v1.1 discuss]: Replace `wrapper` with `aco` as the canonical CLI command and remove legacy command-surface retention.
 - [v1.1 roadmap]: Defer guide / architecture cleanup to v1.2 and keep workspace/runtime expansion queued for v1.3.
+- [Phase 04]: Centralized public command strings in src/cli-surface.ts so help, version, and unknown-command output reuse one source of truth.
+- [Phase 04]: Displayed CLI version now reads package.json at runtime to eliminate help/version drift during the aco cutover.
 
 ### Pending Todos
 
@@ -66,7 +63,7 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-03-31T01:40:51.959Z
-Stopped at: Phase 04 context gathered
-Resume file: .planning/phases/04-canonical-command-surface/04-CONTEXT.md
+Last session: 2026-03-31T02:22:43.727Z
+Stopped at: Completed 04-01-PLAN.md
+Resume file: None
 Next command: `/gsd:plan-phase 04`
