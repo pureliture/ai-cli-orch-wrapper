@@ -9,7 +9,7 @@
 
 - [x] **CMD-01**: User can invoke the installed CLI through the canonical `aco` command on a supported machine
 - [x] **CMD-02**: User sees `aco` in help, usage, version, and command error output instead of legacy command labels
-- [ ] **CMD-03**: User can rely on built-in subcommands continuing to override alias names after the `aco` command surface is consolidated
+- [x] **CMD-03**: User can rely on built-in subcommands continuing to override alias names after the `aco` command surface is consolidated
 
 ### Wrapper Runtime Contract
 
@@ -56,7 +56,7 @@
 | CMD-01 | Phase 04 | Complete |
 | CMD-02 | Phase 04 | Complete |
 | WRAP-03 | Phase 04 | Complete |
-| CMD-03 | Phase 05 | Pending |
+| CMD-03 | Phase 05 | Complete |
 | WRAP-01 | Phase 05 | Complete |
 | WRAP-02 | Phase 05 | Complete |
 

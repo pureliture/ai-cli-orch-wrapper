@@ -35,7 +35,7 @@ test('ai-cli.conf is created with correct header content', async () => {
     assert.ok(existsSync(confPath), 'ai-cli.conf should exist');
 
     const content = readFileSync(confPath, 'utf8');
-    assert.ok(content.includes('# ai-cli-orch-wrapper tmux config'), 'should include title comment');
+    assert.ok(content.includes('# aco tmux config'), 'should include title comment');
     assert.ok(content.includes('# Managed by aco setup'), 'should include managed-by comment');
     assert.ok(content.includes('# CLI alias bindings are managed via .wrapper.json in the project root.'), 'should include wrapper.json reference comment');
   } finally {

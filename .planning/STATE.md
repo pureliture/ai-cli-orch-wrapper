@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Wrapper Command Consolidation
-status: Ready to execute
-stopped_at: Completed 05-wrapper-runtime-contract-02-PLAN.md
-last_updated: "2026-03-31T05:09:16.822Z"
+status: Milestone complete
+stopped_at: Completed 05-wrapper-runtime-contract-04-PLAN.md
+last_updated: "2026-03-31T06:16:48.318Z"
 progress:
   total_phases: 2
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 4
+  completed_plans: 6
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Current Position
 
-Phase: 05 (wrapper-runtime-contract) — EXECUTING
-Plan: 3 of 4
+Phase: 05
+Plan: Not started
 
 ## Performance Metrics
 
@@ -42,6 +42,7 @@ Plan: 3 of 4
 | Phase 04 P02 | 5min | 2 tasks | 4 files |
 | Phase 05 P01 | 15m | 2 tasks | 1 files |
 | Phase 05-wrapper-runtime-contract P02 | 15m | 3 tasks | 10 files |
+| Phase 05-wrapper-runtime-contract P04 | 25m | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -61,6 +62,9 @@ Recent decisions affecting current work:
 - [Phase 05]: [D-05] Remove all wrapper.lock references from core planning docs as it's out of scope for v1.1.
 - [Phase 05-wrapper-runtime-contract]: [D-03] Branding Alignment: Renamed internal configuration to AcoConfig
 - [Phase 05-wrapper-runtime-contract]: [D-04] Contract Preservation: Kept .wrapper.json as on-disk config filename
+- [Phase 05-wrapper-runtime-contract]: [D-06] Prefer 'ACO_CAO_BASE_URL' with fallback to 'WRAPPER_CAO_BASE_URL' for branding transition
+- [Phase 05-wrapper-runtime-contract]: [D-07] Added '_comment' field to '.wrapper.json' for branding during setup
+- [Phase 05-wrapper-runtime-contract]: [D-08] Protect built-in command names from alias overrides
 
 ### Pending Todos
 
@@ -72,7 +76,7 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-03-31T05:09:16.819Z
-Stopped at: Completed 05-wrapper-runtime-contract-02-PLAN.md
+Last session: 2026-03-31T05:51:32.073Z
+Stopped at: Completed 05-wrapper-runtime-contract-04-PLAN.md
 Resume file: None
 Next command: `/gsd:plan-phase 05`

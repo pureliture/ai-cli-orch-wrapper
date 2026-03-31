@@ -65,7 +65,7 @@ test('help lists workflow and workflow-run commands', () => {
   assert.ok(result.stdout.includes('workflow-run Run ad-hoc workflow with runtime overrides'));
 });
 
-test('workflow missing-workflow exits 1 with exact error even if alias named workflow exists', () => {
+test('workflow missing-workflow exits 1 with conflict error when workflow is shadowed', () => {
   const dir = makeTempDir();
   writeConfig(dir, createBaseConfig({
     aliases: {
@@ -76,10 +76,10 @@ test('workflow missing-workflow exits 1 with exact error even if alias named wor
   const result = runCli(['workflow', 'missing-workflow'], dir);
 
   assert.equal(result.status, 1);
-  assert.ok(result.stderr.includes("Error: unknown workflow 'missing-workflow'"));
+  assert.ok(result.stderr.includes("Error: alias 'workflow' in .wrapper.json conflicts with a built-in command."));
 });
 
-test('workflow-run exits 1 with exact missing required flags error', () => {
+test('workflow-run exits 1 with conflict error when workflow-run is shadowed', () => {
   const dir = makeTempDir();
   writeConfig(dir, createBaseConfig({
     aliases: {
@@ -90,7 +90,7 @@ test('workflow-run exits 1 with exact missing required flags error', () => {
   const result = runCli(['workflow-run'], dir);
 
   assert.equal(result.status, 1);
-  assert.ok(result.stderr.includes('Error: missing required flags: --planner-role, --reviewer-role'));
+  assert.ok(result.stderr.includes("Error: alias 'workflow-run' in .wrapper.json conflicts with a built-in command."));
 });
 
 test('workflow named command passes overrides through to the command layer', () => {
@@ -116,7 +116,7 @@ test('workflow named command passes overrides through to the command layer', () 
   assert.ok(!result.stderr.includes("Error: unknown command 'workflow'"));
 });
 
-test('built-ins help and version still win over config-defined workflow names and aliases', () => {
+test('built-ins help and version shadowing causes conflict error', () => {
   const dir = makeTempDir();
   writeConfig(dir, {
     aliases: {
@@ -126,24 +126,10 @@ test('built-ins help and version still win over config-defined workflow names an
       orchestrator: 'claude_code',
       reviewer: 'gemini_cli',
     },
-    workflows: {
-      version: {
-        plannerRole: 'orchestrator',
-        plannerAgent: 'developer',
-        reviewerRole: 'reviewer',
-        reviewerAgent: 'reviewer',
-        maxIterations: 3,
-        plannerLaunchArgs: [],
-        reviewerLaunchArgs: [],
-      },
-    },
   });
 
   const helpResult = runCli(['help'], dir);
-  const versionResult = runCli(['version'], dir);
 
-  assert.equal(helpResult.status, 0);
-  assert.ok(helpResult.stdout.includes('Usage: aco <command>'));
-  assert.equal(versionResult.status, 0);
-  assert.ok(versionResult.stdout.startsWith('aco v'));
+  assert.equal(helpResult.status, 1);
+  assert.ok(helpResult.stderr.includes("Error: alias 'help' in .wrapper.json conflicts with a built-in command."));
 });
