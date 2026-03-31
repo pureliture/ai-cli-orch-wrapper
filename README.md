@@ -83,7 +83,8 @@ npm run build
 ```bash
 npm install
 npm run build
-node dist/cli.js --help
+aco help
+aco version
 ```
 
 ## Intended Resolution Flow
@@ -109,9 +110,9 @@ The upstream registry structure has moved ahead of this repo's implementation.
 
 Today this repo still contains a small downloader-oriented CLI prototype:
 
-- `wrapper download <url>`
-- `wrapper help`
-- `wrapper version`
+- `aco download <url>`
+- `aco help`
+- `aco version`
 
 That prototype is useful as scaffolding, but it does **not** yet implement the full upstream JSON-LD registry resolution flow described above.
 
@@ -160,7 +161,7 @@ npm install
 npm run build
 
 # Run the current prototype CLI
-node dist/cli.js --help
+aco help
 
 # Verification currently available in this repo
 npm test
