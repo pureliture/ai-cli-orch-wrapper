@@ -1,11 +1,11 @@
 ---
-status: complete
+status: diagnosed
 phase: 04-canonical-command-surface
 source:
   - 04-01-SUMMARY.md
   - 04-02-SUMMARY.md
 started: 2026-03-31T07:53:01Z
-updated: 2026-03-31T08:10:57Z
+updated: 2026-03-31T08:13:14Z
 ---
 
 ## Current Test
@@ -57,5 +57,15 @@ blocked: 0
   reason: "User reported: 테스트 결과자체는 pass 인데 wrapper라는 명령어 자체가 command not found로 잡혀야하는데 명령어로 인식이되고있네"
   severity: major
   test: 4
-  artifacts: []
-  missing: []
+  root_cause: "This machine still has a stale global `/opt/homebrew/bin/wrapper` symlink from an older npm link/install state. The current package metadata exposes only `aco`, but the leftover `wrapper` shim still resolves and then intentionally hits the CLI's fail-fast remediation path."
+  artifacts:
+    - path: "package.json"
+      issue: "Current bin contract exposes only `aco`, so the observed `wrapper` command is not coming from the repo's published bin metadata."
+    - path: "src/cli.ts"
+      issue: "Legacy basename `wrapper` is intentionally detected and remediated to `Use aco ...`, which matches the runtime behavior once the stale shim is invoked."
+    - path: "test/canonical-command-surface.test.ts"
+      issue: "Regression coverage explicitly locks stale `wrapper` remediation, not shell-level `command not found` absence."
+  missing:
+    - "Clean up the stale global `wrapper` shim left in `/opt/homebrew/bin`."
+    - "Add an install-state cleanup/relink path so old `wrapper` shims are removed when only `aco` should remain."
+  debug_session: ".planning/debug/wrapper-still-resolves.md"
