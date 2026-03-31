@@ -39,7 +39,12 @@ Plans:
   1. User can run `aco setup` and get repo-local config initialized through the `.wrapper.json` contract without manual rename work.
   2. User can run alias and workflow entrypoints through `aco` while artifacts continue to land under the expected `.wrapper/` paths.
   3. Built-in subcommands continue to take precedence over alias names after the command surface is consolidated to `aco`.
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+- [x] 05-01-PLAN.md — Cleanup legacy lockfile references and finalize phase metadata
+- [x] 05-02-PLAN.md — Rename internal Config symbols and module to Aco branding
+- [ ] 05-03-PLAN.md — Rename internal Artifact/Orchestration symbols to Aco branding
+- [ ] 05-04-PLAN.md — Implement alias conflict protection and branding alignment
 
 ## Progress
 
@@ -49,4 +54,4 @@ Plans:
 | 02. CLI Aliases + Workflow Config | v1.0 | 4/4 | Complete | 2026-03-25 |
 | 03. Plan→Review Orchestration Loop | v1.0 | 4/4 | Complete | 2026-03-25 |
 | 04. Canonical Command Surface | v1.1 | 2/2 | Complete    | 2026-03-31 |
-| 05. Wrapper Runtime Contract | v1.1 | 0/TBD | Not started | - |
+| 05. Wrapper Runtime Contract | v1.1 | 2/4 | In Progress|  |

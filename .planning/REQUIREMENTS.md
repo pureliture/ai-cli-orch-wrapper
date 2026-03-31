@@ -13,8 +13,8 @@
 
 ### Wrapper Runtime Contract
 
-- [ ] **WRAP-01**: User can run `aco setup` and get repo-local config initialized through the `.wrapper.json` contract without manual renaming
-- [ ] **WRAP-02**: User can run alias and workflow entrypoints through `aco` while artifacts continue to be stored under the expected `.wrapper/` paths
+- [x] **WRAP-01**: User can run `aco setup` and get repo-local config initialized through the `.wrapper.json` contract without manual renaming
+- [x] **WRAP-02**: User can run alias and workflow entrypoints through `aco` while artifacts continue to be stored under the expected `.wrapper/` paths
 - [x] **WRAP-03**: User receives direct remediation telling them to use `aco` when they hit a stale command invocation or packaging assumption
 
 ## Future Requirements
@@ -57,8 +57,8 @@
 | CMD-02 | Phase 04 | Complete |
 | WRAP-03 | Phase 04 | Complete |
 | CMD-03 | Phase 05 | Pending |
-| WRAP-01 | Phase 05 | Pending |
-| WRAP-02 | Phase 05 | Pending |
+| WRAP-01 | Phase 05 | Complete |
+| WRAP-02 | Phase 05 | Complete |
 
 **Coverage:**
 - v1 requirements: 6 total

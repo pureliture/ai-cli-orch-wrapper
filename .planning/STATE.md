@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Wrapper Command Consolidation
-status: Ready to plan Phase 05
-stopped_at: Phase 05 context gathered
-last_updated: "2026-03-31T04:17:32.538Z"
+status: Ready to execute
+stopped_at: Completed 05-wrapper-runtime-contract-02-PLAN.md
+last_updated: "2026-03-31T05:09:16.822Z"
 progress:
   total_phases: 2
   completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  total_plans: 6
+  completed_plans: 4
 ---
 
 # Project State
@@ -23,8 +23,8 @@ See: .planning/PROJECT.md (updated 2026-03-31)
 
 ## Current Position
 
-Phase: 05 (wrapper-runtime-contract) — READY TO PLAN
-Plan: 0 of 0
+Phase: 05 (wrapper-runtime-contract) — EXECUTING
+Plan: 3 of 4
 
 ## Performance Metrics
 
@@ -40,6 +40,8 @@ Plan: 0 of 0
 | v1.1 | 1/2 | 2/2 | Active |
 | Phase 04 P01 | 5min | 2 tasks | 6 files |
 | Phase 04 P02 | 5min | 2 tasks | 4 files |
+| Phase 05 P01 | 15m | 2 tasks | 1 files |
+| Phase 05-wrapper-runtime-contract P02 | 15m | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -56,6 +58,9 @@ Recent decisions affecting current work:
 - [Phase 04]: Rejected wrapper as a compatibility alias and fail fast only when the invoked executable basename is wrapper.
 - [Phase 04]: Reuse cli-surface recovery helpers so aco help/setup remediation stays centralized.
 - [Phase 04]: Keep .wrapper.json and related runtime-contract identifiers deferred to Phase 05.
+- [Phase 05]: [D-05] Remove all wrapper.lock references from core planning docs as it's out of scope for v1.1.
+- [Phase 05-wrapper-runtime-contract]: [D-03] Branding Alignment: Renamed internal configuration to AcoConfig
+- [Phase 05-wrapper-runtime-contract]: [D-04] Contract Preservation: Kept .wrapper.json as on-disk config filename
 
 ### Pending Todos
 
@@ -67,7 +72,7 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-03-31T04:17:32.535Z
-Stopped at: Phase 05 context gathered
-Resume file: .planning/phases/05-wrapper-runtime-contract/05-CONTEXT.md
+Last session: 2026-03-31T05:09:16.819Z
+Stopped at: Completed 05-wrapper-runtime-contract-02-PLAN.md
+Resume file: None
 Next command: `/gsd:plan-phase 05`
