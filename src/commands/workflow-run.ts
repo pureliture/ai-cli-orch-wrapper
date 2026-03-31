@@ -4,7 +4,7 @@
  * Parses runtime workflow overrides and executes a one-off workflow run.
  */
 
-import { readWrapperConfig } from '../config/wrapper-config.js';
+import { readAcoConfig } from '../config/aco-config.js';
 import {
   resolveAdHocWorkflow,
   type WorkflowOverrides,
@@ -107,7 +107,7 @@ export async function workflowRunCommand(args: string[]): Promise<void> {
     throw new Error(`missing required flags: ${missingRequiredFlags.join(', ')}`);
   }
 
-  const config = readWrapperConfig();
+  const config = readAcoConfig();
   const workflow = resolveAdHocWorkflow(config, {
     plannerRole: overrides.plannerRole,
     plannerAgent: overrides.plannerAgent ?? 'developer',
