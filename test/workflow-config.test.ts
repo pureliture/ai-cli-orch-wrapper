@@ -23,7 +23,7 @@ function writeConfig(dir: string, config: object): string {
 
 // Test 1: named workflow resolves roles to providers through config.roles (D-06, D-07)
 test('resolveNamedWorkflow resolves roles to providers through config.roles', async () => {
-  const { readWrapperConfig } = await import('../dist/config/wrapper-config.js');
+  const { readAcoConfig } = await import('../dist/config/aco-config.js');
   const { resolveNamedWorkflow } = await import('../dist/orchestration/workflow-config.js');
 
   const dir = makeTempDir();
@@ -44,7 +44,7 @@ test('resolveNamedWorkflow resolves roles to providers through config.roles', as
     },
   });
 
-  const config = readWrapperConfig(configPath);
+  const config = readAcoConfig(configPath);
   const resolved = resolveNamedWorkflow(config, 'plan-review');
 
   assert.equal(resolved.workflowName, 'plan-review');
@@ -61,7 +61,7 @@ test('resolveNamedWorkflow resolves roles to providers through config.roles', as
 
 // Test 2: named workflow applies one-run overrides (D-09, D-10)
 test('resolveNamedWorkflow applies one-run overrides', async () => {
-  const { readWrapperConfig } = await import('../dist/config/wrapper-config.js');
+  const { readAcoConfig } = await import('../dist/config/aco-config.js');
   const { resolveNamedWorkflow } = await import('../dist/orchestration/workflow-config.js');
 
   const dir = makeTempDir();
@@ -83,7 +83,7 @@ test('resolveNamedWorkflow applies one-run overrides', async () => {
     },
   });
 
-  const config = readWrapperConfig(configPath);
+  const config = readAcoConfig(configPath);
   const resolved = resolveNamedWorkflow(config, 'plan-review', {
     plannerRole: 'coder',
     plannerAgent: 'architect',
@@ -106,7 +106,7 @@ test('resolveNamedWorkflow applies one-run overrides', async () => {
 
 // Test 3: missing role reference fails with "Unknown role" prefix
 test('resolveNamedWorkflow throws for missing role reference', async () => {
-  const { readWrapperConfig } = await import('../dist/config/wrapper-config.js');
+  const { readAcoConfig } = await import('../dist/config/aco-config.js');
   const { resolveNamedWorkflow } = await import('../dist/orchestration/workflow-config.js');
 
   const dir = makeTempDir();
@@ -124,7 +124,7 @@ test('resolveNamedWorkflow throws for missing role reference', async () => {
     },
   });
 
-  const config = readWrapperConfig(configPath);
+  const config = readAcoConfig(configPath);
   assert.throws(
     () => resolveNamedWorkflow(config, 'plan-review'),
     (err: Error) => err.message.startsWith('Unknown role'),
@@ -133,7 +133,7 @@ test('resolveNamedWorkflow throws for missing role reference', async () => {
 
 // Test 4: malformed workflow definition fails with "Invalid workflow" prefix
 test('resolveNamedWorkflow throws for malformed workflow definition', async () => {
-  const { readWrapperConfig } = await import('../dist/config/wrapper-config.js');
+  const { readAcoConfig } = await import('../dist/config/aco-config.js');
   const { resolveNamedWorkflow } = await import('../dist/orchestration/workflow-config.js');
 
   const dir = makeTempDir();
@@ -148,7 +148,7 @@ test('resolveNamedWorkflow throws for malformed workflow definition', async () =
     },
   });
 
-  const config = readWrapperConfig(configPath);
+  const config = readAcoConfig(configPath);
   assert.throws(
     () => resolveNamedWorkflow(config, 'bad-workflow'),
     (err: Error) => err.message.startsWith('Invalid workflow'),
@@ -157,7 +157,7 @@ test('resolveNamedWorkflow throws for malformed workflow definition', async () =
 
 // Test 5: resolveAdHocWorkflow produces same resolved shape (D-02, D-11)
 test('resolveAdHocWorkflow produces resolved shape with provider resolution', async () => {
-  const { readWrapperConfig } = await import('../dist/config/wrapper-config.js');
+  const { readAcoConfig } = await import('../dist/config/aco-config.js');
   const { resolveAdHocWorkflow } = await import('../dist/orchestration/workflow-config.js');
 
   const dir = makeTempDir();
@@ -169,7 +169,7 @@ test('resolveAdHocWorkflow produces resolved shape with provider resolution', as
     },
   });
 
-  const config = readWrapperConfig(configPath);
+  const config = readAcoConfig(configPath);
   const resolved = resolveAdHocWorkflow(config, {
     plannerRole: 'orchestrator',
     plannerAgent: 'developer',
@@ -188,7 +188,7 @@ test('resolveAdHocWorkflow produces resolved shape with provider resolution', as
 
 // Test 6: resolveNamedWorkflow throws when workflow name not found
 test('resolveNamedWorkflow throws for unknown workflow name', async () => {
-  const { readWrapperConfig } = await import('../dist/config/wrapper-config.js');
+  const { readAcoConfig } = await import('../dist/config/aco-config.js');
   const { resolveNamedWorkflow } = await import('../dist/orchestration/workflow-config.js');
 
   const dir = makeTempDir();
@@ -198,7 +198,7 @@ test('resolveNamedWorkflow throws for unknown workflow name', async () => {
     workflows: {},
   });
 
-  const config = readWrapperConfig(configPath);
+  const config = readAcoConfig(configPath);
   assert.throws(
     () => resolveNamedWorkflow(config, 'nonexistent'),
     (err: Error) => err.message.startsWith('Invalid workflow'),

@@ -33,12 +33,12 @@ test('unknown alias exits 1 with error message', () => {
   assert.ok(result.stderr.includes("Error: unknown command 'unknownalias'"), 'stderr should include error message with alias name');
 });
 
-// Test 2: wrapper claude dispatches to cao launch with correct provider and agent (ALIAS-01)
+// Test 2: aco claude dispatches to cao launch with correct provider and agent (ALIAS-01)
 // This test verifies the subprocess exits with the cao exit code — cao itself is not installed
 // in CI so we expect a non-zero exit from spawnSync(cao) ENOENT, not a wrapper logic error.
 // The test verifies stderr contains wrapper-friendly ENOENT message, not a dispatch logic error.
-test('wrapper claude attempts cao launch with claude_code provider (ALIAS-01)', async () => {
-  const { readWrapperConfig } = await import('../dist/config/wrapper-config.js');
+test('aco claude attempts cao launch with claude_code provider (ALIAS-01)', async () => {
+  const { readAcoConfig } = await import('../dist/config/aco-config.js');
   const dir = makeTempDir();
   const configPath = join(dir, '.wrapper.json');
   writeConfig(dir, {
@@ -48,14 +48,14 @@ test('wrapper claude attempts cao launch with claude_code provider (ALIAS-01)', 
     roles: {},
   });
 
-  const config = readWrapperConfig(configPath);
+  const config = readAcoConfig(configPath);
   assert.equal(config.aliases['claude'].provider, 'claude_code', 'provider should be claude_code');
   assert.equal(config.aliases['claude'].agent, 'developer', 'agent should be developer');
 });
 
 // Test 3: alias added to config is recognized without code changes (ALIAS-02)
 test('alias added to .wrapper.json is recognized without code changes (ALIAS-02)', async () => {
-  const { readWrapperConfig } = await import('../dist/config/wrapper-config.js');
+  const { readAcoConfig } = await import('../dist/config/aco-config.js');
   const dir = makeTempDir();
   const configPath = join(dir, '.wrapper.json');
   writeConfig(dir, {
@@ -65,15 +65,15 @@ test('alias added to .wrapper.json is recognized without code changes (ALIAS-02)
     roles: {},
   });
 
-  const config = readWrapperConfig(configPath);
+  const config = readAcoConfig(configPath);
   assert.ok(config.aliases['myai'] !== undefined, 'custom alias should be present in config');
   assert.equal(config.aliases['myai'].provider, 'some_custom_provider');
   assert.equal(config.aliases['myai'].agent, 'expert');
 });
 
 // Test 4: arbitrary provider string is passed through without wrapper validation (CONFIG-02)
-test('arbitrary provider string is not validated by wrapper (CONFIG-02)', async () => {
-  const { readWrapperConfig } = await import('../dist/config/wrapper-config.js');
+test('arbitrary provider string is not validated by aco (CONFIG-02)', async () => {
+  const { readAcoConfig } = await import('../dist/config/aco-config.js');
   const dir = makeTempDir();
   const configPath = join(dir, '.wrapper.json');
   writeConfig(dir, {
@@ -83,7 +83,7 @@ test('arbitrary provider string is not validated by wrapper (CONFIG-02)', async 
     roles: {},
   });
 
-  const config = readWrapperConfig(configPath);
+  const config = readAcoConfig(configPath);
   // Wrapper must accept any string — cao validates the provider, not wrapper
   assert.equal(config.aliases['future'].provider, 'copilot_cli_v3_experimental');
 });
