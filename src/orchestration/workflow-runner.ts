@@ -8,8 +8,8 @@ import { existsSync, writeFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { CaoHttpClient } from './cao-client.js';
 import {
-  createIterationArtifacts,
-  createWorkflowRunArtifacts,
+  createAcoIterationArtifacts,
+  createAcoWorkflowRunArtifacts,
   writeRunSnapshot,
   writeRunState,
 } from './artifacts.js';
@@ -93,7 +93,7 @@ export async function runWorkflow(
 ): Promise<WorkflowRunResult> {
   const repoRoot = resolve(options?.repoRoot ?? process.cwd());
   const client = options?.client ?? new CaoHttpClient(process.env.WRAPPER_CAO_BASE_URL);
-  const runArtifacts = createWorkflowRunArtifacts(repoRoot, workflow.workflowName);
+  const runArtifacts = createAcoWorkflowRunArtifacts(repoRoot, workflow.workflowName);
   const runId = basename(runArtifacts.runDir);
   const startedAt = now();
 
@@ -161,7 +161,7 @@ export async function runWorkflow(
 
   for (let iterationNumber = 1; iterationNumber <= workflow.maxIterations; iterationNumber += 1) {
     const iterationStartedAt = now();
-    const iterationArtifacts = createIterationArtifacts(runArtifacts.runDir, iterationNumber);
+    const iterationArtifacts = createAcoIterationArtifacts(runArtifacts.runDir, iterationNumber);
     const plannerPrompt = buildPlannerPrompt({
       workflowName: workflow.workflowName,
       iterationNumber,
