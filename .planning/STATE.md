@@ -1,14 +1,17 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.1
-milestone_name: wrapper-command-consolidation
-status: roadmap created
-last_updated: "2026-03-31T01:18:18Z"
+milestone_name: Wrapper Command Consolidation
+status: Ready to plan Phase 04
+stopped_at: Phase 04 context gathered
+last_updated: "2026-03-31T01:40:51.962Z"
+last_activity: 2026-03-31 — v1.1 roadmap created with 2 phases and 6 mapped requirements
 progress:
   total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -18,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Any machine, one command, same AI CLI orchestration environment instantly restored
-**Current focus:** Phase 04 discussion and planning for the canonical wrapper command surface
+**Current focus:** Phase 04 planning for the canonical `aco` command surface
 
 ## Current Position
 
 Milestone: v1.1 Wrapper Command Consolidation
 Phase: 04 of 05 total project phases (1 of 2 in v1.1)
 Plan: 0 of 0 (phase plan not created yet)
-Status: Ready to discuss Phase 04
+Status: Ready to plan Phase 04
 Last activity: 2026-03-31 — v1.1 roadmap created with 2 phases and 6 mapped requirements
 Progress: [□□□□□□□□□□] 0% active milestone progress
 
@@ -50,7 +53,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
 - [v1.0]: Treat workflow artifacts on disk as the authoritative completion signal for live runs.
-- [v1.1 roadmap]: Lock `wrapper` as the canonical CLI command before widening scope again.
+- [v1.1 discuss]: Replace `wrapper` with `aco` as the canonical CLI command and remove legacy command-surface retention.
 - [v1.1 roadmap]: Defer guide / architecture cleanup to v1.2 and keep workspace/runtime expansion queued for v1.3.
 
 ### Pending Todos
@@ -63,7 +66,7 @@ None currently.
 
 ## Session Continuity
 
-Last session: 2026-03-31T01:18:18Z
-Stopped at: Roadmap created; Phase 04 Canonical Command Surface is the next phase to discuss or plan
-Resume file: None
-Next command: `/gsd:discuss-phase 04`
+Last session: 2026-03-31T01:40:51.959Z
+Stopped at: Phase 04 context gathered
+Resume file: .planning/phases/04-canonical-command-surface/04-CONTEXT.md
+Next command: `/gsd:plan-phase 04`
