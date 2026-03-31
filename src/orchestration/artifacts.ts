@@ -9,7 +9,7 @@ import { dirname, join, resolve } from 'node:path';
 
 export const WORKFLOW_ARTIFACT_ROOT = '.wrapper/workflows';
 
-export interface WorkflowRunArtifacts {
+export interface AcoWorkflowRunArtifacts {
   workflowRootDir: string;
   runDir: string;
   iterationsDir: string;
@@ -17,7 +17,7 @@ export interface WorkflowRunArtifacts {
   stateFilePath: string;
 }
 
-export interface IterationArtifacts {
+export interface AcoIterationArtifacts {
   iterationDir: string;
   plannerPromptPath: string;
   planPath: string;
@@ -40,11 +40,11 @@ function writeJsonFile(path: string, data: Record<string, unknown>): void {
   writeFileSync(path, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
-export function createWorkflowRunArtifacts(
+export function createAcoWorkflowRunArtifacts(
   repoRoot: string,
   workflowName: string,
   runId = createRunId(),
-): WorkflowRunArtifacts {
+): AcoWorkflowRunArtifacts {
   const absoluteRepoRoot = resolve(repoRoot);
   const workflowRootDir = join(absoluteRepoRoot, WORKFLOW_ARTIFACT_ROOT, workflowName);
   const runDir = join(workflowRootDir, 'runs', runId);
@@ -61,10 +61,10 @@ export function createWorkflowRunArtifacts(
   };
 }
 
-export function createIterationArtifacts(
+export function createAcoIterationArtifacts(
   runDir: string,
   iterationNumber: number,
-): IterationArtifacts {
+): AcoIterationArtifacts {
   const iterationSegment = String(iterationNumber).padStart(2, '0');
   const iterationDir = join(runDir, 'iterations', iterationSegment);
 
