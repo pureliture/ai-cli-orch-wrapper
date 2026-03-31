@@ -6,18 +6,37 @@
  * CLI entry point — dispatches to command handlers.
  */
 
+import path from 'node:path';
 import { setupCommand } from './commands/setup.js';
 import { aliasCommand } from './commands/alias.js';
 import { workflowCommand } from './commands/workflow.js';
 import { workflowRunCommand } from './commands/workflow-run.js';
-import { formatHelp, formatUnknownCommand, formatVersionLine } from './cli-surface.js';
+import {
+  LEGACY_COMMAND,
+  formatHelp,
+  formatUnknownCommand,
+  formatUseCanonicalCommand,
+  formatVersionLine,
+  selectRecoveryNextStep,
+} from './cli-surface.js';
 import { readWrapperConfig } from './config/wrapper-config.js';
 
 const args = process.argv.slice(2);
 const command = args[0];
 
 async function main(): Promise<void> {
+  const invokedName = path.basename(process.argv[1] ?? '');
   const config = readWrapperConfig();
+
+  if (invokedName === LEGACY_COMMAND) {
+    console.error(formatUseCanonicalCommand(selectRecoveryNextStep(command)));
+    process.exit(1);
+  }
+
+  if (!command) {
+    console.error(formatUseCanonicalCommand('help'));
+    process.exit(1);
+  }
 
   if (command === 'setup') {
     await setupCommand();
