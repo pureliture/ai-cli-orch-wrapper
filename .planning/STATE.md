@@ -1,30 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: v1.0 milestone complete
-stopped_at: Ready for next milestone definition via $gsd-new-milestone
-last_updated: "2026-03-25T00:31:00.000Z"
+milestone: v1.1
+milestone_name: isolated-workspaces-workflow-ergonomics
+status: defining v1.1 requirements
+last_updated: "2026-03-31T00:41:31Z"
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 10
-  completed_plans: 10
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-24)
+See: .planning/PROJECT.md (updated 2026-03-31)
 
 **Core value:** Any machine, one command, same AI CLI orchestration environment instantly restored
-**Current focus:** v1.0 archived — ready for `$gsd-new-milestone`
+**Current focus:** v1.1 planning — isolated workspaces, richer workflow control, and smoother provider session bootstrap
 
 ## Current Position
 
-Phase: None active
-Plan: None active
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements for milestone v1.1
+Last activity: 2026-03-31 — Milestone v1.1 started
 
 ## Performance Metrics
 
@@ -92,5 +93,5 @@ None currently.
 ## Session Continuity
 
 Last session: 2026-03-25T00:31:00.000Z
-Stopped at: Ready for next milestone definition via $gsd-new-milestone
+Stopped at: Milestone v1.1 started; roadmap generation pending
 Resume file: None

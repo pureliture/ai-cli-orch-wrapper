@@ -32,17 +32,20 @@
 
 ### Active
 
-**workmux 연동**
-- [ ] 필요 시 worktree 기반 격리 작업 환경 생성 (workmux 활용)
-- [ ] worktree 작업 완료 후 정리
+**Workspace Isolation**
+- [ ] `wrapper` 명령으로 workmux/worktree 기반 격리 작업 공간을 시작할 수 있어야 함
+- [ ] 격리 작업 공간의 재진입/정리를 위한 메타데이터를 보존해야 함
+- [ ] base checkout을 오염시키지 않고 격리 작업 공간 안에서 alias/workflow를 실행할 수 있어야 함
 
-**확장 워크플로우**
-- [ ] cao가 기본 제공하지 않는 추가 inter-CLI workflow 패턴 확장
-- [ ] 승인/수정 이외의 richer review outcomes 및 rerun UX 개선
+**Workflow Expansion**
+- [ ] plan→review 외의 inter-CLI workflow 템플릿을 repo-local 설정으로 선언할 수 있어야 함
+- [ ] reviewer outcome이 approve / changes_requested 외의 richer 상태를 표현할 수 있어야 함
+- [ ] rerun/resume UX가 기존 artifact 문맥을 재사용할 수 있어야 함
 
-**운영성**
-- [ ] milestone audit / release 흐름을 더 자동화
-- [ ] 실환경 provider 세션 초기화 프롬프트를 더 부드럽게 흡수
+**Session Ergonomics**
+- [ ] 장시간 workflow 시작 전에 provider readiness를 사전 점검할 수 있어야 함
+- [ ] provider session bootstrap 실패 시 즉시 실행 가능한 remediation을 보여줘야 함
+- [ ] 지원 provider에 대해 첫 실행 friction을 줄이는 warmup/bootstrap 경로가 있어야 함
 
 ### Out of Scope
 
@@ -62,15 +65,22 @@
 ## Current State
 
 - **Shipped version:** v1.0
-- **Milestone status:** shipped and archived
+- **Milestone status:** v1.0 shipped, v1.1 planning active
+- **Active milestone:** v1.1 Isolated Workspaces + Workflow Ergonomics
 - **Runtime coverage:** build, lint, full automated tests, named workflow smoke test, ad-hoc workflow smoke test
 - **Operational note:** 실환경에서는 artifact 존재 여부를 workflow step 완료 신호로 취급해야 안정적임
 
-## Next Milestone Goals
+## Current Milestone: v1.1 Isolated Workspaces + Workflow Ergonomics
 
-1. workmux 기반 격리 작업 환경 시작/정리 UX 추가
-2. 추가 inter-CLI workflow 패턴 발굴 및 일반화
-3. 실환경 provider session 초기화/enablement friction 감소
+**Goal:** Extend the wrapper from a single-repo orchestration helper into a safer execution layer with isolated workspaces, richer workflow control, and smoother provider session startup.
+
+**Target features:**
+- workmux-backed workspace start/reopen/cleanup lifecycle
+- repo-local workflow definitions that support richer stop states and rerun guidance
+- provider preflight and warmup flows that reduce first-run session friction
+
+**Deferred from this milestone:**
+- milestone audit / release automation beyond the minimum planning docs
 
 ## Constraints
 
@@ -109,4 +119,4 @@
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-25 after v1.0 milestone completion*
+*Last updated: 2026-03-31 after v1.1 milestone initialization*
