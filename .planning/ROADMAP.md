@@ -9,24 +9,27 @@
 
 ## Overview
 
-v1.1 is a narrowing milestone. Before this wrapper grows into workspace management and richer multi-step orchestration again, the CLI needs one stable public name and one stable repo-local contract. This milestone locks `wrapper` as the canonical command across install, help, error handling, setup, alias dispatch, and workflow artifacts, while explicitly pushing documentation cleanup to v1.2 and workspace/runtime expansion to v1.3.
+v1.1 is a narrowing milestone. Before this wrapper grows into workspace management and richer multi-step orchestration again, the CLI needs one stable public name and one stable repo-local contract. This milestone locks `aco` as the canonical public command across install, help, error handling, and stale-invocation recovery, while explicitly preserving the existing `.wrapper*` runtime contract until Phase 05. Documentation cleanup remains pushed to v1.2 and workspace/runtime expansion to v1.3.
 
 ## Phases
 
-- [ ] **Phase 04: Canonical Command Surface** - Standardize `wrapper` as the single visible CLI name and recovery path.
-- [ ] **Phase 05: Wrapper Runtime Contract** - Keep setup, alias, and workflow behaviors consistent with the wrapper-named repo contract.
+- [ ] **Phase 04: Canonical Command Surface** - Standardize `aco` as the single visible CLI name and recovery path.
+- [ ] **Phase 05: Wrapper Runtime Contract** - Keep setup, alias, and workflow behaviors consistent with the existing `.wrapper*` repo-local contract.
 
 ## Phase Details
 
 ### Phase 04: Canonical Command Surface
-**Goal**: Users can discover, invoke, and recover to the `wrapper` command without ambiguity.
+**Goal**: Users can discover, invoke, and recover to the `aco` command without ambiguity while `.wrapper*` runtime paths stay intact for the next phase.
 **Depends on**: Phase 03
 **Requirements**: CMD-01, CMD-02, WRAP-03
 **Success Criteria** (what must be TRUE):
-  1. User can invoke the installed CLI with the canonical `wrapper` command on a supported machine.
-  2. Help, usage, version, and command error output all identify the tool as `wrapper`.
-  3. If the user reaches a stale command invocation path, the CLI tells them directly to use `wrapper`.
-**Plans**: TBD
+  1. User can invoke the installed CLI with the canonical `aco` command on a supported machine.
+  2. Help, usage, version, and command error output all identify the tool as `aco`.
+  3. If the user reaches a stale command invocation path, the CLI tells them directly to use `aco`.
+**Plans**: 2 plans
+Plans:
+- [ ] 04-01-PLAN.md — Cut over the install/help/version surface and public quick-start guidance to `aco`
+- [ ] 04-02-PLAN.md — Fail fast on stale `wrapper` entrypaths and align setup-managed wording to `aco`
 
 ### Phase 05: Wrapper Runtime Contract
 **Goal**: Users can trust the existing v1.0 runtime flows to keep working once `wrapper` is treated as the canonical command contract.
