@@ -49,23 +49,27 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| WORK-01 | TBD | Pending |
-| WORK-02 | TBD | Pending |
-| WORK-03 | TBD | Pending |
-| WORK-04 | TBD | Pending |
-| FLOW-01 | TBD | Pending |
-| FLOW-02 | TBD | Pending |
-| FLOW-03 | TBD | Pending |
-| FLOW-04 | TBD | Pending |
-| SESS-01 | TBD | Pending |
-| SESS-02 | TBD | Pending |
-| SESS-03 | TBD | Pending |
+| WORK-01 | Phase 04 | Pending |
+| WORK-02 | Phase 04 | Pending |
+| WORK-03 | Phase 05 | Pending |
+| WORK-04 | Phase 04 | Pending |
+| FLOW-01 | Phase 05 | Pending |
+| FLOW-02 | Phase 06 | Pending |
+| FLOW-03 | Phase 06 | Pending |
+| FLOW-04 | Phase 05 | Pending |
+| SESS-01 | Phase 07 | Pending |
+| SESS-02 | Phase 07 | Pending |
+| SESS-03 | Phase 07 | Pending |
 
 **Coverage:**
 - v1 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11 ⚠️
+- Mapped to phases: 11
+- Unmapped: 0
+- Phase 04: 3 requirements
+- Phase 05: 3 requirements
+- Phase 06: 2 requirements
+- Phase 07: 3 requirements
 
 ---
 *Requirements defined: 2026-03-31*
-*Last updated: 2026-03-31 after milestone definition*
+*Last updated: 2026-03-31 after v1.1 roadmap creation*
