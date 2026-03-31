@@ -39,7 +39,7 @@
 
 **Wrapper Runtime Contract**
 - [ ] `aco setup`이 `.wrapper.json` 계약을 기준으로 repo-local 설정을 초기화해야 함
-- [ ] alias / workflow 실행 결과가 `.wrapper/` 및 `wrapper.lock` 경로 규약을 일관되게 유지해야 함
+- [ ] alias / workflow 실행 결과가 `.wrapper/` 경로 규약을 일관되게 유지해야 함
 - [ ] built-in subcommand 우선순위가 alias보다 계속 앞서야 함
 
 ### Out of Scope
@@ -74,7 +74,7 @@
 
 **Target features:**
 - canonical `aco` install/help/error/version surface
-- wrapper-named repo-local config and artifact contract (`.wrapper.json`, `.wrapper/`, `wrapper.lock`)
+- wrapper-named repo-local config and artifact contract (`.wrapper.json`, `.wrapper/`)
 - rename-safe compatibility checks for shipped v1.0 flows under the `aco` public command
 
 **Deferred from this milestone:**
