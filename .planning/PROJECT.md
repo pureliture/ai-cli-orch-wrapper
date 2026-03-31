@@ -30,17 +30,19 @@
 - [x] workflow artifact가 repo 내부 `.wrapper/workflows/` 아래에 보존됨
 - [x] planner/reviewer role 선택을 config 또는 flag override로 제어 가능
 
-### Active
-
 **Canonical CLI Surface** — Validated in Phase 4: Canonical Command Surface
 - [x] 설치된 도구가 최종적으로 `aco` 하나의 canonical command로 노출되어야 함
 - [x] help / usage / version / 에러 출력이 모두 `aco` 기준으로 정렬되어야 함
 - [x] stale invocation 또는 예전 명령어 가정이 남아 있어도 사용자가 `aco`로 복귀할 수 있는 remediation이 보여야 함
 
-**Wrapper Runtime Contract**
-- [ ] `aco setup`이 `.wrapper.json` 계약을 기준으로 repo-local 설정을 초기화해야 함
-- [ ] alias / workflow 실행 결과가 `.wrapper/` 경로 규약을 일관되게 유지해야 함
-- [ ] built-in subcommand 우선순위가 alias보다 계속 앞서야 함
+**Wrapper Runtime Contract** — Validated in Phase 5: Wrapper Runtime Contract
+- [x] `aco setup`이 `.wrapper.json` 계약을 기준으로 repo-local 설정을 초기화해야 함
+- [x] alias / workflow 실행 결과가 `.wrapper/` 경로 규약을 일관되게 유지해야 함
+- [x] built-in subcommand 우선순위가 alias보다 계속 앞서야 함
+
+### Active
+
+- None. v1.1 requirements are validated; the next active scope begins in the deferred documentation and workspace milestones.
 
 ### Out of Scope
 
@@ -57,12 +59,12 @@
 - **현재 코드 상태**: 약 2,749 LOC(TypeScript/JS 기준). `setup`, alias dispatch, workflow config resolution, artifact/prompt helpers, CAO HTTP client, workflow runner, `workflow` / `workflow-run` CLI surface까지 구현 완료.
 - **ghostty-tmux-wrapping**: 동일 작업자의 별도 프로젝트. base tmux 환경 담당. tmux conf 충돌 방지를 위해 모듈식 구조 협의 완료.
 - **마일스톤 재배치**: `v1.1`은 `aco` public command surface 정리와 `.wrapper*` runtime contract 고정, `v1.2`는 가이드/아키텍처 문서 정비, 기존에 초안이 있던 workspace 확장 범위는 `v1.3`으로 뒤로 미룸.
-- **현재 rename 성격**: public command surface는 `aco`로 고정됐고, repo-local runtime contract는 `.wrapper*`로 유지된다. 남은 범위는 이 selective cutover를 Phase 05 runtime contract와 후속 문서에 일관되게 반영하는 것이다.
+- **현재 rename 성격**: public command surface는 `aco`로 고정됐고, repo-local runtime contract는 `.wrapper*`로 유지된다. v1.1 runtime scope는 완료됐고, 남은 follow-up은 milestone wrap-up 및 v1.2 문서 정비다.
 
 ## Current State
 
 - **Shipped version:** v1.0
-- **Milestone status:** v1.0 shipped, v1.1 Phase 04 complete and Phase 05 pending, v1.2/v1.3 queued
+- **Milestone status:** v1.0 shipped, v1.1 phases complete and ready for milestone wrap-up, v1.2/v1.3 queued
 - **Active milestone:** v1.1 Wrapper Command Consolidation
 - **Next milestones:** v1.2 Documentation + Architecture Cleanup, v1.3 Isolated Workspaces + Workflow Ergonomics
 - **Runtime coverage:** build, lint, full automated tests, named workflow smoke test, ad-hoc workflow smoke test
@@ -120,4 +122,4 @@
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 after Phase 04 command-surface alignment*
+*Last updated: 2026-03-31 after Phase 04 gap closure and milestone sync*
