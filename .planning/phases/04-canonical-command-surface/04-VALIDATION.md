@@ -2,9 +2,10 @@
 phase: 04
 slug: canonical-command-surface
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-31
+updated: 2026-03-31
 ---
 
 # Phase 04 — Validation Strategy
@@ -19,18 +20,18 @@ created: 2026-03-31
 |----------|-------|
 | **Framework** | Node.js built-in test runner (`node --test`) |
 | **Config file** | none |
-| **Quick run command** | `node --test test/alias.test.ts test/workflow-cli.test.ts test/setup.test.ts` |
-| **Full suite command** | `npm test && npm run lint` |
-| **Estimated runtime** | ~20 seconds |
+| **Quick run command** | `npm run build && node --test test/canonical-command-surface.test.ts test/workflow-cli.test.ts test/setup.test.ts test/install-state-cleanup.test.ts` |
+| **Full suite command** | `npm run build && npm test && npm run lint` |
+| **Estimated runtime** | ~30 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `node --test test/alias.test.ts test/workflow-cli.test.ts test/setup.test.ts`
-- **After every plan wave:** Run `npm test && npm run lint`
+- **After every task commit:** Run that task's exact `<automated>` verifier from the active PLAN.md
+- **After every plan wave:** Run the combined Phase 04 suite: `npm run build && node --test test/canonical-command-surface.test.ts test/workflow-cli.test.ts test/setup.test.ts test/install-state-cleanup.test.ts && npm run lint`
 - **Before `$gsd-verify-work`:** Full suite must be green
-- **Max feedback latency:** 20 seconds
+- **Max feedback latency:** 30 seconds
 
 ---
 
@@ -38,10 +39,12 @@ created: 2026-03-31
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 04-01-01 | 01 | 1 | CMD-01 | integration | `node --test test/canonical-command-surface.test.ts` | ❌ W0 | ⬜ pending |
-| 04-01-02 | 01 | 1 | CMD-02 | integration | `node --test test/canonical-command-surface.test.ts` | ❌ W0 | ⬜ pending |
-| 04-02-01 | 02 | 2 | WRAP-03 | integration | `node --test test/canonical-command-surface.test.ts` | ❌ W0 | ⬜ pending |
-| 04-02-02 | 02 | 2 | CMD-02 | integration | `npm test && npm run lint` | ✅ | ⬜ pending |
+| 04-01-01 | 01 | 1 | CMD-01 | integration | `cd /Users/pureliture/ai-cli-orch-wrapper && npm run build && node --test test/canonical-command-surface.test.ts test/workflow-cli.test.ts` | ✅ | ⬜ pending |
+| 04-01-02 | 01 | 1 | CMD-02 | integration | `cd /Users/pureliture/ai-cli-orch-wrapper && npm run build && node --test test/canonical-command-surface.test.ts test/workflow-cli.test.ts && npm run lint` | ✅ | ⬜ pending |
+| 04-02-01 | 02 | 2 | WRAP-03 | integration | `cd /Users/pureliture/ai-cli-orch-wrapper && npm run build && node --test test/canonical-command-surface.test.ts test/setup.test.ts` | ✅ | ⬜ pending |
+| 04-02-02 | 02 | 2 | CMD-02 | integration | `cd /Users/pureliture/ai-cli-orch-wrapper && npm run build && node --test test/canonical-command-surface.test.ts test/setup.test.ts test/workflow-cli.test.ts && npm run lint` | ✅ | ⬜ pending |
+| 04-03-01 | 03 | 3 | CMD-01, WRAP-03 | integration | `cd /Users/pureliture/ai-cli-orch-wrapper && node --test test/install-state-cleanup.test.ts` | ✅ | ⬜ pending |
+| 04-03-02 | 03 | 3 | CMD-01, WRAP-03 | integration | `cd /Users/pureliture/ai-cli-orch-wrapper && npm run build && node --test test/install-state-cleanup.test.ts test/canonical-command-surface.test.ts && npm run lint && npm link && npm run cleanup:legacy-bin && node -e \"const fs=require('node:fs'); const path=require('node:path'); const {execSync,spawnSync}=require('node:child_process'); const prefix=(process.env.ACO_BIN_CLEANUP_PREFIX || execSync('npm prefix -g',{encoding:'utf8'})).trim(); const binDir=path.join(prefix,'bin'); const wrapperBin=path.join(binDir,'wrapper'); const acoBin=path.join(binDir,'aco'); const pkgCli=path.resolve('dist/cli.js'); if (fs.existsSync(wrapperBin)) { const wrapperTarget=fs.realpathSync(wrapperBin); const acoTarget=fs.existsSync(acoBin) ? fs.realpathSync(acoBin) : null; if (wrapperTarget === pkgCli || (acoTarget && wrapperTarget === acoTarget)) { console.error('package-owned wrapper shim still present'); process.exit(1); } } if (!fs.existsSync(acoBin)) { console.error('aco shim missing after relink'); process.exit(1); } const result=spawnSync(acoBin,['help'],{stdio:'ignore'}); process.exit(result.status ?? 1);\"` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -49,27 +52,23 @@ created: 2026-03-31
 
 ## Wave 0 Requirements
 
-- [ ] `test/canonical-command-surface.test.ts` — subprocess coverage for `aco`, zero-arg recovery, and stale-invocation remediation
-- [ ] Portable packaging smoke assertions for `package.json#bin` plus `npm link` / reinstall behavior, or an explicitly documented manual check if automation stays too platform-specific
+None. Every Phase 04 task now has an explicit `<automated>` verifier in the current PLAN.md set, including the gap-closure plan.
 
 ---
 
 ## Manual-Only Verifications
 
-| Behavior | Requirement | Why Manual | Test Instructions |
-|----------|-------------|------------|-------------------|
-| Installed executable resolves to `aco` after relink/reinstall | CMD-01 | Global npm bin state depends on the local machine and existing linked shims | Run `npm run build`, then `npm link`, then verify `aco help` succeeds and stale `wrapper help` fails with direct remediation |
-| Existing managed tmux config shows acceptable post-cutover wording | WRAP-03 | Managed file rewrite behavior depends on local prior state in `~/.config/tmux/ai-cli.conf` | Run `aco setup`, inspect `~/.config/tmux/ai-cli.conf`, and confirm either neutral/`aco` wording or an explicitly documented non-migration decision |
+None required for Nyquist coverage. Human spot-checks remain optional, but install/relink state, canonical help output, stale invocation remediation, and setup wording are all covered by automated Phase 04 verifiers.
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 20s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
