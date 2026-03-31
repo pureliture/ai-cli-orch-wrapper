@@ -22,7 +22,7 @@ interface FakeTerminal {
 type ReviewBehavior = 'approved' | 'changes_requested' | 'missing_status' | 'malformed_status';
 
 function makeTempDir(): string {
-  return mkdtempSync(join(tmpdir(), 'wrapper-workflow-runner-test-'));
+  return mkdtempSync(join(tmpdir(), 'aco-workflow-runner-test-'));
 }
 
 function createWorkflowDefinition(maxIterations: number) {

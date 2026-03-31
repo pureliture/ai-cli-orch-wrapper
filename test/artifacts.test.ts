@@ -15,11 +15,11 @@ function makeTempDir(): string {
   return mkdtempSync(join(tmpdir(), 'wrapper-artifacts-test-'));
 }
 
-test('createWorkflowRunArtifacts creates repo-local run paths under .wrapper/workflows', async () => {
-  const { WORKFLOW_ARTIFACT_ROOT, createWorkflowRunArtifacts } = await import('../dist/orchestration/artifacts.js');
+test('createAcoWorkflowRunArtifacts creates repo-local run paths under .wrapper/workflows', async () => {
+  const { WORKFLOW_ARTIFACT_ROOT, createAcoWorkflowRunArtifacts } = await import('../dist/orchestration/artifacts.js');
 
   const repoRoot = makeTempDir();
-  const artifacts = createWorkflowRunArtifacts(repoRoot, 'plan-review', 'run-fixed-01');
+  const artifacts = createAcoWorkflowRunArtifacts(repoRoot, 'plan-review', 'run-fixed-01');
 
   assert.equal(WORKFLOW_ARTIFACT_ROOT, '.wrapper/workflows');
   assert.equal(artifacts.workflowRootDir, join(repoRoot, '.wrapper', 'workflows', 'plan-review'));
@@ -31,12 +31,12 @@ test('createWorkflowRunArtifacts creates repo-local run paths under .wrapper/wor
   assert.ok(artifacts.runDir.startsWith(repoRoot), 'run directory must stay inside the provided repo root');
 });
 
-test('createIterationArtifacts returns zero-padded iteration 01 paths', async () => {
-  const { createWorkflowRunArtifacts, createIterationArtifacts } = await import('../dist/orchestration/artifacts.js');
+test('createAcoIterationArtifacts returns zero-padded iteration 01 paths', async () => {
+  const { createAcoWorkflowRunArtifacts, createAcoIterationArtifacts } = await import('../dist/orchestration/artifacts.js');
 
   const repoRoot = makeTempDir();
-  const runArtifacts = createWorkflowRunArtifacts(repoRoot, 'plan-review', 'run-fixed-01');
-  const iteration = createIterationArtifacts(runArtifacts.runDir, 1);
+  const runArtifacts = createAcoWorkflowRunArtifacts(repoRoot, 'plan-review', 'run-fixed-01');
+  const iteration = createAcoIterationArtifacts(runArtifacts.runDir, 1);
 
   assert.equal(iteration.iterationDir, join(runArtifacts.runDir, 'iterations', '01'));
   assert.equal(iteration.plannerPromptPath, join(runArtifacts.runDir, 'iterations', '01', 'planner.prompt.md'));
@@ -48,15 +48,15 @@ test('createIterationArtifacts returns zero-padded iteration 01 paths', async ()
   assert.ok(existsSync(iteration.iterationDir), 'iteration directory should be created');
 });
 
-test('createIterationArtifacts uses iteration 02 and does not overwrite iteration 01', async () => {
-  const { createWorkflowRunArtifacts, createIterationArtifacts } = await import('../dist/orchestration/artifacts.js');
+test('createAcoIterationArtifacts uses iteration 02 and does not overwrite iteration 01', async () => {
+  const { createAcoWorkflowRunArtifacts, createAcoIterationArtifacts } = await import('../dist/orchestration/artifacts.js');
 
   const repoRoot = makeTempDir();
-  const runArtifacts = createWorkflowRunArtifacts(repoRoot, 'plan-review', 'run-fixed-01');
-  const iterationOne = createIterationArtifacts(runArtifacts.runDir, 1);
+  const runArtifacts = createAcoWorkflowRunArtifacts(repoRoot, 'plan-review', 'run-fixed-01');
+  const iterationOne = createAcoIterationArtifacts(runArtifacts.runDir, 1);
   writeFileSync(iterationOne.planPath, 'plan-v1', 'utf8');
 
-  const iterationTwo = createIterationArtifacts(runArtifacts.runDir, 2);
+  const iterationTwo = createAcoIterationArtifacts(runArtifacts.runDir, 2);
 
   assert.equal(iterationTwo.iterationDir, join(runArtifacts.runDir, 'iterations', '02'));
   assert.equal(iterationTwo.planPath, join(runArtifacts.runDir, 'iterations', '02', 'plan.md'));
@@ -64,10 +64,10 @@ test('createIterationArtifacts uses iteration 02 and does not overwrite iteratio
 });
 
 test('writeRunSnapshot and writeRunState preserve workflow metadata', async () => {
-  const { createWorkflowRunArtifacts, writeRunSnapshot, writeRunState } = await import('../dist/orchestration/artifacts.js');
+  const { createAcoWorkflowRunArtifacts, writeRunSnapshot, writeRunState } = await import('../dist/orchestration/artifacts.js');
 
   const repoRoot = makeTempDir();
-  const runArtifacts = createWorkflowRunArtifacts(repoRoot, 'plan-review', 'run-fixed-01');
+  const runArtifacts = createAcoWorkflowRunArtifacts(repoRoot, 'plan-review', 'run-fixed-01');
 
   const snapshot = {
     workflowName: 'plan-review',
