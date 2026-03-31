@@ -32,20 +32,15 @@
 
 ### Active
 
-**Workspace Isolation**
-- [ ] `wrapper` 명령으로 workmux/worktree 기반 격리 작업 공간을 시작할 수 있어야 함
-- [ ] 격리 작업 공간의 재진입/정리를 위한 메타데이터를 보존해야 함
-- [ ] base checkout을 오염시키지 않고 격리 작업 공간 안에서 alias/workflow를 실행할 수 있어야 함
+**Canonical CLI Surface**
+- [ ] 설치된 도구가 최종적으로 `wrapper` 하나의 canonical command로 노출되어야 함
+- [ ] help / usage / version / 에러 출력이 모두 `wrapper` 기준으로 정렬되어야 함
+- [ ] built-in subcommand 우선순위가 alias보다 계속 앞서야 함
 
-**Workflow Expansion**
-- [ ] plan→review 외의 inter-CLI workflow 템플릿을 repo-local 설정으로 선언할 수 있어야 함
-- [ ] reviewer outcome이 approve / changes_requested 외의 richer 상태를 표현할 수 있어야 함
-- [ ] rerun/resume UX가 기존 artifact 문맥을 재사용할 수 있어야 함
-
-**Session Ergonomics**
-- [ ] 장시간 workflow 시작 전에 provider readiness를 사전 점검할 수 있어야 함
-- [ ] provider session bootstrap 실패 시 즉시 실행 가능한 remediation을 보여줘야 함
-- [ ] 지원 provider에 대해 첫 실행 friction을 줄이는 warmup/bootstrap 경로가 있어야 함
+**Wrapper Runtime Contract**
+- [ ] `wrapper setup`이 `.wrapper.json` 계약을 기준으로 repo-local 설정을 초기화해야 함
+- [ ] alias / workflow 실행 결과가 `.wrapper/` 및 `wrapper.lock` 경로 규약을 일관되게 유지해야 함
+- [ ] stale invocation 또는 예전 명령어 가정이 남아 있어도 사용자가 `wrapper`로 복귀할 수 있는 remediation이 보여야 함
 
 ### Out of Scope
 
@@ -61,26 +56,30 @@
 - **registry-hub + cao-profile-registry**: 별도 병렬 개발 중. Claude Code Marketplace처럼 MD 파일 또는 MD 포함 패키지를 제공하는 구조. 지금은 "특정 URL에서 파일을 내려주는 서비스"로만 가정.
 - **현재 코드 상태**: 약 2,749 LOC(TypeScript/JS 기준). `setup`, alias dispatch, workflow config resolution, artifact/prompt helpers, CAO HTTP client, workflow runner, `workflow` / `workflow-run` CLI surface까지 구현 완료.
 - **ghostty-tmux-wrapping**: 동일 작업자의 별도 프로젝트. base tmux 환경 담당. tmux conf 충돌 방지를 위해 모듈식 구조 협의 완료.
+- **마일스톤 재배치**: `v1.1`은 `wrapper` command contract 정리, `v1.2`는 가이드/아키텍처 문서 정비, 기존에 초안이 있던 workspace 확장 범위는 `v1.3`으로 뒤로 미룸.
+- **현재 rename 성격**: 코드베이스 일부는 이미 `wrapper` 명칭을 사용하지만, milestone / runtime contract / 운영 가이드는 아직 하나의 canonical surface로 잠겨 있지 않음.
 
 ## Current State
 
 - **Shipped version:** v1.0
-- **Milestone status:** v1.0 shipped, v1.1 planning active
-- **Active milestone:** v1.1 Isolated Workspaces + Workflow Ergonomics
+- **Milestone status:** v1.0 shipped, v1.1 planning active, v1.2/v1.3 queued
+- **Active milestone:** v1.1 Wrapper Command Consolidation
+- **Next milestones:** v1.2 Documentation + Architecture Cleanup, v1.3 Isolated Workspaces + Workflow Ergonomics
 - **Runtime coverage:** build, lint, full automated tests, named workflow smoke test, ad-hoc workflow smoke test
 - **Operational note:** 실환경에서는 artifact 존재 여부를 workflow step 완료 신호로 취급해야 안정적임
 
-## Current Milestone: v1.1 Isolated Workspaces + Workflow Ergonomics
+## Current Milestone: v1.1 Wrapper Command Consolidation
 
-**Goal:** Extend the wrapper from a single-repo orchestration helper into a safer execution layer with isolated workspaces, richer workflow control, and smoother provider session startup.
+**Goal:** Make `wrapper` the single canonical end-user command surface before widening the product again.
 
 **Target features:**
-- workmux-backed workspace start/reopen/cleanup lifecycle
-- repo-local workflow definitions that support richer stop states and rerun guidance
-- provider preflight and warmup flows that reduce first-run session friction
+- canonical `wrapper` install/help/error/version surface
+- wrapper-named repo-local config and artifact contract (`.wrapper.json`, `.wrapper/`, `wrapper.lock`)
+- rename-safe compatibility checks for shipped v1.0 flows
 
 **Deferred from this milestone:**
-- milestone audit / release automation beyond the minimum planning docs
+- v1.2 guide / architecture / planning document alignment
+- v1.3 isolated workspace lifecycle, richer workflow control, and provider readiness expansion
 
 ## Constraints
 
@@ -93,6 +92,8 @@
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
+| `wrapper`를 다음 확장 전 canonical CLI 이름으로 고정 | command surface가 흔들리면 이후 docs/workspace milestone이 다시 중복 정리를 요구하게 됨 | — Pending |
+| 문서 정비를 별도 v1.2로 분리 | rename milestone의 acceptance를 runtime contract 중심으로 유지해야 범위가 작고 검증 가능함 | — Pending |
 | tmux conf 모듈식 분리 (`~/.config/tmux/ai-cli.conf`) | ghostty-tmux-wrapping과 `~/.tmux.conf` 소유권 충돌 방지 | — Pending |
 | registry-hub 결합 금지 | registry-hub는 독립 프로젝트로 병렬 개발 중, 래퍼가 종속되면 양쪽 개발 속도에 영향 | — Pending |
 | cmux 제외 | 이번 목표 범위에서 불필요 | — Pending |
@@ -119,4 +120,4 @@
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 after v1.1 milestone initialization*
+*Last updated: 2026-03-31 after v1.1 milestone re-baselining*
