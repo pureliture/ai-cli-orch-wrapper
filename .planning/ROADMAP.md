@@ -14,7 +14,7 @@ v1.1 is a narrowing milestone. Before this wrapper grows into workspace manageme
 ## Phases
 
 - [x] **Phase 04: Canonical Command Surface** - Standardize `aco` as the single visible CLI name and recovery path. (completed 2026-03-31)
-- [ ] **Phase 05: Wrapper Runtime Contract** - Keep setup, alias, and workflow behaviors consistent with the existing `.wrapper*` repo-local contract.
+- [ ] **Phase 05: Wrapper Runtime Contract** - Keep setup, alias, and workflow behaviors consistent with the existing `.wrapper*` repo-local contract under the `aco` public command.
 
 ## Phase Details
 
@@ -32,13 +32,13 @@ Plans:
 - [x] 04-02-PLAN.md — Fail fast on stale `wrapper` entrypaths and align setup-managed wording to `aco`
 
 ### Phase 05: Wrapper Runtime Contract
-**Goal**: Users can trust the existing v1.0 runtime flows to keep working once `wrapper` is treated as the canonical command contract.
+**Goal**: Users can trust the existing v1.0 runtime flows to keep working once `aco` is the canonical public command while the `.wrapper*` repo-local contract remains in place.
 **Depends on**: Phase 04
 **Requirements**: CMD-03, WRAP-01, WRAP-02
 **Success Criteria** (what must be TRUE):
-  1. User can run `wrapper setup` and get repo-local config initialized through the `.wrapper.json` contract without manual rename work.
-  2. User can run alias and workflow entrypoints through `wrapper` while artifacts continue to land under the expected `.wrapper/` paths.
-  3. Built-in subcommands continue to take precedence over alias names after the command surface is consolidated.
+  1. User can run `aco setup` and get repo-local config initialized through the `.wrapper.json` contract without manual rename work.
+  2. User can run alias and workflow entrypoints through `aco` while artifacts continue to land under the expected `.wrapper/` paths.
+  3. Built-in subcommands continue to take precedence over alias names after the command surface is consolidated to `aco`.
 **Plans**: TBD
 
 ## Progress
@@ -48,5 +48,5 @@ Plans:
 | 01. Foundation + Environment Setup | v1.0 | 2/2 | Complete | 2026-03-25 |
 | 02. CLI Aliases + Workflow Config | v1.0 | 4/4 | Complete | 2026-03-25 |
 | 03. Plan→Review Orchestration Loop | v1.0 | 4/4 | Complete | 2026-03-25 |
-| 04. Canonical Command Surface | v1.1 | 2/2 | Complete   | 2026-03-31 |
+| 04. Canonical Command Surface | v1.1 | 2/2 | Complete    | 2026-03-31 |
 | 05. Wrapper Runtime Contract | v1.1 | 0/TBD | Not started | - |

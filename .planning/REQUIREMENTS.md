@@ -7,15 +7,15 @@
 
 ### Canonical Command
 
-- [x] **CMD-01**: User can invoke the installed CLI through the canonical `wrapper` command on a supported machine
-- [x] **CMD-02**: User sees `wrapper` in help, usage, version, and command error output instead of legacy command labels
-- [ ] **CMD-03**: User can rely on built-in subcommands continuing to override alias names after the command surface is consolidated
+- [x] **CMD-01**: User can invoke the installed CLI through the canonical `aco` command on a supported machine
+- [x] **CMD-02**: User sees `aco` in help, usage, version, and command error output instead of legacy command labels
+- [ ] **CMD-03**: User can rely on built-in subcommands continuing to override alias names after the `aco` command surface is consolidated
 
 ### Wrapper Runtime Contract
 
-- [ ] **WRAP-01**: User can run `wrapper setup` and get repo-local config initialized through the `.wrapper.json` contract without manual renaming
-- [ ] **WRAP-02**: User can run alias and workflow entrypoints through `wrapper` while artifacts continue to be stored under the expected `.wrapper/` paths
-- [x] **WRAP-03**: User receives direct remediation telling them to use `wrapper` when they hit a stale command invocation or packaging assumption
+- [ ] **WRAP-01**: User can run `aco setup` and get repo-local config initialized through the `.wrapper.json` contract without manual renaming
+- [ ] **WRAP-02**: User can run alias and workflow entrypoints through `aco` while artifacts continue to be stored under the expected `.wrapper/` paths
+- [x] **WRAP-03**: User receives direct remediation telling them to use `aco` when they hit a stale command invocation or packaging assumption
 
 ## Future Requirements
 

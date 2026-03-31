@@ -3,7 +3,7 @@
 ## What This Is
 
 어느 PC에서나 단일 명령어로 동일한 AI CLI 오케스트레이션 환경을 재현할 수 있는 개인용 래퍼 툴.
-현재는 `wrapper setup`, alias 기반 실행, repo-local workflow config, 그리고 CAO-backed plan→review 루프까지 포함한 v1.0 기능셋을 제공한다.
+현재는 `aco setup`, alias 기반 실행, repo-local workflow config, 그리고 CAO-backed plan→review 루프까지 포함한 v1.1 기능셋을 제공한다.
 
 ## Core Value
 
@@ -19,28 +19,28 @@
 - [x] 이미 설치된 cao / tmux / workmux를 전제로 동작 (직접 설치 불포함)
 
 **CLI Aliases + Workflow Config** — Validated in Phase 2: CLI Aliases + Workflow Config
-- [x] `wrapper claude`, `wrapper gemini`, `wrapper codex` 같은 짧은 alias로 해당 provider 실행 가능
+- [x] `aco claude`, `aco gemini`, `aco codex` 같은 짧은 alias로 해당 provider 실행 가능
 - [x] 코드 수정 없이 `.wrapper.json`에서 alias 추가/재매핑 가능
 - [x] `orchestrator`, `reviewer` 같은 role→CLI 매핑을 설정 파일에 선언 가능
 - [x] wrapper 고유 DSL 없이 cao native provider/agent 개념을 그대로 사용
 
 **Workflow Orchestration** — Validated in Phase 3: Plan→Review Orchestration Loop
-- [x] `wrapper workflow <name>` / `wrapper workflow-run ...`로 planner→reviewer 반복 루프 실행 가능
+- [x] `aco workflow <name>` / `aco workflow-run ...`로 planner→reviewer 반복 루프 실행 가능
 - [x] reviewer 승인 여부는 `review.status.json`의 machine-readable 상태로만 판정
 - [x] workflow artifact가 repo 내부 `.wrapper/workflows/` 아래에 보존됨
 - [x] planner/reviewer role 선택을 config 또는 flag override로 제어 가능
 
 ### Active
 
-**Canonical CLI Surface**
-- [ ] 설치된 도구가 최종적으로 `wrapper` 하나의 canonical command로 노출되어야 함
-- [ ] help / usage / version / 에러 출력이 모두 `wrapper` 기준으로 정렬되어야 함
-- [ ] built-in subcommand 우선순위가 alias보다 계속 앞서야 함
+**Canonical CLI Surface** — Validated in Phase 4: Canonical Command Surface
+- [x] 설치된 도구가 최종적으로 `aco` 하나의 canonical command로 노출되어야 함
+- [x] help / usage / version / 에러 출력이 모두 `aco` 기준으로 정렬되어야 함
+- [x] stale invocation 또는 예전 명령어 가정이 남아 있어도 사용자가 `aco`로 복귀할 수 있는 remediation이 보여야 함
 
 **Wrapper Runtime Contract**
-- [ ] `wrapper setup`이 `.wrapper.json` 계약을 기준으로 repo-local 설정을 초기화해야 함
+- [ ] `aco setup`이 `.wrapper.json` 계약을 기준으로 repo-local 설정을 초기화해야 함
 - [ ] alias / workflow 실행 결과가 `.wrapper/` 및 `wrapper.lock` 경로 규약을 일관되게 유지해야 함
-- [ ] stale invocation 또는 예전 명령어 가정이 남아 있어도 사용자가 `wrapper`로 복귀할 수 있는 remediation이 보여야 함
+- [ ] built-in subcommand 우선순위가 alias보다 계속 앞서야 함
 
 ### Out of Scope
 
@@ -56,13 +56,13 @@
 - **registry-hub + cao-profile-registry**: 별도 병렬 개발 중. Claude Code Marketplace처럼 MD 파일 또는 MD 포함 패키지를 제공하는 구조. 지금은 "특정 URL에서 파일을 내려주는 서비스"로만 가정.
 - **현재 코드 상태**: 약 2,749 LOC(TypeScript/JS 기준). `setup`, alias dispatch, workflow config resolution, artifact/prompt helpers, CAO HTTP client, workflow runner, `workflow` / `workflow-run` CLI surface까지 구현 완료.
 - **ghostty-tmux-wrapping**: 동일 작업자의 별도 프로젝트. base tmux 환경 담당. tmux conf 충돌 방지를 위해 모듈식 구조 협의 완료.
-- **마일스톤 재배치**: `v1.1`은 `wrapper` command contract 정리, `v1.2`는 가이드/아키텍처 문서 정비, 기존에 초안이 있던 workspace 확장 범위는 `v1.3`으로 뒤로 미룸.
-- **현재 rename 성격**: 코드베이스 일부는 이미 `wrapper` 명칭을 사용하지만, milestone / runtime contract / 운영 가이드는 아직 하나의 canonical surface로 잠겨 있지 않음.
+- **마일스톤 재배치**: `v1.1`은 `aco` public command surface 정리와 `.wrapper*` runtime contract 고정, `v1.2`는 가이드/아키텍처 문서 정비, 기존에 초안이 있던 workspace 확장 범위는 `v1.3`으로 뒤로 미룸.
+- **현재 rename 성격**: public command surface는 `aco`로 고정됐고, repo-local runtime contract는 `.wrapper*`로 유지된다. 남은 범위는 이 selective cutover를 Phase 05 runtime contract와 후속 문서에 일관되게 반영하는 것이다.
 
 ## Current State
 
 - **Shipped version:** v1.0
-- **Milestone status:** v1.0 shipped, v1.1 planning active, v1.2/v1.3 queued
+- **Milestone status:** v1.0 shipped, v1.1 Phase 04 complete and Phase 05 pending, v1.2/v1.3 queued
 - **Active milestone:** v1.1 Wrapper Command Consolidation
 - **Next milestones:** v1.2 Documentation + Architecture Cleanup, v1.3 Isolated Workspaces + Workflow Ergonomics
 - **Runtime coverage:** build, lint, full automated tests, named workflow smoke test, ad-hoc workflow smoke test
@@ -70,12 +70,12 @@
 
 ## Current Milestone: v1.1 Wrapper Command Consolidation
 
-**Goal:** Make `wrapper` the single canonical end-user command surface before widening the product again.
+**Goal:** Make `aco` the single canonical end-user command surface before widening the product again, while preserving the existing `.wrapper*` repo-local runtime contract through Phase 05.
 
 **Target features:**
-- canonical `wrapper` install/help/error/version surface
+- canonical `aco` install/help/error/version surface
 - wrapper-named repo-local config and artifact contract (`.wrapper.json`, `.wrapper/`, `wrapper.lock`)
-- rename-safe compatibility checks for shipped v1.0 flows
+- rename-safe compatibility checks for shipped v1.0 flows under the `aco` public command
 
 **Deferred from this milestone:**
 - v1.2 guide / architecture / planning document alignment
@@ -92,7 +92,7 @@
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| `wrapper`를 다음 확장 전 canonical CLI 이름으로 고정 | command surface가 흔들리면 이후 docs/workspace milestone이 다시 중복 정리를 요구하게 됨 | — Pending |
+| `aco`를 다음 확장 전 canonical CLI 이름으로 고정 | command surface가 흔들리면 이후 docs/workspace milestone이 다시 중복 정리를 요구하게 됨 | — Completed Phase 4 |
 | 문서 정비를 별도 v1.2로 분리 | rename milestone의 acceptance를 runtime contract 중심으로 유지해야 범위가 작고 검증 가능함 | — Pending |
 | tmux conf 모듈식 분리 (`~/.config/tmux/ai-cli.conf`) | ghostty-tmux-wrapping과 `~/.tmux.conf` 소유권 충돌 방지 | — Pending |
 | registry-hub 결합 금지 | registry-hub는 독립 프로젝트로 병렬 개발 중, 래퍼가 종속되면 양쪽 개발 속도에 영향 | — Pending |
@@ -120,4 +120,4 @@
 4. Update Context with current state
 
 ---
-*Last updated: 2026-03-31 after v1.1 milestone re-baselining*
+*Last updated: 2026-03-31 after Phase 04 command-surface alignment*
