@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, planningPaths, planningDir, planningRoot, toPosixPath, output, error } = require('./core.cjs');
+const { loadConfig, resolveModelInternal, findPhaseInternal, getRoadmapPhaseInternal, pathExistsInternal, generateSlugInternal, getMilestoneInfo, getMilestonePhaseFilter, stripShippedMilestones, extractCurrentMilestone, normalizePhaseName, planningPaths, planningDir, planningRoot, toPosixPath, output, error, checkAgentsInstalled } = require('./core.cjs');
 
 function getLatestCompletedMilestone(cwd) {
   const milestonesPath = path.join(planningRoot(cwd), 'MILESTONES.md');
@@ -26,11 +26,17 @@ function getLatestCompletedMilestone(cwd) {
 
 /**
  * Inject `project_root` into an init result object.
- * Workflows use this to prefix `.planning/` paths correctly when the agent's CWD
+ * Workflows use this to prefix `.planning/` paths correctly when Claude's CWD
  * differs from the project root (e.g., inside a sub-repo).
  */
 function withProjectRoot(cwd, result) {
   result.project_root = cwd;
+  // Inject agent installation status into all init outputs (#1371).
+  // Workflows that spawn named subagents use this to detect when agents
+  // are missing and would silently fall back to general-purpose.
+  const agentStatus = checkAgentsInstalled();
+  result.agents_installed = agentStatus.agents_installed;
+  result.missing_agents = agentStatus.missing_agents;
   return result;
 }
 
@@ -252,7 +258,23 @@ function cmdInitNewProject(cwd, raw) {
   let hasCode = false;
   let hasPackageFile = false;
   try {
-    const codeExtensions = new Set(['.ts', '.js', '.py', '.go', '.rs', '.swift', '.java']);
+    const codeExtensions = new Set([
+      '.ts', '.js', '.py', '.go', '.rs', '.swift', '.java',
+      '.kt', '.kts',           // Kotlin (Android, server-side)
+      '.c', '.cpp', '.h',      // C/C++
+      '.cs',                   // C#
+      '.rb',                   // Ruby
+      '.php',                  // PHP
+      '.dart',                 // Dart (Flutter)
+      '.m', '.mm',             // Objective-C / Objective-C++
+      '.scala',                // Scala
+      '.groovy',               // Groovy (Gradle build scripts)
+      '.lua',                  // Lua
+      '.r', '.R',              // R
+      '.zig',                  // Zig
+      '.ex', '.exs',           // Elixir
+      '.clj',                  // Clojure
+    ]);
     const skipDirs = new Set(['node_modules', '.git', '.planning', '.claude', '__pycache__', 'target', 'dist', 'build']);
     function findCodeFiles(dir, depth) {
       if (depth > 3) return false;
@@ -273,7 +295,18 @@ function cmdInitNewProject(cwd, raw) {
                    pathExistsInternal(cwd, 'requirements.txt') ||
                    pathExistsInternal(cwd, 'Cargo.toml') ||
                    pathExistsInternal(cwd, 'go.mod') ||
-                   pathExistsInternal(cwd, 'Package.swift');
+                   pathExistsInternal(cwd, 'Package.swift') ||
+                   pathExistsInternal(cwd, 'build.gradle') ||
+                   pathExistsInternal(cwd, 'build.gradle.kts') ||
+                   pathExistsInternal(cwd, 'pom.xml') ||
+                   pathExistsInternal(cwd, 'Gemfile') ||
+                   pathExistsInternal(cwd, 'composer.json') ||
+                   pathExistsInternal(cwd, 'pubspec.yaml') ||
+                   pathExistsInternal(cwd, 'CMakeLists.txt') ||
+                   pathExistsInternal(cwd, 'Makefile') ||
+                   pathExistsInternal(cwd, 'build.zig') ||
+                   pathExistsInternal(cwd, 'mix.exs') ||
+                   pathExistsInternal(cwd, 'project.clj');
 
   const result = {
     // Models
@@ -771,10 +804,10 @@ function cmdInitManager(cwd, raw) {
 
   // Validate prerequisites
   if (!fs.existsSync(paths.roadmap)) {
-    error('No ROADMAP.md found. Run /gsd-new-milestone first.');
+    error('No ROADMAP.md found. Run /gsd:new-milestone first.');
   }
   if (!fs.existsSync(paths.state)) {
-    error('No STATE.md found. Run /gsd-new-milestone first.');
+    error('No STATE.md found. Run /gsd:new-milestone first.');
   }
   const rawContent = fs.readFileSync(paths.roadmap, 'utf-8');
   const content = extractCurrentMilestone(rawContent, cwd);
@@ -931,7 +964,7 @@ function cmdInitManager(cwd, raw) {
         phase_name: phase.name,
         action: 'execute',
         reason: `${phase.plan_count} plans ready, dependencies met`,
-        command: `/gsd-execute-phase ${phase.number}`,
+        command: `/gsd:execute-phase ${phase.number}`,
       });
     } else if (phase.disk_status === 'discussed' || phase.disk_status === 'researched') {
       recommendedActions.push({
@@ -939,7 +972,7 @@ function cmdInitManager(cwd, raw) {
         phase_name: phase.name,
         action: 'plan',
         reason: 'Context gathered, ready for planning',
-        command: `/gsd-plan-phase ${phase.number}`,
+        command: `/gsd:plan-phase ${phase.number}`,
       });
     } else if ((phase.disk_status === 'empty' || phase.disk_status === 'no_directory') && phase.is_next_to_discuss) {
       recommendedActions.push({
@@ -947,7 +980,7 @@ function cmdInitManager(cwd, raw) {
         phase_name: phase.name,
         action: 'discuss',
         reason: 'Unblocked, ready to gather context',
-        command: `/gsd-discuss-phase ${phase.number}`,
+        command: `/gsd:discuss-phase ${phase.number}`,
       });
     }
   }
@@ -1315,6 +1348,77 @@ function cmdInitRemoveWorkspace(cwd, name, raw) {
   output(result, raw);
 }
 
+/**
+ * Build a formatted agent skills block for injection into Task() prompts.
+ *
+ * Reads `config.agent_skills[agentType]` and validates each skill path exists
+ * within the project root. Returns a formatted `<agent_skills>` block or empty
+ * string if no skills are configured.
+ *
+ * @param {object} config - Loaded project config
+ * @param {string} agentType - The agent type (e.g., 'gsd-executor', 'gsd-planner')
+ * @param {string} projectRoot - Absolute path to project root (for path validation)
+ * @returns {string} Formatted skills block or empty string
+ */
+function buildAgentSkillsBlock(config, agentType, projectRoot) {
+  const { validatePath } = require('./security.cjs');
+
+  if (!config || !config.agent_skills || !agentType) return '';
+
+  let skillPaths = config.agent_skills[agentType];
+  if (!skillPaths) return '';
+
+  // Normalize single string to array
+  if (typeof skillPaths === 'string') skillPaths = [skillPaths];
+  if (!Array.isArray(skillPaths) || skillPaths.length === 0) return '';
+
+  const validPaths = [];
+  for (const skillPath of skillPaths) {
+    if (typeof skillPath !== 'string') continue;
+
+    // Validate path safety — must resolve within project root
+    const pathCheck = validatePath(skillPath, projectRoot);
+    if (!pathCheck.safe) {
+      process.stderr.write(`[agent-skills] WARNING: Skipping unsafe path "${skillPath}": ${pathCheck.error}\n`);
+      continue;
+    }
+
+    // Check that the skill directory and SKILL.md exist
+    const skillMdPath = path.join(projectRoot, skillPath, 'SKILL.md');
+    if (!fs.existsSync(skillMdPath)) {
+      process.stderr.write(`[agent-skills] WARNING: Skill not found at "${skillPath}/SKILL.md" — skipping\n`);
+      continue;
+    }
+
+    validPaths.push(skillPath);
+  }
+
+  if (validPaths.length === 0) return '';
+
+  const lines = validPaths.map(p => `- @${p}/SKILL.md`).join('\n');
+  return `<agent_skills>\nRead these user-configured skills:\n${lines}\n</agent_skills>`;
+}
+
+/**
+ * Command: output the agent skills block for a given agent type.
+ * Used by workflows: SKILLS=$(node "$TOOLS" agent-skills gsd-executor 2>/dev/null)
+ */
+function cmdAgentSkills(cwd, agentType, raw) {
+  if (!agentType) {
+    // No agent type — output empty string silently
+    output('', raw, '');
+    return;
+  }
+
+  const config = loadConfig(cwd);
+  const block = buildAgentSkillsBlock(config, agentType, cwd);
+  // Output raw text (not JSON) so workflows can embed it directly
+  if (block) {
+    process.stdout.write(block);
+  }
+  process.exit(0);
+}
+
 module.exports = {
   cmdInitExecutePhase,
   cmdInitPlanPhase,
@@ -1333,4 +1437,6 @@ module.exports = {
   cmdInitListWorkspaces,
   cmdInitRemoveWorkspace,
   detectChildRepos,
+  buildAgentSkillsBlock,
+  cmdAgentSkills,
 };

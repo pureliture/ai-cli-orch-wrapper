@@ -5,7 +5,7 @@ Create executable phase prompts (PLAN.md files) for a roadmap phase with integra
 <required_reading>
 Read all files referenced by the invoking prompt's execution_context before starting.
 
-@.github/get-shit-done/references/ui-brand.md
+@/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/references/ui-brand.md
 </required_reading>
 
 <available_agent_types>
@@ -22,21 +22,24 @@ Valid GSD subagent types (use exact names — do not fall back to 'general-purpo
 Load all context in one call (paths only to minimize orchestrator context):
 
 ```bash
-INIT=$(node ".github/get-shit-done/bin/gsd-tools.cjs" init plan-phase "$PHASE")
+INIT=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init plan-phase "$PHASE")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
+AGENT_SKILLS_RESEARCHER=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-researcher 2>/dev/null)
+AGENT_SKILLS_PLANNER=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-planner 2>/dev/null)
+AGENT_SKILLS_CHECKER=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-checker 2>/dev/null)
 ```
 
 Parse JSON for: `researcher_model`, `planner_model`, `checker_model`, `research_enabled`, `plan_checker_enabled`, `nyquist_validation_enabled`, `commit_docs`, `text_mode`, `phase_found`, `phase_dir`, `phase_number`, `phase_name`, `phase_slug`, `padded_phase`, `has_research`, `has_context`, `has_reviews`, `has_plans`, `plan_count`, `planning_exists`, `roadmap_exists`, `phase_req_ids`.
 
 **File paths (for <files_to_read> blocks):** `state_path`, `roadmap_path`, `requirements_path`, `context_path`, `research_path`, `verification_path`, `uat_path`, `reviews_path`. These are null if files don't exist.
 
-**If `planning_exists` is false:** Error — run `/gsd-new-project` first.
+**If `planning_exists` is false:** Error — run `/gsd:new-project` first.
 
 ## 2. Parse and Normalize Arguments
 
 Extract from $ARGUMENTS: phase number (integer or decimal like `2.1`), flags (`--research`, `--skip-research`, `--gaps`, `--skip-verify`, `--prd <filepath>`, `--reviews`, `--text`).
 
-Set `TEXT_MODE=true` if `--text` is present in $ARGUMENTS OR `text_mode` from init JSON is `true`. When `TEXT_MODE` is active, replace every `AskUserQuestion` call with a plain-text numbered list and ask the user to type their choice number. This is required for Claude Code remote sessions (`/rc` mode) where TUI menus don't work through the the agent App.
+Set `TEXT_MODE=true` if `--text` is present in $ARGUMENTS OR `text_mode` from init JSON is `true`. When `TEXT_MODE` is active, replace every `AskUserQuestion` call with a plain-text numbered list and ask the user to type their choice number. This is required for Claude Code remote sessions (`/rc` mode) where TUI menus don't work through the Claude App.
 
 Extract `--prd <filepath>` from $ARGUMENTS. If present, set PRD_FILE to the filepath.
 
@@ -61,16 +64,16 @@ Error:
 ```
 No REVIEWS.md found for Phase {N}. Run reviews first:
 
-/gsd-review --phase {N}
+/gsd:review --phase {N}
 
-Then re-run /gsd-plan-phase {N} --reviews
+Then re-run /gsd:plan-phase {N} --reviews
 ```
 Exit workflow.
 
 ## 3. Validate Phase
 
 ```bash
-PHASE_INFO=$(node ".github/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}")
+PHASE_INFO=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}")
 ```
 
 **If `found` is false:** Error with available phases. **If `found` is true:** Extract `phase_number`, `phase_name`, `goal` from JSON.
@@ -103,7 +106,7 @@ Generating CONTEXT.md from requirements...
 3. Parse the PRD content and generate CONTEXT.md. The orchestrator should:
    - Extract all requirements, user stories, acceptance criteria, and constraints from the PRD
    - Map each to a locked decision (everything in the PRD is treated as a locked decision)
-   - Identify any areas the PRD doesn't cover and mark as "the agent's Discretion"
+   - Identify any areas the PRD doesn't cover and mark as "Claude's Discretion"
    - **Extract canonical refs** from ROADMAP.md for this phase, plus any specs/ADRs referenced in the PRD — expand to full file paths (MANDATORY)
    - Create CONTEXT.md in the phase directory
 
@@ -129,7 +132,7 @@ Generating CONTEXT.md from requirements...
 ### [Category derived from content]
 - [Requirement as locked decision]
 
-### the agent's Discretion
+### Claude's Discretion
 [Areas not covered by PRD — implementation details, technical choices]
 
 </decisions>
@@ -172,7 +175,7 @@ Use full relative paths. Group by topic area.]
 
 5. Commit:
 ```bash
-node ".github/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): generate context from PRD" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
+node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): generate context from PRD" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
 
 6. Set `context_content` to the generated CONTEXT.md content and continue to step 5 (Handle Research).
@@ -191,7 +194,7 @@ If `context_path` is not null, display: `Using phase context from: ${context_pat
 
 Read discuss mode for context gate label:
 ```bash
-DISCUSS_MODE=$(node ".github/get-shit-done/bin/gsd-tools.cjs" config-get workflow.discuss_mode 2>/dev/null || echo "discuss")
+DISCUSS_MODE=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.discuss_mode 2>/dev/null || echo "discuss")
 ```
 
 If `TEXT_MODE` is true, present as a plain-text numbered list:
@@ -223,9 +226,9 @@ If "Run discuss-phase first":
   does not work correctly in nested subcontexts (#1009). Instead, display the command
   and exit so the user runs it as a top-level command:
   ```
-  Run this command first, then re-run /gsd-plan-phase {X} ${GSD_WS}:
+  Run this command first, then re-run /gsd:plan-phase {X} ${GSD_WS}:
 
-  /gsd-discuss-phase {X} ${GSD_WS}
+  /gsd:discuss-phase {X} ${GSD_WS}
   ```
   **Exit the plan-phase workflow. Do not continue.**
 
@@ -281,7 +284,7 @@ Display banner:
 ### Spawn gsd-phase-researcher
 
 ```bash
-PHASE_DESC=$(node ".github/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick section)
+PHASE_DESC=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick section)
 ```
 
 Research prompt:
@@ -293,17 +296,19 @@ Answer: "What do I need to know to PLAN this phase well?"
 </objective>
 
 <files_to_read>
-- {context_path} (USER DECISIONS from /gsd-discuss-phase)
+- {context_path} (USER DECISIONS from /gsd:discuss-phase)
 - {requirements_path} (Project requirements)
 - {state_path} (Project decisions and history)
 </files_to_read>
+
+${AGENT_SKILLS_RESEARCHER}
 
 <additional_context>
 **Phase description:** {phase_description}
 **Phase requirement IDs (MUST address):** {phase_req_ids}
 
-**Project instructions:** Read ./copilot-instructions.md if exists — follow project-specific guidelines
-**Project skills:** Check .github/skills/ or .agents/skills/ directory (if either exists) — read SKILL.md files, research should account for project skill patterns
+**Project instructions:** Read ./CLAUDE.md if exists — follow project-specific guidelines
+**Project skills:** Check .claude/skills/ or .agents/skills/ directory (if either exists) — read SKILL.md files, research should account for project skill patterns
 </additional_context>
 
 <output>
@@ -339,11 +344,11 @@ If `research_enabled` is false and `nyquist_validation_enabled` is true: warn "N
 In that case: **skip validation-strategy creation entirely**. Do **not** expect `RESEARCH.md` or `VALIDATION.md` for this run, and continue to Step 6.
 
 ```bash
-grep -l "## Validation Architecture" "${PHASE_DIR}"/*-RESEARCH.md 2>/dev/null
+grep -l "## Validation Architecture" "${PHASE_DIR}"/*-RESEARCH.md 2>/dev/null || true
 ```
 
 **If found:**
-1. Read template: `.github/get-shit-done/templates/VALIDATION.md`
+1. Read template: `/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/templates/VALIDATION.md`
 2. Write to `${PHASE_DIR}/${PADDED_PHASE}-VALIDATION.md` (use Write tool)
 3. Fill frontmatter: `{N}` → phase number, `{phase-slug}` → slug, `{date}` → current date
 4. Verify:
@@ -360,8 +365,8 @@ test -f "${PHASE_DIR}/${PADDED_PHASE}-VALIDATION.md" && echo "VALIDATION_CREATED
 > Skip if `workflow.ui_phase` is explicitly `false` AND `workflow.ui_safety_gate` is explicitly `false` in `.planning/config.json`. If keys are absent, treat as enabled.
 
 ```bash
-UI_PHASE_CFG=$(node ".github/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
-UI_GATE_CFG=$(node ".github/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_safety_gate 2>/dev/null || echo "true")
+UI_PHASE_CFG=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
+UI_GATE_CFG=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_safety_gate 2>/dev/null || echo "true")
 ```
 
 **If both are `false`:** Skip to step 6.
@@ -369,7 +374,7 @@ UI_GATE_CFG=$(node ".github/get-shit-done/bin/gsd-tools.cjs" config-get workflow
 Check if phase has frontend indicators:
 
 ```bash
-PHASE_SECTION=$(node ".github/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" 2>/dev/null)
+PHASE_SECTION=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" 2>/dev/null)
 echo "$PHASE_SECTION" | grep -iE "UI|interface|frontend|component|layout|page|screen|view|form|dashboard|widget" > /dev/null 2>&1
 HAS_UI=$?
 ```
@@ -389,7 +394,7 @@ If `TEXT_MODE` is true, present as a plain-text numbered list:
 ```
 Phase {N} has frontend indicators but no UI-SPEC.md. Generate a design contract before planning?
 
-1. Generate UI-SPEC first — Run /gsd-ui-phase {N} then re-run /gsd-plan-phase {N}
+1. Generate UI-SPEC first — Run /gsd:ui-phase {N} then re-run /gsd:plan-phase {N}
 2. Continue without UI-SPEC
 3. Not a frontend phase
 
@@ -400,7 +405,7 @@ Otherwise use AskUserQuestion:
 - header: "UI Design Contract"
 - question: "Phase {N} has frontend indicators but no UI-SPEC.md. Generate a design contract before planning?"
 - options:
-  - "Generate UI-SPEC first" → Display: "Run `/gsd-ui-phase {N} ${GSD_WS}` then re-run `/gsd-plan-phase {N} ${GSD_WS}`". Exit workflow.
+  - "Generate UI-SPEC first" → Display: "Run `/gsd:ui-phase {N} ${GSD_WS}` then re-run `/gsd:plan-phase {N} ${GSD_WS}`". Exit workflow.
   - "Continue without UI-SPEC" → Continue to step 6.
   - "Not a frontend phase" → Continue to step 6.
 
@@ -409,7 +414,7 @@ Otherwise use AskUserQuestion:
 ## 6. Check Existing Plans
 
 ```bash
-ls "${PHASE_DIR}"/*-PLAN.md 2>/dev/null
+ls "${PHASE_DIR}"/*-PLAN.md 2>/dev/null || true
 ```
 
 **If exists AND `--reviews` flag:** Skip prompt — go straight to replanning (the purpose of `--reviews` is to replan with review feedback).
@@ -448,9 +453,9 @@ VALIDATION_EXISTS=$(ls "${PHASE_DIR}"/*-VALIDATION.md 2>/dev/null | head -1)
 ```
 
 If missing and Nyquist is still enabled/applicable — ask user:
-1. Re-run: `/gsd-plan-phase {PHASE} --research ${GSD_WS}`
+1. Re-run: `/gsd:plan-phase {PHASE} --research ${GSD_WS}`
 2. Disable Nyquist with the exact command:
-   `node ".github/get-shit-done/bin/gsd-tools.cjs" config-set workflow.nyquist_validation false`
+   `node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow.nyquist_validation false`
 3. Continue anyway (plans fail Dimension 8)
 
 Proceed to Step 8 only if user selects 2 or 3.
@@ -477,7 +482,7 @@ Planner prompt:
 - {state_path} (Project State)
 - {roadmap_path} (Roadmap)
 - {requirements_path} (Requirements)
-- {context_path} (USER DECISIONS from /gsd-discuss-phase)
+- {context_path} (USER DECISIONS from /gsd:discuss-phase)
 - {research_path} (Technical Research)
 - {verification_path} (Verification Gaps - if --gaps)
 - {uat_path} (UAT Gaps - if --gaps)
@@ -485,14 +490,16 @@ Planner prompt:
 - {UI_SPEC_PATH} (UI Design Contract — visual/interaction specs, if exists)
 </files_to_read>
 
+${AGENT_SKILLS_PLANNER}
+
 **Phase requirement IDs (every ID MUST appear in a plan's `requirements` field):** {phase_req_ids}
 
-**Project instructions:** Read ./copilot-instructions.md if exists — follow project-specific guidelines
-**Project skills:** Check .github/skills/ or .agents/skills/ directory (if either exists) — read SKILL.md files, plans should account for project skill rules
+**Project instructions:** Read ./CLAUDE.md if exists — follow project-specific guidelines
+**Project skills:** Check .claude/skills/ or .agents/skills/ directory (if either exists) — read SKILL.md files, plans should account for project skill rules
 </planning_context>
 
 <downstream_consumer>
-Output consumed by /gsd-execute-phase. Plans need:
+Output consumed by /gsd:execute-phase. Plans need:
 - Frontmatter (wave, depends_on, files_modified, autonomous)
 - Tasks in XML format with read_first and acceptance_criteria fields (MANDATORY on every task)
 - Verification criteria
@@ -578,14 +585,16 @@ Checker prompt:
 - {PHASE_DIR}/*-PLAN.md (Plans to verify)
 - {roadmap_path} (Roadmap)
 - {requirements_path} (Requirements)
-- {context_path} (USER DECISIONS from /gsd-discuss-phase)
+- {context_path} (USER DECISIONS from /gsd:discuss-phase)
 - {research_path} (Technical Research — includes Validation Architecture)
 </files_to_read>
 
+${AGENT_SKILLS_CHECKER}
+
 **Phase requirement IDs (MUST ALL be covered):** {phase_req_ids}
 
-**Project instructions:** Read ./copilot-instructions.md if exists — verify plans honor project guidelines
-**Project skills:** Check .github/skills/ or .agents/skills/ directory (if either exists) — verify plans account for project skill rules
+**Project instructions:** Read ./CLAUDE.md if exists — verify plans honor project guidelines
+**Project skills:** Check .claude/skills/ or .agents/skills/ directory (if either exists) — verify plans account for project skill rules
 </verification_context>
 
 <expected_output>
@@ -625,8 +634,10 @@ Revision prompt:
 
 <files_to_read>
 - {PHASE_DIR}/*-PLAN.md (Existing plans)
-- {context_path} (USER DECISIONS from /gsd-discuss-phase)
+- {context_path} (USER DECISIONS from /gsd:discuss-phase)
 </files_to_read>
+
+${AGENT_SKILLS_PLANNER}
 
 **Checker issues:** {structured_issues_from_checker}
 </revision_context>
@@ -718,13 +729,13 @@ Check for auto-advance trigger:
 2. **Sync chain flag with intent** — if user invoked manually (no `--auto`), clear the ephemeral chain flag from any previous interrupted `--auto` chain. This does NOT touch `workflow.auto_advance` (the user's persistent settings preference):
    ```bash
    if [[ ! "$ARGUMENTS" =~ --auto ]]; then
-     node ".github/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
+     node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
    fi
    ```
 3. Read both the chain flag and user preference:
    ```bash
-   AUTO_CHAIN=$(node ".github/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
-   AUTO_CFG=$(node ".github/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
+   AUTO_CHAIN=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+   AUTO_CFG=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
    ```
 
 **If `--auto` flag present OR `AUTO_CHAIN` is true OR `AUTO_CFG` is true:**
@@ -740,7 +751,7 @@ Plans ready. Launching execute-phase...
 
 Launch execute-phase using the Skill tool to avoid nested Task sessions (which cause runtime freezes due to deep agent nesting):
 ```
-Skill(skill="gsd-execute-phase", args="${PHASE} --auto --no-transition ${GSD_WS}")
+Skill(skill="gsd:execute-phase", args="${PHASE} --auto --no-transition ${GSD_WS}")
 ```
 
 The `--no-transition` flag tells execute-phase to return status after verification instead of chaining further. This keeps the auto-advance chain flat — each phase runs at the same nesting level rather than spawning deeper Task agents.
@@ -754,14 +765,14 @@ The `--no-transition` flag tells execute-phase to return status after verificati
 
   Auto-advance pipeline finished.
 
-  Next: /gsd-discuss-phase ${NEXT_PHASE} --auto ${GSD_WS}
+  Next: /gsd:discuss-phase ${NEXT_PHASE} --auto ${GSD_WS}
   ```
 - **GAPS FOUND / VERIFICATION FAILED** → Display result, stop chain:
   ```
   Auto-advance stopped: Execution needs review.
 
   Review the output above and continue manually:
-  /gsd-execute-phase ${PHASE} ${GSD_WS}
+  /gsd:execute-phase ${PHASE} ${GSD_WS}
   ```
 
 **If neither `--auto` nor config enabled:**
@@ -792,7 +803,7 @@ Verification: {Passed | Passed with override | Skipped}
 
 **Execute Phase {X}** — run all {N} plans
 
-/gsd-execute-phase {X} ${GSD_WS}
+/gsd:execute-phase {X} ${GSD_WS}
 
 <sub>/clear first → fresh context window</sub>
 
@@ -800,9 +811,9 @@ Verification: {Passed | Passed with override | Skipped}
 
 **Also available:**
 - cat .planning/phases/{phase-dir}/*-PLAN.md — review plans
-- /gsd-plan-phase {X} --research — re-research first
-- /gsd-review --phase {X} --all — peer review plans with external AIs
-- /gsd-plan-phase {X} --reviews — replan incorporating review feedback
+- /gsd:plan-phase {X} --research — re-research first
+- /gsd:review --phase {X} --all — peer review plans with external AIs
+- /gsd:plan-phase {X} --reviews — replan incorporating review feedback
 
 ───────────────────────────────────────────────────────────────
 </offer_next>
@@ -823,11 +834,11 @@ stdio deadlocks with MCP servers — see Claude Code issue anthropics/claude-cod
    Remove-Item -Recurse -Force "$env:USERPROFILE\.claude\tasks\*" -ErrorAction SilentlyContinue
    ```
 4. **Reduce MCP server count:** Temporarily disable non-essential MCP servers in settings.json
-5. **Retry:** Restart Claude Code and run `/gsd-plan-phase` again
+5. **Retry:** Restart Claude Code and run `/gsd:plan-phase` again
 
 If freezes persist, try `--skip-research` to reduce the agent chain from 3 to 2 agents:
 ```
-/gsd-plan-phase N --skip-research
+/gsd:plan-phase N --skip-research
 ```
 </windows_troubleshooting>
 

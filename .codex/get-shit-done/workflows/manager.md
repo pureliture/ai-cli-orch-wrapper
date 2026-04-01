@@ -19,7 +19,8 @@ Read all files referenced by the invoking prompt's execution_context before star
 Bootstrap via manager init:
 
 ```bash
-INIT=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" init manager)
+INIT=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init manager)
+if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
 Parse JSON for: `milestone_version`, `milestone_name`, `phase_count`, `completed_count`, `in_progress_count`, `phases`, `recommended_actions`, `all_complete`, `waiting_signal`.
@@ -52,7 +53,8 @@ Proceed to dashboard step.
 **Every time this step is reached**, re-read state from disk to pick up changes from background agents:
 
 ```bash
-INIT=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" init manager)
+INIT=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init manager)
+if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
 Parse the full JSON. Build the dashboard display.
@@ -104,8 +106,8 @@ If `all_complete` is true:
 ╚══════════════════════════════════════════════════════════════╝
 
 All {phase_count} phases done. Ready for final steps:
-  → $gsd-verify-work — run acceptance testing
-  → $gsd-complete-milestone — archive and wrap up
+  → /gsd:verify-work — run acceptance testing
+  → /gsd:complete-milestone — archive and wrap up
 ```
 
 Ask user via AskUserQuestion:
@@ -221,8 +223,8 @@ Phase: {N} — {phase_name}
 Goal: {goal}
 
 Steps:
-1. Read the plan-phase workflow: cat /Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/workflows/plan-phase.md
-2. Run: node \"/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs\" init plan-phase {N}
+1. Read the plan-phase workflow: cat /Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/workflows/plan-phase.md
+2. Run: node \"/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs\" init plan-phase {N}
 3. Follow the workflow steps to produce PLAN.md files for this phase.
 4. If research is enabled in config, run the research step first.
 5. Spawn a gsd-planner subagent via Task() to create the plans.
@@ -256,8 +258,8 @@ Phase: {N} — {phase_name}
 Goal: {goal}
 
 Steps:
-1. Read the execute-phase workflow: cat /Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/workflows/execute-phase.md
-2. Run: node \"/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs\" init execute-phase {N}
+1. Read the execute-phase workflow: cat /Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/workflows/execute-phase.md
+2. Run: node \"/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs\" init execute-phase {N}
 3. Follow the workflow steps: discover plans, analyze dependencies, group into waves.
 4. For each wave, spawn gsd-executor subagents via Task() to execute plans in parallel.
 5. After all waves complete, spawn a gsd-verifier subagent if verifier is enabled.
@@ -332,11 +334,11 @@ Display final status with progress bar:
  {milestone_version} — {milestone_name}
  {PROGRESS_BAR} {progress_pct}%  ({completed_count}/{phase_count} phases)
 
- Resume anytime: $gsd-manager
+ Resume anytime: /gsd:manager
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-**Note:** Any background agents still running will continue to completion. Their results will be visible on next `$gsd-manager` or `$gsd-progress` invocation.
+**Note:** Any background agents still running will continue to completion. Their results will be visible on next `/gsd:manager` or `/gsd:progress` invocation.
 
 </step>
 

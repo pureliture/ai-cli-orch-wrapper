@@ -9,7 +9,7 @@ Uses git cherry-pick with path filtering to rebuild a clean history.
 <process>
 
 <step name="detect_state">
-Parse `{{GSD_ARGS}}` for target branch (default: `main`).
+Parse `$ARGUMENTS` for target branch (default: `main`).
 
 ```bash
 CURRENT_BRANCH=$(git branch --show-current)
@@ -114,7 +114,7 @@ Next steps:
   git push origin {PR_BRANCH}
   gh pr create --base {TARGET} --head {PR_BRANCH}
 
-Or use $gsd-ship to create the PR automatically.
+Or use /gsd:ship to create the PR automatically.
 ```
 </step>
 

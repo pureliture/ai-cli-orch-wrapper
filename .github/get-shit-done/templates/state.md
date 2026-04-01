@@ -120,7 +120,7 @@ Points to PROJECT.md for full context. Includes:
 - Current focus (which phase)
 - Last update date (triggers re-read if stale)
 
-the agent reads PROJECT.md directly for requirements, constraints, and decisions.
+Claude reads PROJECT.md directly for requirements, constraints, and decisions.
 
 ### Current Position
 Where we are right now:
@@ -145,10 +145,10 @@ Updated after each plan completion.
 
 **Decisions:** Reference to PROJECT.md Key Decisions table, plus recent decisions summary for quick access. Full decision log lives in PROJECT.md.
 
-**Pending Todos:** Ideas captured via /gsd-add-todo
+**Pending Todos:** Ideas captured via /gsd:add-todo
 - Count of pending todos
 - Reference to .planning/todos/pending/
-- Brief list if few, count if many (e.g., "5 pending todos — see /gsd-check-todos")
+- Brief list if few, count if many (e.g., "5 pending todos — see /gsd:check-todos")
 
 **Blockers/Concerns:** From "Next Phase Readiness" sections
 - Issues that affect future work

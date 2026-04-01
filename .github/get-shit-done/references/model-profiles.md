@@ -1,6 +1,6 @@
 # Model Profiles
 
-Model profiles control which the agent model each GSD agent uses. This allows balancing quality vs token spend, or inheriting the currently selected session model.
+Model profiles control which Claude model each GSD agent uses. This allows balancing quality vs token spend, or inheriting the currently selected session model.
 
 ## Profile Definitions
 
@@ -43,9 +43,9 @@ Model profiles control which the agent model each GSD agent uses. This allows ba
 - **Required when using non-Anthropic providers** (OpenRouter, local models, etc.) — otherwise GSD may call Anthropic models directly, incurring unexpected costs
 - Use when: you want GSD to follow your currently selected runtime model
 
-## Using Non-the agent Runtimes (Codex, OpenCode, Gemini CLI)
+## Using Non-Claude Runtimes (Codex, OpenCode, Gemini CLI)
 
-When installed for a non-the agent runtime, the GSD installer sets `resolve_model_ids: "omit"` in `~/.gsd/defaults.json`. This returns an empty model parameter for all agents, so each agent uses the runtime's default model. No manual setup is needed.
+When installed for a non-Claude runtime, the GSD installer sets `resolve_model_ids: "omit"` in `~/.gsd/defaults.json`. This returns an empty model parameter for all agents, so each agent uses the runtime's default model. No manual setup is needed.
 
 To assign different models to different agents, add `model_overrides` with model IDs your runtime recognizes:
 
@@ -69,7 +69,7 @@ If you're using Claude Code with OpenRouter, a local model, or any non-Anthropic
 
 ```bash
 # Via settings command
-/gsd-settings
+/gsd:settings
 # → Select "Inherit" for model profile
 
 # Or manually in .planning/config.json
@@ -109,7 +109,7 @@ Overrides take precedence over the profile. Valid values: `opus`, `sonnet`, `hai
 
 ## Switching Profiles
 
-Runtime: `/gsd-set-profile <profile>`
+Runtime: `/gsd:set-profile <profile>`
 
 Per-project default: Set in `.planning/config.json`:
 ```json

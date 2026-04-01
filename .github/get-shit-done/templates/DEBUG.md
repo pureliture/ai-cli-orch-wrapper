@@ -67,8 +67,8 @@ files_changed: []
 
 **Current Focus:**
 - OVERWRITE entirely on each update
-- Always reflects what the agent is doing RIGHT NOW
-- If the agent reads this after /clear, it knows exactly where to resume
+- Always reflects what Claude is doing RIGHT NOW
+- If Claude reads this after /clear, it knows exactly where to resume
 - Fields: hypothesis, test, expecting, next_action
 
 **Symptoms:**
@@ -99,7 +99,7 @@ files_changed: []
 
 <lifecycle>
 
-**Creation:** Immediately when /gsd-debug is called
+**Creation:** Immediately when /gsd:debug is called
 - Create file with trigger from user input
 - Set status to "gathering"
 - Current Focus: next_action = "gather symptoms"
@@ -140,7 +140,7 @@ files_changed: []
 
 <resume_behavior>
 
-When the agent reads this file after /clear:
+When Claude reads this file after /clear:
 
 1. Parse frontmatter → know status
 2. Read Current Focus → know exactly what was happening
@@ -148,7 +148,7 @@ When the agent reads this file after /clear:
 4. Read Evidence → know what's been learned
 5. Continue from next_action
 
-The file IS the debugging brain. the agent should be able to resume perfectly from any interruption point.
+The file IS the debugging brain. Claude should be able to resume perfectly from any interruption point.
 
 </resume_behavior>
 

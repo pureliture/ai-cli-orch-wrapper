@@ -20,9 +20,9 @@ command -v claude >/dev/null 2>&1 && echo "claude:available" || echo "claude:mis
 command -v codex >/dev/null 2>&1 && echo "codex:available" || echo "codex:missing"
 ```
 
-Parse flags from `{{GSD_ARGS}}`:
+Parse flags from `$ARGUMENTS`:
 - `--gemini` → include Gemini
-- `--claude` → include the agent
+- `--claude` → include Claude
 - `--codex` → include Codex
 - `--all` → include all available
 - No flags → include all available
@@ -34,11 +34,11 @@ No external AI CLIs found. Install at least one:
 - codex: https://github.com/openai/codex
 - claude: https://github.com/anthropics/claude-code
 
-Then run $gsd-review again.
+Then run /gsd:review again.
 ```
 Exit.
 
-If only one CLI is the current runtime (e.g. running inside the agent), skip it for the review
+If only one CLI is the current runtime (e.g. running inside Claude), skip it for the review
 to ensure independence. At least one DIFFERENT CLI must be available.
 </step>
 
@@ -46,7 +46,7 @@ to ensure independence. At least one DIFFERENT CLI must be available.
 Collect phase artifacts for the review prompt:
 
 ```bash
-INIT=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
+INIT=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -121,14 +121,14 @@ For each selected CLI, invoke in sequence (not parallel — avoid rate limits):
 gemini -p "$(cat /tmp/gsd-review-prompt-{phase}.md)" 2>/dev/null > /tmp/gsd-review-gemini-{phase}.md
 ```
 
-**the agent (separate session):**
+**Claude (separate session):**
 ```bash
 claude -p "$(cat /tmp/gsd-review-prompt-{phase}.md)" --no-input 2>/dev/null > /tmp/gsd-review-claude-{phase}.md
 ```
 
 **Codex:**
 ```bash
-codex -p "$(cat /tmp/gsd-review-prompt-{phase}.md)" 2>/dev/null > /tmp/gsd-review-codex-{phase}.md
+codex exec --skip-git-repo-check "$(cat /tmp/gsd-review-prompt-{phase}.md)" 2>/dev/null > /tmp/gsd-review-codex-{phase}.md
 ```
 
 If a CLI fails, log the error and continue with remaining CLIs.
@@ -163,7 +163,7 @@ plans_reviewed: [{list of PLAN.md files}]
 
 ---
 
-## the agent Review
+## Claude Review
 
 {claude review content}
 
@@ -191,7 +191,7 @@ plans_reviewed: [{list of PLAN.md files}]
 
 Commit:
 ```bash
-node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" commit "docs: cross-AI review for phase {N}" --files {phase_dir}/{padded_phase}-REVIEWS.md
+node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: cross-AI review for phase {N}" --files {phase_dir}/{padded_phase}-REVIEWS.md
 ```
 </step>
 
@@ -211,7 +211,7 @@ Consensus concerns:
 Full review: {padded_phase}-REVIEWS.md
 
 To incorporate feedback into planning:
-  $gsd-plan-phase {N} --reviews
+  /gsd:plan-phase {N} --reviews
 ```
 
 Clean up temp files.
@@ -224,5 +224,5 @@ Clean up temp files.
 - [ ] REVIEWS.md written with structured feedback
 - [ ] Consensus summary synthesized from multiple reviewers
 - [ ] Temp files cleaned up
-- [ ] User knows how to use feedback ($gsd-plan-phase --reviews)
+- [ ] User knows how to use feedback (/gsd:plan-phase --reviews)
 </success_criteria>

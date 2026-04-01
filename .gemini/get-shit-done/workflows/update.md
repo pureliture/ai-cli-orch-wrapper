@@ -221,8 +221,8 @@ Exit.
 - `agents/gsd-*` files will be replaced
 
 (Paths are relative to detected runtime install location:
-global: `/Users/pureliture/ai-cli-orch-wrapper/.gemini/`, `~/.config/opencode/`, `~/.opencode/`, `~/.gemini/`, or `~/.codex/`
-local: `./.gemini/`, `./.config/opencode/`, `./.opencode/`, `./.gemini/`, or `./.codex/`)
+global: `/Users/pureliture/ghostty-tmux-wrapping/.claude/`, `~/.config/opencode/`, `~/.opencode/`, `~/.gemini/`, or `~/.codex/`
+local: `./.claude/`, `./.config/opencode/`, `./.opencode/`, `./.gemini/`, or `./.codex/`)
 
 Your custom files in other locations are preserved:
 - Custom commands not in `commands/gsd/` ✓
@@ -290,7 +290,7 @@ Format completion message (changelog was already shown in confirmation step):
 
 ⚠️  Restart your runtime to pick up the new commands.
 
-[View full changelog](https://github.com/glittercowboy/get-shit-done/blob/main/CHANGELOG.md)
+[View full changelog](https://github.com/gsd-build/get-shit-done/blob/main/CHANGELOG.md)
 ```
 </step>
 

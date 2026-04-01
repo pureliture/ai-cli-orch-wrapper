@@ -14,7 +14,7 @@ Read project state to determine current position:
 
 ```bash
 # Get state snapshot
-node "/Users/pureliture/ai-cli-orch-wrapper/.gemini/get-shit-done/bin/gsd-tools.cjs" state json 2>/dev/null || echo "{}"
+node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" state json 2>/dev/null || echo "{}"
 ```
 
 Also read:

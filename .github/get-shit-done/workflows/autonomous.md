@@ -28,13 +28,14 @@ fi
 Bootstrap via milestone-level init:
 
 ```bash
-INIT=$(node ".github/get-shit-done/bin/gsd-tools.cjs" init milestone-op)
+INIT=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init milestone-op)
+if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
 Parse JSON for: `milestone_version`, `milestone_name`, `phase_count`, `completed_phases`, `roadmap_exists`, `state_exists`, `commit_docs`.
 
-**If `roadmap_exists` is false:** Error — "No ROADMAP.md found. Run `/gsd-new-milestone` first."
-**If `state_exists` is false:** Error — "No STATE.md found. Run `/gsd-new-milestone` first."
+**If `roadmap_exists` is false:** Error — "No ROADMAP.md found. Run `/gsd:new-milestone` first."
+**If `state_exists` is false:** Error — "No STATE.md found. Run `/gsd:new-milestone` first."
 
 Display startup banner:
 
@@ -58,7 +59,7 @@ If `FROM_PHASE` is set, display: `Starting from phase ${FROM_PHASE}`
 Run phase discovery:
 
 ```bash
-ROADMAP=$(node ".github/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
+ROADMAP=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
 ```
 
 Parse the JSON `phases` array.
@@ -97,7 +98,7 @@ Exit cleanly.
 **Fetch details for each phase:**
 
 ```bash
-DETAIL=$(node ".github/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
+DETAIL=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
 ```
 
 Extract `phase_name`, `goal`, `success_criteria` from each. Store for use in execute_phase and transition messages.
@@ -123,7 +124,7 @@ Where N = current phase number (from the ROADMAP, e.g., 6), T = total milestone 
 Check if CONTEXT.md already exists for this phase:
 
 ```bash
-PHASE_STATE=$(node ".github/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Parse `has_context` from JSON.
@@ -139,7 +140,7 @@ Proceed to 3b.
 **If has_context is false:** Check if discuss is disabled via settings:
 
 ```bash
-SKIP_DISCUSS=$(node ".github/get-shit-done/bin/gsd-tools.cjs" config-get workflow.skip_discuss 2>/dev/null || echo "false")
+SKIP_DISCUSS=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.skip_discuss 2>/dev/null || echo "false")
 ```
 
 **If SKIP_DISCUSS is `true`:** Skip discuss entirely — the ROADMAP phase description is the spec. Display:
@@ -151,7 +152,7 @@ Phase ${PHASE_NUM}: Discuss skipped (workflow.skip_discuss=true) — using ROADM
 Write a minimal CONTEXT.md so downstream plan-phase has valid input. Get phase details:
 
 ```bash
-DETAIL=$(node ".github/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
+DETAIL=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
 ```
 
 Extract `goal` and `requirements` from JSON. Write `${phase_dir}/${padded_phase}-CONTEXT.md` with:
@@ -173,8 +174,8 @@ Extract `goal` and `requirements` from JSON. Write `${phase_dir}/${padded_phase}
 <decisions>
 ## Implementation Decisions
 
-### the agent's Discretion
-All implementation choices are at the agent's discretion — discuss phase was skipped per user setting. Use ROADMAP phase goal, success criteria, and codebase conventions to guide decisions.
+### Claude's Discretion
+All implementation choices are at Claude's discretion — discuss phase was skipped per user setting. Use ROADMAP phase goal, success criteria, and codebase conventions to guide decisions.
 
 </decisions>
 
@@ -203,7 +204,7 @@ None — discuss phase skipped.
 Commit the minimal context:
 
 ```bash
-node ".github/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): auto-generated context (discuss skipped)" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
+node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): auto-generated context (discuss skipped)" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
 
 Proceed to 3b.
@@ -213,15 +214,54 @@ Proceed to 3b.
 After smart_discuss completes, verify context was written:
 
 ```bash
-PHASE_STATE=$(node ".github/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Check `has_context`. If false → go to handle_blocker: "Smart discuss for phase ${PHASE_NUM} did not produce CONTEXT.md."
 
+**3a.5. UI Design Contract (Frontend Phases)**
+
+Check if this phase has frontend indicators and whether a UI-SPEC already exists:
+
+```bash
+PHASE_SECTION=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM} 2>/dev/null)
+echo "$PHASE_SECTION" | grep -iE "UI|interface|frontend|component|layout|page|screen|view|form|dashboard|widget" > /dev/null 2>&1
+HAS_UI=$?
+UI_SPEC_FILE=$(ls "${PHASE_DIR}"/*-UI-SPEC.md 2>/dev/null | head -1)
+```
+
+Check if UI phase workflow is enabled:
+
+```bash
+UI_PHASE_CFG=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
+```
+
+**If `HAS_UI` is 0 (frontend indicators found) AND `UI_SPEC_FILE` is empty (no UI-SPEC exists) AND `UI_PHASE_CFG` is not `false`:**
+
+Display:
+
+```
+Phase ${PHASE_NUM}: Frontend phase detected — generating UI design contract...
+```
+
+```
+Skill(skill="gsd:ui-phase", args="${PHASE_NUM}")
+```
+
+Verify UI-SPEC was created:
+
+```bash
+UI_SPEC_FILE=$(ls "${PHASE_DIR}"/*-UI-SPEC.md 2>/dev/null | head -1)
+```
+
+**If `UI_SPEC_FILE` is still empty after ui-phase:** Display warning `Phase ${PHASE_NUM}: UI-SPEC generation did not produce output — continuing without design contract.` and proceed to 3b.
+
+**If `HAS_UI` is 1 (no frontend indicators) OR `UI_SPEC_FILE` is not empty (UI-SPEC already exists) OR `UI_PHASE_CFG` is `false`:** Skip silently to 3b.
+
 **3b. Plan**
 
 ```
-Skill(skill="gsd-plan-phase", args="${PHASE_NUM}")
+Skill(skill="gsd:plan-phase", args="${PHASE_NUM}")
 ```
 
 Verify plan produced output — re-run `init phase-op` and check `has_plans`. If false → go to handle_blocker: "Plan phase ${PHASE_NUM} did not produce any plans."
@@ -229,7 +269,7 @@ Verify plan produced output — re-run `init phase-op` and check `has_plans`. If
 **3c. Execute**
 
 ```
-Skill(skill="gsd-execute-phase", args="${PHASE_NUM} --no-transition")
+Skill(skill="gsd:execute-phase", args="${PHASE_NUM} --no-transition")
 ```
 
 **3d. Post-Execution Routing**
@@ -243,7 +283,7 @@ VERIFY_STATUS=$(grep "^status:" "${PHASE_DIR}"/*-VERIFICATION.md 2>/dev/null | h
 Where `PHASE_DIR` comes from the `init phase-op` call already made in step 3a. If the variable is not in scope, re-fetch:
 
 ```bash
-PHASE_STATE=$(node ".github/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Parse `phase_dir` from the JSON.
@@ -294,14 +334,14 @@ Ask user via AskUserQuestion:
 On **"Run gap closure"**: Execute gap closure cycle (limit: 1 attempt):
 
 ```
-Skill(skill="gsd-plan-phase", args="${PHASE_NUM} --gaps")
+Skill(skill="gsd:plan-phase", args="${PHASE_NUM} --gaps")
 ```
 
 Verify gap plans were created — re-run `init phase-op ${PHASE_NUM}` and check `has_plans`. If no new gap plans → go to handle_blocker: "Gap closure planning for phase ${PHASE_NUM} did not produce plans."
 
 Re-execute:
 ```
-Skill(skill="gsd-execute-phase", args="${PHASE_NUM} --no-transition")
+Skill(skill="gsd:execute-phase", args="${PHASE_NUM} --no-transition")
 ```
 
 Re-read verification status:
@@ -324,6 +364,38 @@ On **"Continue without fixing"**: Display `Phase ${PHASE_NUM} ⏭ Gaps deferred`
 
 On **"Stop autonomous mode"**: Go to handle_blocker with "User stopped — gaps remain in phase ${PHASE_NUM}".
 
+**3d.5. UI Review (Frontend Phases)**
+
+> Run after any successful execution routing (passed, human_needed accepted, or gaps deferred/accepted) — before proceeding to the iterate step.
+
+Check if this phase had a UI-SPEC (created in step 3a.5 or pre-existing):
+
+```bash
+UI_SPEC_FILE=$(ls "${PHASE_DIR}"/*-UI-SPEC.md 2>/dev/null | head -1)
+```
+
+Check if UI review is enabled:
+
+```bash
+UI_REVIEW_CFG=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_review 2>/dev/null || echo "true")
+```
+
+**If `UI_SPEC_FILE` is not empty AND `UI_REVIEW_CFG` is not `false`:**
+
+Display:
+
+```
+Phase ${PHASE_NUM}: Frontend phase with UI-SPEC — running UI review audit...
+```
+
+```
+Skill(skill="gsd:ui-review", args="${PHASE_NUM}")
+```
+
+Display the review result summary (score from UI-REVIEW.md if produced). Continue to iterate step regardless of score — UI review is advisory, not blocking.
+
+**If `UI_SPEC_FILE` is empty OR `UI_REVIEW_CFG` is `false`:** Skip silently to iterate step.
+
 </step>
 
 <step name="smart_discuss">
@@ -332,12 +404,12 @@ On **"Stop autonomous mode"**: Go to handle_blocker with "User stopped — gaps 
 
 Run smart discuss for the current phase. Proposes grey area answers in batch tables — the user accepts or overrides per area. Produces identical CONTEXT.md output to regular discuss-phase.
 
-> **Note:** Smart discuss is an autonomous-optimized variant of the `gsd-discuss-phase` skill. It produces identical CONTEXT.md output but uses batch table proposals instead of sequential questioning. The original `discuss-phase` skill remains unchanged (per CTRL-03). Future milestones may extract this to a separate skill file.
+> **Note:** Smart discuss is an autonomous-optimized variant of the `gsd:discuss-phase` skill. It produces identical CONTEXT.md output but uses batch table proposals instead of sequential questioning. The original `discuss-phase` skill remains unchanged (per CTRL-03). Future milestones may extract this to a separate skill file.
 
 **Inputs:** `PHASE_NUM` from execute_phase. Run init to get phase paths:
 
 ```bash
-PHASE_STATE=$(node ".github/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Parse from JSON: `phase_dir`, `phase_slug`, `padded_phase`, `phase_name`.
@@ -351,9 +423,9 @@ Read project-level and prior phase context to avoid re-asking decided questions.
 **Read project files:**
 
 ```bash
-cat .planning/PROJECT.md 2>/dev/null
-cat .planning/REQUIREMENTS.md 2>/dev/null
-cat .planning/STATE.md 2>/dev/null
+cat .planning/PROJECT.md 2>/dev/null || true
+cat .planning/REQUIREMENTS.md 2>/dev/null || true
+cat .planning/STATE.md 2>/dev/null || true
 ```
 
 Extract from these:
@@ -364,7 +436,7 @@ Extract from these:
 **Read all prior CONTEXT.md files:**
 
 ```bash
-find .planning/phases -name "*-CONTEXT.md" 2>/dev/null | sort
+(find .planning/phases -name "*-CONTEXT.md" 2>/dev/null || true) | sort
 ```
 
 For each CONTEXT.md where phase number < current phase:
@@ -398,7 +470,7 @@ Lightweight codebase scan to inform grey area identification and proposals. Keep
 **Check for existing codebase maps:**
 
 ```bash
-ls .planning/codebase/*.md 2>/dev/null
+ls .planning/codebase/*.md 2>/dev/null || true
 ```
 
 **If codebase maps exist:** Read the most relevant ones (CONVENTIONS.md, STRUCTURE.md, STACK.md based on phase type). Extract reusable components, established patterns, integration points. Skip to building context below.
@@ -408,8 +480,8 @@ ls .planning/codebase/*.md 2>/dev/null
 Extract key terms from the phase goal. Search for related files:
 
 ```bash
-grep -rl "{term1}\|{term2}" src/ app/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null | head -10
-ls src/components/ src/hooks/ src/lib/ src/utils/ 2>/dev/null
+grep -rl "{term1}\|{term2}" src/ app/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null | head -10 || true
+ls src/components/ src/hooks/ src/lib/ src/utils/ 2>/dev/null || true
 ```
 
 Read the 3-5 most relevant files to understand existing patterns.
@@ -426,7 +498,7 @@ Read the 3-5 most relevant files to understand existing patterns.
 **Get phase details:**
 
 ```bash
-DETAIL=$(node ".github/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
+DETAIL=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
 ```
 
 Extract `goal`, `requirements`, `success_criteria` from the JSON response.
@@ -446,7 +518,7 @@ Phase ${PHASE_NUM}: Infrastructure phase — skipping discuss, writing minimal c
 
 Use these defaults for the CONTEXT.md:
 - `<domain>`: Phase boundary from ROADMAP goal
-- `<decisions>`: Single "### the agent's Discretion" subsection — "All implementation choices are at the agent's discretion — pure infrastructure phase"
+- `<decisions>`: Single "### Claude's Discretion" subsection — "All implementation choices are at Claude's discretion — pure infrastructure phase"
 - `<code_context>`: Whatever the codebase scout found
 - `<specifics>`: "No specific requirements — infrastructure phase"
 - `<deferred>`: "None"
@@ -496,7 +568,7 @@ Then prompt the user via **AskUserQuestion**:
 **On "Change QN":** Use AskUserQuestion with the alternatives for that specific question:
 - **header:** "{Area Name}"
 - **question:** "Q{N}: {question text}"
-- **options:** List the 1-2 alternatives plus "You decide" (maps to the agent's Discretion)
+- **options:** List the 1-2 alternatives plus "You decide" (maps to Claude's Discretion)
 
 Record the user's choice. Re-display the updated table with the change reflected. Re-present the full acceptance prompt so the user can make additional changes or accept.
 
@@ -557,8 +629,8 @@ Use **exactly** this structure (identical to discuss-phase output):
 - {Accepted/chosen answer for Q2}
 ...
 
-### the agent's Discretion
-{Any "You decide" answers collected — note the agent has flexibility here}
+### Claude's Discretion
+{Any "You decide" answers collected — note Claude has flexibility here}
 
 </decisions>
 
@@ -598,7 +670,7 @@ Write the file.
 **Commit:**
 
 ```bash
-node ".github/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): smart discuss context" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
+node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): smart discuss context" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
 
 Display confirmation:
@@ -617,7 +689,7 @@ Decisions captured: {count} across {area_count} areas
 After each phase completes, re-read ROADMAP.md to catch phases inserted mid-execution (decimal phases like 5.1):
 
 ```bash
-ROADMAP=$(node ".github/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
+ROADMAP=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
 ```
 
 Re-filter incomplete phases using the same logic as discover_phases:
@@ -659,7 +731,7 @@ Display lifecycle transition banner:
 **5a. Audit**
 
 ```
-Skill(skill="gsd-audit-milestone")
+Skill(skill="gsd:audit-milestone")
 ```
 
 After audit completes, detect the result:
@@ -695,7 +767,7 @@ Ask user via AskUserQuestion:
 
 On **"Continue anyway"**: Display `Audit ⏭ Gaps accepted — proceeding to complete milestone` and proceed to 5b.
 
-On **"Stop"**: Go to handle_blocker with "User stopped — audit gaps remain. Run /gsd-audit-milestone to review, then /gsd-complete-milestone when ready."
+On **"Stop"**: Go to handle_blocker with "User stopped — audit gaps remain. Run /gsd:audit-milestone to review, then /gsd:complete-milestone when ready."
 
 **If `tech_debt`:**
 
@@ -710,18 +782,18 @@ Show the summary, then ask user via AskUserQuestion:
 
 On **"Continue with tech debt"**: Display `Audit ⏭ Tech debt acknowledged — proceeding to complete milestone` and proceed to 5b.
 
-On **"Stop"**: Go to handle_blocker with "User stopped — tech debt to address. Run /gsd-audit-milestone to review details."
+On **"Stop"**: Go to handle_blocker with "User stopped — tech debt to address. Run /gsd:audit-milestone to review details."
 
 **5b. Complete Milestone**
 
 ```
-Skill(skill="gsd-complete-milestone", args="${milestone_version}")
+Skill(skill="gsd:complete-milestone", args="${milestone_version}")
 ```
 
 After complete-milestone returns, verify it produced output:
 
 ```bash
-ls .planning/milestones/v${milestone_version}-ROADMAP.md 2>/dev/null
+ls .planning/milestones/v${milestone_version}-ROADMAP.md 2>/dev/null || true
 ```
 
 If the archive file does not exist, go to handle_blocker: "Complete milestone did not produce expected archive files."
@@ -729,7 +801,7 @@ If the archive file does not exist, go to handle_blocker: "Complete milestone di
 **5c. Cleanup**
 
 ```
-Skill(skill="gsd-cleanup")
+Skill(skill="gsd:cleanup")
 ```
 
 Cleanup shows its own dry-run and asks user for approval internally — this is an acceptable pause per CTRL-01 since it's an explicit decision about file deletion.
@@ -780,7 +852,7 @@ When any phase operation fails or a blocker is detected, present 3 options via A
  Skipped: {list of skipped phases}
  Remaining: {list of remaining phases}
 
- Resume with: /gsd-autonomous --from {next_phase}
+ Resume with: /gsd:autonomous --from {next_phase}
 ```
 
 </step>
@@ -788,7 +860,7 @@ When any phase operation fails or a blocker is detected, present 3 options via A
 </process>
 
 <success_criteria>
-- [ ] All incomplete phases executed in order (smart discuss → plan → execute each)
+- [ ] All incomplete phases executed in order (smart discuss → ui-phase → plan → execute → ui-review each)
 - [ ] Smart discuss proposes grey area answers in tables, user accepts or overrides per area
 - [ ] Progress banners displayed between phases
 - [ ] Execute-phase invoked with --no-transition (autonomous manages transitions)
@@ -804,7 +876,7 @@ When any phase operation fails or a blocker is detected, present 3 options via A
 - [ ] Final completion or stop summary displayed
 - [ ] After all phases complete, lifecycle step is invoked (not manual suggestion)
 - [ ] Lifecycle transition banner displayed before audit
-- [ ] Audit invoked via Skill(skill="gsd-audit-milestone")
+- [ ] Audit invoked via Skill(skill="gsd:audit-milestone")
 - [ ] Audit result routing: passed → auto-continue, gaps_found → user decides, tech_debt → user decides
 - [ ] Audit technical failure (no file/no status) routes to handle_blocker
 - [ ] Complete-milestone invoked via Skill() with ${milestone_version} arg
@@ -812,4 +884,8 @@ When any phase operation fails or a blocker is detected, present 3 options via A
 - [ ] Final completion banner displayed after lifecycle
 - [ ] Progress bar uses phase number / total milestone phases (not position among incomplete)
 - [ ] Smart discuss documents relationship to discuss-phase with CTRL-03 note
+- [ ] Frontend phases get UI-SPEC generated before planning (step 3a.5) if not already present
+- [ ] Frontend phases get UI review audit after successful execution (step 3d.5) if UI-SPEC exists
+- [ ] UI phase and UI review respect workflow.ui_phase and workflow.ui_review config toggles
+- [ ] UI review is advisory (non-blocking) — phase proceeds to iterate regardless of score
 </success_criteria>

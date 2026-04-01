@@ -1,0 +1,25 @@
+{
+  "_comment": "Managed by aco setup — do not edit manually.",
+  "aliases": {
+    "claude": {
+      "provider": "claude_code",
+      "agent": "developer"
+    },
+    "gemini": {
+      "provider": "gemini_cli",
+      "agent": "developer"
+    },
+    "codex": {
+      "provider": "codex",
+      "agent": "developer"
+    },
+    "setup": {
+      "provider": "stub",
+      "agent": "stub"
+    }
+  },
+  "roles": {
+    "orchestrator": "claude_code",
+    "reviewer": "gemini_cli"
+  }
+}
