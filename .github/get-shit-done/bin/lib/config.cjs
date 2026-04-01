@@ -27,6 +27,18 @@ const VALID_CONFIG_KEYS = new Set([
   'hooks.context_warnings',
 ]);
 
+/**
+ * Check whether a config key path is valid.
+ * Supports exact matches from VALID_CONFIG_KEYS plus dynamic patterns
+ * like `agent_skills.<agent-type>` where the sub-key is freeform.
+ */
+function isValidConfigKey(keyPath) {
+  if (VALID_CONFIG_KEYS.has(keyPath)) return true;
+  // Allow agent_skills.<agent-type> with any agent type string
+  if (/^agent_skills\.[a-zA-Z0-9_-]+$/.test(keyPath)) return true;
+  return false;
+}
+
 const CONFIG_KEY_SUGGESTIONS = {
   'workflow.nyquist_validation_enabled': 'workflow.nyquist_validation',
   'agents.nyquist_validation_enabled': 'workflow.nyquist_validation',
@@ -48,7 +60,7 @@ function validateKnownConfigKeyPath(keyPath) {
  * Merges (increasing priority):
  *   1. Hardcoded defaults — every key that loadConfig() resolves, plus mode/granularity
  *   2. User-level defaults from ~/.gsd/defaults.json (if present)
- *   3. userChoices — the settings the user explicitly selected during /gsd-new-project
+ *   3. userChoices — the settings the user explicitly selected during /gsd:new-project
  *
  * Uses the canonical `git` namespace for branching keys (consistent with VALID_CONFIG_KEYS
  * and the settings workflow). loadConfig() handles both flat and nested formats, so this
@@ -120,6 +132,7 @@ function buildNewProjectConfig(userChoices) {
     hooks: {
       context_warnings: true,
     },
+    agent_skills: {},
   };
 
   // Three-level deep merge: hardcoded <- userDefaults <- choices
@@ -142,6 +155,11 @@ function buildNewProjectConfig(userChoices) {
       ...(userDefaults.hooks || {}),
       ...(choices.hooks || {}),
     },
+    agent_skills: {
+      ...hardcoded.agent_skills,
+      ...(userDefaults.agent_skills || {}),
+      ...(choices.agent_skills || {}),
+    },
   };
 }
 
@@ -149,7 +167,7 @@ function buildNewProjectConfig(userChoices) {
  * Command: create a fully-materialized .planning/config.json for a new project.
  *
  * Accepts user-chosen settings as a JSON string (the keys the user explicitly
- * configured during /gsd-new-project). All remaining keys are filled from
+ * configured during /gsd:new-project). All remaining keys are filled from
  * hardcoded defaults and optional ~/.gsd/defaults.json.
  *
  * Idempotent: if config.json already exists, returns { created: false }.
@@ -298,15 +316,18 @@ function cmdConfigSet(cwd, keyPath, value, raw) {
 
   validateKnownConfigKeyPath(keyPath);
 
-  if (!VALID_CONFIG_KEYS.has(keyPath)) {
-    error(`Unknown config key: "${keyPath}". Valid keys: ${[...VALID_CONFIG_KEYS].sort().join(', ')}`);
+  if (!isValidConfigKey(keyPath)) {
+    error(`Unknown config key: "${keyPath}". Valid keys: ${[...VALID_CONFIG_KEYS].sort().join(', ')}, agent_skills.<agent-type>`);
   }
 
-  // Parse value (handle booleans and numbers)
+  // Parse value (handle booleans, numbers, and JSON arrays/objects)
   let parsedValue = value;
   if (value === 'true') parsedValue = true;
   else if (value === 'false') parsedValue = false;
   else if (!isNaN(value) && value !== '') parsedValue = Number(value);
+  else if (typeof value === 'string' && (value.startsWith('[') || value.startsWith('{'))) {
+    try { parsedValue = JSON.parse(value); } catch { /* keep as string */ }
+  }
 
   const setConfigValueResult = setConfigValue(cwd, keyPath, parsedValue);
   output(setConfigValueResult, raw, `${keyPath}=${parsedValue}`);

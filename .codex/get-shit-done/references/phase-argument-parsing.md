@@ -4,7 +4,7 @@ Parse and normalize phase arguments for commands that operate on phases.
 
 ## Extraction
 
-From `{{GSD_ARGS}}`:
+From `$ARGUMENTS`:
 - Extract phase number (first numeric argument)
 - Extract flags (prefixed with `--`)
 - Remaining text is description (for insert/add commands)
@@ -14,7 +14,7 @@ From `{{GSD_ARGS}}`:
 The `find-phase` command handles normalization and validation in one step:
 
 ```bash
-PHASE_INFO=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" find-phase "${PHASE}")
+PHASE_INFO=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" find-phase "${PHASE}")
 ```
 
 Returns JSON with:
@@ -45,7 +45,7 @@ fi
 Use `roadmap get-phase` to validate phase exists:
 
 ```bash
-PHASE_CHECK=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick found)
+PHASE_CHECK=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick found)
 if [ "$PHASE_CHECK" = "false" ]; then
   echo "ERROR: Phase ${PHASE} not found in roadmap"
   exit 1
@@ -57,5 +57,5 @@ fi
 Use `find-phase` for directory lookup:
 
 ```bash
-PHASE_DIR=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" find-phase "${PHASE}" --raw)
+PHASE_DIR=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" find-phase "${PHASE}" --raw)
 ```

@@ -13,7 +13,7 @@ You are a thinking partner, not an interviewer. The user is the visionary — yo
 
 2. **gsd-planner** — Reads CONTEXT.md to know WHAT decisions are locked
    - "Pull-to-refresh on mobile" → planner includes that in task specs
-   - "the agent's Discretion: loading skeleton" → planner can decide approach
+   - "Claude's Discretion: loading skeleton" → planner can decide approach
 
 **Your job:** Capture decisions clearly enough that downstream agents can act on them without asking the user again.
 
@@ -21,7 +21,7 @@ You are a thinking partner, not an interviewer. The user is the visionary — yo
 </downstream_awareness>
 
 <philosophy>
-**User = founder/visionary. the agent = builder.**
+**User = founder/visionary. Claude = builder.**
 
 The user knows:
 - How they imagine it working
@@ -98,7 +98,7 @@ Phase: "API documentation"
 
 **The key question:** What decisions would change the outcome that the user should weigh in on?
 
-**the agent handles these (don't ask):**
+**Claude handles these (don't ask):**
 - Technical implementation details
 - Architecture patterns
 - Performance optimization
@@ -114,11 +114,11 @@ Never proceed with an empty answer.
 **Text mode (`workflow.text_mode: true` in config or `--text` flag):**
 When text mode is active, **do not use AskUserQuestion at all**. Instead, present every
 question as a plain-text numbered list and ask the user to type their choice number.
-This is required for Claude Code remote sessions (`/rc` mode) where the the agent App
+This is required for Claude Code remote sessions (`/rc` mode) where the Claude App
 cannot forward TUI menu selections back to the host.
 
 Enable text mode:
-- Per-session: pass `--text` flag to any command (e.g., `$gsd-discuss-phase --text`)
+- Per-session: pass `--text` flag to any command (e.g., `/gsd:discuss-phase --text`)
 - Per-project: `gsd-tools config-set workflow.text_mode true`
 
 Text mode applies to ALL workflows in the session, not just discuss-phase.
@@ -126,14 +126,15 @@ Text mode applies to ALL workflows in the session, not just discuss-phase.
 
 <process>
 
-**Express path available:** If you already have a PRD or acceptance criteria document, use `$gsd-plan-phase {phase} --prd path/to/prd.md` to skip this discussion and go straight to planning.
+**Express path available:** If you already have a PRD or acceptance criteria document, use `/gsd:plan-phase {phase} --prd path/to/prd.md` to skip this discussion and go straight to planning.
 
 <step name="initialize" priority="first">
 Phase number from argument (required).
 
 ```bash
-INIT=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE}")
+INIT=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
+AGENT_SKILLS_ADVISOR=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-advisor 2>/dev/null)
 ```
 
 Parse JSON for: `commit_docs`, `phase_found`, `phase_dir`, `phase_number`, `phase_name`, `phase_slug`, `padded_phase`, `has_research`, `has_context`, `has_plans`, `has_verification`, `plan_count`, `roadmap_exists`, `planning_exists`.
@@ -142,7 +143,7 @@ Parse JSON for: `commit_docs`, `phase_found`, `phase_dir`, `phase_number`, `phas
 ```
 Phase [X] not found in roadmap.
 
-Use $gsd-progress ${GSD_WS} to see available phases.
+Use /gsd:progress ${GSD_WS} to see available phases.
 ```
 Exit workflow.
 
@@ -160,7 +161,7 @@ Exit workflow.
 Check if CONTEXT.md already exists using `has_context` from init.
 
 ```bash
-ls ${phase_dir}/*-CONTEXT.md 2>/dev/null
+ls ${phase_dir}/*-CONTEXT.md 2>/dev/null || true
 ```
 
 **If exists:**
@@ -189,7 +190,7 @@ Check `has_plans` and `plan_count` from init. **If `has_plans` is true:**
 - header: "Plans exist"
 - question: "Phase [X] already has {plan_count} plan(s) created without user context. Your decisions here won't affect existing plans unless you replan."
 - options:
-  - "Continue and replan after" — Capture context, then run $gsd-plan-phase {X} ${GSD_WS} to replan
+  - "Continue and replan after" — Capture context, then run /gsd:plan-phase {X} ${GSD_WS} to replan
   - "View existing plans" — Show plans before deciding
   - "Cancel" — Skip discuss-phase
 
@@ -206,9 +207,9 @@ Read project-level and prior phase context to avoid re-asking decided questions 
 **Step 1: Read project-level files**
 ```bash
 # Core project files
-cat .planning/PROJECT.md 2>/dev/null
-cat .planning/REQUIREMENTS.md 2>/dev/null
-cat .planning/STATE.md 2>/dev/null
+cat .planning/PROJECT.md 2>/dev/null || true
+cat .planning/REQUIREMENTS.md 2>/dev/null || true
+cat .planning/STATE.md 2>/dev/null || true
 ```
 
 Extract from these:
@@ -219,7 +220,7 @@ Extract from these:
 **Step 2: Read all prior CONTEXT.md files**
 ```bash
 # Find all CONTEXT.md files from phases before current
-find .planning/phases -name "*-CONTEXT.md" 2>/dev/null | sort
+(find .planning/phases -name "*-CONTEXT.md" 2>/dev/null || true) | sort
 ```
 
 For each CONTEXT.md where phase number < current phase:
@@ -259,7 +260,7 @@ Check if any pending todos are relevant to this phase's scope. Surfaces backlog 
 
 **Load and match todos:**
 ```bash
-TODO_MATCHES=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" todo match-phase "${PHASE_NUMBER}")
+TODO_MATCHES=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" todo match-phase "${PHASE_NUMBER}")
 ```
 
 Parse JSON for: `todo_count`, `matches[]` (each with `file`, `title`, `area`, `score`, `reasons`).
@@ -300,7 +301,7 @@ Lightweight scan of existing code to inform gray area identification and discuss
 
 **Step 1: Check for existing codebase maps**
 ```bash
-ls .planning/codebase/*.md 2>/dev/null
+ls .planning/codebase/*.md 2>/dev/null || true
 ```
 
 **If codebase maps exist:** Read the most relevant ones (CONVENTIONS.md, STRUCTURE.md, STACK.md based on phase type). Extract:
@@ -316,12 +317,12 @@ Extract key terms from the phase goal (e.g., "feed" → "post", "card", "list"; 
 
 ```bash
 # Find files related to phase goal terms
-grep -rl "{term1}\|{term2}" src/ app/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null | head -10
+grep -rl "{term1}\|{term2}" src/ app/ --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" 2>/dev/null | head -10 || true
 
 # Find existing components/hooks
-ls src/components/ 2>/dev/null
-ls src/hooks/ 2>/dev/null
-ls src/lib/ src/utils/ 2>/dev/null
+ls src/components/ 2>/dev/null || true
+ls src/hooks/ 2>/dev/null || true
+ls src/lib/ src/utils/ 2>/dev/null || true
 ```
 
 Read the 3-5 most relevant files to understand existing patterns.
@@ -368,7 +369,7 @@ Check if advisor mode should activate:
 
 1. Check for USER-PROFILE.md:
    ```bash
-   PROFILE_PATH="/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/USER-PROFILE.md"
+   PROFILE_PATH="/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/USER-PROFILE.md"
    ```
    ADVISOR_MODE = file exists at PROFILE_PATH → true, otherwise → false
 
@@ -384,7 +385,7 @@ Check if advisor mode should activate:
 
 3. Resolve model for advisor agents:
    ```bash
-   ADVISOR_MODEL=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-advisor-researcher --raw)
+   ADVISOR_MODEL=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" resolve-model gsd-advisor-researcher --raw)
    ```
 
 If ADVISOR_MODE is false, skip all advisor-specific steps — workflow proceeds with existing conversational flow unchanged.
@@ -491,14 +492,15 @@ After user selects gray areas in present_gray_areas, spawn parallel research age
 2. For EACH user-selected gray area, spawn a Task() in parallel:
 
    Task(
-     prompt="First, read @/Users/pureliture/ai-cli-orch-wrapper/.codex/agents/gsd-advisor-researcher.md for your role and instructions.
+     prompt="First, read @/Users/pureliture/ghostty-tmux-wrapping/.claude/agents/gsd-advisor-researcher.md for your role and instructions.
 
      <gray_area>{area_name}: {area_description from gray area identification}</gray_area>
      <phase_context>{phase_goal and description from ROADMAP.md}</phase_context>
      <project_context>{project name and brief description from PROJECT.md}</project_context>
      <calibration_tier>{resolved calibration tier: full_maturity | standard | minimal_decisive}</calibration_tier>
 
-     Research this gray area and return a structured comparison table with rationale.",
+     Research this gray area and return a structured comparison table with rationale.
+     ${AGENT_SKILLS_ADVISOR}",
      subagent_type="general-purpose",
      model="{ADVISOR_MODEL}",
      description="Research: {area_name}"
@@ -543,7 +545,7 @@ Table-first discussion flow — present research-backed comparison tables, then 
    - If user picks from table options → record as locked decision for that area
    - If user picks "Other" → receive their input, reflect it back for confirmation, record
 
-4. **After recording pick, the agent decides whether follow-up questions are needed:**
+4. **After recording pick, Claude decides whether follow-up questions are needed:**
    - If the pick has ambiguity that would affect downstream planning → ask 1-2 targeted follow-up questions using AskUserQuestion
    - If the pick is clear and self-contained → move to next area
    - Do NOT ask the standard 4 questions — the table already provided the context
@@ -589,17 +591,17 @@ With that context: How should users authenticate?
 
 When disabled (default), skip the research and present questions directly as before.
 
-**Text mode support:** Parse optional `--text` from `{{GSD_ARGS}}`.
+**Text mode support:** Parse optional `--text` from `$ARGUMENTS`.
 - Accept `--text` flag OR read `workflow.text_mode` from config (from init context)
 - When active, replace ALL `AskUserQuestion` calls with plain-text numbered lists
 - User types a number to select, or types free text for "Other"
 - This is required for Claude Code remote sessions (`/rc` mode) where TUI menus
-  don't work through the the agent App
+  don't work through the Claude App
 
-**Batch mode support:** Parse optional `--batch` from `{{GSD_ARGS}}`.
+**Batch mode support:** Parse optional `--batch` from `$ARGUMENTS`.
 - Accept `--batch`, `--batch=N`, or `--batch N`
 
-**Analyze mode support:** Parse optional `--analyze` from `{{GSD_ARGS}}`.
+**Analyze mode support:** Parse optional `--analyze` from `$ARGUMENTS`.
 When `--analyze` is active, before presenting each question (or question group in batch mode), provide a brief **trade-off analysis** for the decision:
 - 2-3 options with pros/cons based on codebase context and common patterns
 - A recommended approach with reasoning
@@ -632,7 +634,7 @@ This gives the user context to make informed decisions without extra prompting. 
 
 Each answer (or answer set, in batch mode) should reveal the next question or next batch.
 
-**Auto mode (`--auto`):** For each area, the agent selects the recommended option (first option, or the one explicitly marked "recommended") for every question without using AskUserQuestion. Log each auto-selected choice:
+**Auto mode (`--auto`):** For each area, Claude selects the recommended option (first option, or the one explicitly marked "recommended") for every question without using AskUserQuestion. Log each auto-selected choice:
 ```
 [auto] [Area] — Q: "[question text]" → Selected: "[chosen option]" (recommended default)
 ```
@@ -660,7 +662,7 @@ After all areas are auto-resolved, skip the "Explore more gray areas" prompt and
      - List (simpler, would be a new pattern)
      - Timeline (needs new Timeline component — none exists yet)
      ```
-   - Include "You decide" as an option when reasonable — captures the agent discretion
+   - Include "You decide" as an option when reasonable — captures Claude discretion
    - **Context7 for library choices:** When a gray area involves library selection (e.g., "magic links" → query next-auth docs) or API approach decisions, use `mcp__context7__*` tools to fetch current documentation and inform the options. Don't use Context7 for every question — only when library-specific knowledge improves the options.
 
    **Batch mode (`--batch`): Ask 2-5 numbered questions in one plain-text turn**
@@ -769,8 +771,8 @@ mkdir -p ".planning/phases/${padded_phase}-${phase_slug}"
 ### [Category 2 that was discussed]
 - **D-03:** [Decision or preference captured]
 
-### the agent's Discretion
-[Areas where user said "you decide" — note that the agent has flexibility here]
+### Claude's Discretion
+[Areas where user said "you decide" — note that Claude has flexibility here]
 
 ### Folded Todos
 [If any todos were folded into scope from the cross_reference_todos step, list them here.
@@ -871,15 +873,15 @@ Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
 
 **Phase ${PHASE}: [Name]** — [Goal from ROADMAP.md]
 
-`$gsd-plan-phase ${PHASE} ${GSD_WS}`
+`/gsd:plan-phase ${PHASE} ${GSD_WS}`
 
 <sub>`/clear` first → fresh context window</sub>
 
 ---
 
 **Also available:**
-- `$gsd-plan-phase ${PHASE} --skip-research ${GSD_WS}` — plan without research
-- `$gsd-ui-phase ${PHASE} ${GSD_WS}` — generate UI design contract before planning (if phase has frontend work)
+- `/gsd:plan-phase ${PHASE} --skip-research ${GSD_WS}` — plan without research
+- `/gsd:ui-phase ${PHASE} ${GSD_WS}` — generate UI design contract before planning (if phase has frontend work)
 - Review/edit CONTEXT.md before continuing
 
 ---
@@ -920,9 +922,9 @@ Created: .planning/phases/${PADDED_PHASE}-${SLUG}/${PADDED_PHASE}-CONTEXT.md
 
 [Repeat for each area]
 
-## the agent's Discretion
+## Claude's Discretion
 
-[List areas where user said "you decide" or deferred to the agent]
+[List areas where user said "you decide" or deferred to Claude]
 
 ## Deferred Ideas
 
@@ -934,7 +936,7 @@ Write file.
 Commit phase context and discussion log:
 
 ```bash
-node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): capture phase context" --files "${phase_dir}/${padded_phase}-CONTEXT.md" "${phase_dir}/${padded_phase}-DISCUSSION-LOG.md"
+node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): capture phase context" --files "${phase_dir}/${padded_phase}-CONTEXT.md" "${phase_dir}/${padded_phase}-DISCUSSION-LOG.md"
 ```
 
 Confirm: "Committed: docs(${padded_phase}): capture phase context"
@@ -944,7 +946,7 @@ Confirm: "Committed: docs(${padded_phase}): capture phase context"
 Update STATE.md with session info:
 
 ```bash
-node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" state record-session \
+node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" state record-session \
   --stopped-at "Phase ${PHASE} context gathered" \
   --resume-file "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
@@ -952,29 +954,29 @@ node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.c
 Commit STATE.md:
 
 ```bash
-node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" commit "docs(state): record phase ${PHASE} context session" --files .planning/STATE.md
+node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(state): record phase ${PHASE} context session" --files .planning/STATE.md
 ```
 </step>
 
 <step name="auto_advance">
 Check for auto-advance trigger:
 
-1. Parse `--auto` flag from {{GSD_ARGS}}
+1. Parse `--auto` flag from $ARGUMENTS
 2. **Sync chain flag with intent** — if user invoked manually (no `--auto`), clear the ephemeral chain flag from any previous interrupted `--auto` chain. This does NOT touch `workflow.auto_advance` (the user's persistent settings preference):
    ```bash
-   if [[ ! "{{GSD_ARGS}}" =~ --auto ]]; then
-     node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
+   if [[ ! "$ARGUMENTS" =~ --auto ]]; then
+     node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
    fi
    ```
 3. Read both the chain flag and user preference:
    ```bash
-   AUTO_CHAIN=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
-   AUTO_CFG=$(node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
+   AUTO_CHAIN=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+   AUTO_CFG=$(node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
    ```
 
 **If `--auto` flag present AND `AUTO_CHAIN` is not true:** Persist chain flag to config (handles direct `--auto` usage without new-project):
 ```bash
-node "/Users/pureliture/ai-cli-orch-wrapper/.codex/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active true
+node "/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active true
 ```
 
 **If `--auto` flag present OR `AUTO_CHAIN` is true OR `AUTO_CFG` is true:**
@@ -1004,23 +1006,23 @@ This keeps the auto-advance chain flat — discuss, plan, and execute all run at
 
   Auto-advance pipeline finished: discuss → plan → execute
 
-  Next: $gsd-discuss-phase ${NEXT_PHASE} --auto ${GSD_WS}
+  Next: /gsd:discuss-phase ${NEXT_PHASE} --auto ${GSD_WS}
   <sub>/clear first → fresh context window</sub>
   ```
 - **PLANNING COMPLETE** → Planning done, execution didn't complete:
   ```
   Auto-advance partial: Planning complete, execution did not finish.
-  Continue: $gsd-execute-phase ${PHASE} ${GSD_WS}
+  Continue: /gsd:execute-phase ${PHASE} ${GSD_WS}
   ```
 - **PLANNING INCONCLUSIVE / CHECKPOINT** → Stop chain:
   ```
   Auto-advance stopped: Planning needs input.
-  Continue: $gsd-plan-phase ${PHASE} ${GSD_WS}
+  Continue: /gsd:plan-phase ${PHASE} ${GSD_WS}
   ```
 - **GAPS FOUND** → Stop chain:
   ```
   Auto-advance stopped: Gaps found during execution.
-  Continue: $gsd-plan-phase ${PHASE} --gaps ${GSD_WS}
+  Continue: /gsd:plan-phase ${PHASE} --gaps ${GSD_WS}
   ```
 
 **If neither `--auto` nor config enabled:**

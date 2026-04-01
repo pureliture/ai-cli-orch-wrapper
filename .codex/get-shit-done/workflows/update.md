@@ -17,7 +17,7 @@ First, derive `PREFERRED_RUNTIME` from the invoking prompt's `execution_context`
 - Path contains `/.config/opencode/` or `/.opencode/` -> `opencode`
 - Otherwise -> `claude`
 
-Use `PREFERRED_RUNTIME` as the first runtime checked so `$gsd-update` targets the runtime that invoked it.
+Use `PREFERRED_RUNTIME` as the first runtime checked so `/gsd:update` targets the runtime that invoked it.
 
 ```bash
 # Runtime candidates: "<runtime>:<config-dir>" stored as an array.
@@ -221,16 +221,16 @@ Exit.
 - `agents/gsd-*` files will be replaced
 
 (Paths are relative to detected runtime install location:
-global: `/Users/pureliture/ai-cli-orch-wrapper/.codex/`, `~/.config/opencode/`, `~/.opencode/`, `~/.gemini/`, or `~/.codex/`
-local: `./.codex/`, `./.config/opencode/`, `./.opencode/`, `./.gemini/`, or `./.codex/`)
+global: `/Users/pureliture/ghostty-tmux-wrapping/.claude/`, `~/.config/opencode/`, `~/.opencode/`, `~/.gemini/`, or `~/.codex/`
+local: `./.claude/`, `./.config/opencode/`, `./.opencode/`, `./.gemini/`, or `./.codex/`)
 
 Your custom files in other locations are preserved:
 - Custom commands not in `commands/gsd/` ✓
 - Custom agents not prefixed with `gsd-` ✓
 - Custom hooks ✓
-- Your AGENTS.md files ✓
+- Your CLAUDE.md files ✓
 
-If you've modified any GSD files directly, they'll be automatically backed up to `gsd-local-patches/` and can be reapplied with `$gsd-reapply-patches` after the update.
+If you've modified any GSD files directly, they'll be automatically backed up to `gsd-local-patches/` and can be reapplied with `/gsd:reapply-patches` after the update.
 ```
 
 Use AskUserQuestion:
@@ -290,7 +290,7 @@ Format completion message (changelog was already shown in confirmation step):
 
 ⚠️  Restart your runtime to pick up the new commands.
 
-[View full changelog](https://github.com/glittercowboy/get-shit-done/blob/main/CHANGELOG.md)
+[View full changelog](https://github.com/gsd-build/get-shit-done/blob/main/CHANGELOG.md)
 ```
 </step>
 
@@ -304,7 +304,7 @@ Check for gsd-local-patches/backup-meta.json in the config directory.
 
 ```
 Local patches were backed up before the update.
-Run $gsd-reapply-patches to merge your modifications into the new version.
+Run /gsd:reapply-patches to merge your modifications into the new version.
 ```
 
 **If no patches:** Continue normally.

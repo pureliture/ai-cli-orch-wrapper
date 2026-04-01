@@ -216,7 +216,7 @@ get-shit-done/
 
 **New Workflow:**
 - Implementation: `get-shit-done/workflows/{name}.md`
-- Usage: Reference from command with `@/Users/pureliture/ai-cli-orch-wrapper/.claude/get-shit-done/workflows/{name}.md`
+- Usage: Reference from command with `@/Users/pureliture/ghostty-tmux-wrapping/.claude/get-shit-done/workflows/{name}.md`
 
 **New Reference Document:**
 - Implementation: `get-shit-done/references/{name}.md`
@@ -229,12 +229,12 @@ get-shit-done/
 ## Special Directories
 
 **get-shit-done/**
-- Purpose: Resources installed to /Users/pureliture/ai-cli-orch-wrapper/.claude/
+- Purpose: Resources installed to /Users/pureliture/ghostty-tmux-wrapping/.claude/
 - Source: Copied by bin/install.js during installation
 - Committed: Yes (source of truth)
 
 **commands/**
-- Purpose: Slash commands installed to /Users/pureliture/ai-cli-orch-wrapper/.claude/commands/
+- Purpose: Slash commands installed to /Users/pureliture/ghostty-tmux-wrapping/.claude/commands/
 - Source: Copied by bin/install.js during installation
 - Committed: Yes (source of truth)
 

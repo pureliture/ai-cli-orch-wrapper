@@ -40,7 +40,7 @@ function detectSubRepos(cwd) {
 /**
  * Walk up from `startDir` to find the project root that owns `.planning/`.
  *
- * In multi-repo workspaces, the agent may open inside a sub-repo (e.g. `backend/`)
+ * In multi-repo workspaces, Claude may open inside a sub-repo (e.g. `backend/`)
  * instead of the project root. This function prevents `.planning/` from being
  * created inside the sub-repo by locating the nearest ancestor that already has
  * a `.planning/` directory.
@@ -58,13 +58,22 @@ function findProjectRoot(startDir) {
   const root = path.parse(resolved).root;
   const homedir = require('os').homedir();
 
-  // Check if startDir or any of its ancestors (up to but not including a
+  // If startDir already contains .planning/, it IS the project root.
+  // Do not walk up to a parent workspace that also has .planning/ (#1362).
+  const ownPlanning = path.join(resolved, '.planning');
+  if (fs.existsSync(ownPlanning) && fs.statSync(ownPlanning).isDirectory()) {
+    return startDir;
+  }
+
+  // Check if startDir or any of its ancestors (up to AND including the
   // candidate project root) contains a .git directory. This handles both
-  // `backend/` (direct sub-repo) and `backend/src/modules/` (nested inside).
+  // `backend/` (direct sub-repo) and `backend/src/modules/` (nested inside),
+  // as well as the common case where .git lives at the same level as .planning/.
   function isInsideGitRepo(candidateParent) {
     let d = resolved;
-    while (d !== candidateParent && d !== root) {
+    while (d !== root) {
       if (fs.existsSync(path.join(d, '.git'))) return true;
+      if (d === candidateParent) break;
       d = path.dirname(d);
     }
     return false;
@@ -205,7 +214,7 @@ function loadConfig(cwd) {
     exa_search: false,
     text_mode: false, // when true, use plain-text numbered lists instead of AskUserQuestion menus
     sub_repos: [],
-    resolve_model_ids: false, // false: return alias as-is | true: map to full the agent model ID | "omit": return '' (runtime uses its default)
+    resolve_model_ids: false, // false: return alias as-is | true: map to full Claude model ID | "omit": return '' (runtime uses its default)
     context_window: 200000, // default 200k; set to 1000000 for Opus/Sonnet 4.6 1M models
     phase_naming: 'sequential', // 'sequential' (default, auto-increment) or 'custom' (arbitrary string IDs)
   };
@@ -300,6 +309,7 @@ function loadConfig(cwd) {
       context_window: get('context_window') ?? defaults.context_window,
       phase_naming: get('phase_naming') ?? defaults.phase_naming,
       model_overrides: parsed.model_overrides || null,
+      agent_skills: parsed.agent_skills || {},
     };
   } catch {
     return defaults;
@@ -922,6 +932,58 @@ function getRoadmapPhaseInternal(cwd, phaseNum) {
   }
 }
 
+// ─── Agent installation validation (#1371) ───────────────────────────────────
+
+/**
+ * Resolve the agents directory from the GSD install location.
+ * gsd-tools.cjs lives at <configDir>/get-shit-done/bin/gsd-tools.cjs,
+ * so agents/ is at <configDir>/agents/.
+ *
+ * @returns {string} Absolute path to the agents directory
+ */
+function getAgentsDir() {
+  // __dirname is get-shit-done/bin/lib/ → go up 3 levels to configDir
+  return path.join(__dirname, '..', '..', '..', 'agents');
+}
+
+/**
+ * Check which GSD agents are installed on disk.
+ * Returns an object with installation status and details.
+ *
+ * @returns {{ agents_installed: boolean, missing_agents: string[], installed_agents: string[], agents_dir: string }}
+ */
+function checkAgentsInstalled() {
+  const agentsDir = getAgentsDir();
+  const expectedAgents = Object.keys(MODEL_PROFILES);
+  const installed = [];
+  const missing = [];
+
+  if (!fs.existsSync(agentsDir)) {
+    return {
+      agents_installed: false,
+      missing_agents: expectedAgents,
+      installed_agents: [],
+      agents_dir: agentsDir,
+    };
+  }
+
+  for (const agent of expectedAgents) {
+    const agentFile = path.join(agentsDir, `${agent}.md`);
+    if (fs.existsSync(agentFile)) {
+      installed.push(agent);
+    } else {
+      missing.push(agent);
+    }
+  }
+
+  return {
+    agents_installed: installed.length > 0 && missing.length === 0,
+    missing_agents: missing,
+    installed_agents: installed,
+    agents_dir: agentsDir,
+  };
+}
+
 // ─── Model alias resolution ───────────────────────────────────────────────────
 
 /**
@@ -946,8 +1008,8 @@ function resolveModelInternal(cwd, agentType) {
   }
 
   // resolve_model_ids: "omit" — return empty string so the runtime uses its configured
-  // default model. For non-the agent runtimes (OpenCode, Codex, etc.) that don't recognize
-  // the agent aliases (opus/sonnet/haiku/inherit). Set automatically during install. See #1156.
+  // default model. For non-Claude runtimes (OpenCode, Codex, etc.) that don't recognize
+  // Claude aliases (opus/sonnet/haiku/inherit). Set automatically during install. See #1156.
   if (config.resolve_model_ids === 'omit') {
     return '';
   }
@@ -959,7 +1021,7 @@ function resolveModelInternal(cwd, agentType) {
   if (profile === 'inherit') return 'inherit';
   const alias = agentModels[profile] || agentModels['balanced'] || 'sonnet';
 
-  // resolve_model_ids: true — map alias to full the agent model ID
+  // resolve_model_ids: true — map alias to full Claude model ID
   // Prevents 404s when the Task tool passes aliases directly to the API
   if (config.resolve_model_ids) {
     return MODEL_ALIAS_MAP[alias] || alias;
@@ -1163,4 +1225,6 @@ module.exports = {
   filterSummaryFiles,
   getPhaseFileStats,
   readSubdirectories,
+  getAgentsDir,
+  checkAgentsInstalled,
 };

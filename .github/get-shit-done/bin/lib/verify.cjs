@@ -5,7 +5,7 @@
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
-const { safeReadFile, loadConfig, normalizePhaseName, execGit, findPhaseInternal, getMilestoneInfo, stripShippedMilestones, extractCurrentMilestone, planningDir, planningRoot, output, error } = require('./core.cjs');
+const { safeReadFile, loadConfig, normalizePhaseName, execGit, findPhaseInternal, getMilestoneInfo, stripShippedMilestones, extractCurrentMilestone, planningDir, planningRoot, output, error, checkAgentsInstalled } = require('./core.cjs');
 const { extractFrontmatter, parseMustHavesBlock } = require('./frontmatter.cjs');
 const { writeStateMd } = require('./state.cjs');
 
@@ -556,7 +556,7 @@ function cmdValidateHealth(cwd, options, raw) {
 
   // ─── Check 1: .planning/ exists ───────────────────────────────────────────
   if (!fs.existsSync(planBase)) {
-    addIssue('error', 'E001', '.planning/ directory not found', 'Run /gsd-new-project to initialize');
+    addIssue('error', 'E001', '.planning/ directory not found', 'Run /gsd:new-project to initialize');
     output({
       status: 'broken',
       errors,
@@ -569,7 +569,7 @@ function cmdValidateHealth(cwd, options, raw) {
 
   // ─── Check 2: PROJECT.md exists and has required sections ─────────────────
   if (!fs.existsSync(projectPath)) {
-    addIssue('error', 'E002', 'PROJECT.md not found', 'Run /gsd-new-project to create');
+    addIssue('error', 'E002', 'PROJECT.md not found', 'Run /gsd:new-project to create');
   } else {
     const content = fs.readFileSync(projectPath, 'utf-8');
     const requiredSections = ['## What This Is', '## Core Value', '## Requirements'];
@@ -582,12 +582,12 @@ function cmdValidateHealth(cwd, options, raw) {
 
   // ─── Check 3: ROADMAP.md exists ───────────────────────────────────────────
   if (!fs.existsSync(roadmapPath)) {
-    addIssue('error', 'E003', 'ROADMAP.md not found', 'Run /gsd-new-milestone to create roadmap');
+    addIssue('error', 'E003', 'ROADMAP.md not found', 'Run /gsd:new-milestone to create roadmap');
   }
 
   // ─── Check 4: STATE.md exists and references valid phases ─────────────────
   if (!fs.existsSync(statePath)) {
-    addIssue('error', 'E004', 'STATE.md not found', 'Run /gsd-health --repair to regenerate', true);
+    addIssue('error', 'E004', 'STATE.md not found', 'Run /gsd:health --repair to regenerate', true);
     repairs.push('regenerateState');
   } else {
     const stateContent = fs.readFileSync(statePath, 'utf-8');
@@ -614,7 +614,7 @@ function cmdValidateHealth(cwd, options, raw) {
             'warning',
             'W002',
             `STATE.md references phase ${ref}, but only phases ${[...diskPhases].sort().join(', ')} exist`,
-            'Review STATE.md manually before changing it; /gsd-health --repair will not overwrite an existing STATE.md for phase mismatches'
+            'Review STATE.md manually before changing it; /gsd:health --repair will not overwrite an existing STATE.md for phase mismatches'
           );
         }
       }
@@ -623,7 +623,7 @@ function cmdValidateHealth(cwd, options, raw) {
 
   // ─── Check 5: config.json valid JSON + valid schema ───────────────────────
   if (!fs.existsSync(configPath)) {
-    addIssue('warning', 'W003', 'config.json not found', 'Run /gsd-health --repair to create with defaults', true);
+    addIssue('warning', 'W003', 'config.json not found', 'Run /gsd:health --repair to create with defaults', true);
     repairs.push('createConfig');
   } else {
     try {
@@ -635,7 +635,7 @@ function cmdValidateHealth(cwd, options, raw) {
         addIssue('warning', 'W004', `config.json: invalid model_profile "${parsed.model_profile}"`, `Valid values: ${validProfiles.join(', ')}`);
       }
     } catch (err) {
-      addIssue('error', 'E005', `config.json: JSON parse error - ${err.message}`, 'Run /gsd-health --repair to reset to defaults', true);
+      addIssue('error', 'E005', `config.json: JSON parse error - ${err.message}`, 'Run /gsd:health --repair to reset to defaults', true);
       repairs.push('resetConfig');
     }
   }
@@ -646,7 +646,7 @@ function cmdValidateHealth(cwd, options, raw) {
       const configRaw = fs.readFileSync(configPath, 'utf-8');
       const configParsed = JSON.parse(configRaw);
       if (configParsed.workflow && configParsed.workflow.nyquist_validation === undefined) {
-        addIssue('warning', 'W008', 'config.json: workflow.nyquist_validation absent (defaults to enabled but agents may skip)', 'Run /gsd-health --repair to add key', true);
+        addIssue('warning', 'W008', 'config.json: workflow.nyquist_validation absent (defaults to enabled but agents may skip)', 'Run /gsd:health --repair to add key', true);
         if (!repairs.includes('addNyquistKey')) repairs.push('addNyquistKey');
       }
     } catch { /* intentionally empty */ }
@@ -693,11 +693,29 @@ function cmdValidateHealth(cwd, options, raw) {
         const researchFile = phaseFiles.find(f => f.endsWith('-RESEARCH.md'));
         const researchContent = fs.readFileSync(path.join(phasesDir, e.name, researchFile), 'utf-8');
         if (researchContent.includes('## Validation Architecture')) {
-          addIssue('warning', 'W009', `Phase ${e.name}: has Validation Architecture in RESEARCH.md but no VALIDATION.md`, 'Re-run /gsd-plan-phase with --research to regenerate');
+          addIssue('warning', 'W009', `Phase ${e.name}: has Validation Architecture in RESEARCH.md but no VALIDATION.md`, 'Re-run /gsd:plan-phase with --research to regenerate');
         }
       }
     }
   } catch { /* intentionally empty */ }
+
+  // ─── Check 7c: Agent installation (#1371) ──────────────────────────────────
+  // Verify GSD agents are installed. Missing agents cause Task(subagent_type=...)
+  // to silently fall back to general-purpose, losing specialized instructions.
+  try {
+    const agentStatus = checkAgentsInstalled();
+    if (!agentStatus.agents_installed) {
+      if (agentStatus.installed_agents.length === 0) {
+        addIssue('warning', 'W010',
+          `No GSD agents found in ${agentStatus.agents_dir} — Task(subagent_type="gsd-*") will fall back to general-purpose`,
+          'Run the GSD installer: npx get-shit-done-cc@latest');
+      } else {
+        addIssue('warning', 'W010',
+          `Missing ${agentStatus.missing_agents.length} GSD agents: ${agentStatus.missing_agents.join(', ')} — affected workflows will fall back to general-purpose`,
+          'Run the GSD installer: npx get-shit-done-cc@latest');
+      }
+    }
+  } catch { /* intentionally empty — agent check is non-blocking */ }
 
   // ─── Check 8: Run existing consistency checks ─────────────────────────────
   // Inline subset of cmdValidateConsistency
@@ -786,7 +804,7 @@ function cmdValidateHealth(cwd, options, raw) {
             stateContent += `**Current phase:** (determining...)\n`;
             stateContent += `**Status:** Resuming\n\n`;
             stateContent += `## Session Log\n\n`;
-            stateContent += `- ${new Date().toISOString().split('T')[0]}: STATE.md regenerated by /gsd-health --repair\n`;
+            stateContent += `- ${new Date().toISOString().split('T')[0]}: STATE.md regenerated by /gsd:health --repair\n`;
             writeStateMd(statePath, stateContent, cwd);
             repairActions.push({ action: repair, success: true, path: 'STATE.md' });
             break;
@@ -838,6 +856,24 @@ function cmdValidateHealth(cwd, options, raw) {
   }, raw);
 }
 
+/**
+ * Validate agent installation status (#1371).
+ * Returns detailed information about which agents are installed and which are missing.
+ */
+function cmdValidateAgents(cwd, raw) {
+  const { MODEL_PROFILES } = require('./model-profiles.cjs');
+  const agentStatus = checkAgentsInstalled();
+  const expected = Object.keys(MODEL_PROFILES);
+
+  output({
+    agents_dir: agentStatus.agents_dir,
+    agents_found: agentStatus.agents_installed,
+    installed: agentStatus.installed_agents,
+    missing: agentStatus.missing_agents,
+    expected,
+  }, raw);
+}
+
 module.exports = {
   cmdVerifySummary,
   cmdVerifyPlanStructure,
@@ -848,4 +884,5 @@ module.exports = {
   cmdVerifyKeyLinks,
   cmdValidateConsistency,
   cmdValidateHealth,
+  cmdValidateAgents,
 };

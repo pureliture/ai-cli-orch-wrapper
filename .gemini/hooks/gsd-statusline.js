@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// gsd-hook-version: 1.28.0
+// gsd-hook-version: 1.30.0
 // Claude Code Statusline - GSD Edition
 // Shows: model | current task | directory | context usage
 
@@ -70,7 +70,7 @@ process.stdin.on('end', () => {
     let task = '';
     const homeDir = os.homedir();
     // Respect CLAUDE_CONFIG_DIR for custom config directory setups (#870)
-    const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(homeDir, '.gemini');
+    const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(homeDir, '.claude');
     const todosDir = path.join(claudeDir, 'todos');
     if (session && fs.existsSync(todosDir)) {
       try {
