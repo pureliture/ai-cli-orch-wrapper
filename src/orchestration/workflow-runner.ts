@@ -41,6 +41,10 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+export function resolveCaoBaseUrl(env: NodeJS.ProcessEnv = process.env): string | undefined {
+  return env.ACO_CAO_BASE_URL || env.WRAPPER_CAO_BASE_URL;
+}
+
 async function safeExitTerminal(client: WorkflowClient, terminalId?: string): Promise<void> {
   if (!terminalId) {
     return;
@@ -92,7 +96,7 @@ export async function runWorkflow(
   },
 ): Promise<WorkflowRunResult> {
   const repoRoot = resolve(options?.repoRoot ?? process.cwd());
-  const client = options?.client ?? new CaoHttpClient(process.env.ACO_CAO_BASE_URL || process.env.WRAPPER_CAO_BASE_URL);
+  const client = options?.client ?? new CaoHttpClient(resolveCaoBaseUrl());
   const runArtifacts = createAcoWorkflowRunArtifacts(repoRoot, workflow.workflowName);
   const runId = basename(runArtifacts.runDir);
   const startedAt = now();
