@@ -78,8 +78,15 @@ Define fresh v1.2 requirements and roadmap.
 
 No shipping blockers. Remaining concerns are documentation drift and partial validation hygiene noted in the milestone audit.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260401-omk | worktree에 새로운 브랜치 생성해서 진행해 | 2026-04-01 | b5be440 | [260401-omk-worktree](.planning/quick/260401-omk-worktree/) |
+
 ## Session Continuity
 
+Last activity: 2026-04-01 - Completed quick task 260401-omk: worktree에 새로운 브랜치 생성해서 진행해
 Last session: 2026-04-01T08:55:00+09:00
 Stopped at: v1.1 completion wrap-up
 Resume file: None
