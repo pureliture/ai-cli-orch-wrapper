@@ -2,8 +2,8 @@
 
 ## What This Is
 
-어느 PC에서나 단일 명령어로 동일한 AI CLI 오케스트레이션 환경을 재현할 수 있는 개인용 래퍼 툴.
-현재는 `aco setup`, alias 기반 실행, repo-local workflow config, 그리고 CAO-backed plan→review 루프까지 포함한 v1.1 기능셋을 제공한다.
+Claude Code를 메인 오케스트레이터로, Gemini CLI / Copilot CLI 등 다른 AI CLI를 서브에이전트로 활용하는 슬래시 커맨드 브릿지.
+ccg-workflow / codex-plugin-cc 패턴으로 `.claude/commands/` 슬래시 커맨드를 제공하며, 별도 CLI 바이너리 없이 Claude Code 안에서 바로 사용한다.
 
 ## Core Value
 
@@ -40,15 +40,33 @@
 - [x] alias / workflow 실행 결과가 `.wrapper/` 경로 규약을 일관되게 유지해야 함
 - [x] built-in subcommand 우선순위가 alias보다 계속 앞서야 함
 
+## Current Milestone: v1.2 CC Slash Commands — Multi-AI Bridge
+
+**Goal:** Claude Code 슬래시 커맨드로 Gemini CLI / Copilot CLI를 서브에이전트로 실행하는 브릿지 레이어 구축
+
+**Target features:**
+- Gemini-CLI 서브에이전트 실행 인프라 (`.claude/commands/aco/`)
+- Copilot-CLI 서브에이전트 실행 인프라
+- `/aco:review` — git diff / 파일을 지정 CLI에 review 위임
+- `/aco:status` — adapter 가용성 + 라우팅 설정 출력
+- `/aco:adversarial` — `--focus` 옵션 포함 공격적 리뷰
+
 ### Active
 
-- None. `v1.1` is shipped. The next active scope should be defined by a fresh `v1.2` requirements file.
+- [ ] Gemini-CLI 서브에이전트 실행 인프라 구현
+- [ ] Copilot-CLI 서브에이전트 실행 인프라 구현
+- [ ] `/aco:review` 슬래시 커맨드
+- [ ] `/aco:status` 슬래시 커맨드
+- [ ] `/aco:adversarial` 슬래시 커맨드
 
 ### Out of Scope
 
-- cmux — 이번 범위에서 제외
-- cao / tmux / workmux / ghostty / oh-my-zsh 자체 설치 — 사전 설치 전제
-- registry-hub 구현 — 외부에서 병렬 개발, 이 래퍼는 URL 소비자로만 동작
+- `aco` CLI 바이너리 — v1.2부터 슬래시 커맨드 전용으로 전환
+- `/aco:rescue` — v1.3
+- `/aco:init` (대화형 설정) — v1.3
+- 통합 테스트 + 문서 정비 — v1.3
+- cao / tmux / workmux 자체 설치 — 사전 설치 전제
+- registry-hub 구현 — 외부에서 병렬 개발
 - ghostty / oh-my-zsh 설정 — ghostty-tmux-wrapping 프로젝트 담당
 - cao profile management 다운로드/lockfile 레이어 — 현재 milestone 범위 밖, 별도 레지스트리/프로파일 흐름으로 유지
 
@@ -99,7 +117,9 @@
 | `aco`를 canonical CLI 이름으로 고정 | command surface가 흔들리면 이후 docs/workspace milestone이 다시 중복 정리를 요구하게 됨 | ✓ Shipped in v1.1 |
 | public CLI rename과 `.wrapper*` disk contract를 분리 | rename migration risk를 줄이고 기존 repo-local state를 깨지 않기 위해 | ✓ Shipped in v1.1 |
 | reserved alias names는 inert 처리 | built-ins-first contract를 유지해야 CLI surface가 config에 의해 깨지지 않음 | ✓ Shipped in v1.1 |
-| 문서 정비를 별도 v1.2로 분리 | rename milestone의 acceptance를 runtime contract 중심으로 유지해야 범위가 작고 검증 가능함 | — Next |
+| 문서 정비를 별도 v1.2로 분리 | rename milestone의 acceptance를 runtime contract 중심으로 유지해야 범위가 작고 검증 가능함 | ✗ Superseded by v1.2 pivot |
+| v1.2를 CC 슬래시 커맨드 전용으로 피벗 | `aco` CLI 대신 ccg-workflow / codex-plugin-cc 패턴으로 전환. CLI 바이너리 없이 CC 안에서 바로 동작하는 구조가 목적에 더 적합 | — Pending |
+| `src/` 전체 삭제 (v1.2 브랜치) | TypeScript CLI 코드가 슬래시 커맨드 구현에 방해가 됨. 결과물이 Markdown 슬래시 커맨드이므로 TS 소스 불필요 | — Pending |
 | tmux conf 모듈식 분리 (`~/.config/tmux/ai-cli.conf`) | ghostty-tmux-wrapping과 `~/.tmux.conf` 소유권 충돌 방지 | ✓ Validated |
 | registry-hub 결합 금지 | registry-hub는 독립 프로젝트로 병렬 개발 중, 래퍼가 종속되면 양쪽 개발 속도에 영향 | — Ongoing |
 | workflow 완료 판정은 artifact 기준 | 실환경 CAO terminal state만으로는 조기 완료 오판 가능 | ✓ Validated |

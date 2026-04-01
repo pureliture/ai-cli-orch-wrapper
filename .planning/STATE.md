@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Wrapper Command Consolidation
-status: v1.1 shipped
-stopped_at: Milestone archived and tagged locally
-last_updated: "2026-04-01T08:55:00+09:00"
+milestone: v1.2
+milestone_name: CC Slash Commands — Multi-AI Bridge
+status: defining requirements
+stopped_at: Milestone started
+last_updated: "2026-04-02T00:00:00+09:00"
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 17
-  completed_plans: 17
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
@@ -21,10 +21,19 @@ See: .planning/PROJECT.md (updated 2026-04-01)
 **Core value:** Any machine, one command, same AI CLI orchestration environment instantly restored
 **Current focus:** Plan the v1.2 documentation and architecture cleanup milestone
 
+## Project Reference
+
+See: .planning/PROJECT.md (updated 2026-04-02)
+
+**Core value:** Claude Code를 오케스트레이터로, 다른 AI CLI를 서브에이전트로 — 슬래시 커맨드 하나로 즉시 사용
+**Current focus:** v1.2 requirements 정의 → roadmap 생성
+
 ## Current Position
 
-Milestone: v1.1 — SHIPPED
-Next step: `$gsd-new-milestone`
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-02 — Milestone v1.2 started
 
 ## Performance Metrics
 
