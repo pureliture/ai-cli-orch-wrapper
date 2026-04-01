@@ -68,7 +68,7 @@
 - **Active milestone:** none
 - **Next milestones:** v1.2 Documentation + Architecture Cleanup, v1.3 Isolated Workspaces + Workflow Ergonomics
 - **Latest verification:** `npm run build && node --test test/canonical-command-surface.test.ts test/workflow-cli.test.ts test/setup.test.ts test/config.test.ts test/artifacts.test.ts test/workflow-runner.test.ts test/alias.test.ts test/workflow-config.test.ts` passed (45/45)
-- **Audit status:** v1.1 shipped with non-blocking validation debt; see `.planning/milestones/v1.1-MILESTONE-AUDIT.md`
+- **Audit status:** v1.1 audit passed; see `.planning/milestones/v1.1-MILESTONE-AUDIT.md`
 - **Operational note:** 실환경에서는 artifact 존재 여부를 workflow step 완료 신호로 취급해야 안정적임
 
 ## Next Milestone Goals

@@ -88,17 +88,13 @@ test('arbitrary provider string is not validated by aco (CONFIG-02)', async () =
   assert.equal(config.aliases['future'].provider, 'copilot_cli_v3_experimental');
 });
 
-// Test 5: built-in commands (setup, help, version) are not overridable by aliases
-test('built-in command "setup" is not shadowed by alias in config', () => {
-  // Even if .wrapper.json had an alias named "setup", the built-in must win.
-  // Test: run `wrapper setup` with a config that would define a "setup" alias.
-  // The built-in setup runs (exits 0 or 1 depending on prereqs), not an alias dispatch.
-  // We simply verify exit behavior is not the unknown-command error path.
+// Test 5: built-in help remains authoritative even if aliases exist elsewhere
+test('built-in command "help" is not shadowed by alias config', () => {
   const result = spawnSync(process.execPath, ['dist/cli.js', 'help'], {
     cwd: PROJECT_ROOT,
     encoding: 'utf8',
   });
-  // help always exits 0 and prints usage
+
   assert.equal(result.status, 0, 'built-in help should exit 0');
   assert.ok(result.stdout.includes('Usage:'), 'help output should include Usage:');
 });

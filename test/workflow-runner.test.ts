@@ -296,3 +296,18 @@ test('runWorkflow waits for the planner artifact when terminal status goes idle 
   assert.ok(existsSync(join(result.runDir, 'iterations', '01', 'plan.md')));
   assert.ok(existsSync(join(result.runDir, 'iterations', '01', 'review.status.json')));
 });
+
+test('resolveCaoBaseUrl prefers ACO_CAO_BASE_URL over WRAPPER_CAO_BASE_URL', async () => {
+  const { resolveCaoBaseUrl } = await import('../dist/orchestration/workflow-runner.js');
+
+  assert.equal(resolveCaoBaseUrl({
+    ACO_CAO_BASE_URL: 'http://127.0.0.1:7001',
+    WRAPPER_CAO_BASE_URL: 'http://127.0.0.1:7002',
+  }), 'http://127.0.0.1:7001');
+
+  assert.equal(resolveCaoBaseUrl({
+    WRAPPER_CAO_BASE_URL: 'http://127.0.0.1:7002',
+  }), 'http://127.0.0.1:7002');
+
+  assert.equal(resolveCaoBaseUrl({}), undefined);
+});
