@@ -84,11 +84,12 @@ No shipping blockers. Remaining concerns are documentation drift and partial val
 |---|-------------|------|--------|-----------|
 | 260401-omk | worktree에 새로운 브랜치 생성해서 진행해 | 2026-04-01 | b5be440 | [260401-omk-worktree](.planning/quick/260401-omk-worktree/) |
 | 260401-owm | Blueprint Step 1: cao 의존성 및 workflow 명령 구조적 제거 | 2026-04-01 | ccf6b36 | [260401-owm-blueprint-step-1-cao-workflow](.planning/quick/260401-owm-blueprint-step-1-cao-workflow/) |
+| 260401-wi8 | Blueprint Step 2: 새 config 스키마 + CliAdapter interface 정의 | 2026-04-01 | 88e219d | [260401-wi8-blueprint-step-2-config-cliadapter-inter](.planning/quick/260401-wi8-blueprint-step-2-config-cliadapter-inter/) |
 
 ## Session Continuity
 
-Last activity: 2026-04-01 - Completed quick task 260401-owm: Blueprint Step 1 cao workflow layer removal
-Last session: 2026-04-01T08:55:00+09:00
-Stopped at: v1.1 completion wrap-up
+Last activity: 2026-04-01 - Completed quick task 260401-wi8: Blueprint Step 2 V2Config + CliAdapter interface definitions
+Last session: 2026-04-01T09:10:00+09:00
+Stopped at: Quick task 260401-wi8 complete
 Resume file: None
 Next command: `$gsd-new-milestone`
