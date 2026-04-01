@@ -90,4 +90,4 @@ Blueprint Step 3-6 기반. 결과물은 `.claude/commands/aco/` 슬래시 커맨
 
 ---
 *Requirements defined: 2026-04-02*
-*Last updated: 2026-04-02 after v1.2 milestone start*
+*Last updated: 2026-04-02 — traceability confirmed after roadmap creation*
