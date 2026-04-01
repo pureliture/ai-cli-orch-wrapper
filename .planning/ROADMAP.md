@@ -42,7 +42,12 @@ See [milestones/v1.1-ROADMAP.md](./milestones/v1.1-ROADMAP.md) for full phase de
   2. Typing `/aco:review` routes the diff to Copilot-CLI and returns a response collected from its stdout
   3. When an adapter CLI is not installed, the command prints a clear error naming the missing tool
   4. A `.wrapper.json` v2.0 `routing` block (`routing.review`, `routing.adversarial`) controls which adapter each command uses
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Directory structure + Wave 0 bash test scaffolding (RED stubs)
+- [ ] 06-02-PLAN.md — adapter.sh core functions (aco_adapter_available, aco_adapter_version, aco_check_adapter, aco_adapter_invoke)
+- [ ] 06-03-PLAN.md — .wrapper.json v2.0 routing schema + _read_routing_adapter helper
 
 ### Phase 7: /aco:review + /aco:status
 **Goal**: Users can delegate code review to a configured adapter CLI and inspect adapter availability and routing config at a glance
@@ -79,6 +84,6 @@ See [milestones/v1.1-ROADMAP.md](./milestones/v1.1-ROADMAP.md) for full phase de
 | 3. Plan→Review Orchestration Loop | v1.0 | 3/3 | Complete | 2026-03-25 |
 | 4. Canonical Command Surface | v1.1 | 3/3 | Complete | 2026-03-31 |
 | 5. Wrapper Runtime Contract | v1.1 | 4/4 | Complete | 2026-03-31 |
-| 6. Adapter Infrastructure | v1.2 | 0/TBD | Not started | - |
+| 6. Adapter Infrastructure | v1.2 | 0/3 | Not started | - |
 | 7. /aco:review + /aco:status | v1.2 | 0/TBD | Not started | - |
 | 8. /aco:adversarial | v1.2 | 0/TBD | Not started | - |
