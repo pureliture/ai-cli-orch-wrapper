@@ -12,7 +12,7 @@ const BINARY_CHECK_TIMEOUT_MS = 5_000;
 const NPM_INSTALL_TIMEOUT_MS = 60_000;
 const EXIT_ERROR = 1;
 
-const TEMPLATES_DIR = resolve(__dirname, '..', '..', '..', 'templates');
+const TEMPLATES_DIR = resolve(__dirname, '..', '..', '..', '..', 'templates');
 
 export interface PackInstallOptions {
   global?: boolean;

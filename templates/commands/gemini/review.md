@@ -17,7 +17,7 @@ if [[ -n "$FILE_ARG" ]]; then
   if [[ ! -f "$FILE_ARG" ]]; then
     echo "Error: file not found: $FILE_ARG" >&2; exit 1
   fi
-  aco run gemini review --input "$(cat "$FILE_ARG")"
+  cat "$FILE_ARG" | aco run gemini review
 else
   CONTENT=$(git diff HEAD 2>/dev/null || true)
   if [[ -z "$CONTENT" ]]; then CONTENT=$(git diff HEAD~1 2>/dev/null || true); fi

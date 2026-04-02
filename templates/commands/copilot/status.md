@@ -15,7 +15,7 @@ SESSION_ID="${ARGUMENTS:-}"
 if [[ -n "$SESSION_ID" ]]; then
   aco status --session "$SESSION_ID"
 else
-  aco provider setup copilot 2>&1 || true
+  aco-install provider setup copilot 2>&1 || true
 fi
 ```
 

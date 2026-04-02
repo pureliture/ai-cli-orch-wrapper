@@ -12,7 +12,7 @@ Install the aco pack and configure the Gemini CLI provider.
 set -euo pipefail
 echo "## Gemini CLI Setup"
 echo ""
-aco provider setup gemini || true
+aco-install provider setup gemini || true
 echo ""
 echo "If not installed: npm install -g @google/gemini-cli"
 echo "Then authenticate: gemini auth login"

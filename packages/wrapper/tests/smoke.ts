@@ -2,7 +2,7 @@
  * Smoke test: verify aco providers are available at runtime.
  * Migrated from .claude/aco/tests/smoke-adapters.sh
  *
- * Run: node tests/smoke.js [gemini|copilot|all]
+ * Run: npx tsx tests/smoke.ts [gemini|copilot|all]
  */
 import { ProviderRegistry } from '../src/providers/registry.js';
 

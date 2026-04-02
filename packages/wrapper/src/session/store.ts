@@ -28,7 +28,7 @@ export class SessionStore {
   async create(provider: string, command: string, pid?: number, permissionProfile?: string): Promise<TaskRecord> {
     const id = randomUUID();
     const sessionDir = join(this.baseDir, id);
-    await mkdir(sessionDir, { recursive: true });
+    await mkdir(sessionDir, { recursive: true, mode: 0o700 });
 
     const record: TaskRecord = {
       id,
@@ -108,7 +108,7 @@ export class SessionStore {
   /** Creates a tee writable: chunks go to stdout AND to the session output.log. */
   createOutputTee(id: string): Writable {
     const logPath = this.outputLogPath(id);
-    const fileStream = createWriteStream(logPath, { flags: 'a' });
+    const fileStream = createWriteStream(logPath, { flags: 'a', mode: 0o600 });
 
     const tee = new Transform({
       transform(chunk: Buffer, _enc: string, cb: () => void) {

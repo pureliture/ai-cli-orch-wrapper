@@ -10,7 +10,7 @@ npx aco-install
 
 # Option 2: from this repo
 npm install
-aco pack setup
+aco-install pack setup
 ```
 
 ## Provider Setup
@@ -19,11 +19,11 @@ After pack installation, configure each provider:
 
 ```bash
 # Gemini CLI
-aco provider setup gemini
+aco-install provider setup gemini
 # If not installed: npm install -g @google/gemini-cli
 
 # GitHub Copilot CLI
-aco provider setup copilot
+aco-install provider setup copilot
 # If not installed: npm install -g @github/copilot && gh auth login
 ```
 
@@ -34,9 +34,9 @@ aco provider setup copilot
 | `/gemini:review [file]` | Code review via Gemini CLI (`git diff HEAD` if no file) |
 | `/gemini:adversarial [--focus security\|performance\|correctness] [file]` | Adversarial review |
 | `/gemini:rescue [--from file] [--error msg]` | Get unstuck with second opinion |
-| `/gemini:result [--session id]` | Retrieve last/named session output |
-| `/gemini:status [--session id]` | Session or provider status |
-| `/gemini:cancel [--session id]` | Cancel a running background session |
+| `/gemini:result [<session-id>]` | Retrieve last/named session output |
+| `/gemini:status [<session-id>]` | Session or provider status |
+| `/gemini:cancel [<session-id>]` | Cancel a running background session |
 | `/gemini:setup` | Provider install/auth guidance |
 | `/copilot:*` | Same surface for GitHub Copilot CLI |
 
@@ -80,3 +80,9 @@ package.json        — npm workspace root
 npm test            # runs packages/wrapper unit tests
 npm run test:smoke  # provider availability smoke check
 ```
+
+## Docs
+
+- [Architecture](docs/architecture.md)
+- [Contributing](docs/CONTRIBUTING.md)
+- [Runbook](docs/RUNBOOK.md)

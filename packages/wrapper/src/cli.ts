@@ -85,7 +85,7 @@ async function cmdRun(args: string[]): Promise<void> {
   const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
 
   try {
-    const outputLogPath = sessionStore.outputLogPath(session.id);
+    const tee = sessionStore.createOutputTee(session.id);
     let hasOutput = false;
 
     for await (const chunk of provider.invoke(prompt, content, {
@@ -98,10 +98,13 @@ async function cmdRun(args: string[]): Promise<void> {
         });
       },
     })) {
-      process.stdout.write(chunk);
-      await appendFile(outputLogPath, chunk);
+      tee.write(chunk);
       hasOutput = true;
     }
+
+    await new Promise<void>((resolve, reject) => {
+      tee.end((err?: Error | null) => (err ? reject(err) : resolve()));
+    });
 
     if (!hasOutput && permissionProfile === 'restricted') {
       await appendFile(sessionStore.errorLogPath(session.id), 'Permission profile: restricted — output may be blocked\n');
