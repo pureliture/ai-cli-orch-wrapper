@@ -137,3 +137,47 @@ aco_adapter_invoke() {
       ;;
   esac
 }
+
+# ---------------------------------------------------------------------------
+# _read_routing_adapter <cmd> <default>
+# Reads the routing adapter key for <cmd> from .wrapper.json in the CWD.
+# Falls back to <default> if .wrapper.json is missing, has no routing block,
+# or the specific key is absent.
+# Uses jq if available; falls back to python3 for portability.
+# Never exits non-zero — always outputs a string.
+#
+# Usage:
+#   ADAPTER=$(_read_routing_adapter "review" "gemini")
+#   ADAPTER=$(_read_routing_adapter "adversarial" "copilot")
+# ---------------------------------------------------------------------------
+_read_routing_adapter() {
+  local cmd="$1"
+  local default="$2"
+
+  if [[ ! -f ".wrapper.json" ]]; then
+    echo "$default"
+    return 0
+  fi
+
+  if command -v jq >/dev/null 2>&1; then
+    local result
+    result=$(jq -r ".routing.${cmd} // empty" .wrapper.json 2>/dev/null)
+    if [[ -n "$result" ]]; then
+      echo "$result"
+    else
+      echo "$default"
+    fi
+    return 0
+  fi
+
+  # jq not available: fall back to python3
+  python3 -c "
+import json, sys
+try:
+    d = json.load(open('.wrapper.json'))
+    val = d.get('routing', {}).get('${cmd}', '')
+    print(val if val else '${default}')
+except Exception:
+    print('${default}')
+" 2>/dev/null || echo "$default"
+}
