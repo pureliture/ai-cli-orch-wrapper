@@ -57,7 +57,10 @@ test('help output uses aco as the visible command name', () => {
 
   assert.equal(result.status, 0);
   assert.ok(result.stdout.includes('Usage: aco <command>'));
+  assert.ok(result.stdout.includes('download'));
   assert.ok(!result.stdout.includes('Usage: wrapper <command>'));
+  assert.ok(!result.stdout.includes('workflow'));
+  assert.ok(!result.stdout.includes('via cao'));
 });
 
 test('stale wrapper help invocation fails fast with aco help remediation', () => {
@@ -137,7 +140,7 @@ test('readme quick-start guidance uses aco and avoids raw node invocation for us
   assert.ok(!readme.includes('node dist/cli.js --help'));
 });
 
-test('reserved alias definitions do not block built-ins or appear in help aliases', () => {
+test('reserved alias definitions do not leak legacy alias help text', () => {
   const dir = makeTempDir();
   writeFileSync(join(dir, '.wrapper.json'), JSON.stringify({
     aliases: {
@@ -153,5 +156,6 @@ test('reserved alias definitions do not block built-ins or appear in help aliase
 
   assert.equal(result.status, 0);
   assert.ok(result.stdout.includes('Usage: aco <command>'));
-  assert.ok(!result.stdout.includes('  setup    Launch claude_code via cao'));
+  assert.ok(!result.stdout.includes('Aliases:'));
+  assert.ok(!result.stdout.includes('via cao'));
 });

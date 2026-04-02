@@ -112,9 +112,9 @@ test('idempotency — second run reports already exists / already configured', a
   }
 });
 
-// Test 5: missing prerequisite exits 1 with correct message
+// Test 5: missing prerequisites exit 1 with the current tool list
 test('missing prerequisite exits 1 with correct message', () => {
-  // Spawn a child process with PATH cleared so 'which cao' fails
+  // Spawn a child process with PATH cleared so prerequisite discovery fails.
   const result = spawnSync(
     process.execPath,
     ['dist/cli.js', 'setup'],
@@ -127,5 +127,6 @@ test('missing prerequisite exits 1 with correct message', () => {
 
   assert.equal(result.status, 1, 'process should exit with code 1');
   assert.ok(result.stderr.includes('Error: missing prerequisites:'), 'stderr should include error message');
-  assert.ok(result.stderr.includes('cao'), 'stderr should name the missing tool');
+  assert.ok(result.stderr.includes('tmux'), 'stderr should name the missing tool');
+  assert.ok(result.stderr.includes('workmux'), 'stderr should name the missing tool');
 });

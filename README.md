@@ -22,9 +22,6 @@ skillinterop/
   skill-registry/
     index.jsonld
     skills/<skill-name>/SKILL.md
-  cao-profile-registry/
-    index.jsonld
-    profiles/<profile-name>/PROFILE.md
   reprogate-registry/
     index.jsonld
     gates/<gate-name>/GATE.md
@@ -114,7 +111,6 @@ After the relink, `aco help` should work from the global install state and any u
 | Type | Catalog | Item document root |
 |------|---------|--------------------|
 | `skill` | `skill-registry/index.jsonld` | `skills/<name>/SKILL.md` |
-| `cao-profile` | `cao-profile-registry/index.jsonld` | `profiles/<name>/PROFILE.md` |
 | `reprogate` | `reprogate-registry/index.jsonld` | `gates/<name>/GATE.md` |
 
 ## Current Repository Status
