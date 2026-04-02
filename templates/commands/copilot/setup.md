@@ -12,7 +12,7 @@ Install the aco pack and configure the GitHub Copilot CLI provider.
 set -euo pipefail
 echo "## GitHub Copilot CLI Setup"
 echo ""
-aco provider setup copilot || true
+aco-install provider setup copilot || true
 echo ""
 echo "If not installed: npm install -g @github/copilot"
 echo "Then authenticate: gh auth login"
