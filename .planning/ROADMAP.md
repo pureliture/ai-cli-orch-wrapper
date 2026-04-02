@@ -5,6 +5,7 @@
 - ✅ **v1.0 Core Wrapper Foundation** - Phases 01-03 shipped 2026-03-25 ([roadmap archive](./milestones/v1.0-ROADMAP.md), [requirements archive](./milestones/v1.0-REQUIREMENTS.md), [audit](./milestones/v1.0-MILESTONE-AUDIT.md))
 - ✅ **v1.1 Wrapper Command Consolidation** - Phases 04-05 shipped 2026-03-31 ([roadmap archive](./milestones/v1.1-ROADMAP.md), [requirements archive](./milestones/v1.1-REQUIREMENTS.md), [audit](./milestones/v1.1-MILESTONE-AUDIT.md))
 - 🚧 **v1.2 CC Slash Commands — Multi-AI Bridge** - Phases 06-08 (in progress)
+  - 결과물: `.claude/commands/gemini/` + `.claude/commands/copilot/` 슬래시 커맨드 세트
 - 📋 **v1.3 Isolated Workspaces + Workflow Ergonomics** - Planned
 
 ## Phases
@@ -25,11 +26,11 @@ See [milestones/v1.1-ROADMAP.md](./milestones/v1.1-ROADMAP.md) for full phase de
 
 ### 🚧 v1.2 CC Slash Commands — Multi-AI Bridge (In Progress)
 
-**Milestone Goal:** Claude Code 슬래시 커맨드로 Gemini CLI / Copilot CLI를 서브에이전트로 실행하는 브릿지 레이어 구축. 결과물은 `.claude/commands/aco/` 슬래시 커맨드.
+**Milestone Goal:** Claude Code 슬래시 커맨드로 Gemini CLI / Copilot CLI를 서브에이전트로 실행하는 브릿지 레이어 구축. 커맨드 네임스페이스가 타겟 CLI를 직접 인코딩 (`/gemini:*`, `/copilot:*`) — config 파일 라우팅 없이 호출부터 명시적.
 
-- [ ] **Phase 6: Adapter Infrastructure** - Shared bash helpers + routing config schema for spawning external AI CLIs as subagents
-- [ ] **Phase 7: /aco:review + /aco:status** - Review delegation and adapter status commands
-- [ ] **Phase 8: /aco:adversarial** - Adversarial review command with focus control
+- ✅ **Phase 6: Adapter Infrastructure** - Shared bash helpers + adapter availability detection
+- [ ] **Phase 7: /gemini:review + /copilot:review + status** - Per-CLI review delegation and availability commands
+- [ ] **Phase 8: /gemini:adversarial + /copilot:adversarial** - Per-CLI adversarial review with focus control
 
 ## Phase Details
 
@@ -49,28 +50,27 @@ Plans:
 - [x] 06-02-PLAN.md — adapter.sh core functions (aco_adapter_available, aco_adapter_version, aco_check_adapter, aco_adapter_invoke)
 - [x] 06-03-PLAN.md — .wrapper.json v2.0 routing schema + _read_routing_adapter helper
 
-### Phase 7: /aco:review + /aco:status
-**Goal**: Users can delegate code review to a configured adapter CLI and inspect adapter availability and routing config at a glance
+### Phase 7: /gemini:review + /copilot:review + status commands
+**Goal**: Users can delegate code review to Gemini CLI or Copilot CLI by name, and inspect each adapter's availability directly
 **Depends on**: Phase 6
-**Requirements**: REV-01, REV-02, REV-03, REV-04, STAT-01, STAT-02, STAT-03
+**Requirements**: REV-01, REV-02, REV-03, REV-04, STAT-01, STAT-02
 **Success Criteria** (what must be TRUE):
-  1. `/aco:review` with no arguments sends `git diff HEAD` output to the routing config's review adapter
-  2. `/aco:review path/to/file.ts` sends that file's content as the review target instead of the diff
-  3. When `git diff HEAD` is empty, `/aco:review` retries with `git diff HEAD~1`; when both are empty it prints "No changes detected"
-  4. `/aco:review --target gemini` overrides the routing config and sends to Gemini-CLI regardless of config
-  5. `/aco:status` prints a `✓ / ✗` availability table for all configured adapters and shows the current command-to-adapter routing table
-  6. `/aco:status` when `.wrapper.json` is missing prints "Run /aco:init first"
+  1. `/gemini:review` with no arguments sends `git diff HEAD` to Gemini CLI and returns its response verbatim
+  2. `/copilot:review` with no arguments sends `git diff HEAD` to Copilot CLI and returns its response verbatim
+  3. `/gemini:review path/to/file.ts` and `/copilot:review path/to/file.ts` each send that file's content as the review target instead of the diff
+  4. When the target CLI is not installed, the command prints a clear error naming the missing tool (e.g. "gemini not found — install with: pip install google-generativeai-cli")
+  5. When `git diff HEAD` is empty, retries with `git diff HEAD~1`; when both are empty prints "No changes detected"
+  6. `/gemini:status` prints Gemini CLI availability + version; `/copilot:status` prints Copilot CLI availability + version
 **Plans**: TBD
 
-### Phase 8: /aco:adversarial
-**Goal**: Users can run an aggressive, focus-targeted review of their code against any configured adapter CLI
+### Phase 8: /gemini:adversarial + /copilot:adversarial
+**Goal**: Users can run an aggressive, focus-targeted review via either CLI
 **Depends on**: Phase 7
 **Requirements**: ADV-01, ADV-02, ADV-03, ADV-04
 **Success Criteria** (what must be TRUE):
-  1. `/aco:adversarial` dispatches to the routing config's adversarial adapter using a more aggressive prompt than `/aco:review`
-  2. `/aco:adversarial --focus security` scopes the review prompt to security concerns; `--focus performance`, `--focus correctness`, and `--focus all` each change the prompt focus accordingly
-  3. Input resolution follows the same priority as `/aco:review`: explicit file path beats `git diff HEAD`, fallback to `git diff HEAD~1`, then "No changes detected" error
-  4. `/aco:adversarial --target copilot` overrides the routing config's adversarial adapter
+  1. `/gemini:adversarial` and `/copilot:adversarial` each use a more aggressive review prompt than their `:review` counterparts
+  2. `--focus security` scopes the review to security concerns; `--focus performance`, `--focus correctness`, and `--focus all` each change the prompt focus accordingly
+  3. Input resolution follows the same priority as `:review`: explicit file path beats `git diff HEAD`, fallback to `git diff HEAD~1`, then "No changes detected" error
 **Plans**: TBD
 
 ## Progress
@@ -84,6 +84,6 @@ Plans:
 | 3. Plan→Review Orchestration Loop | v1.0 | 3/3 | Complete | 2026-03-25 |
 | 4. Canonical Command Surface | v1.1 | 3/3 | Complete | 2026-03-31 |
 | 5. Wrapper Runtime Contract | v1.1 | 4/4 | Complete | 2026-03-31 |
-| 6. Adapter Infrastructure | v1.2 | 0/3 | Not started | - |
-| 7. /aco:review + /aco:status | v1.2 | 0/TBD | Not started | - |
-| 8. /aco:adversarial | v1.2 | 0/TBD | Not started | - |
+| 6. Adapter Infrastructure | v1.2 | 3/3 | Complete | 2026-04-02 |
+| 7. /gemini:review + /copilot:review | v1.2 | 0/TBD | Not started | - |
+| 8. /gemini:adversarial + /copilot:adversarial | v1.2 | 0/TBD | Not started | - |

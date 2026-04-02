@@ -1,5 +1,5 @@
 {
-  "_comment": "Managed by aco -- do not edit manually.",
+  "_comment": "Managed by ai-cli-orch-wrapper \u2014 do not edit manually.",
   "schemaVersion": "2.0",
   "aliases": {
     "claude": {
@@ -18,9 +18,5 @@
   "roles": {
     "orchestrator": "claude_code",
     "reviewer": "gemini_cli"
-  },
-  "routing": {
-    "review": "gemini",
-    "adversarial": "copilot"
   }
 }
