@@ -25,3 +25,8 @@ temp/
 .claude/worktrees/
 .codex/worktrees/
 .gemini/worktrees/
+
+
+reference/*
+.codex/*
+.gemini/*
