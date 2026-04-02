@@ -35,28 +35,28 @@ npx aco-install
 
 # Option 2: from repo
 npm install
-aco pack setup
+aco-install pack setup
 ```
 
 ---
 
 ## Session Data
 
-Sessions are stored at `~/.aco/sessions/<uuid>/`:
+Sessions are stored at `~/.aco/sessions/<uuid>/` with restrictive permissions (`0700` directory, `0600` files):
 
-| File | Contents |
-|------|----------|
-| `task.json` | status, provider, command, pid, timestamps |
-| `output.log` | streaming stdout from the provider CLI |
-| `error.log` | stderr / error details |
+| File | Permissions | Contents |
+|------|-------------|----------|
+| `task.json` | `0600` | status, provider, command, pid, timestamps |
+| `output.log` | `0600` | streaming stdout from the provider CLI |
+| `error.log` | `0600` | stderr / error details |
 
 ### Inspect a session
 
 ```bash
-aco status                    # last session
-aco status --session <id>     # named session
-aco result                    # last session output
-aco result --session <id>     # named session output
+aco status                      # last session
+aco status --session <id>       # named session
+aco result                      # last session output
+aco result --session <id>       # named session output
 ```
 
 ### Cancel a running session
@@ -80,8 +80,8 @@ npm install -g @aco/wrapper
 ### Provider not found / not authenticated
 
 ```bash
-aco provider setup gemini     # install + auth guidance for Gemini CLI
-aco provider setup copilot    # install + auth guidance for Copilot CLI
+aco-install provider setup gemini     # install + auth guidance for Gemini CLI
+aco-install provider setup copilot    # install + auth guidance for Copilot CLI
 ```
 
 Gemini CLI: `npm install -g @google/gemini-cli`  
@@ -92,7 +92,7 @@ Copilot CLI: `npm install -g @github/copilot && gh auth login`
 Re-run the pack install to copy templates:
 
 ```bash
-aco pack install
+aco-install pack install
 ```
 
 Templates are copied (not symlinked) from `templates/commands/` → `.claude/commands/`.  
