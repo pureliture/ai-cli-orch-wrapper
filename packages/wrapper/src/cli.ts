@@ -9,6 +9,7 @@ import { sessionStore } from './session/store.js';
 import type { PermissionProfile } from './providers/interface.js';
 
 const VERSION = '0.4.0';
+const EXIT_ERROR = 1;
 const VALID_PERMISSION_PROFILES: PermissionProfile[] = ['default', 'restricted', 'unrestricted'];
 
 async function main(): Promise<void> {
@@ -34,7 +35,7 @@ async function main(): Promise<void> {
     default:
       console.error(`aco: unknown command '${subcommand ?? ''}'`);
       console.error('Usage: aco <run|result|status|cancel> [options]');
-      process.exit(1);
+      process.exit(EXIT_ERROR);
   }
 }
 
@@ -47,19 +48,19 @@ async function cmdRun(args: string[]): Promise<void> {
 
   if (!providerKey || !command) {
     console.error('Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]');
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   const provider = providerRegistry.get(providerKey);
   if (!provider) {
     console.error(`Unknown provider: ${providerKey}`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   const permissionProfile = parseFlag<PermissionProfile>(args, '--permission-profile') ?? 'default';
   if (!VALID_PERMISSION_PROFILES.includes(permissionProfile)) {
     console.error(`Invalid --permission-profile '${permissionProfile}'. Valid values: default|restricted|unrestricted`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
   const inputFlag = parseFlag(args, '--input') ?? '';
 
@@ -92,7 +93,9 @@ async function cmdRun(args: string[]): Promise<void> {
       sessionId: session.id,
       onPid: (pid) => {
         // Fire-and-forget pid update so the session can be cancelled
-        sessionStore.update(session.id, { pid }).catch(() => undefined);
+        sessionStore.update(session.id, { pid }).catch((err: unknown) => {
+          console.warn('Failed to record process PID:', err instanceof Error ? err.message : String(err));
+        });
       },
     })) {
       process.stdout.write(chunk);
@@ -110,7 +113,7 @@ async function cmdRun(args: string[]): Promise<void> {
     await appendFile(sessionStore.errorLogPath(session.id), msg + '\n');
     await sessionStore.markFailed(session.id);
     console.error(`Error: ${msg}`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 }
 
@@ -121,13 +124,13 @@ async function cmdResult(args: string[]): Promise<void> {
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
     console.error('No sessions found.');
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   const logPath = sessionStore.outputLogPath(sessionId);
   if (!existsSync(logPath)) {
     console.error(`No output log found for session ${sessionId}`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   const output = await readFile(logPath, 'utf8');
@@ -141,7 +144,7 @@ async function cmdStatus(args: string[]): Promise<void> {
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
     console.error('No sessions found.');
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   try {
@@ -155,7 +158,7 @@ async function cmdStatus(args: string[]): Promise<void> {
     if (record.permissionProfile) console.log(`Permission: ${record.permissionProfile}`);
   } catch {
     console.error(`Session not found: ${sessionId}`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 }
 
@@ -166,7 +169,7 @@ async function cmdCancel(args: string[]): Promise<void> {
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
     console.error('No sessions found.');
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   let record;
@@ -174,7 +177,7 @@ async function cmdCancel(args: string[]): Promise<void> {
     record = await sessionStore.read(sessionId);
   } catch {
     console.error(`Session not found: ${sessionId}`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   if (record.status === 'done' || record.status === 'failed') {
@@ -191,7 +194,7 @@ async function cmdCancel(args: string[]): Promise<void> {
     try {
       process.kill(record.pid, 'SIGTERM');
     } catch {
-      // process may already be gone
+      // The process may have already exited — safe to ignore
     }
   }
 
@@ -210,5 +213,5 @@ function parseFlag<T extends string = string>(args: string[], flag: string): T |
 
 main().catch((err) => {
   console.error(err);
-  process.exit(1);
+  process.exit(EXIT_ERROR);
 });

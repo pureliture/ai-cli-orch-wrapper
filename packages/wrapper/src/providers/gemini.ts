@@ -1,9 +1,12 @@
-import { execFile, spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { which } from '../util/which.js';
+import { spawnStream } from '../util/spawn-stream.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 
 const execFileAsync = promisify(execFile);
+
+const AUTH_CHECK_TIMEOUT_MS = 5_000;
 
 export class GeminiProvider implements IProvider {
   readonly key = 'gemini';
@@ -18,7 +21,7 @@ export class GeminiProvider implements IProvider {
       return { ok: false, hint: this.installHint };
     }
     try {
-      await execFileAsync('gemini', ['--version'], { timeout: 5000 });
+      await execFileAsync('gemini', ['--version'], { timeout: AUTH_CHECK_TIMEOUT_MS });
       return { ok: true };
     } catch {
       return { ok: false, hint: 'gemini auth login  # or run `gemini` interactively' };
@@ -39,31 +42,6 @@ export class GeminiProvider implements IProvider {
     if (!binary) throw new Error('gemini CLI not found in PATH');
 
     const args = [...this.buildArgs('', options), `${prompt}\n\n${content}`];
-    yield* spawnStream(binary, args, options);
+    yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe' }, options);
   }
-}
-
-async function* spawnStream(binary: string, args: string[], options?: InvokeOptions): AsyncIterable<string> {
-  const child = spawn(binary, args, { stdio: ['pipe', 'pipe', 'pipe'] });
-
-  if (child.pid !== undefined) {
-    options?.onPid?.(child.pid);
-  }
-
-  child.stdin.end();
-
-  // Drain stderr to prevent buffer deadlock; ignore content
-  child.stderr.resume();
-
-  for await (const chunk of child.stdout) {
-    yield (chunk as Buffer).toString();
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    child.on('close', (code) => {
-      if (code !== 0) reject(new Error(`gemini exited with code ${code}`));
-      else resolve();
-    });
-    child.on('error', reject);
-  });
 }
