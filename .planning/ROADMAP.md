@@ -65,9 +65,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Scaffolding + reviewer prompts + Wave 0 test stubs + .wrapper.json routing fix
-- [ ] 07-02-PLAN.md — /gemini:review and /copilot:review commands (REV-01, REV-02, REV-03)
-- [ ] 07-03-PLAN.md — /gemini:status, /copilot:status, /gemini:setup, /copilot:setup commands (STAT-01, SETUP-01)
+- [x] 07-01-PLAN.md — Scaffolding + reviewer prompts + Wave 0 test stubs + .wrapper.json routing fix
+- [x] 07-02-PLAN.md — /gemini:review and /copilot:review commands (REV-01, REV-02, REV-03)
+- [x] 07-03-PLAN.md — /gemini:status, /copilot:status, /gemini:setup, /copilot:setup commands (STAT-01, SETUP-01)
 
 ### Phase 8: adversarial + rescue
 **Goal**: Users can run aggressive focus-targeted reviews and get unstuck via a second-opinion AI using either CLI
@@ -103,6 +103,6 @@ Plans:
 | 4. Canonical Command Surface | v1.1 | 3/3 | Complete | 2026-03-31 |
 | 5. Wrapper Runtime Contract | v1.1 | 4/4 | Complete | 2026-03-31 |
 | 6. Adapter Infrastructure | v1.2 | 3/3 | Complete | 2026-04-02 |
-| 7. review + status + setup | v1.2 | 0/TBD | Not started | - |
+| 7. review + status + setup | v1.2 | 3/3 | ✅ Complete | 2026-04-02 |
 | 8. adversarial + rescue | v1.2 | 0/TBD | Not started | - |
 | 9. result + cancel (background) | v1.2 | 0/TBD | Not started | - |
