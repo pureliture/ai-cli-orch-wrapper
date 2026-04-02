@@ -62,7 +62,12 @@ Plans:
   4. When `git diff HEAD` is empty, retries with `git diff HEAD~1`; when both are empty prints "No changes detected"
   5. `/gemini:status` and `/copilot:status` each print the CLI's availability (`✓`/`✗`) and version
   6. `/gemini:setup` and `/copilot:setup` each print install instructions and required auth steps for their CLI
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 07-01-PLAN.md — Scaffolding + reviewer prompts + Wave 0 test stubs + .wrapper.json routing fix
+- [ ] 07-02-PLAN.md — /gemini:review and /copilot:review commands (REV-01, REV-02, REV-03)
+- [ ] 07-03-PLAN.md — /gemini:status, /copilot:status, /gemini:setup, /copilot:setup commands (STAT-01, SETUP-01)
 
 ### Phase 8: adversarial + rescue
 **Goal**: Users can run aggressive focus-targeted reviews and get unstuck via a second-opinion AI using either CLI
