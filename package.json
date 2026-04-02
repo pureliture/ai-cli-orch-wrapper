@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build --workspace=packages/wrapper && npm run build --workspace=packages/installer",
     "test": "npm test --workspace=packages/wrapper",
     "test:smoke": "npm run test:smoke --workspace=packages/wrapper --if-present"
   },
