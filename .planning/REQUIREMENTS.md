@@ -34,13 +34,19 @@ Blueprint Step 3-6 기반. 결과물은 `.claude/commands/aco/` 슬래시 커맨
 - [ ] **ADV-03**: input 우선순위는 `/aco:review`와 동일하다 (파일 > git diff > 오류)
 - [ ] **ADV-04**: `--target <adapter>` flag로 routing config를 override할 수 있다
 
-## v1.3 Requirements (Deferred)
-
 ### /aco:rescue
 
-- **RESC-01**: `--from <file>`, `--error <message>`, stdin 세 가지 input 경로를 지원한다
-- **RESC-02**: `git log -5 --oneline`을 자동으로 컨텍스트에 삽입한다
-- **RESC-03**: `--from`과 `--error`를 동시에 제공하면 둘을 병합해 사용한다
+- [ ] **RESC-01**: `--from <file>`, `--error <message>`, stdin 세 가지 input 경로를 지원한다
+- [ ] **RESC-02**: `git log -5 --oneline`을 자동으로 컨텍스트에 삽입한다
+- [ ] **RESC-03**: `--from`과 `--error`를 동시에 제공하면 둘을 병합해 사용한다
+
+### Background Tasks
+
+- [ ] **BG-01**: `/gemini:review --background` and `/copilot:review --background` each launch the review as a background task and immediately confirm the task ID; same flag applies to `:adversarial`
+- [ ] **BG-02**: `/gemini:result <task-id>` and `/copilot:result <task-id>` each retrieve and print the output of a completed background task; running `:result` on an incomplete task prints "Still running — check again later"; running `:result` on a cancelled task prints "Task \<id\> was cancelled."; running `:result` on an unknown ID prints "Task not found: \<id\>"
+- [ ] **BG-03**: `/gemini:cancel <task-id>` and `/copilot:cancel <task-id>` each cancel a running background task by killing the process and marking the task as cancelled
+
+## v1.3 Requirements (Deferred)
 
 ### /aco:init
 
@@ -82,10 +88,16 @@ Blueprint Step 3-6 기반. 결과물은 `.claude/commands/aco/` 슬래시 커맨
 | ADV-02 | Phase 8 | Pending |
 | ADV-03 | Phase 8 | Pending |
 | ADV-04 | Phase 8 | Pending |
+| RESC-01 | Phase 8 | Pending |
+| RESC-02 | Phase 8 | Pending |
+| RESC-03 | Phase 8 | Pending |
+| BG-01 | Phase 9 | Pending |
+| BG-02 | Phase 9 | Pending |
+| BG-03 | Phase 9 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 15 total
-- Mapped to phases: 15
+- v1.2 requirements: 21 total
+- Mapped to phases: 21
 - Unmapped: 0 ✓
 
 ---

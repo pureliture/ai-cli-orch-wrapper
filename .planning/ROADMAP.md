@@ -89,7 +89,11 @@ Plans:
   2. `/gemini:result <task-id>` and `/copilot:result <task-id>` each retrieve and print the output of a completed background task
   3. `/gemini:cancel <task-id>` and `/copilot:cancel <task-id>` each cancel a running background task
   4. Running `:result` on an incomplete task prints "Still running — check again later"
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 09-01-PLAN.md — Scaffolding: background task helpers in adapter.sh + Wave 0 test stubs
+- [ ] 09-02-PLAN.md — Commands: --background flag on review/adversarial + result and cancel commands
 
 ## Progress
 
@@ -104,5 +108,5 @@ Plans:
 | 5. Wrapper Runtime Contract | v1.1 | 4/4 | Complete | 2026-03-31 |
 | 6. Adapter Infrastructure | v1.2 | 3/3 | Complete | 2026-04-02 |
 | 7. review + status + setup | v1.2 | 3/3 | ✅ Complete | 2026-04-02 |
-| 8. adversarial + rescue | v1.2 | 0/TBD | Not started | - |
-| 9. result + cancel (background) | v1.2 | 0/TBD | Not started | - |
+| 8. adversarial + rescue | v1.2 | 3/3 | ✅ Verified | 2026-04-02 |
+| 9. result + cancel (background) | v1.2 | 0/2 | Not started | - |
