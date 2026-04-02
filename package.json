@@ -1,35 +1,17 @@
 {
-  "name": "ai-cli-orch-wrapper",
-  "version": "0.2.0",
-  "description": "Lightweight URL downloader with lock-file tracking",
-  "type": "module",
-  "main": "dist/index.js",
-  "bin": {
-    "aco": "dist/cli.js"
-  },
+  "name": "claude-code-gemini-copilot-commands",
+  "version": "0.3.0",
+  "description": "Claude Code slash-command pack for Gemini CLI and GitHub Copilot CLI spawning.",
+  "private": true,
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "start": "node dist/cli.js",
-    "test": "node --test",
-    "lint": "tsc -p tsconfig.lint.json",
-    "cleanup:legacy-bin": "node scripts/cleanup-legacy-bin.mjs",
-    "postinstall": "node scripts/cleanup-legacy-bin.mjs"
+    "test": "bash .claude/aco/tests/test-error-handling.sh && bash .claude/aco/tests/test-review-commands.sh",
+    "test:smoke": "bash .claude/aco/tests/smoke-adapters.sh"
   },
   "keywords": [
-    "ai",
-    "cli",
-    "orchestration",
-    "downloader",
-    "lockfile"
+    "claude-code",
+    "gemini-cli",
+    "copilot-cli",
+    "slash-commands"
   ],
-  "author": "skillinterop",
-  "license": "MIT",
-  "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+  "license": "MIT"
 }
