@@ -4,13 +4,13 @@
 **ai-cli-orch-wrapper**
 
 어느 PC에서나 단일 명령어로 동일한 AI CLI 오케스트레이션 환경을 재현할 수 있는 개인용 래퍼 툴.
-cao(AWS Labs CLI Agent Orchestrator) + tmux + workmux를 조합하여 Claude Code, Gemini CLI, Codex, Copilot CLI 등 여러 AI CLI를 워크플로우 역할(오케스트레이터, 리뷰어, 플래너 등)에 따라 지정하고 협력시킬 수 있다.
+tmux + workmux 기반으로 Claude Code, Gemini CLI, Codex, Copilot CLI 등 여러 AI CLI를 같은 환경 규약 아래에서 다룰 수 있다.
 
 **Core Value:** 어느 PC로 옮겨도 단일 명령어 하나로 동일한 AI CLI 오케스트레이션 환경이 즉시 복원되어야 한다.
 
 ### Constraints
 
-- **전제 조건**: cao, tmux, workmux는 이미 설치된 환경에서만 동작
+- **전제 조건**: tmux, workmux는 이미 설치된 환경에서만 동작
 - **tmux conf 비침습**: `~/.tmux.conf` 직접 수정 금지. `~/.config/tmux/ai-cli.conf`에만 작성하고 source 라인 한 줄만 추가
 - **registry 결합 금지**: registry-hub URL은 설정값으로만 참조, 이 래퍼에 하드코딩 또는 의존 금지
 - **이식성 우선**: 환경 상태는 이 레포 안에서 완전히 재현 가능해야 함
@@ -187,7 +187,7 @@ cao(AWS Labs CLI Agent Orchestrator) + tmux + workmux를 조합하여 Claude Cod
 - Purpose: Named specialized AI persona spawned by orchestrating commands
 - Examples: `.claude/agents/gsd-executor.md`, `.claude/agents/gsd-planner.md`, `.claude/agents/gsd-codebase-mapper.md`
 - Pattern: Markdown role file read by Claude when spawning a sub-agent task
-- Purpose: JSON-LD `DataCatalog` hub-and-leaf structure for discovering installable skills, CAO profiles, and ReproGate gates
+- Purpose: JSON-LD `DataCatalog` hub-and-leaf structure for discovering installable skills and ReproGate gates
 - Examples: Documented in `docs/registry-resolver.md`, `docs/lockfile-example.json`
 - Pattern: Hub `DataCatalog` → `hasPart[]` → leaf `DataCatalog` → `dataset[]` → `SoftwareSourceCode` items
 ## Entry Points

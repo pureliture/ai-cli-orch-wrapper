@@ -10,15 +10,6 @@
       "channel": "stable",
       "status": "active",
       "lockedAt": "2026-03-23T05:34:44Z"
-    },
-    {
-      "identifier": "cao-profile/org/default-cao@0.1.0",
-      "registryType": "cao-profile",
-      "catalogUrl": "https://raw.githubusercontent.com/skillinterop/cao-profile-registry/main/index.jsonld",
-      "contentUrl": "https://raw.githubusercontent.com/skillinterop/cao-profile-registry/main/profiles/default-cao/PROFILE.md",
-      "channel": "experimental",
-      "status": "active",
-      "lockedAt": "2026-03-23T05:34:45Z"
     }
   ]
 }

@@ -12,7 +12,7 @@
     "dev": "tsc --watch",
     "start": "node dist/cli.js",
     "test": "node --test",
-    "lint": "tsc --noEmit",
+    "lint": "tsc -p tsconfig.lint.json",
     "cleanup:legacy-bin": "node scripts/cleanup-legacy-bin.mjs",
     "postinstall": "node scripts/cleanup-legacy-bin.mjs"
   },

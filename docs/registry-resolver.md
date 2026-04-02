@@ -26,10 +26,6 @@ skillinterop/
 │   ├── index.jsonld
 │   ├── schemas/
 │   └── skills/
-├── cao-profile-registry/
-│   ├── index.jsonld
-│   ├── schemas/
-│   └── profiles/
 └── reprogate-registry/
     ├── index.jsonld
     ├── schemas/
@@ -61,7 +57,6 @@ The hub currently publishes a JSON-LD `DataCatalog` in `registry-catalog.jsonld`
 | Registry Type | Leaf catalog URL |
 |---------------|------------------|
 | `skill` | `https://raw.githubusercontent.com/skillinterop/skill-registry/main/index.jsonld` |
-| `cao-profile` | `https://raw.githubusercontent.com/skillinterop/cao-profile-registry/main/index.jsonld` |
 | `reprogate` | `https://raw.githubusercontent.com/skillinterop/reprogate-registry/main/index.jsonld` |
 
 ## Leaf Catalogs
@@ -83,24 +78,6 @@ Each leaf registry publishes a root `index.jsonld` document. The shape is consis
       "url": "./skills/workmux-router/SKILL.md",
       "skillinterop:status": "active",
       "skillinterop:channel": "stable"
-    }
-  ]
-}
-```
-
-### CAO profile registry
-
-```json
-{
-  "@type": "DataCatalog",
-  "name": "CAO Profile Registry",
-  "dataset": [
-    {
-      "@type": "SoftwareApplication",
-      "identifier": "cao-profile/org/default-cao@0.1.0",
-      "url": "./profiles/default-cao/PROFILE.md",
-      "skillinterop:status": "active",
-      "skillinterop:channel": "experimental"
     }
   ]
 }
