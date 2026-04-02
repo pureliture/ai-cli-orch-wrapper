@@ -1,12 +1,12 @@
 ---
 name: gemini:adversarial
-description: Adversarial code review via Gemini CLI — assumes bugs exist, finds them. Use --focus to scope.
-argument-hint: "[--focus security|performance|correctness|all] [path/to/file.ts]"
+description: Adversarial code review via Gemini CLI — assumes bugs exist, finds them. Use --focus to scope. Use --background to run as a background task.
+argument-hint: "[--background] [--focus security|performance|correctness|all] [path/to/file.ts]"
 allowed-tools:
   - Bash
 ---
 
-Adversarial code review via Gemini CLI. More aggressive than `:review` — starts from the assumption that bugs exist. Optionally scope with `--focus security`, `--focus performance`, `--focus correctness`, or `--focus all` (default). Without a file argument, reviews `git diff HEAD`.
+Adversarial code review via Gemini CLI. More aggressive than `:review` — starts from the assumption that bugs exist. Optionally scope with `--focus security`, `--focus performance`, `--focus correctness`, or `--focus all` (default). Use `--background` to run as a background task; retrieve output with `/gemini:result <task-id>`. Without a file argument, reviews `git diff HEAD`.
 
 ```bash
 #!/usr/bin/env bash
@@ -28,8 +28,17 @@ if [[ ! -f "$ADVERSARIAL_PROMPT_FILE" ]]; then
 fi
 ADVERSARIAL_PROMPT=$(cat "$ADVERSARIAL_PROMPT_FILE")
 
-# ADV-02: Parse --focus flag from $ARGUMENTS (template substitution, not argv)
+# BG-01: Parse --background flag first; strip it before --focus parsing
 ARGS="${ARGUMENTS:-}"
+BG_FLAG=false
+if [[ "$ARGS" == *"--background"* ]]; then
+  BG_FLAG=true
+  ARGS="${ARGS/--background/}"
+  ARGS="${ARGS#"${ARGS%%[! ]*}"}"  # trim leading whitespace
+  ARGS="${ARGS%"${ARGS##*[! ]}"}"  # trim trailing whitespace
+fi
+
+# ADV-02: Parse --focus flag from remaining ARGS
 FOCUS="all"
 if [[ "$ARGS" =~ --focus[[:space:]]+([a-z]+) ]]; then
   FOCUS="${BASH_REMATCH[1]}"
@@ -81,6 +90,12 @@ else
   fi
 fi
 
-# Dispatch through adapter (output verbatim)
-aco_adapter_invoke "gemini" "$ADVERSARIAL_PROMPT" "$CONTENT"
+# BG-01: Background vs foreground dispatch
+if [[ "$BG_FLAG" == true ]]; then
+  TASK_ID=$(aco_bg_task_id "gemini" "adversarial")
+  aco_bg_task_launch "$TASK_ID" "gemini" "$ADVERSARIAL_PROMPT" "$CONTENT"
+else
+  # Dispatch through adapter (output verbatim)
+  aco_adapter_invoke "gemini" "$ADVERSARIAL_PROMPT" "$CONTENT"
+fi
 ```
