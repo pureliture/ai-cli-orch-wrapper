@@ -8,6 +8,10 @@ import { providerRegistry } from '@aco/wrapper';
 
 const execFileAsync = promisify(execFile);
 
+const BINARY_CHECK_TIMEOUT_MS = 5_000;
+const NPM_INSTALL_TIMEOUT_MS = 60_000;
+const EXIT_ERROR = 1;
+
 const TEMPLATES_DIR = resolve(__dirname, '..', '..', '..', 'templates');
 
 export interface PackInstallOptions {
@@ -53,8 +57,8 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
     let manifest: { files?: string[] } = {};
     try {
       manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { files?: string[] };
-    } catch {
-      console.warn('  [warn] Could not read install manifest; falling back to directory removal.');
+    } catch (err) {
+      console.warn('  [warn] Could not read install manifest; falling back to directory removal.', err instanceof Error ? err.message : String(err));
     }
 
     if (manifest.files && manifest.files.length > 0) {
@@ -137,21 +141,21 @@ export async function providerSetup(name: string): Promise<void> {
   if (!provider) {
     console.error(`Unknown provider: ${name}`);
     console.error(`Available: ${providerRegistry.keys().join(', ')}`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   const available = provider.isAvailable();
   if (!available) {
     console.error(`${name}: not installed ✗`);
     console.error(`  Install: ${provider.installHint}`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   const auth = await provider.checkAuth();
   if (!auth.ok) {
     console.error(`${name}: installed ✓  auth ✗`);
     console.error(`  Fix: ${auth.hint}`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 
   console.log(`${name}: installed ✓  auth: ok ✓`);
@@ -198,19 +202,20 @@ async function collectFiles(dir: string, out: string[]): Promise<void> {
 async function placeWrapperBinary(_targetBase: string, binaryName: string): Promise<void> {
   // Check if already in PATH
   try {
-    await execFileAsync(binaryName, ['--version'], { timeout: 5000 });
+    await execFileAsync(binaryName, ['--version'], { timeout: BINARY_CHECK_TIMEOUT_MS });
     console.log(`  binary: '${binaryName}' already in PATH ✓`);
     return;
   } catch {
-    // Not in PATH — try global npm install
+    // Not found in PATH — proceed to global npm install
   }
 
   try {
     console.log(`  binary: installing @aco/wrapper globally …`);
-    await execFileAsync('npm', ['install', '-g', '@aco/wrapper'], { timeout: 60000 });
+    await execFileAsync('npm', ['install', '-g', '@aco/wrapper'], { timeout: NPM_INSTALL_TIMEOUT_MS });
     console.log(`  binary: '${binaryName}' installed globally ✓`);
-  } catch {
-    console.warn(`  [warn] Could not install '${binaryName}' globally.`);
+  } catch (err) {
+    const reason = err instanceof Error ? err.message : String(err);
+    console.warn(`  [warn] Could not install '${binaryName}' globally: ${reason}`);
     console.warn(`         Run manually: npm install -g @aco/wrapper`);
   }
 }

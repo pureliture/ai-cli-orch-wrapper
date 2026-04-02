@@ -84,22 +84,25 @@ export class SessionStore {
   /** Returns the most-recently-started session ID, or undefined if none exist. */
   latestId(): string | undefined {
     if (!existsSync(this.baseDir)) return undefined;
+
     const entries = readdirSync(this.baseDir)
-      .map((name) => {
-        const taskFile = join(this.baseDir, name, 'task.json');
-        try {
-          const raw = readFileSync(taskFile, 'utf8');
-          const record = JSON.parse(raw) as { startedAt?: string };
-          return { name, startedAt: record.startedAt ?? '' };
-        } catch {
-          return null;
-        }
-      })
+      .map((name) => this.readStartedAt(name))
       .filter((e): e is { name: string; startedAt: string } => e !== null);
 
     if (entries.length === 0) return undefined;
     entries.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
     return entries[0].name;
+  }
+
+  private readStartedAt(name: string): { name: string; startedAt: string } | null {
+    const taskFile = join(this.baseDir, name, 'task.json');
+    try {
+      const raw = readFileSync(taskFile, 'utf8');
+      const record = JSON.parse(raw) as { startedAt?: string };
+      return { name, startedAt: record.startedAt ?? '' };
+    } catch {
+      return null;
+    }
   }
 
   /** Creates a tee writable: chunks go to stdout AND to the session output.log. */

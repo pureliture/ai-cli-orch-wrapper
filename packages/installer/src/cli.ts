@@ -2,6 +2,7 @@
 import process from 'node:process';
 
 const MIN_NODE = '18.0.0';
+const EXIT_ERROR = 1;
 checkNodeVersion();
 
 import { packInstall, packUninstall, packStatus, packSetup, providerSetup } from './commands/pack-install.js';
@@ -45,7 +46,7 @@ async function main(): Promise<void> {
       default:
         console.error(`Unknown pack sub-command: ${sub ?? ''}`);
         printUsage();
-        process.exit(1);
+        process.exit(EXIT_ERROR);
     }
     return;
   }
@@ -54,26 +55,26 @@ async function main(): Promise<void> {
     const name = subOrName;
     if (!name) {
       console.error('Usage: aco provider setup <name>');
-      process.exit(1);
+      process.exit(EXIT_ERROR);
     }
     if (name === 'setup') {
       // aco provider setup <name>
       const providerName = rest[0];
       if (!providerName) {
         console.error('Usage: aco provider setup <name>');
-        process.exit(1);
+        process.exit(EXIT_ERROR);
       }
       await providerSetup(providerName);
     } else {
       console.error(`Unknown provider sub-command: ${name}`);
-      process.exit(1);
+      process.exit(EXIT_ERROR);
     }
     return;
   }
 
   console.error(`Unknown command: ${group}`);
   printUsage();
-  process.exit(1);
+  process.exit(EXIT_ERROR);
 }
 
 function checkNodeVersion(): void {
@@ -81,7 +82,7 @@ function checkNodeVersion(): void {
   const [reqMajor, reqMinor] = MIN_NODE.split('.').map(Number);
   if (major < reqMajor || (major === reqMajor && minor < reqMinor)) {
     console.error(`aco-install requires Node.js >= ${MIN_NODE} (current: ${process.versions.node})`);
-    process.exit(1);
+    process.exit(EXIT_ERROR);
   }
 }
 
@@ -99,5 +100,5 @@ Usage:
 
 main().catch((err) => {
   console.error(err);
-  process.exit(1);
+  process.exit(EXIT_ERROR);
 });

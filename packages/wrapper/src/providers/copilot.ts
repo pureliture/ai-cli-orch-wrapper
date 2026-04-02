@@ -1,9 +1,12 @@
-import { execFile, spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { which } from '../util/which.js';
+import { spawnStream } from '../util/spawn-stream.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 
 const execFileAsync = promisify(execFile);
+
+const AUTH_CHECK_TIMEOUT_MS = 5_000;
 
 export class CopilotProvider implements IProvider {
   readonly key = 'copilot';
@@ -22,7 +25,7 @@ export class CopilotProvider implements IProvider {
       return { ok: false, hint: 'gh auth login  # Install GitHub CLI: https://cli.github.com' };
     }
     try {
-      await execFileAsync(gh, ['auth', 'status'], { timeout: 5000 });
+      await execFileAsync(gh, ['auth', 'status'], { timeout: AUTH_CHECK_TIMEOUT_MS });
       return { ok: true };
     } catch {
       return { ok: false, hint: 'gh auth login' };
@@ -44,29 +47,6 @@ export class CopilotProvider implements IProvider {
 
     const fullPrompt = content ? `${content}\n\n${prompt}` : prompt;
     const args = [...this.buildArgs('', options), fullPrompt];
-    yield* spawnStream(binary, args, options);
+    yield* spawnStream(binary, args, { processName: 'copilot', stdin: 'ignore' }, options);
   }
-}
-
-async function* spawnStream(binary: string, args: string[], options?: InvokeOptions): AsyncIterable<string> {
-  const child = spawn(binary, args, { stdio: ['ignore', 'pipe', 'pipe'] });
-
-  if (child.pid !== undefined) {
-    options?.onPid?.(child.pid);
-  }
-
-  // Drain stderr to prevent buffer deadlock; ignore content
-  child.stderr.resume();
-
-  for await (const chunk of child.stdout) {
-    yield (chunk as Buffer).toString();
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    child.on('close', (code) => {
-      if (code !== 0) reject(new Error(`copilot exited with code ${code}`));
-      else resolve();
-    });
-    child.on('error', reject);
-  });
 }
