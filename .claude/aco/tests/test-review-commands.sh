@@ -306,6 +306,190 @@ run_test "Wave 0 (08-03): .claude/commands/gemini/rescue.md exists" "$_r"
 [[ -f "${PHASE8_COMMANDS_DIR}/copilot/rescue.md" ]] && _r=0 || _r=1
 run_test "Wave 0 (08-03): .claude/commands/copilot/rescue.md exists" "$_r"
 
+# ══════════════════════════════════════════════════════════════════════════════
+# Phase 9: result + cancel tests
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Export ACO_TASKS_DIR to a tmpdir for all Phase 9 tests so we don't pollute ~/.gsd-tasks
+_P9_TASKS_TMP=$(mktemp -d /tmp/test-gsd-tasks-XXXX)
+export ACO_TASKS_DIR="$_P9_TASKS_TMP"
+
+# ── BG-01: aco_bg_task_dir creates and returns path ──────────────────────────
+test_bg01_task_dir_creates_path() {
+  local dir
+  dir=$(aco_bg_task_dir)
+  [[ -n "$dir" ]] && [[ -d "$dir" ]]
+}
+test_bg01_task_dir_creates_path
+run_test "BG-01: aco_bg_task_dir returns non-empty path and creates the directory" "$?"
+
+# ── BG-01: aco_bg_task_id format matches <adapter>-<cmd>-<ts>-<hex8> ─────────
+test_bg01_task_id_format() {
+  local id
+  id=$(aco_bg_task_id "gemini" "review")
+  [[ "$id" =~ ^gemini-review-[0-9]+-[a-f0-9]+$ ]]
+}
+test_bg01_task_id_format
+run_test "BG-01: aco_bg_task_id 'gemini review' matches gemini-review-<ts>-<hex>" "$?"
+
+# ── BG-01: aco_bg_task_id generates unique IDs on sequential calls ─────────────
+test_bg01_task_id_unique() {
+  local id1 id2
+  id1=$(aco_bg_task_id "gemini" "review")
+  # Brief sleep to ensure timestamp or rand component differs
+  sleep 0.05 2>/dev/null || true
+  id2=$(aco_bg_task_id "gemini" "review")
+  [[ "$id1" != "$id2" ]]
+}
+test_bg01_task_id_unique
+run_test "BG-01: aco_bg_task_id produces different IDs on sequential calls" "$?"
+
+# ── BG-02: aco_bg_task_status returns 'not_found' for unknown task ────────────
+test_bg02_status_not_found() {
+  local status
+  status=$(aco_bg_task_status "nonexistent-task-$(date +%s)")
+  [[ "$status" == "not_found" ]]
+}
+test_bg02_status_not_found
+run_test "BG-02: aco_bg_task_status unknown task ID → 'not_found'" "$?"
+
+# ── BG-02: aco_bg_task_status returns 'complete' when status file says complete ─
+test_bg02_status_complete() {
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+  local task_id="test-complete-$(date +%s)"
+  echo "complete" > "${tasks_dir}/${task_id}.status"
+  echo "review output here" > "${tasks_dir}/${task_id}.output"
+  local status
+  status=$(aco_bg_task_status "$task_id")
+  rm -f "${tasks_dir}/${task_id}.status" "${tasks_dir}/${task_id}.output"
+  [[ "$status" == "complete" ]]
+}
+test_bg02_status_complete
+run_test "BG-02: aco_bg_task_status status='complete' → 'complete'" "$?"
+
+# ── BG-02: aco_bg_task_status returns 'cancelled' when status file says cancelled
+test_bg02_status_cancelled() {
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+  local task_id="test-cancelled-$(date +%s)"
+  echo "cancelled" > "${tasks_dir}/${task_id}.status"
+  local status
+  status=$(aco_bg_task_status "$task_id")
+  rm -f "${tasks_dir}/${task_id}.status"
+  [[ "$status" == "cancelled" ]]
+}
+test_bg02_status_cancelled
+run_test "BG-02: aco_bg_task_status status='cancelled' → 'cancelled'" "$?"
+
+# ── BG-03 extra: aco_bg_task_status 'running' + live PID → 'running' ──────────
+test_bg03_status_running_live_pid() {
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+  local task_id="test-running-live-$(date +%s)"
+  echo "running" > "${tasks_dir}/${task_id}.status"
+  echo "$$" > "${tasks_dir}/${task_id}.pid"   # current shell PID is always alive
+  local status
+  status=$(aco_bg_task_status "$task_id")
+  rm -f "${tasks_dir}/${task_id}.status" "${tasks_dir}/${task_id}.pid"
+  [[ "$status" == "running" ]]
+}
+test_bg03_status_running_live_pid
+run_test "BG-03 extra: aco_bg_task_status running + live PID ($$) → 'running'" "$?"
+
+# ── BG-02: aco_bg_task_result not_found → 'Task not found: <id>' ─────────────
+test_bg02_result_not_found_message() {
+  local fake_id="nonexistent-$(date +%s)"
+  local output
+  output=$(aco_bg_task_result "$fake_id")
+  [[ "$output" == "Task not found: ${fake_id}" ]]
+}
+test_bg02_result_not_found_message
+run_test "BG-02: aco_bg_task_result not_found → 'Task not found: <id>'" "$?"
+
+# ── BG-03 extra: aco_bg_task_result running → 'Still running — check again later'
+test_bg03_result_still_running_message() {
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+  local task_id="test-still-running-$(date +%s)"
+  echo "running" > "${tasks_dir}/${task_id}.status"
+  echo "$$" > "${tasks_dir}/${task_id}.pid"   # current shell PID — always alive
+  local output
+  output=$(aco_bg_task_result "$task_id")
+  rm -f "${tasks_dir}/${task_id}.status" "${tasks_dir}/${task_id}.pid"
+  [[ "$output" == "Still running — check again later" ]]
+}
+test_bg03_result_still_running_message
+run_test "BG-03 extra: aco_bg_task_result running task → 'Still running — check again later'" "$?"
+
+# ── BG-02: aco_bg_task_result complete → prints output file content ──────────
+test_bg02_result_complete_output() {
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+  local task_id="test-output-$(date +%s)"
+  echo "complete" > "${tasks_dir}/${task_id}.status"
+  echo "Review output: looks good!" > "${tasks_dir}/${task_id}.output"
+  local output
+  output=$(aco_bg_task_result "$task_id")
+  rm -f "${tasks_dir}/${task_id}.status" "${tasks_dir}/${task_id}.output"
+  [[ "$output" == "Review output: looks good!" ]]
+}
+test_bg02_result_complete_output
+run_test "BG-02: aco_bg_task_result complete → prints output file content verbatim" "$?"
+
+# ── BG-03: aco_bg_task_cancel on running task → 'cancelled' status + message ──
+test_bg03_cancel_marks_cancelled() {
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+  local task_id="test-cancel-$(date +%s)"
+  echo "running" > "${tasks_dir}/${task_id}.status"
+  # Use PID 1 (init/launchd) — always exists but we can't kill it (permission denied)
+  # aco_bg_task_cancel does: kill $pid || true — so it tolerates permission errors
+  echo "1" > "${tasks_dir}/${task_id}.pid"
+  local output
+  output=$(aco_bg_task_cancel "$task_id")
+  local final_status
+  final_status=$(cat "${tasks_dir}/${task_id}.status" 2>/dev/null || echo "missing")
+  rm -f "${tasks_dir}/${task_id}.status" "${tasks_dir}/${task_id}.pid"
+  [[ "$final_status" == "cancelled" ]] && [[ "$output" == "Task ${task_id} cancelled." ]]
+}
+test_bg03_cancel_marks_cancelled
+run_test "BG-03: aco_bg_task_cancel running task → status='cancelled', prints confirmation" "$?"
+
+# ── BG-03: aco_bg_task_cancel on non-running task → returns error message ─────
+test_bg03_cancel_not_running() {
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+  local task_id="test-cancel-complete-$(date +%s)"
+  echo "complete" > "${tasks_dir}/${task_id}.status"
+  local output
+  output=$(aco_bg_task_cancel "$task_id" 2>&1 || true)
+  rm -f "${tasks_dir}/${task_id}.status"
+  [[ "$output" == "Cannot cancel task ${task_id}: status is 'complete' (not running)" ]]
+}
+test_bg03_cancel_not_running
+run_test "BG-03: aco_bg_task_cancel non-running task → error message (not running)" "$?"
+
+# Cleanup Phase 9 tmpdir
+rm -rf "$_P9_TASKS_TMP"
+unset ACO_TASKS_DIR
+
+# ── Wave 0 (09-02): Result + Cancel command files ─────────────────────────────
+# RED until Plan 09-02 executes.
+# (PHASE8_COMMANDS_DIR is defined above in the Phase 8 section)
+
+[[ -f "${PHASE8_COMMANDS_DIR}/gemini/result.md" ]] && _r=0 || _r=1
+run_test "Wave 0 (09-02): .claude/commands/gemini/result.md exists" "$_r"
+
+[[ -f "${PHASE8_COMMANDS_DIR}/copilot/result.md" ]] && _r=0 || _r=1
+run_test "Wave 0 (09-02): .claude/commands/copilot/result.md exists" "$_r"
+
+[[ -f "${PHASE8_COMMANDS_DIR}/gemini/cancel.md" ]] && _r=0 || _r=1
+run_test "Wave 0 (09-02): .claude/commands/gemini/cancel.md exists" "$_r"
+
+[[ -f "${PHASE8_COMMANDS_DIR}/copilot/cancel.md" ]] && _r=0 || _r=1
+run_test "Wave 0 (09-02): .claude/commands/copilot/cancel.md exists" "$_r"
+
 # ── Summary ────────────────────────────────────────────────────────────────
 echo ""
 echo "Results: ${PASS} passed, ${FAIL} failed"
