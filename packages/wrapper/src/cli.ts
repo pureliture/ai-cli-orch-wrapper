@@ -1,13 +1,15 @@
 #!/usr/bin/env node
-import { readFile, writeFile, appendFile } from 'node:fs/promises';
+import { readFile, appendFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import process from 'node:process';
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile } from './providers/interface.js';
 
 const VERSION = '0.4.0';
+const VALID_PERMISSION_PROFILES: PermissionProfile[] = ['default', 'restricted', 'unrestricted'];
 
 async function main(): Promise<void> {
   const [, , subcommand, ...rest] = process.argv;
@@ -55,6 +57,10 @@ async function cmdRun(args: string[]): Promise<void> {
   }
 
   const permissionProfile = parseFlag<PermissionProfile>(args, '--permission-profile') ?? 'default';
+  if (!VALID_PERMISSION_PROFILES.includes(permissionProfile)) {
+    console.error(`Invalid --permission-profile '${permissionProfile}'. Valid values: default|restricted|unrestricted`);
+    process.exit(1);
+  }
   const inputFlag = parseFlag(args, '--input') ?? '';
 
   // Read stdin if not a TTY and no --input flag
@@ -65,11 +71,14 @@ async function cmdRun(args: string[]): Promise<void> {
     content = Buffer.concat(chunks).toString();
   }
 
-  // Load prompt from prompt template directory if available
-  const promptPath = join(process.cwd(), '.claude', 'aco', 'prompts', providerKey, `${command}.md`);
+  // Load prompt: prefer cwd-local override, fall back to global ~/.claude
+  const cwdPromptPath = join(process.cwd(), '.claude', 'aco', 'prompts', providerKey, `${command}.md`);
+  const globalPromptPath = join(homedir(), '.claude', 'aco', 'prompts', providerKey, `${command}.md`);
   let prompt = `You are a code reviewer. Perform a ${command} for the following content.`;
-  if (existsSync(promptPath)) {
-    prompt = await readFile(promptPath, 'utf8');
+  if (existsSync(cwdPromptPath)) {
+    prompt = await readFile(cwdPromptPath, 'utf8');
+  } else if (existsSync(globalPromptPath)) {
+    prompt = await readFile(globalPromptPath, 'utf8');
   }
 
   const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
@@ -78,7 +87,14 @@ async function cmdRun(args: string[]): Promise<void> {
     const outputLogPath = sessionStore.outputLogPath(session.id);
     let hasOutput = false;
 
-    for await (const chunk of provider.invoke(prompt, content, { permissionProfile, sessionId: session.id })) {
+    for await (const chunk of provider.invoke(prompt, content, {
+      permissionProfile,
+      sessionId: session.id,
+      onPid: (pid) => {
+        // Fire-and-forget pid update so the session can be cancelled
+        sessionStore.update(session.id, { pid }).catch(() => undefined);
+      },
+    })) {
       process.stdout.write(chunk);
       await appendFile(outputLogPath, chunk);
       hasOutput = true;

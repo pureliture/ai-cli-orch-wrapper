@@ -1,7 +1,7 @@
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { which } from '../util/which.js';
-import type { AuthResult, InvokeOptions, IProvider } from './interface.js';
+import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -25,23 +25,35 @@ export class GeminiProvider implements IProvider {
     }
   }
 
-  buildArgs(command: string, _options?: InvokeOptions): string[] {
-    return ['--yolo', '-p'];
+  buildArgs(command: string, options?: InvokeOptions): string[] {
+    const profile: PermissionProfile = options?.permissionProfile ?? 'default';
+    const base = ['-p'];
+    if (profile !== 'restricted') {
+      base.unshift('--yolo');
+    }
+    return base;
   }
 
-  async *invoke(prompt: string, content: string, _options?: InvokeOptions): AsyncIterable<string> {
+  async *invoke(prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string> {
     const binary = which('gemini');
     if (!binary) throw new Error('gemini CLI not found in PATH');
 
-    const args = [...this.buildArgs(''), `${prompt}\n\n${content}`];
-    yield* spawnStream(binary, args, content);
+    const args = [...this.buildArgs('', options), `${prompt}\n\n${content}`];
+    yield* spawnStream(binary, args, options);
   }
 }
 
-async function* spawnStream(binary: string, args: string[], _stdinContent: string): AsyncIterable<string> {
+async function* spawnStream(binary: string, args: string[], options?: InvokeOptions): AsyncIterable<string> {
   const child = spawn(binary, args, { stdio: ['pipe', 'pipe', 'pipe'] });
 
+  if (child.pid !== undefined) {
+    options?.onPid?.(child.pid);
+  }
+
   child.stdin.end();
+
+  // Drain stderr to prevent buffer deadlock; ignore content
+  child.stderr.resume();
 
   for await (const chunk of child.stdout) {
     yield (chunk as Buffer).toString();

@@ -1,7 +1,7 @@
 import { execFile, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { which } from '../util/which.js';
-import type { AuthResult, InvokeOptions, IProvider } from './interface.js';
+import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -29,22 +29,34 @@ export class CopilotProvider implements IProvider {
     }
   }
 
-  buildArgs(command: string, _options?: InvokeOptions): string[] {
-    return ['--allow-all-tools', '--silent', '-p'];
+  buildArgs(command: string, options?: InvokeOptions): string[] {
+    const profile: PermissionProfile = options?.permissionProfile ?? 'default';
+    const base = ['--silent', '-p'];
+    if (profile !== 'restricted') {
+      base.unshift('--allow-all-tools');
+    }
+    return base;
   }
 
-  async *invoke(prompt: string, content: string, _options?: InvokeOptions): AsyncIterable<string> {
+  async *invoke(prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string> {
     const binary = which('copilot');
     if (!binary) throw new Error('copilot CLI not found in PATH');
 
     const fullPrompt = content ? `${content}\n\n${prompt}` : prompt;
-    const args = [...this.buildArgs(''), fullPrompt];
-    yield* spawnStream(binary, args);
+    const args = [...this.buildArgs('', options), fullPrompt];
+    yield* spawnStream(binary, args, options);
   }
 }
 
-async function* spawnStream(binary: string, args: string[]): AsyncIterable<string> {
+async function* spawnStream(binary: string, args: string[], options?: InvokeOptions): AsyncIterable<string> {
   const child = spawn(binary, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+
+  if (child.pid !== undefined) {
+    options?.onPid?.(child.pid);
+  }
+
+  // Drain stderr to prevent buffer deadlock; ignore content
+  child.stderr.resume();
 
   for await (const chunk of child.stdout) {
     yield (chunk as Buffer).toString();
