@@ -1,9 +1,6 @@
 # Dependencies
 node_modules/
 
-# Build output
-dist/
-
 # OS files
 .DS_Store
 Thumbs.db
@@ -14,21 +11,12 @@ Thumbs.db
 *.swp
 *.swo
 
-# Logs
+# Logs and temp files
 *.log
 logs/
-
-# Environment
-.env
-.env.local
-
-# Temporary files
 tmp/
 temp/
 *.tmp
-
-# Wrapper cache (local only)
-.wrapper/
 
 # Local agent/runtime state
 .omc/
@@ -37,6 +25,3 @@ temp/
 .claude/worktrees/
 .codex/worktrees/
 .gemini/worktrees/
-
-# Lock file is committed for reproducibility
-# !wrapper.lock
