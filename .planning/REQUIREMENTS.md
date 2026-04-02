@@ -3,103 +3,51 @@
 **Defined:** 2026-04-02
 **Core Value:** Claude Code를 오케스트레이터로, 다른 AI CLI를 서브에이전트로 — 슬래시 커맨드 하나로 즉시 사용
 
-## v1.2 Requirements
+## v1.3 Requirements
 
-Blueprint Step 3-6 기반. 결과물은 `.claude/commands/aco/` 슬래시 커맨드.
+v1.3은 두 가지 축: (1) v1.2 carry-forward items (STAT-03, STAT-02, REV-04, ADV-04), (2) `/aco:init` 대화형 설정 + 통합 테스트/문서.
 
-### Adapter Infrastructure
+### Carry-Forward from v1.2
 
-- [ ] **ADPT-01**: Gemini-CLI를 서브에이전트로 실행할 수 있다 (subprocess spawn + stdin prompt 전달 + stdout 수집)
-- [ ] **ADPT-02**: Copilot-CLI를 서브에이전트로 실행할 수 있다 (동일 패턴, CLI별 quirk 대응)
-- [ ] **ADPT-03**: adapter가 설치되지 않은 경우 명확한 오류 메시지를 출력한다
-- [ ] **ADPT-04**: `.wrapper.json` v2.0 라우팅 설정으로 커맨드별 adapter를 지정할 수 있다 (`routing.review`, `routing.adversarial`)
-
-### /aco:review
-
-- [ ] **REV-01**: `git diff HEAD`를 routing config의 review adapter에 dispatch한다
-- [ ] **REV-02**: 파일 경로를 인자로 받으면 해당 파일 내용을 review 대상으로 사용한다
-- [ ] **REV-03**: `git diff HEAD` 결과가 없으면 `git diff HEAD~1`을 시도하고, 그래도 없으면 "No changes detected" 오류를 출력한다
-- [ ] **REV-04**: `--target <adapter>` flag로 routing config를 override할 수 있다
-
-### /aco:status
-
-- [ ] **STAT-01**: 설정된 모든 adapter의 가용성을 병렬로 확인해 `✓ / ✗` 형식으로 출력한다
-- [ ] **STAT-02**: 현재 routing 설정(커맨드 → adapter 매핑)을 표 형식으로 출력한다
-- [ ] **STAT-03**: `.wrapper.json`이 없으면 "Run /aco:init first" 안내를 출력한다
-
-### /aco:adversarial
-
-- [ ] **ADV-01**: review보다 공격적인 프롬프트로 routing config의 adversarial adapter에 dispatch한다
-- [ ] **ADV-02**: `--focus <security|performance|correctness|all>` 옵션으로 리뷰 초점을 좁힌다 (기본: all)
-- [ ] **ADV-03**: input 우선순위는 `/aco:review`와 동일하다 (파일 > git diff > 오류)
-- [ ] **ADV-04**: `--target <adapter>` flag로 routing config를 override할 수 있다
-
-### /aco:rescue
-
-- [ ] **RESC-01**: `--from <file>`, `--error <message>`, stdin 세 가지 input 경로를 지원한다
-- [ ] **RESC-02**: `git log -5 --oneline`을 자동으로 컨텍스트에 삽입한다
-- [ ] **RESC-03**: `--from`과 `--error`를 동시에 제공하면 둘을 병합해 사용한다
-
-### Background Tasks
-
-- [ ] **BG-01**: `/gemini:review --background` and `/copilot:review --background` each launch the review as a background task and immediately confirm the task ID; same flag applies to `:adversarial`
-- [ ] **BG-02**: `/gemini:result <task-id>` and `/copilot:result <task-id>` each retrieve and print the output of a completed background task; running `:result` on an incomplete task prints "Still running — check again later"; running `:result` on a cancelled task prints "Task \<id\> was cancelled."; running `:result` on an unknown ID prints "Task not found: \<id\>"
-- [ ] **BG-03**: `/gemini:cancel <task-id>` and `/copilot:cancel <task-id>` each cancel a running background task by killing the process and marking the task as cancelled
-
-## v1.3 Requirements (Deferred)
+- [ ] **STAT-03**: `/gemini:status` / `/copilot:status` — `.wrapper.json`이 없으면 "Run /aco:init first" 안내를 출력한다
+- [ ] **STAT-02**: 현재 routing 설정(커맨드 → adapter 매핑)을 표 형식으로 출력한다 (전용 `/aco:status` 중앙 커맨드로 구현)
+- [ ] **REV-04**: `--target <adapter>` flag로 routing config를 override할 수 있다 (중앙 `/aco:review` 커맨드에서 구현)
+- [ ] **ADV-04**: `--target <adapter>` flag로 routing config를 override할 수 있다 (중앙 `/aco:adversarial` 커맨드에서 구현)
 
 ### /aco:init
 
-- **INIT-01**: 가용한 adapter를 자동 감지해 라우팅 설정을 대화형으로 구성한다
-- **INIT-02**: 감지된 adapter만 선택지로 표시한다 (미설치 adapter 숨김)
-- **INIT-03**: `.wrapper.json`이 이미 있으면 마이그레이션 확인 후 업데이트한다
+- [ ] **INIT-01**: 가용한 adapter를 자동 감지해 라우팅 설정을 대화형으로 구성한다
+- [ ] **INIT-02**: 감지된 adapter만 선택지로 표시한다 (미설치 adapter 숨김)
+- [ ] **INIT-03**: `.wrapper.json`이 이미 있으면 마이그레이션 확인 후 업데이트한다
 
 ### Integration Tests + Docs
 
-- **INT-01**: 전체 커맨드 흐름 통합 테스트
-- **INT-02**: README v2.0 업데이트 (커맨드 레퍼런스 표 포함)
+- [ ] **INT-01**: 전체 커맨드 흐름 통합 테스트
+- [ ] **INT-02**: README v2.0 업데이트 (커맨드 레퍼런스 표 포함)
 
-## Out of Scope
+## v1.4 Requirements (Deferred)
 
-| Feature | Reason |
-|---------|--------|
-| `aco` CLI 바이너리 유지 | v1.2부터 슬래시 커맨드 전용으로 전환 |
-| TypeScript 소스 코드 | `src/` 삭제됨 — 슬래시 커맨드는 Markdown + Bash |
-| cao 오케스트레이션 | 제거됨 (Blueprint Step 1) |
-| tmux 세션 관리 | CC 슬래시 커맨드 패턴에서 불필요 |
-| registry-hub 연동 | 외부 병렬 개발 중, 이번 범위 밖 |
+*(None defined yet — added as v1.3 work reveals new scope)*
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| ADPT-01 | Phase 6 | Pending |
-| ADPT-02 | Phase 6 | Pending |
-| ADPT-03 | Phase 6 | Pending |
-| ADPT-04 | Phase 6 | Pending |
-| REV-01 | Phase 7 | Pending |
-| REV-02 | Phase 7 | Pending |
-| REV-03 | Phase 7 | Pending |
-| REV-04 | Phase 7 | Pending |
-| STAT-01 | Phase 7 | Pending |
-| STAT-02 | Phase 7 | Pending |
-| STAT-03 | Phase 7 | Pending |
-| ADV-01 | Phase 8 | Pending |
-| ADV-02 | Phase 8 | Pending |
-| ADV-03 | Phase 8 | Pending |
-| ADV-04 | Phase 8 | Pending |
-| RESC-01 | Phase 8 | Pending |
-| RESC-02 | Phase 8 | Pending |
-| RESC-03 | Phase 8 | Pending |
-| BG-01 | Phase 9 | Pending |
-| BG-02 | Phase 9 | Pending |
-| BG-03 | Phase 9 | Pending |
+| STAT-03 | TBD | Pending |
+| STAT-02 | TBD | Pending |
+| REV-04 | TBD | Pending |
+| ADV-04 | TBD | Pending |
+| INIT-01 | TBD | Pending |
+| INIT-02 | TBD | Pending |
+| INIT-03 | TBD | Pending |
+| INT-01 | TBD | Pending |
+| INT-02 | TBD | Pending |
 
 **Coverage:**
-- v1.2 requirements: 21 total
-- Mapped to phases: 21
-- Unmapped: 0 ✓
+- v1.3 requirements: 9 total
+- Mapped to phases: 0 (roadmap not yet defined)
+- Unmapped: 9 (pending /gsd-new-milestone)
 
 ---
 *Requirements defined: 2026-04-02*
-*Last updated: 2026-04-02 — traceability confirmed after roadmap creation*
+*Previous milestone requirements: [v1.2-REQUIREMENTS.md](./milestones/v1.2-REQUIREMENTS.md)*

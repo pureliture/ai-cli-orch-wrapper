@@ -40,6 +40,9 @@ ccg-workflow / codex-plugin-cc 패턴으로 `.claude/commands/` 슬래시 커맨
 - [x] alias / workflow 실행 결과가 `.wrapper/` 경로 규약을 일관되게 유지해야 함
 - [x] built-in subcommand 우선순위가 alias보다 계속 앞서야 함
 
+<details>
+<summary>Archived v1.2 Milestone Framing</summary>
+
 ## Current Milestone: v1.2 CC Slash Commands — Multi-AI Bridge
 
 **Goal:** Claude Code 슬래시 커맨드로 Gemini CLI / Copilot CLI를 서브에이전트로 실행하는 브릿지 레이어 구축
@@ -51,24 +54,18 @@ ccg-workflow / codex-plugin-cc 패턴으로 `.claude/commands/` 슬래시 커맨
 - `/aco:status` — adapter 가용성 + 라우팅 설정 출력
 - `/aco:adversarial` — `--focus` 옵션 포함 공격적 리뷰
 
-### Active
+### Delivered
 
-- [ ] Gemini-CLI 서브에이전트 실행 인프라 구현
-- [ ] Copilot-CLI 서브에이전트 실행 인프라 구현
-- [ ] `/aco:review` 슬래시 커맨드
-- [ ] `/aco:status` 슬래시 커맨드
-- [ ] `/aco:adversarial` 슬래시 커맨드
+- [x] Gemini-CLI 서브에이전트 실행 인프라 구현
+- [x] Copilot-CLI 서브에이전트 실행 인프라 구현
+- [x] `/gemini:review` + `/copilot:review` 슬래시 커맨드
+- [x] `/gemini:status` + `/copilot:status` 슬래시 커맨드
+- [x] `/gemini:adversarial` + `/copilot:adversarial` 슬래시 커맨드
+- [x] `/gemini:rescue` + `/copilot:rescue` 슬래시 커맨드
+- [x] `/gemini:result` + `/copilot:result` + `/gemini:cancel` + `/copilot:cancel`
+- [x] `/gemini:setup` + `/copilot:setup` 슬래시 커맨드
 
-### Out of Scope
-
-- `aco` CLI 바이너리 — v1.2부터 슬래시 커맨드 전용으로 전환
-- `/aco:rescue` — v1.3
-- `/aco:init` (대화형 설정) — v1.3
-- 통합 테스트 + 문서 정비 — v1.3
-- cao / tmux / workmux 자체 설치 — 사전 설치 전제
-- registry-hub 구현 — 외부에서 병렬 개발
-- ghostty / oh-my-zsh 설정 — ghostty-tmux-wrapping 프로젝트 담당
-- cao profile management 다운로드/lockfile 레이어 — 현재 milestone 범위 밖, 별도 레지스트리/프로파일 흐름으로 유지
+</details>
 
 ## Context
 
@@ -81,27 +78,26 @@ ccg-workflow / codex-plugin-cc 패턴으로 `.claude/commands/` 슬래시 커맨
 
 ## Current State
 
-- **Shipped version:** v1.1
-- **Milestone status:** v1.0 and v1.1 shipped
+- **Shipped version:** v1.2
+- **Milestone status:** v1.0, v1.1, v1.2 shipped
 - **Active milestone:** none
-- **Next milestones:** v1.2 Documentation + Architecture Cleanup, v1.3 Isolated Workspaces + Workflow Ergonomics
-- **Latest verification:** `npm run build && node --test test/canonical-command-surface.test.ts test/workflow-cli.test.ts test/setup.test.ts test/config.test.ts test/artifacts.test.ts test/workflow-runner.test.ts test/alias.test.ts test/workflow-config.test.ts` passed (45/45)
-- **Audit status:** v1.1 audit passed; see `.planning/milestones/v1.1-MILESTONE-AUDIT.md`
-- **Operational note:** 실환경에서는 artifact 존재 여부를 workflow step 완료 신호로 취급해야 안정적임
+- **Next milestone:** v1.3 Isolated Workspaces + Workflow Ergonomics (not yet planned)
+- **v1.2 deliverables:** 14 slash commands (`/gemini:*` + `/copilot:*` × {review, adversarial, rescue, status, setup, result, cancel}), `adapter.sh` (10 functions), 44-test suite
+- **Audit status:** v1.2 audit passed (15/21 req satisfied, 4 deferred, 1 gap); see `.planning/milestones/v1.2-MILESTONE-AUDIT.md`
+- **Carry-forward to v1.3:** STAT-03 (wrapper.json missing guard), STAT-02 full routing table, REV-04/ADV-04 `--target` flag
 
 ## Next Milestone Goals
 
-### v1.2 Documentation + Architecture Cleanup
-
-- README와 설치 가이드를 shipped `aco` surface 기준으로 정리
-- wrapper architecture, config files, workflow lifecycle를 문서에서 추적 가능하게 만들기
-- planning/project docs가 실제 shipped runtime contract와 이후 milestone 경계에 맞게 정렬되도록 정리
-
 ### v1.3 Isolated Workspaces + Workflow Ergonomics
 
-- isolated workspace lifecycle
-- richer workflow restart/reviewer controls
-- provider preflight and lighter bootstrap guidance
+- `/aco:init` — interactive adapter detection + `.wrapper.json` setup (INIT-01/02/03)
+- STAT-03: `.wrapper.json` missing guard ("Run /aco:init first")
+- STAT-02: full routing config table display
+- REV-04 + ADV-04: `--target <adapter>` override on centralized `/aco:review` + `/aco:adversarial`
+- INT-01: full command flow integration tests
+- INT-02: README v2.0 with command reference table
+
+</details>
 
 ## Constraints
 
@@ -118,8 +114,8 @@ ccg-workflow / codex-plugin-cc 패턴으로 `.claude/commands/` 슬래시 커맨
 | public CLI rename과 `.wrapper*` disk contract를 분리 | rename migration risk를 줄이고 기존 repo-local state를 깨지 않기 위해 | ✓ Shipped in v1.1 |
 | reserved alias names는 inert 처리 | built-ins-first contract를 유지해야 CLI surface가 config에 의해 깨지지 않음 | ✓ Shipped in v1.1 |
 | 문서 정비를 별도 v1.2로 분리 | rename milestone의 acceptance를 runtime contract 중심으로 유지해야 범위가 작고 검증 가능함 | ✗ Superseded by v1.2 pivot |
-| v1.2를 CC 슬래시 커맨드 전용으로 피벗 | `aco` CLI 대신 ccg-workflow / codex-plugin-cc 패턴으로 전환. CLI 바이너리 없이 CC 안에서 바로 동작하는 구조가 목적에 더 적합 | — Pending |
-| `src/` 전체 삭제 (v1.2 브랜치) | TypeScript CLI 코드가 슬래시 커맨드 구현에 방해가 됨. 결과물이 Markdown 슬래시 커맨드이므로 TS 소스 불필요 | — Pending |
+| v1.2를 CC 슬래시 커맨드 전용으로 피벗 | `aco` CLI 대신 ccg-workflow / codex-plugin-cc 패턴으로 전환. CLI 바이너리 없이 CC 안에서 바로 동작하는 구조가 목적에 더 적합 | ✓ Shipped in v1.2 |
+| `src/` 전체 삭제 (v1.2 브랜치) | TypeScript CLI 코드가 슬래시 커맨드 구현에 방해가 됨. 결과물이 Markdown 슬래시 커맨드이므로 TS 소스 불필요 | ✓ Shipped in v1.2 |
 | tmux conf 모듈식 분리 (`~/.config/tmux/ai-cli.conf`) | ghostty-tmux-wrapping과 `~/.tmux.conf` 소유권 충돌 방지 | ✓ Validated |
 | registry-hub 결합 금지 | registry-hub는 독립 프로젝트로 병렬 개발 중, 래퍼가 종속되면 양쪽 개발 속도에 영향 | — Ongoing |
 | workflow 완료 판정은 artifact 기준 | 실환경 CAO terminal state만으로는 조기 완료 오판 가능 | ✓ Validated |
