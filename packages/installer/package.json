@@ -1,0 +1,24 @@
+{
+  "name": "aco-install",
+  "version": "0.4.0",
+  "description": "Installer CLI for the aco Claude Code command pack.",
+  "main": "dist/cli.js",
+  "bin": {
+    "aco-install": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@aco/wrapper": "*"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "typescript": "^6.0.2"
+  }
+}

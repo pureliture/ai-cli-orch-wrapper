@@ -1,11 +1,15 @@
 {
-  "name": "claude-code-gemini-copilot-commands",
-  "version": "0.3.0",
-  "description": "Claude Code slash-command pack for Gemini CLI and GitHub Copilot CLI spawning.",
+  "name": "ai-cli-orch-wrapper",
+  "version": "0.4.0",
+  "description": "Claude Code slash-command pack for Gemini CLI and GitHub Copilot CLI — installable npm workspace.",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "test": "bash .claude/aco/tests/test-error-handling.sh && bash .claude/aco/tests/test-review-commands.sh",
-    "test:smoke": "bash .claude/aco/tests/smoke-adapters.sh"
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm test --workspace=packages/wrapper",
+    "test:smoke": "npm run test:smoke --workspace=packages/wrapper --if-present"
   },
   "keywords": [
     "claude-code",

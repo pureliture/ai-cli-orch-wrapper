@@ -1,0 +1,198 @@
+#!/usr/bin/env node
+import { readFile, writeFile, appendFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import process from 'node:process';
+import { providerRegistry } from './providers/registry.js';
+import { sessionStore } from './session/store.js';
+import type { PermissionProfile } from './providers/interface.js';
+
+const VERSION = '0.4.0';
+
+async function main(): Promise<void> {
+  const [, , subcommand, ...rest] = process.argv;
+
+  switch (subcommand) {
+    case '--version':
+    case '-v':
+      console.log(`aco ${VERSION}`);
+      break;
+    case 'run':
+      await cmdRun(rest);
+      break;
+    case 'result':
+      await cmdResult(rest);
+      break;
+    case 'status':
+      await cmdStatus(rest);
+      break;
+    case 'cancel':
+      await cmdCancel(rest);
+      break;
+    default:
+      console.error(`aco: unknown command '${subcommand ?? ''}'`);
+      console.error('Usage: aco <run|result|status|cancel> [options]');
+      process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// aco run <provider> <command> [--input <text>] [--permission-profile <profile>]
+// ---------------------------------------------------------------------------
+async function cmdRun(args: string[]): Promise<void> {
+  const providerKey = args[0];
+  const command = args[1];
+
+  if (!providerKey || !command) {
+    console.error('Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]');
+    process.exit(1);
+  }
+
+  const provider = providerRegistry.get(providerKey);
+  if (!provider) {
+    console.error(`Unknown provider: ${providerKey}`);
+    process.exit(1);
+  }
+
+  const permissionProfile = parseFlag<PermissionProfile>(args, '--permission-profile') ?? 'default';
+  const inputFlag = parseFlag(args, '--input') ?? '';
+
+  // Read stdin if not a TTY and no --input flag
+  let content = inputFlag;
+  if (!content && !process.stdin.isTTY) {
+    const chunks: Buffer[] = [];
+    for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+    content = Buffer.concat(chunks).toString();
+  }
+
+  // Load prompt from prompt template directory if available
+  const promptPath = join(process.cwd(), '.claude', 'aco', 'prompts', providerKey, `${command}.md`);
+  let prompt = `You are a code reviewer. Perform a ${command} for the following content.`;
+  if (existsSync(promptPath)) {
+    prompt = await readFile(promptPath, 'utf8');
+  }
+
+  const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
+
+  try {
+    const outputLogPath = sessionStore.outputLogPath(session.id);
+    let hasOutput = false;
+
+    for await (const chunk of provider.invoke(prompt, content, { permissionProfile, sessionId: session.id })) {
+      process.stdout.write(chunk);
+      await appendFile(outputLogPath, chunk);
+      hasOutput = true;
+    }
+
+    if (!hasOutput && permissionProfile === 'restricted') {
+      await appendFile(sessionStore.errorLogPath(session.id), 'Permission profile: restricted — output may be blocked\n');
+    }
+
+    await sessionStore.markDone(session.id);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    await appendFile(sessionStore.errorLogPath(session.id), msg + '\n');
+    await sessionStore.markFailed(session.id);
+    console.error(`Error: ${msg}`);
+    process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// aco result [--session <id>]
+// ---------------------------------------------------------------------------
+async function cmdResult(args: string[]): Promise<void> {
+  const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
+  if (!sessionId) {
+    console.error('No sessions found.');
+    process.exit(1);
+  }
+
+  const logPath = sessionStore.outputLogPath(sessionId);
+  if (!existsSync(logPath)) {
+    console.error(`No output log found for session ${sessionId}`);
+    process.exit(1);
+  }
+
+  const output = await readFile(logPath, 'utf8');
+  process.stdout.write(output);
+}
+
+// ---------------------------------------------------------------------------
+// aco status [--session <id>]
+// ---------------------------------------------------------------------------
+async function cmdStatus(args: string[]): Promise<void> {
+  const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
+  if (!sessionId) {
+    console.error('No sessions found.');
+    process.exit(1);
+  }
+
+  try {
+    const record = await sessionStore.read(sessionId);
+    console.log(`Session:    ${record.id}`);
+    console.log(`Provider:   ${record.provider}`);
+    console.log(`Command:    ${record.command}`);
+    console.log(`Status:     ${record.status}`);
+    console.log(`Started:    ${record.startedAt}`);
+    if (record.endedAt) console.log(`Ended:      ${record.endedAt}`);
+    if (record.permissionProfile) console.log(`Permission: ${record.permissionProfile}`);
+  } catch {
+    console.error(`Session not found: ${sessionId}`);
+    process.exit(1);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// aco cancel [--session <id>]
+// ---------------------------------------------------------------------------
+async function cmdCancel(args: string[]): Promise<void> {
+  const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
+  if (!sessionId) {
+    console.error('No sessions found.');
+    process.exit(1);
+  }
+
+  let record;
+  try {
+    record = await sessionStore.read(sessionId);
+  } catch {
+    console.error(`Session not found: ${sessionId}`);
+    process.exit(1);
+  }
+
+  if (record.status === 'done' || record.status === 'failed') {
+    console.warn(`Session ${sessionId} is already ${record.status} — nothing to cancel.`);
+    return;
+  }
+
+  if (record.status === 'cancelled') {
+    console.warn(`Session ${sessionId} is already cancelled.`);
+    return;
+  }
+
+  if (record.pid) {
+    try {
+      process.kill(record.pid, 'SIGTERM');
+    } catch {
+      // process may already be gone
+    }
+  }
+
+  await sessionStore.markCancelled(sessionId);
+  console.log(`Session ${sessionId} cancelled.`);
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+function parseFlag<T extends string = string>(args: string[], flag: string): T | undefined {
+  const idx = args.indexOf(flag);
+  if (idx === -1 || idx + 1 >= args.length) return undefined;
+  return args[idx + 1] as T;
+}
+
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

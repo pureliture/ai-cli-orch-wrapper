@@ -1,83 +1,82 @@
-# Claude Code Gemini/Copilot Spawn Pack
+# ai-cli-orch-wrapper
 
-This repository contains a minimal Claude Code command pack for spawning
-Gemini CLI and GitHub Copilot CLI from slash commands.
+Installable Claude Code command pack for Gemini CLI and GitHub Copilot CLI, backed by a provider-based Node.js wrapper runtime.
 
-## Scope
+## Install
 
-Included commands:
-- `/gemini:review`
-- `/gemini:adversarial`
-- `/gemini:rescue`
-- `/gemini:result`
-- `/gemini:cancel`
-- `/gemini:status`
-- `/gemini:setup`
-- `/copilot:review`
-- `/copilot:adversarial`
-- `/copilot:rescue`
-- `/copilot:result`
-- `/copilot:cancel`
-- `/copilot:status`
-- `/copilot:setup`
+```bash
+# Option 1: npx (no local install required)
+npx aco-install
 
-Common execution logic lives in `.claude/aco/lib/adapter.sh`.
+# Option 2: from this repo
+npm install
+aco pack setup
+```
 
-## Layout
+## Provider Setup
+
+After pack installation, configure each provider:
+
+```bash
+# Gemini CLI
+aco provider setup gemini
+# If not installed: npm install -g @google/gemini-cli
+
+# GitHub Copilot CLI
+aco provider setup copilot
+# If not installed: npm install -g @github/copilot && gh auth login
+```
+
+## Commands
+
+| Command | Description |
+|---|---|
+| `/gemini:review [file]` | Code review via Gemini CLI (`git diff HEAD` if no file) |
+| `/gemini:adversarial [--focus security\|performance\|correctness] [file]` | Adversarial review |
+| `/gemini:rescue [--from file] [--error msg]` | Get unstuck with second opinion |
+| `/gemini:result [--session id]` | Retrieve last/named session output |
+| `/gemini:status [--session id]` | Session or provider status |
+| `/gemini:cancel [--session id]` | Cancel a running background session |
+| `/gemini:setup` | Provider install/auth guidance |
+| `/copilot:*` | Same surface for GitHub Copilot CLI |
+
+## Runtime: `aco` CLI
+
+The `aco` wrapper owns execution, session, and output lifecycle:
+
+```bash
+aco run gemini review            # run via wrapper
+aco run copilot adversarial      # run via wrapper
+aco result                       # print last session output
+aco result --session <id>        # print named session output
+aco status                       # show last session status
+aco cancel --session <id>        # cancel a running session
+```
+
+Sessions are stored at `~/.aco/sessions/<uuid>/` with `task.json` and `output.log`.
+
+## Repo Layout
 
 ```text
-.claude/
-  aco/
-    lib/
-      adapter.sh
-    prompts/
-      gemini/
-      copilot/
-    tests/
-  commands/
+packages/
+  wrapper/          — aco wrapper runtime (provider interface, session store, CLI)
+  installer/        — aco-install CLI (pack install, provider setup)
+templates/
+  commands/         — Claude Code slash command templates (installed to .claude/commands/)
     gemini/
     copilot/
+  prompts/          — Provider prompt templates (installed to .claude/aco/prompts/)
+    gemini/
+    copilot/
+openspec/           — Architecture specs and change proposals
 CLAUDE.md
 README.md
-package.json
+package.json        — npm workspace root
 ```
 
-## Prerequisites
-
-- `gemini` available in `PATH`
-- `copilot` available in `PATH`
-- `gh auth login` completed for Copilot
-
-## Usage In Claude Code
-
-```text
-/gemini:status
-/copilot:status
-/gemini:review
-/copilot:review path/to/file.ts
-/gemini:adversarial --focus security
-/copilot:adversarial --background --focus correctness
-/gemini:result <task-id>
-/copilot:cancel <task-id>
-/gemini:rescue --from logs/error.txt
-```
-
-Behavior:
-- `review` reads `git diff HEAD` when no file argument is provided
-- `adversarial` runs a more aggressive review with optional `--focus`
-- `rescue` sends a problem description, file content, stdin, or error text
-- `result` and `cancel` manage background tasks
-
-## Verification
-
-Deterministic checks:
+## Tests
 
 ```bash
-npm test
-```
-
-Environment smoke:
-
-```bash
-npm run test:smoke
+npm test            # runs packages/wrapper unit tests
+npm run test:smoke  # provider availability smoke check
 ```
