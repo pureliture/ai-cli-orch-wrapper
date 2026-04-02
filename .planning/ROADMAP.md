@@ -45,9 +45,9 @@ See [milestones/v1.1-ROADMAP.md](./milestones/v1.1-ROADMAP.md) for full phase de
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — Directory structure + Wave 0 bash test scaffolding (RED stubs)
-- [ ] 06-02-PLAN.md — adapter.sh core functions (aco_adapter_available, aco_adapter_version, aco_check_adapter, aco_adapter_invoke)
-- [ ] 06-03-PLAN.md — .wrapper.json v2.0 routing schema + _read_routing_adapter helper
+- [x] 06-01-PLAN.md — Directory structure + Wave 0 bash test scaffolding (RED stubs)
+- [x] 06-02-PLAN.md — adapter.sh core functions (aco_adapter_available, aco_adapter_version, aco_check_adapter, aco_adapter_invoke)
+- [x] 06-03-PLAN.md — .wrapper.json v2.0 routing schema + _read_routing_adapter helper
 
 ### Phase 7: /aco:review + /aco:status
 **Goal**: Users can delegate code review to a configured adapter CLI and inspect adapter availability and routing config at a glance
