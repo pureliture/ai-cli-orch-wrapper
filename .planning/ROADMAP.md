@@ -29,7 +29,7 @@ See [milestones/v1.1-ROADMAP.md](./milestones/v1.1-ROADMAP.md) for full phase de
 **Milestone Goal:** Claude Code 슬래시 커맨드로 Gemini CLI / Copilot CLI를 서브에이전트로 실행하는 브릿지 레이어 구축. 커맨드 네임스페이스가 타겟 CLI를 직접 인코딩 (`/gemini:*`, `/copilot:*`) — config 파일 라우팅 없이 호출부터 명시적.
 
 - ✅ **Phase 6: Adapter Infrastructure** - Shared bash helpers + adapter availability detection
-- [ ] **Phase 7: review + status + setup** - Per-CLI review delegation, availability check, and initial setup
+- [x] **Phase 7: review + status + setup** - Per-CLI review delegation, availability check, and initial setup
 - [ ] **Phase 8: adversarial + rescue** - Adversarial review and stuck-state recovery per CLI
 - [ ] **Phase 9: result + cancel** - Background task result retrieval and cancellation per CLI
 
