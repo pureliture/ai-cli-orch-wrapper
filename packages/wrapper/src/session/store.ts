@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { existsSync, createWriteStream, readdirSync, statSync } from 'node:fs';
+import { existsSync, createWriteStream, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
@@ -81,23 +81,24 @@ export class SessionStore {
     return join(this.baseDir, id);
   }
 
-  /** Returns the most-recently-created session ID, or undefined if none exist. */
+  /** Returns the most-recently-started session ID, or undefined if none exist. */
   latestId(): string | undefined {
     if (!existsSync(this.baseDir)) return undefined;
     const entries = readdirSync(this.baseDir)
       .map((name) => {
-        const dir = join(this.baseDir, name);
+        const taskFile = join(this.baseDir, name, 'task.json');
         try {
-          const stat = statSync(dir);
-          return { name, mtime: stat.mtimeMs };
+          const raw = readFileSync(taskFile, 'utf8');
+          const record = JSON.parse(raw) as { startedAt?: string };
+          return { name, startedAt: record.startedAt ?? '' };
         } catch {
           return null;
         }
       })
-      .filter((e): e is { name: string; mtime: number } => e !== null);
+      .filter((e): e is { name: string; startedAt: string } => e !== null);
 
     if (entries.length === 0) return undefined;
-    entries.sort((a, b) => b.mtime - a.mtime);
+    entries.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
     return entries[0].name;
   }
 

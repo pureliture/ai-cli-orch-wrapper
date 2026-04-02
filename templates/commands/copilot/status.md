@@ -1,12 +1,12 @@
 ---
 name: copilot:status
-description: Check GitHub Copilot CLI availability and version, or get session status
-argument-hint: "[--session <id>]"
+description: Check GitHub Copilot provider install/auth status, or show session status
+argument-hint: "[<session-id>]"
 allowed-tools:
   - Bash
 ---
 
-Check whether GitHub Copilot CLI is installed and print its version. With `--session <id>`, shows the session status instead.
+Without an argument, checks whether GitHub Copilot CLI is installed and authenticated. With a session ID, shows that session's status.
 
 ```bash
 #!/usr/bin/env bash
@@ -18,3 +18,4 @@ else
   aco provider setup copilot 2>&1 || true
 fi
 ```
+

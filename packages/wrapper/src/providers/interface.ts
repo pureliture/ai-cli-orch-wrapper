@@ -8,6 +8,8 @@ export interface AuthResult {
 export interface InvokeOptions {
   permissionProfile?: PermissionProfile;
   sessionId?: string;
+  /** Called once the provider process has been spawned, with its PID. */
+  onPid?: (pid: number) => void;
 }
 
 export interface IProvider {

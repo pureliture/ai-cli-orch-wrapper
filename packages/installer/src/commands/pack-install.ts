@@ -1,8 +1,12 @@
-import { cp, rm, readdir, unlink } from 'node:fs/promises';
+import { cp, rm, readdir, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
 import { homedir } from 'node:os';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { providerRegistry } from '@aco/wrapper';
+
+const execFileAsync = promisify(execFile);
 
 const TEMPLATES_DIR = resolve(__dirname, '..', '..', '..', 'templates');
 
@@ -11,6 +15,8 @@ export interface PackInstallOptions {
   force?: boolean;
   binaryName?: string;
 }
+
+const MANIFEST_PATH = (targetBase: string) => join(targetBase, 'aco', 'aco-manifest.json');
 
 export async function packInstall(options: PackInstallOptions = {}): Promise<void> {
   const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
@@ -21,8 +27,14 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
 
   console.log(`Installing aco command pack to ${targetBase} …\n`);
 
-  await copyTree(commandsSrc, commandsDest, options.force ?? false, 'command');
-  await copyTree(promptsSrc, promptsDest, options.force ?? false, 'prompt template');
+  const installedFiles: string[] = [];
+  await copyTree(commandsSrc, commandsDest, options.force ?? false, 'command', installedFiles);
+  await copyTree(promptsSrc, promptsDest, options.force ?? false, 'prompt template', installedFiles);
+
+  // Write manifest for selective uninstall
+  const manifestPath = MANIFEST_PATH(targetBase);
+  await mkdir(dirname(manifestPath), { recursive: true });
+  await writeFile(manifestPath, JSON.stringify({ files: installedFiles }, null, 2));
 
   const binaryName = options.binaryName ?? 'aco';
   await placeWrapperBinary(targetBase, binaryName);
@@ -32,16 +44,40 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
 
 export async function packUninstall(options: { global?: boolean } = {}): Promise<void> {
   const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
-  const commandsDest = join(targetBase, 'commands');
-  const promptsDest = join(targetBase, 'aco', 'prompts');
+  const manifestPath = MANIFEST_PATH(targetBase);
 
   console.log('Uninstalling aco command pack …');
 
-  for (const dir of [commandsDest, promptsDest]) {
-    if (existsSync(dir)) {
-      await rm(dir, { recursive: true, force: true });
-      console.log(`  removed ${dir}`);
+  if (existsSync(manifestPath)) {
+    // Selective removal: only delete files recorded in the install manifest
+    let manifest: { files?: string[] } = {};
+    try {
+      manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { files?: string[] };
+    } catch {
+      console.warn('  [warn] Could not read install manifest; falling back to directory removal.');
     }
+
+    if (manifest.files && manifest.files.length > 0) {
+      for (const file of manifest.files) {
+        if (existsSync(file)) {
+          await rm(file, { force: true });
+          console.log(`  removed ${file}`);
+        }
+      }
+      await rm(manifestPath, { force: true });
+    } else {
+      // Fallback: remove tracked directories
+      const commandsDest = join(targetBase, 'commands');
+      const promptsDest = join(targetBase, 'aco', 'prompts');
+      for (const dir of [commandsDest, promptsDest]) {
+        if (existsSync(dir)) {
+          await rm(dir, { recursive: true, force: true });
+          console.log(`  removed ${dir}`);
+        }
+      }
+    }
+  } else {
+    console.warn('  [warn] No aco install manifest found. Pack may not have been installed via this tool.');
   }
 
   console.log('✓ Pack uninstalled.');
@@ -125,7 +161,7 @@ export async function providerSetup(name: string): Promise<void> {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-async function copyTree(src: string, dest: string, force: boolean, kind: string): Promise<void> {
+async function copyTree(src: string, dest: string, force: boolean, kind: string, manifest: string[]): Promise<void> {
   if (!existsSync(src)) {
     console.warn(`  [warn] template source not found: ${src}`);
     return;
@@ -139,7 +175,9 @@ async function copyTree(src: string, dest: string, force: boolean, kind: string)
       console.warn(`  [skip] ${destFile} already exists (use --force to overwrite)`);
       continue;
     }
+    await mkdir(dirname(destFile), { recursive: true });
     await cp(srcFile, destFile, { recursive: false, force: true });
+    manifest.push(destFile);
     console.log(`  copied ${kind}: ${destFile}`);
   }
 }
@@ -157,7 +195,22 @@ async function collectFiles(dir: string, out: string[]): Promise<void> {
   }
 }
 
-async function placeWrapperBinary(targetBase: string, binaryName: string): Promise<void> {
-  // The wrapper bin is handled via npm workspace linking; just inform the user.
-  console.log(`  binary: '${binaryName}' available via npm workspace (run 'npm link packages/wrapper' if not in PATH)`);
+async function placeWrapperBinary(_targetBase: string, binaryName: string): Promise<void> {
+  // Check if already in PATH
+  try {
+    await execFileAsync(binaryName, ['--version'], { timeout: 5000 });
+    console.log(`  binary: '${binaryName}' already in PATH ✓`);
+    return;
+  } catch {
+    // Not in PATH — try global npm install
+  }
+
+  try {
+    console.log(`  binary: installing @aco/wrapper globally …`);
+    await execFileAsync('npm', ['install', '-g', '@aco/wrapper'], { timeout: 60000 });
+    console.log(`  binary: '${binaryName}' installed globally ✓`);
+  } catch {
+    console.warn(`  [warn] Could not install '${binaryName}' globally.`);
+    console.warn(`         Run manually: npm install -g @aco/wrapper`);
+  }
 }

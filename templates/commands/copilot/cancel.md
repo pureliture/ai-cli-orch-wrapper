@@ -1,12 +1,12 @@
 ---
 name: copilot:cancel
-description: Cancel a running background Copilot task
-argument-hint: "[--session <id>]"
+description: Cancel a running Copilot task
+argument-hint: "[<session-id>]"
 allowed-tools:
   - Bash
 ---
 
-Cancel a background task launched with `/copilot:review --background`. Sends SIGTERM to the provider process and marks the session as cancelled.
+Cancel a running task. Sends SIGTERM to the provider process and marks the session as cancelled. Pass a session ID to target a specific session; omit to cancel the most recent.
 
 ```bash
 #!/usr/bin/env bash
@@ -18,3 +18,4 @@ else
   aco cancel
 fi
 ```
+
