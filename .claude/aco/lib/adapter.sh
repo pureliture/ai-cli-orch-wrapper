@@ -181,3 +181,225 @@ except Exception:
     print('${default}')
 " 2>/dev/null || echo "$default"
 }
+
+# ===========================================================================
+# Background Task Helpers
+# Phase 9 — result + cancel
+#
+# Public API:
+#   aco_bg_task_dir                              — return (and create) tasks dir
+#   aco_bg_task_id    <adapter> <cmd>            — generate unique task ID
+#   aco_bg_task_launch <task-id> <adapter> <prompt> [stdin_content]
+#   aco_bg_task_status <task-id>                 — running|complete|cancelled|error|not_found
+#   aco_bg_task_result <task-id>                 — print output or status message
+#   aco_bg_task_cancel <task-id>                 — kill + mark cancelled
+#
+# Task state lives in ${ACO_TASKS_DIR:-$HOME/.gsd-tasks}/<task-id>.{pid,output,status}
+# ===========================================================================
+
+# ---------------------------------------------------------------------------
+# aco_bg_task_dir
+# Returns the background tasks directory path, creating it if it does not exist.
+# Respects ACO_TASKS_DIR environment variable (set this in tests to use a tmpdir).
+# ---------------------------------------------------------------------------
+aco_bg_task_dir() {
+  local dir="${ACO_TASKS_DIR:-${HOME}/.gsd-tasks}"
+  mkdir -p "$dir"
+  echo "$dir"
+}
+
+# ---------------------------------------------------------------------------
+# aco_bg_task_id <adapter> <cmd>
+# Generates a unique task ID of the form: <adapter>-<cmd>-<timestamp>-<hex8>
+# Example: gemini-review-1745678901-a3f2b1c0
+# Uses /dev/urandom for the random hex suffix; falls back to $RANDOM arithmetic.
+# ---------------------------------------------------------------------------
+aco_bg_task_id() {
+  local adapter="$1"
+  local cmd="$2"
+  local ts
+  ts=$(date +%s)
+  local rand
+  rand=$(od -An -N4 -tx4 /dev/urandom 2>/dev/null | tr -d ' \n' \
+    || printf '%04x%04x' $RANDOM $RANDOM)
+  echo "${adapter}-${cmd}-${ts}-${rand}"
+}
+
+# ---------------------------------------------------------------------------
+# aco_bg_task_launch <task-id> <adapter> <prompt> [stdin_content]
+# Spawns aco_adapter_invoke in a background subshell.
+# Writes {task-id}.status = "running" and {task-id}.pid before returning.
+# The subshell writes captured output to {task-id}.output and updates .status
+# to "complete" or "error" when finished, then removes the .pid file.
+# Prints a human-readable confirmation with the task ID and retrieval commands.
+# ---------------------------------------------------------------------------
+aco_bg_task_launch() {
+  local task_id="$1"
+  local adapter="$2"
+  local prompt="$3"
+  local stdin_content="${4:-}"
+
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+
+  local out_file="${tasks_dir}/${task_id}.output"
+  local pid_file="${tasks_dir}/${task_id}.pid"
+  local status_file="${tasks_dir}/${task_id}.status"
+
+  # Mark running before spawning so callers can query immediately
+  echo "running" > "$status_file"
+
+  # Spawn background subshell; capture all output (stdout + stderr) to out_file
+  (
+    if aco_adapter_invoke "$adapter" "$prompt" "$stdin_content" > "$out_file" 2>&1; then
+      echo "complete" > "$status_file"
+    else
+      echo "error" > "$status_file"
+    fi
+    rm -f "$pid_file"
+  ) &
+
+  local bg_pid=$!
+  echo "$bg_pid" > "$pid_file"
+  disown "$bg_pid" 2>/dev/null || true
+
+  echo "Background task started: ${task_id}"
+  echo "  Retrieve:  /${adapter}:result ${task_id}"
+  echo "  Cancel:    /${adapter}:cancel ${task_id}"
+}
+
+# ---------------------------------------------------------------------------
+# aco_bg_task_status <task-id>
+# Returns one of: running | complete | cancelled | error | not_found
+#
+# If status file says "running", validates the PID is still alive:
+#   - alive           → "running"
+#   - dead + output   → promote to "complete" (updates status file)
+#   - dead + no output→ promote to "error"   (updates status file)
+# ---------------------------------------------------------------------------
+aco_bg_task_status() {
+  local task_id="$1"
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+
+  local status_file="${tasks_dir}/${task_id}.status"
+  local pid_file="${tasks_dir}/${task_id}.pid"
+
+  if [[ ! -f "$status_file" ]]; then
+    echo "not_found"
+    return 0
+  fi
+
+  local status
+  status=$(cat "$status_file")
+
+  if [[ "$status" == "running" ]]; then
+    if [[ -f "$pid_file" ]]; then
+      local pid
+      pid=$(cat "$pid_file")
+      if kill -0 "$pid" 2>/dev/null; then
+        echo "running"
+        return 0
+      fi
+    fi
+    # Process is gone — decide final status from output file presence
+    local out_file="${tasks_dir}/${task_id}.output"
+    if [[ -f "$out_file" ]]; then
+      echo "complete" > "$status_file"
+      echo "complete"
+    else
+      echo "error" > "$status_file"
+      echo "error"
+    fi
+    return 0
+  fi
+
+  echo "$status"
+}
+
+# ---------------------------------------------------------------------------
+# aco_bg_task_result <task-id>
+# Prints the output of a completed task, or a descriptive status message:
+#   not_found  → "Task not found: <id>"
+#   running    → "Still running — check again later"
+#   cancelled  → "Task <id> was cancelled."
+#   error      → "Task <id> completed with errors:" + output (if any)
+#   complete   → contents of output file
+# ---------------------------------------------------------------------------
+aco_bg_task_result() {
+  local task_id="$1"
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+
+  local status
+  status=$(aco_bg_task_status "$task_id")
+
+  case "$status" in
+    not_found)
+      echo "Task not found: ${task_id}"
+      ;;
+    running)
+      echo "Still running — check again later"
+      ;;
+    cancelled)
+      echo "Task ${task_id} was cancelled."
+      ;;
+    error)
+      local out_file="${tasks_dir}/${task_id}.output"
+      if [[ -f "$out_file" ]]; then
+        echo "Task ${task_id} completed with errors:"
+        cat "$out_file"
+      else
+        echo "Task ${task_id} failed with no output."
+      fi
+      ;;
+    complete)
+      local out_file="${tasks_dir}/${task_id}.output"
+      if [[ -f "$out_file" ]]; then
+        cat "$out_file"
+      else
+        echo "Task ${task_id} completed but output file is missing."
+      fi
+      ;;
+  esac
+}
+
+# ---------------------------------------------------------------------------
+# aco_bg_task_cancel <task-id>
+# Kills the background process (if running) and marks the task as cancelled.
+# Prints a confirmation message on success.
+# Exits 1 with an error message if task not found or not in running state.
+# ---------------------------------------------------------------------------
+aco_bg_task_cancel() {
+  local task_id="$1"
+  local tasks_dir
+  tasks_dir=$(aco_bg_task_dir)
+
+  local status_file="${tasks_dir}/${task_id}.status"
+  local pid_file="${tasks_dir}/${task_id}.pid"
+
+  if [[ ! -f "$status_file" ]]; then
+    echo "Task not found: ${task_id}"
+    return 1
+  fi
+
+  local status
+  status=$(cat "$status_file")
+
+  if [[ "$status" != "running" ]]; then
+    echo "Cannot cancel task ${task_id}: status is '${status}' (not running)"
+    return 1
+  fi
+
+  if [[ -f "$pid_file" ]]; then
+    local pid
+    pid=$(cat "$pid_file")
+    if kill -0 "$pid" 2>/dev/null; then
+      kill "$pid" 2>/dev/null || true
+    fi
+    rm -f "$pid_file"
+  fi
+
+  echo "cancelled" > "$status_file"
+  echo "Task ${task_id} cancelled."
+}
