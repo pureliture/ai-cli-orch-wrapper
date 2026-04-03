@@ -1,12 +1,12 @@
 ---
 name: gemini:status
-description: Check Gemini provider install/auth status, or show session status
+description: Show session status for a Gemini task
 argument-hint: "[<session-id>]"
 allowed-tools:
   - Bash
 ---
 
-Without an argument, checks whether Gemini CLI is installed and authenticated. With a session ID, shows that session's status.
+Show session status. Pass a session ID to target a specific session; omit to show the most recent. To check provider install/auth status, use `/gemini:setup`.
 
 ```bash
 #!/usr/bin/env bash
@@ -15,7 +15,7 @@ SESSION_ID="${ARGUMENTS:-}"
 if [[ -n "$SESSION_ID" ]]; then
   aco status --session "$SESSION_ID"
 else
-  aco-install provider setup gemini 2>&1 || true
+  aco status
 fi
 ```
 
