@@ -39,3 +39,23 @@ temp/
 reference/*
 .codex/*
 .gemini/*
+
+# Claude Code session files (non-persistent)
+.claude/session-intent.md
+.claude/session-plan.md
+.claude/agents/
+.claude/commands/
+.claude/skills/
+
+# Claude Octopus runtime state
+.claude-octopus/
+
+# GitHub Copilot prompts/skills
+.github/prompts/
+.github/skills/
+
+# OpenSpec local workspace
+openspec/
+
+# Go build artifacts
+/bin/
