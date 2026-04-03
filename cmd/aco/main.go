@@ -44,9 +44,9 @@ func main() {
 		runner:   runner.StubRunner{},
 	}
 
-	// Phase 4: register providers here.
-	// d.registry.Register(gemini.New())
-	// d.registry.Register(copilot.New())
+	// Phase 4: register providers.
+	d.registry.Register(provider.NewGemini())
+	d.registry.Register(provider.NewCopilot())
 
 	switch os.Args[1] {
 	case "--version", "-v":
