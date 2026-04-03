@@ -21,11 +21,9 @@ import (
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/session"
 )
 
-const version = "0.0.1-phase1"
+const version = "0.0.2-phase2"
 
 // deps bundles the runtime dependencies injected into commands.
-// Phase 1: runner is stubbed; providers are empty.
-// Phase 4: providers registered; Phase 2: real runner wired in.
 type deps struct {
 	store    *session.Store
 	registry *provider.Registry
@@ -41,10 +39,9 @@ func main() {
 	d := &deps{
 		store:    session.NewStore(),
 		registry: provider.NewRegistry(),
-		runner:   runner.StubRunner{},
+		runner:   runner.ProcessRunner{}, // Phase 2: real process runner
 	}
 
-	// Phase 4: register providers.
 	d.registry.Register(provider.NewGemini())
 	d.registry.Register(provider.NewCopilot())
 
