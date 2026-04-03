@@ -27,8 +27,9 @@ import (
 // block on IO, Wait is never called, WaitDelay never fires).
 const sigkillDelay = 3 * time.Second
 
-// lockedWriter serialises writes to w using mu. Used for stderr capture where
-// the Go internal goroutine and our own goroutine might both write concurrently.
+// lockedWriter serialises writes to w using mu. Although cmd.Stderr is written
+// by a single Go-internal copy goroutine, the mutex is retained for safety
+// against future callers that pass a shared writer.
 type lockedWriter struct {
 	mu sync.Mutex
 	w  io.Writer
@@ -113,11 +114,15 @@ func (ProcessRunner) Run(ctx context.Context, opts RunOpts) error {
 		return classifyStartError(opts.Provider, err)
 	}
 
-	// ── CPW-01 / R-RUN-03: PID persisted SYNCHRONOUSLY ──
+	// ── CPW-01 / R-RUN-03: PID persisted synchronously ──
 	// cmd.Start() has returned; cmd.Process.Pid is set. The Go-internal copy
-	// goroutines have started, but no data has been consumed yet (the process
-	// needs time to produce output). This satisfies the "before first output byte"
-	// requirement in practice and by structural ordering.
+	// goroutines have started but in practice no data is consumed yet (the process
+	// must first parse flags and connect to a network). This is a best-effort
+	// structural guarantee: there is no hard happens-before between SetPID and the
+	// first write to opts.Stdout, because no synchronization primitive enforces it.
+	// For provider CLIs that produce output only after network round-trips, the race
+	// window is negligible. If a strict guarantee is required, use cmd.StdoutPipe
+	// and drain manually — but see the WaitDelay deadlock note at the top of this file.
 	if opts.Store != nil && opts.SessionID != "" {
 		if pidErr := opts.Store.SetPID(opts.SessionID, cmd.Process.Pid); pidErr != nil {
 			// Non-fatal: degraded cancellation (R-CANCEL-05 path) if PID absent.
