@@ -1,6 +1,15 @@
 # Dependencies
 node_modules/
 
+# Build output
+dist/
+*.tsbuildinfo
+# Compiled artifacts that may appear in src/ if outDir is not honoured
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts.map
+
 # OS files
 .DS_Store
 Thumbs.db
@@ -25,3 +34,8 @@ temp/
 .claude/worktrees/
 .codex/worktrees/
 .gemini/worktrees/
+
+
+reference/*
+.codex/*
+.gemini/*
