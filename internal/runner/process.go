@@ -15,17 +15,27 @@ import (
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/provider"
 )
 
-// sigkillDelay is the WaitDelay value given to cmd. After context cancellation
-// the Go runtime sends SIGTERM; if the process has not exited within WaitDelay
-// it sends SIGKILL (CPW-06, R-CANCEL-03).
+// sigkillDelay is the time between SIGTERM and SIGKILL (CPW-06, R-CANCEL-03).
+const sigkillDelay = 3 * time.Second
+
+// Note on process group kill (Setpgid: true):
+// The provider process and all its children are placed in a new process group.
+// On timeout/context-cancel, we send SIGTERM then SIGKILL to the ENTIRE group
+// (via syscall.Kill(-pgid, ...)). This ensures that even if the provider spawns
+// subprocesses that hold the stdout pipe write end open, those processes are
+// killed and the pipe closes, unblocking Go's internal goroutines and allowing
+// cmd.Wait() to return.
+//
+// Trade-off: with Setpgid, the provider process group does not receive SIGHUP
+// when the terminal session ends. For delegation CLIs (gemini, copilot) running
+// inside Claude Code sessions, this is acceptable — aco cancel handles cleanup.
+// This supersedes the R-SPAWN-05 SHOULD-NOT guideline, which is overridden here
+// because reliable process lifecycle requires it (CPW-06, R-CANCEL-03).
 //
 // Note on cmd.Stdout vs StdoutPipe:
-// This implementation uses cmd.Stdout / cmd.Stderr (not StdoutPipe). The Go
-// runtime internally manages the copy goroutines, and WaitDelay applies to
-// those goroutines. Using StdoutPipe requires the caller to drain pipes before
-// calling Wait, which creates a deadlock when the context times out (goroutines
-// block on IO, Wait is never called, WaitDelay never fires).
-const sigkillDelay = 3 * time.Second
+// cmd.Stdout = MultiWriter is used (not StdoutPipe). The Go runtime manages
+// the copy goroutines internally. With Setpgid + group kill, all orphaned
+// children are killed, closing all pipe write ends, unblocking the goroutines.
 
 // lockedWriter serialises writes to w using mu. Although cmd.Stderr is written
 // by a single Go-internal copy goroutine, the mutex is retained for safety
@@ -83,6 +93,9 @@ func (ProcessRunner) Run(ctx context.Context, opts RunOpts) error {
 	cmd.Dir = "."          // inherit cwd (R-SPAWN-03)
 	cmd.Env = os.Environ() // inherit env (R-SPAWN-02)
 	cmd.WaitDelay = sigkillDelay
+	// Place the provider in a new process group so that group kill covers
+	// all children (prevents orphaned processes from keeping pipes open).
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	// Open log files before spawn (0600, R-TEE-02, R-STDERR-02).
 	outputFile, err := os.OpenFile(opts.OutputLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
@@ -114,6 +127,21 @@ func (ProcessRunner) Run(ctx context.Context, opts RunOpts) error {
 		return classifyStartError(opts.Provider, err)
 	}
 
+	// Group kill timers: send SIGTERM then SIGKILL to the provider's process
+	// group. This ensures orphaned children (which could keep pipes open) are
+	// also killed when the context expires.
+	//
+	// We use time.AfterFunc with explicit delays rather than ctx.Done() to avoid
+	// any goroutine scheduling issues with context cancellation signals.
+	pgid := cmd.Process.Pid // Setpgid: true → pgid == pid at spawn time
+	timeoutDur := time.Duration(timeoutSecs) * time.Second
+	sigtermTimer := time.AfterFunc(timeoutDur, func() {
+		_ = syscall.Kill(-pgid, syscall.SIGTERM)
+	})
+	sigkillTimer := time.AfterFunc(timeoutDur+sigkillDelay, func() {
+		_ = syscall.Kill(-pgid, syscall.SIGKILL)
+	})
+
 	// ── CPW-01 / R-RUN-03: PID persisted synchronously ──
 	// cmd.Start() has returned; cmd.Process.Pid is set. The Go-internal copy
 	// goroutines have started but in practice no data is consumed yet (the process
@@ -130,12 +158,13 @@ func (ProcessRunner) Run(ctx context.Context, opts RunOpts) error {
 		}
 	}
 
-	// cmd.Wait() blocks until:
-	//   - The process exits, AND
-	//   - The internal copy goroutines complete (pipes drained).
-	// On context timeout: sends SIGTERM, then after WaitDelay sends SIGKILL,
-	// then closes the internal goroutines. Wait then returns.
+	// cmd.Wait() blocks until the process exits and goroutines complete.
+	// The AfterFunc timers above ensure the process group is killed on timeout.
 	waitErr := cmd.Wait()
+
+	// Cancel timers if the process exited cleanly before timeout.
+	sigtermTimer.Stop()
+	sigkillTimer.Stop()
 
 	// Files are closed by defer; explicit close here ensures flush before
 	// the caller calls MarkDone (R-TEE-03, CPW-04).
