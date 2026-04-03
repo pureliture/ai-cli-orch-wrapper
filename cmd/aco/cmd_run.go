@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -11,6 +10,7 @@ import (
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/provider"
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/prompt"
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/runner"
+	"github.com/pureliture/ai-cli-orch-wrapper/internal/session"
 )
 
 const defaultTimeoutSecs = 300 // R-RUN-09: default 300 seconds
@@ -21,37 +21,59 @@ const defaultTimeoutSecs = 300 // R-RUN-09: default 300 seconds
 // The provider invocation is stubbed via runner.StubRunner.
 // Phase 2 replaces StubRunner with the real process runner.
 func cmdRun(d *deps, args []string) int {
-	fs := flag.NewFlagSet("run", flag.ContinueOnError)
-	fs.SetOutput(os.Stderr)
+	// Parse args manually to allow flags in any position relative to positional
+	// args (flag.FlagSet stops at the first non-flag, which would miss flags
+	// placed after "gemini review").
 	var (
-		inputFlag   = fs.String("input", "", "Content to delegate (overrides stdin)")
-		profileFlag = fs.String("permission-profile", "default", "Permission profile: default|restricted|unrestricted")
-		timeoutFlag = fs.Int("timeout", 0, "Timeout in seconds (default: 300, R-RUN-09)")
+		inputFlag   string
+		profileFlag = "default"
+		timeoutFlag int
+		positional  []string
 	)
-	if err := fs.Parse(args); err != nil {
-		return 1
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "--input" || a == "-input":
+			if i+1 < len(args) {
+				inputFlag = args[i+1]
+				i++
+			}
+		case a == "--permission-profile" || a == "-permission-profile":
+			if i+1 < len(args) {
+				profileFlag = args[i+1]
+				i++
+			}
+		case a == "--timeout" || a == "-timeout":
+			if i+1 < len(args) {
+				if v, err := strconv.Atoi(args[i+1]); err == nil {
+					timeoutFlag = v
+				}
+				i++
+			}
+		case len(a) > 0 && a[0] != '-':
+			positional = append(positional, a)
+		}
 	}
 
-	remaining := fs.Args()
-	if len(remaining) < 2 {
+	if len(positional) < 2 {
 		fmt.Fprintln(os.Stderr, "Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <secs>]")
 		return 1
 	}
 
-	providerKey := remaining[0]
-	command := remaining[1]
+	providerKey := positional[0]
+	command := positional[1]
 
 	// Validate permission profile
-	profile := provider.PermissionProfile(*profileFlag)
+	profile := provider.PermissionProfile(profileFlag)
 	switch profile {
 	case provider.ProfileDefault, provider.ProfileRestricted, provider.ProfileUnrestricted:
 	default:
-		fmt.Fprintf(os.Stderr, "invalid --permission-profile %q: must be default|restricted|unrestricted\n", *profileFlag)
+		fmt.Fprintf(os.Stderr, "invalid --permission-profile %q: must be default|restricted|unrestricted\n", profileFlag)
 		return 1
 	}
 
 	// Resolve timeout: flag > ACO_TIMEOUT_SECONDS env > default (R-RUN-09)
-	timeoutSecs := *timeoutFlag
+	timeoutSecs := timeoutFlag
 	if timeoutSecs == 0 {
 		if env := os.Getenv("ACO_TIMEOUT_SECONDS"); env != "" {
 			if v, err := strconv.Atoi(env); err == nil && v > 0 {
@@ -75,7 +97,7 @@ func cmdRun(d *deps, args []string) int {
 	}
 
 	// Read content from --input or stdin
-	content := *inputFlag
+	content := inputFlag
 	if content == "" && !isTerminal(os.Stdin) {
 		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
@@ -121,7 +143,15 @@ func cmdRun(d *deps, args []string) int {
 	})
 
 	if runErr != nil {
-		// Classify and record the failure
+		// Re-read the session to check if aco cancel already marked it cancelled.
+		// If so, do not overwrite the cancellation with a signal/failure status —
+		// the cancel command won the race (R-CANCEL-04).
+		if current, readErr := d.store.Read(rec.ID); readErr == nil && current.Status == session.StatusCancelled {
+			// Session was cancelled externally. Suppress the signal error.
+			return 1
+		}
+
+		// Classify and record the failure.
 		switch e := runErr.(type) {
 		case *provider.AuthError:
 			_ = d.store.MarkFailedWithSignal(rec.ID, "auth-failure")
