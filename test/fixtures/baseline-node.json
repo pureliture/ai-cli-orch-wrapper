@@ -1,0 +1,161 @@
+{
+  "generated": "2026-04-03T00:00:00.000Z",
+  "binary": "packages/wrapper/dist/cli.js",
+  "binary_version": "aco 0.4.0",
+  "fixtures": [
+    {
+      "id": "01",
+      "name": "streaming-output",
+      "known_node_gap": false,
+      "expected_against_node": "PASS",
+      "actual": "NOT_RUN",
+      "notes": "Requires mock provider binary in PATH — needs compiled harness with isolated mock bin dir"
+    },
+    {
+      "id": "02",
+      "name": "pid-capture-timing",
+      "known_node_gap": true,
+      "expected_against_node": "FAIL",
+      "actual": "NOT_RUN",
+      "notes": "PID is written fire-and-forget (sessionStore.update is not awaited before first output) — known Node gap"
+    },
+    {
+      "id": "03",
+      "name": "cancel-sigterm-sigkill",
+      "known_node_gap": true,
+      "expected_against_node": "FAIL",
+      "actual": "NOT_RUN",
+      "notes": "Node implementation sends only SIGTERM; no SIGKILL escalation after 3s — known Node gap"
+    },
+    {
+      "id": "04",
+      "name": "cancel-partial-output",
+      "known_node_gap": false,
+      "expected_against_node": "PASS",
+      "actual": "NOT_RUN",
+      "notes": "Requires mock provider binary in PATH — needs compiled harness with isolated mock bin dir"
+    },
+    {
+      "id": "05",
+      "name": "exit-code-recording",
+      "known_node_gap": true,
+      "expected_against_node": "FAIL",
+      "actual": "NOT_RUN",
+      "notes": "markFailed does not record exitCode or signal in task.json — known Node gap"
+    },
+    {
+      "id": "06",
+      "name": "timeout-marking",
+      "known_node_gap": true,
+      "expected_against_node": "FAIL",
+      "actual": "NOT_RUN",
+      "notes": "No --timeout flag support in current Node implementation — known Node gap"
+    },
+    {
+      "id": "07",
+      "name": "provider-not-found",
+      "known_node_gap": false,
+      "expected_against_node": "PASS",
+      "actual": "PASS",
+      "notes": "Smoke tested: exit 1 confirmed; stderr contains 'gemini' satisfying the install-hint assertion (assertions.ts checks for 'npm install' OR 'gemini' in stderr); no session directory created. README notes 'Partial' gap but assertions.ts sets knownNodeGap: false."
+    },
+    {
+      "id": "08",
+      "name": "auth-failure",
+      "known_node_gap": true,
+      "expected_against_node": "FAIL",
+      "actual": "NOT_RUN",
+      "notes": "No auth-failure classification in Node implementation; task.json will not have signal: 'auth-failure'; error.log will not be populated — known Node gap"
+    },
+    {
+      "id": "09",
+      "name": "status-lifecycle",
+      "known_node_gap": true,
+      "expected_against_node": "FAIL",
+      "actual": "NOT_RUN",
+      "notes": "Node status output does not include ExitCode: or Signal: fields; cancelled session exit code differs from spec — known Node gap. Note: ACO_SESSION_DIR env var is not honored by Node binary (uses ~/.aco/sessions hardcoded)"
+    },
+    {
+      "id": "10",
+      "name": "result-running-session",
+      "known_node_gap": true,
+      "expected_against_node": "FAIL",
+      "actual": "NOT_RUN",
+      "notes": "Node 'aco result' exits 0 even for running sessions and prints no 'still running' banner — known Node gap"
+    },
+    {
+      "id": "11",
+      "name": "result-failed-session",
+      "known_node_gap": true,
+      "expected_against_node": "FAIL",
+      "actual": "NOT_RUN",
+      "notes": "Node 'aco result' does not surface error.log content in its output — known Node gap"
+    },
+    {
+      "id": "12",
+      "name": "latest-session-resolution",
+      "known_node_gap": true,
+      "expected_against_node": "FAIL",
+      "actual": "NOT_RUN",
+      "notes": "Node implementation resolves latest session by scanning all session dirs (by mtime), not by reading a 'latest' pointer file. Fixture asserts the pointer file exists at sessionBaseDir/latest — known Node gap"
+    }
+  ],
+  "smoke_tests": [
+    {
+      "name": "version-check",
+      "command": "node packages/wrapper/dist/cli.js --version",
+      "result": "PASS",
+      "output": "aco 0.4.0",
+      "exit_code": 0
+    },
+    {
+      "name": "unknown-command",
+      "command": "node packages/wrapper/dist/cli.js fakecommand",
+      "result": "PASS",
+      "output": "aco: unknown command 'fakecommand'\nUsage: aco <run|result|status|cancel> [options]",
+      "exit_code": 1,
+      "notes": "Unknown command correctly exits 1 with usage hint in stderr"
+    },
+    {
+      "name": "provider-not-found-registered",
+      "command": "node packages/wrapper/dist/cli.js run gemini review --input test (PATH=/usr/bin:/bin, no gemini binary)",
+      "result": "PASS",
+      "output": "Error: gemini CLI not found in PATH",
+      "exit_code": 1,
+      "notes": "Known provider (gemini) with binary absent from PATH exits 1 with error in stderr"
+    },
+    {
+      "name": "provider-not-found-unknown",
+      "command": "node packages/wrapper/dist/cli.js run nonexistentprovider999 review --input test",
+      "result": "PASS",
+      "output": "Unknown provider: nonexistentprovider999",
+      "exit_code": 1,
+      "notes": "Unknown provider name (not in registry) exits 1 with 'Unknown provider:' in stderr; no session created"
+    },
+    {
+      "name": "status-invalid-session",
+      "command": "node packages/wrapper/dist/cli.js status --session nonexistent-session-id-000000",
+      "result": "PASS",
+      "output": "Session not found: nonexistent-session-id-000000",
+      "exit_code": 1,
+      "notes": "Status with nonexistent session ID exits 1 with 'Session not found:' in stderr"
+    },
+    {
+      "name": "aco-session-dir-not-honored",
+      "command": "node packages/wrapper/dist/cli.js status (with ACO_SESSION_DIR set to empty tmpdir)",
+      "result": "OBSERVED",
+      "output": "Returns most recent real session from ~/.aco/sessions — ignores ACO_SESSION_DIR",
+      "exit_code": 0,
+      "notes": "ACO_SESSION_DIR env var is NOT honored by the Node binary; sessionStore is hardcoded to ~/.aco/sessions. This means fixture harness isolation via ACO_SESSION_DIR will not work against the Node binary — the full fixture suite requires the Go binary which must support ACO_SESSION_DIR."
+    }
+  ],
+  "summary": {
+    "total_fixtures": 12,
+    "known_gaps": 8,
+    "expected_pass_against_node": 4,
+    "smoke_tests_passed": 5,
+    "smoke_tests_failed": 0,
+    "smoke_tests_observed": 1,
+    "notes": "4 fixtures expected to PASS against Node binary (01, 04, 07, and by extension any that don't require mock providers or missing features). 8 fixtures are known Node gaps and must FAIL against the Node binary. Full fixture suite cannot be run against the Node binary because: (1) harness.ts is not compiled, (2) ACO_SESSION_DIR env var is not honored (session isolation is impossible). The Go binary must support ACO_SESSION_DIR for fixture isolation to work."
+  }
+}
