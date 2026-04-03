@@ -60,7 +60,7 @@ export class MyProvider implements IProvider {
   isAvailable(): boolean { /* check PATH */ }
   async checkAuth(): Promise<AuthResult> { /* verify credentials */ }
   buildArgs(command: string, options?: InvokeOptions): string[] { /* CLI flags */ }
-  async *invoke(prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string> { /* spawn */ }
+  async *invoke(command: string, prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string> { /* spawn */ }
 }
 ```
 

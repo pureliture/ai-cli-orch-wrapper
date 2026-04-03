@@ -1,6 +1,6 @@
 import { cp, rm, readdir, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, resolve, dirname } from 'node:path';
+import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -110,8 +110,12 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
   } else {
     console.log('Commands:');
     for (const f of installedFiles) {
-      const rel = f.replace(commandsDest + '/', '');
-      console.log(`  /${rel.replace(/\.md$/, '').replace('/', ':')}`);
+      const rel = relative(commandsDest, f);
+      const slashName = rel
+        .replace(/\.md$/, '')
+        .split(sep)
+        .join(':');
+      console.log(`  /${slashName}`);
     }
   }
 
@@ -231,5 +235,6 @@ async function placeWrapperBinary(_targetBase: string, binaryName: string): Prom
 }
 
 function isWithinDir(baseDir: string, targetPath: string): boolean {
-  return targetPath === baseDir || targetPath.startsWith(`${baseDir}/`);
+  const rel = relative(baseDir, targetPath);
+  return rel !== '..' && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 }
