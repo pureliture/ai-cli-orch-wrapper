@@ -1,76 +1,76 @@
 # ai-cli-orch-wrapper
 
-Installable Claude Code command pack for Gemini CLI and GitHub Copilot CLI, backed by a provider-based Node.js wrapper runtime.
+provider 기반 Node.js wrapper runtime 위에 구성된, Gemini CLI와 GitHub Copilot CLI용 설치형 Claude Code command pack입니다.
 
-## Install
+## 설치
 
 ```bash
-# Option 1: npx (no local install required)
+# 방법 1: npx 사용 (로컬 설치 불필요)
 npx aco-install
 
-# Option 2: from this repo
+# 방법 2: 이 저장소에서 직접 설치
 npm install
 aco-install pack setup
 ```
 
-After installation, verify the published CLIs are reachable:
+설치 후에는 배포된 CLI가 실제로 실행 가능한지 확인합니다.
 
 ```bash
 npx aco-install --version
 npx @aco/wrapper --version
 ```
 
-## Provider Setup
+## Provider 설정
 
-After pack installation, configure each provider:
+pack 설치가 끝났다면 provider별 설치/인증 상태를 설정합니다.
 
 ```bash
 # Gemini CLI
 aco-install provider setup gemini
-# If not installed: npm install -g @google/gemini-cli
+# 설치되어 있지 않다면: npm install -g @google/gemini-cli
 
 # GitHub Copilot CLI
 aco-install provider setup copilot
-# If not installed: npm install -g @github/copilot && gh auth login
+# 설치되어 있지 않다면: npm install -g @github/copilot && gh auth login
 ```
 
-## Commands
+## 명령어
 
 | Command | Description |
 |---|---|
-| `/gemini:review [file]` | Code review via Gemini CLI (`git diff HEAD` if no file) |
-| `/gemini:adversarial [--focus security\|performance\|correctness] [file]` | Adversarial review |
-| `/gemini:rescue [--from file] [--error msg]` | Get unstuck with second opinion |
-| `/gemini:result [<session-id>]` | Retrieve last/named session output |
-| `/gemini:status [<session-id>]` | Session or provider status |
-| `/gemini:cancel [<session-id>]` | Cancel a running background session |
-| `/gemini:setup` | Provider install/auth guidance |
-| `/copilot:*` | Same surface for GitHub Copilot CLI |
+| `/gemini:review [file]` | Gemini CLI로 코드 리뷰 수행 (`file`이 없으면 `git diff HEAD`) |
+| `/gemini:adversarial [--focus security\|performance\|correctness] [file]` | 공격적 관점의 리뷰 수행 |
+| `/gemini:rescue [--from file] [--error msg]` | 막혔을 때 세컨드 오피니언 받기 |
+| `/gemini:result [<session-id>]` | 최근 세션 또는 지정 세션의 출력 조회 |
+| `/gemini:status [<session-id>]` | 세션 또는 provider 상태 조회 |
+| `/gemini:cancel [<session-id>]` | 실행 중인 세션 취소 |
+| `/gemini:setup` | provider 설치 및 인증 가이드 출력 |
+| `/copilot:*` | GitHub Copilot CLI에도 동일한 인터페이스 제공 |
 
-## Runtime: `aco` CLI
+## 런타임: `aco` CLI
 
-The `aco` wrapper owns execution, session, and output lifecycle:
+`aco` wrapper는 실행, 세션, 출력 lifecycle을 관리합니다.
 
 ```bash
-aco run gemini review            # run via wrapper
-aco run copilot adversarial      # run via wrapper
-aco result                       # print last session output
-aco result --session <id>        # print named session output
-aco status                       # show last session status
-aco cancel --session <id>        # cancel a running session
+aco run gemini review            # wrapper를 통해 실행
+aco run copilot adversarial      # wrapper를 통해 실행
+aco result                       # 마지막 세션 출력 조회
+aco result --session <id>        # 지정 세션 출력 조회
+aco status                       # 마지막 세션 상태 조회
+aco cancel --session <id>        # 실행 중인 세션 취소
 ```
 
-Sessions are stored at `~/.aco/sessions/<uuid>/` with restrictive permissions:
+세션은 `~/.aco/sessions/<uuid>/` 아래에 제한된 권한으로 저장됩니다.
 
 | File | Permissions | Purpose |
 |---|---|---|
-| `task.json` | `0600` | provider, command, status, pid, timestamps |
-| `output.log` | `0600` | streamed provider output |
-| `error.log` | `0600` | provider stderr and wrapper error details |
+| `task.json` | `0600` | provider, command, status, pid, timestamp 정보 |
+| `output.log` | `0600` | provider 출력 스트림 |
+| `error.log` | `0600` | provider stderr 및 wrapper 오류 상세 |
 
-The session directory itself is created with `0700`.
+세션 디렉터리 자체는 `0700` 권한으로 생성됩니다.
 
-## Repo Layout
+## 저장소 구조
 
 ```text
 packages/
@@ -96,16 +96,16 @@ README.md
 package.json        — npm workspace root
 ```
 
-## OpenSpec Workflow
+## OpenSpec 워크플로
 
-This repository is initialized for OpenSpec-based change tracking.
+이 저장소는 OpenSpec 기반 변경 추적이 가능하도록 초기화되어 있습니다.
 
-- Workflow assets live in `openspec/`, `.github/prompts/`, `.github/skills/`, `.claude/commands/opsx/`, and `.claude/skills/`.
-- Create or inspect work with `openspec new change <name>`, `openspec list --json`, and `openspec status --change <name> --json`.
-- Continue an implementation-ready change with `openspec instructions apply --change <name> --json`.
-- Validate artifacts with `openspec validate <name>` before treating a change as complete.
+- 워크플로 자산은 `openspec/`, `.github/prompts/`, `.github/skills/`, `.claude/commands/opsx/`, `.claude/skills/` 아래에 있습니다.
+- `openspec new change <name>`, `openspec list --json`, `openspec status --change <name> --json`으로 작업을 생성하거나 확인할 수 있습니다.
+- 구현 준비가 끝난 change는 `openspec instructions apply --change <name> --json`으로 이어서 진행합니다.
+- 완료 처리 전에는 `openspec validate <name>`로 artifact를 검증합니다.
 
-## Development
+## 개발
 
 ```bash
 git clone <repo>
@@ -114,55 +114,55 @@ npm install
 npm run build
 ```
 
-Build order matters: `packages/wrapper` must compile before `packages/installer`. The root `npm run build` script already enforces that order.
+빌드 순서는 중요합니다. `packages/wrapper`가 먼저 컴파일되어야 `packages/installer`를 빌드할 수 있습니다. 루트의 `npm run build` 스크립트가 이 순서를 강제합니다.
 
-## Tests
+## 테스트
 
 ```bash
-npm test            # runs packages/wrapper unit tests
-npm run test:smoke  # provider availability smoke check
+npm test            # packages/wrapper 단위 테스트 실행
+npm run test:smoke  # provider 실행 가능 여부 smoke check
 ```
 
-## Troubleshooting
+## 문제 해결
 
 ### `aco: command not found`
 
-Install the wrapper binary explicitly:
+wrapper 바이너리를 명시적으로 설치합니다.
 
 ```bash
 npm install -g @aco/wrapper
 ```
 
-### Provider not found or not authenticated
+### Provider를 찾을 수 없거나 인증되지 않은 경우
 
 ```bash
 aco-install provider setup gemini
 aco-install provider setup copilot
 ```
 
-Gemini CLI installs via `npm install -g @google/gemini-cli`.  
-Copilot CLI installs via `npm install -g @github/copilot && gh auth login`.
+Gemini CLI는 `npm install -g @google/gemini-cli`로 설치합니다.  
+Copilot CLI는 `npm install -g @github/copilot && gh auth login`으로 설치 및 인증합니다.
 
-### Slash commands missing after install
+### 설치 후 slash command가 보이지 않는 경우
 
-Re-copy the templates:
+템플릿을 다시 복사합니다.
 
 ```bash
 aco-install pack install
 ```
 
-### Build fails in `packages/installer`
+### `packages/installer` 빌드가 실패하는 경우
 
-Build the packages in dependency order:
+의존 순서대로 패키지를 빌드합니다.
 
 ```bash
 npm run build --workspace=packages/wrapper
 npm run build --workspace=packages/installer
 ```
 
-## Publishing
+## 배포
 
-Release flow, in order:
+배포 순서는 다음과 같습니다.
 
 ```bash
 npm run build
@@ -170,7 +170,7 @@ cd packages/wrapper && npm publish
 cd ../installer && npm publish
 ```
 
-## Docs
+## 문서
 
 - [Architecture](docs/architecture.md)
 - [Contributing](docs/CONTRIBUTING.md)
