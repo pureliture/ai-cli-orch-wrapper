@@ -1,0 +1,24 @@
+{
+  "name": "@aco/wrapper",
+  "version": "0.4.0",
+  "description": "Provider-based wrapper runtime for aco CLI — execution, session, and output lifecycle.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "aco": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --require tsx/cjs --test tests/providers.test.ts tests/session.test.ts",
+    "test:smoke": "tsx tests/smoke.ts"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
