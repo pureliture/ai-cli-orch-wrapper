@@ -8,9 +8,11 @@ export interface SpawnStreamConfig {
   stdin: 'pipe' | 'ignore';
 }
 
+const MAX_STDERR_CHARS = 4_000;
+
 /**
  * Spawns a child process and yields its stdout as string chunks.
- * Drains stderr to prevent buffer deadlock.
+ * Captures stderr so provider failures remain diagnosable.
  * Calls options.onPid once the process has a PID.
  */
 export async function* spawnStream(
@@ -31,8 +33,12 @@ export async function* spawnStream(
     child.stdin.end();
   }
 
-  // Drain stderr to prevent the OS pipe buffer from filling and blocking stdout
-  child.stderr?.resume();
+  let stderr = '';
+  child.stderr?.on('data', (chunk: Buffer | string) => {
+    if (stderr.length >= MAX_STDERR_CHARS) return;
+    const text = typeof chunk === 'string' ? chunk : chunk.toString();
+    stderr += text.slice(0, MAX_STDERR_CHARS - stderr.length);
+  });
 
   if (!child.stdout) {
     throw new Error(`${config.processName}: failed to open stdout pipe`);
@@ -43,9 +49,13 @@ export async function* spawnStream(
   }
 
   await new Promise<void>((resolve, reject) => {
-    child.on('close', (code) => {
-      if (code !== 0) {
-        reject(new Error(`${config.processName} exited with code ${code}`));
+    child.on('close', (code, signal) => {
+      if (code !== 0 || signal !== null) {
+        const reason = signal === null
+          ? `${config.processName} exited with code ${code}`
+          : `${config.processName} terminated by signal ${signal}`;
+        const detail = stderr.trim();
+        reject(new Error(detail ? `${reason}\n${detail}` : reason));
       } else {
         resolve();
       }

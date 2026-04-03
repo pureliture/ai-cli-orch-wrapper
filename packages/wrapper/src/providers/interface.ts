@@ -19,5 +19,5 @@ export interface IProvider {
   isAvailable(): boolean;
   checkAuth(): Promise<AuthResult>;
   buildArgs(command: string, options?: InvokeOptions): string[];
-  invoke(prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string>;
+  invoke(command: string, prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string>;
 }

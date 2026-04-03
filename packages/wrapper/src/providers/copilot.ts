@@ -41,12 +41,12 @@ export class CopilotProvider implements IProvider {
     return base;
   }
 
-  async *invoke(prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string> {
+  async *invoke(command: string, prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string> {
     const binary = which('copilot');
     if (!binary) throw new Error('copilot CLI not found in PATH');
 
     const fullPrompt = content ? `${content}\n\n${prompt}` : prompt;
-    const args = [...this.buildArgs('', options), fullPrompt];
+    const args = [...this.buildArgs(command, options), fullPrompt];
     yield* spawnStream(binary, args, { processName: 'copilot', stdin: 'ignore' }, options);
   }
 }

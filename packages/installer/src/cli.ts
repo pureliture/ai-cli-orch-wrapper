@@ -54,14 +54,14 @@ async function main(): Promise<void> {
   if (group === 'provider') {
     const name = subOrName;
     if (!name) {
-      console.error('Usage: aco provider setup <name>');
+      console.error('Usage: aco-install provider setup <name>');
       process.exit(EXIT_ERROR);
     }
     if (name === 'setup') {
-      // aco provider setup <name>
+      // aco-install provider setup <name>
       const providerName = rest[0];
       if (!providerName) {
-        console.error('Usage: aco provider setup <name>');
+        console.error('Usage: aco-install provider setup <name>');
         process.exit(EXIT_ERROR);
       }
       await providerSetup(providerName);
@@ -89,12 +89,12 @@ function checkNodeVersion(): void {
 function printUsage(): void {
   console.log(`
 Usage:
-  aco-install                    — shorthand for 'aco pack setup'
-  aco pack install [--global] [--force] [--binary-name <name>]
-  aco pack uninstall [--global]
-  aco pack status [--global]
-  aco pack setup [--global] [--force]
-  aco provider setup <gemini|copilot>
+  aco-install                    — shorthand for 'aco-install pack setup'
+  aco-install pack install [--global] [--force] [--binary-name <name>]
+  aco-install pack uninstall [--global]
+  aco-install pack status [--global]
+  aco-install pack setup [--global] [--force]
+  aco-install provider setup <gemini|copilot>
 `);
 }
 
