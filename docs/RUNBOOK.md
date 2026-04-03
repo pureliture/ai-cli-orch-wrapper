@@ -22,7 +22,7 @@ cd ../installer && npm publish
 
 ```bash
 npx aco-install --version
-npx aco --version
+npx @aco/wrapper --version
 ```
 
 ---
@@ -37,6 +37,33 @@ npx aco-install
 npm install
 aco-install pack setup
 ```
+
+---
+
+## OpenSpec
+
+### Workflow assets
+
+- `openspec/config.yaml` defines the repository OpenSpec root.
+- `openspec/changes/<name>/` stores proposal, spec, design, and task artifacts for active changes.
+- `.github/prompts/` and `.github/skills/` contain generated OpenSpec prompt and skill surfaces.
+- `.claude/commands/opsx/` and `.claude/skills/` contain Claude-side workflow entry points for the same OpenSpec flows.
+
+### Inspect and continue a change
+
+```bash
+openspec list --json
+openspec status --change <name> --json
+openspec instructions apply --change <name> --json
+```
+
+### Validate artifacts
+
+```bash
+openspec validate <name>
+```
+
+Use `openspec validate <name>` before considering an OpenSpec-driven task complete.
 
 ---
 

@@ -37,11 +37,11 @@ export class GeminiProvider implements IProvider {
     return base;
   }
 
-  async *invoke(prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string> {
+  async *invoke(command: string, prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string> {
     const binary = which('gemini');
     if (!binary) throw new Error('gemini CLI not found in PATH');
 
-    const args = [...this.buildArgs('', options), `${prompt}\n\n${content}`];
+    const args = [...this.buildArgs(command, options), `${prompt}\n\n${content}`];
     yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe' }, options);
   }
 }

@@ -43,12 +43,13 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
   const binaryName = options.binaryName ?? 'aco';
   await placeWrapperBinary(targetBase, binaryName);
 
-  console.log(`\n✓ Pack installed. Run 'aco pack setup' to verify provider readiness.`);
+  console.log(`\n✓ Pack installed. Run 'aco-install pack setup' to verify provider readiness.`);
 }
 
 export async function packUninstall(options: { global?: boolean } = {}): Promise<void> {
   const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
   const manifestPath = MANIFEST_PATH(targetBase);
+  const resolvedTargetBase = resolve(targetBase);
 
   console.log('Uninstalling aco command pack …');
 
@@ -63,6 +64,11 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
 
     if (manifest.files && manifest.files.length > 0) {
       for (const file of manifest.files) {
+        const resolvedFile = resolve(file);
+        if (!isWithinDir(resolvedTargetBase, resolvedFile)) {
+          console.warn(`  [warn] Skipping manifest entry outside target directory: ${file}`);
+          continue;
+        }
         if (existsSync(file)) {
           await rm(file, { force: true });
           console.log(`  removed ${file}`);
@@ -91,7 +97,7 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
   const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
   const commandsDest = join(targetBase, 'commands');
 
-  console.log('aco pack status\n');
+  console.log('aco-install pack status\n');
   console.log(`Target: ${targetBase}`);
 
   // List installed commands
@@ -128,12 +134,12 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
     const provider = providerRegistry.get(key)!;
     const available = provider.isAvailable();
     if (!available) {
-      console.log(`  ${key}: not installed  → run: aco provider setup ${key}`);
+      console.log(`  ${key}: not installed  → run: aco-install provider setup ${key}`);
     } else {
       console.log(`  ${key}: installed ✓`);
     }
   }
-  console.log('\nNext step: aco provider setup <gemini|copilot>');
+  console.log('\nNext step: aco-install provider setup <gemini|copilot>');
 }
 
 export async function providerSetup(name: string): Promise<void> {
@@ -200,11 +206,15 @@ async function collectFiles(dir: string, out: string[]): Promise<void> {
 }
 
 async function placeWrapperBinary(_targetBase: string, binaryName: string): Promise<void> {
-  // Check if already in PATH
+  // Check if already in PATH and appears to be the expected @aco/wrapper binary
   try {
-    await execFileAsync(binaryName, ['--version'], { timeout: BINARY_CHECK_TIMEOUT_MS });
-    console.log(`  binary: '${binaryName}' already in PATH ✓`);
-    return;
+    const { stdout } = await execFileAsync(binaryName, ['--version'], { timeout: BINARY_CHECK_TIMEOUT_MS });
+    const versionOutput = typeof stdout === 'string' ? stdout.trim().toLowerCase() : '';
+    if (versionOutput.startsWith('aco ')) {
+      console.log(`  binary: '${binaryName}' already in PATH ✓`);
+      return;
+    }
+    console.warn(`  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like @aco/wrapper. Proceeding to install @aco/wrapper globally.`);
   } catch {
     // Not found in PATH — proceed to global npm install
   }
@@ -218,4 +228,8 @@ async function placeWrapperBinary(_targetBase: string, binaryName: string): Prom
     console.warn(`  [warn] Could not install '${binaryName}' globally: ${reason}`);
     console.warn(`         Run manually: npm install -g @aco/wrapper`);
   }
+}
+
+function isWithinDir(baseDir: string, targetPath: string): boolean {
+  return targetPath === baseDir || targetPath.startsWith(`${baseDir}/`);
 }

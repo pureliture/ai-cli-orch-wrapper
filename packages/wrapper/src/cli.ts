@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 import { readFile, appendFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import process from 'node:process';
+import type { Writable } from 'node:stream';
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile } from './providers/interface.js';
 
-const VERSION = '0.4.0';
+const VERSION = loadVersion();
 const EXIT_ERROR = 1;
 const VALID_PERMISSION_PROFILES: PermissionProfile[] = ['default', 'restricted', 'unrestricted'];
 
@@ -83,12 +84,12 @@ async function cmdRun(args: string[]): Promise<void> {
   }
 
   const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
+  const tee = sessionStore.createOutputTee(session.id);
+  let hasOutput = false;
+  let runError: unknown;
 
   try {
-    const tee = sessionStore.createOutputTee(session.id);
-    let hasOutput = false;
-
-    for await (const chunk of provider.invoke(prompt, content, {
+    for await (const chunk of provider.invoke(command, prompt, content, {
       permissionProfile,
       sessionId: session.id,
       onPid: (pid) => {
@@ -101,23 +102,25 @@ async function cmdRun(args: string[]): Promise<void> {
       tee.write(chunk);
       hasOutput = true;
     }
-
-    await new Promise<void>((resolve, reject) => {
-      tee.end((err?: Error | null) => (err ? reject(err) : resolve()));
-    });
-
-    if (!hasOutput && permissionProfile === 'restricted') {
-      await appendFile(sessionStore.errorLogPath(session.id), 'Permission profile: restricted — output may be blocked\n');
-    }
-
-    await sessionStore.markDone(session.id);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    runError = err;
+  } finally {
+    await endWritable(tee);
+  }
+
+  if (runError) {
+    const msg = runError instanceof Error ? runError.message : String(runError);
     await appendFile(sessionStore.errorLogPath(session.id), msg + '\n');
     await sessionStore.markFailed(session.id);
     console.error(`Error: ${msg}`);
     process.exit(EXIT_ERROR);
   }
+
+  if (!hasOutput && permissionProfile === 'restricted') {
+    await appendFile(sessionStore.errorLogPath(session.id), 'Permission profile: restricted — output may be blocked\n');
+  }
+
+  await sessionStore.markDone(session.id);
 }
 
 // ---------------------------------------------------------------------------
@@ -212,6 +215,23 @@ function parseFlag<T extends string = string>(args: string[], flag: string): T |
   const idx = args.indexOf(flag);
   if (idx === -1 || idx + 1 >= args.length) return undefined;
   return args[idx + 1] as T;
+}
+
+function loadVersion(): string {
+  try {
+    const raw = readFileSync(join(__dirname, '..', 'package.json'), 'utf8');
+    const parsed = JSON.parse(raw) as { version?: string };
+    return parsed.version ?? '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
+async function endWritable(stream: Writable): Promise<void> {
+  if (stream.writableEnded || stream.destroyed) return;
+  await new Promise<void>((resolve, reject) => {
+    stream.end((err?: Error | null) => (err ? reject(err) : resolve()));
+  });
 }
 
 main().catch((err) => {
