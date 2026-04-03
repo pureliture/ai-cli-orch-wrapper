@@ -110,14 +110,14 @@ async function cmdRun(args: string[]): Promise<void> {
 
   if (runError) {
     const msg = runError instanceof Error ? runError.message : String(runError);
-    await appendFile(sessionStore.errorLogPath(session.id), msg + '\n');
+    await appendFile(sessionStore.errorLogPath(session.id), msg + '\n', { mode: 0o600 });
     await sessionStore.markFailed(session.id);
     console.error(`Error: ${msg}`);
     process.exit(EXIT_ERROR);
   }
 
   if (!hasOutput && permissionProfile === 'restricted') {
-    await appendFile(sessionStore.errorLogPath(session.id), 'Permission profile: restricted — output may be blocked\n');
+    await appendFile(sessionStore.errorLogPath(session.id), 'Permission profile: restricted — output may be blocked\n', { mode: 0o600 });
   }
 
   await sessionStore.markDone(session.id);
