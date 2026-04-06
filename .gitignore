@@ -46,6 +46,9 @@ reference/*
 .claude/session-plan.md
 .claude/commands/
 .claude/skills/
+!.claude/skills/
+!.claude/skills/github-jira-ops/
+!.claude/skills/github-jira-ops/**
 
 # Claude Octopus runtime state
 .claude-octopus/
