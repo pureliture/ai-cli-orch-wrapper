@@ -34,6 +34,7 @@ temp/
 .claude/worktrees/
 .codex/worktrees/
 .gemini/worktrees/
+.aco-worktrees/
 
 
 reference/*
