@@ -6,7 +6,7 @@ allowed-tools:
   - Bash
 ---
 
-Adversarial code review via GitHub Copilot CLI. More aggressive than `:review` — starts from the assumption that bugs exist. Optionally scope with `--focus security`, `--focus performance`, `--focus correctness`, or `--focus all` (default). Without a file argument, reviews `git diff HEAD`. Retrieve output with `/copilot:result <session-id>`.
+Adversarial code review via GitHub Copilot CLI. More aggressive than `:review` — starts from the assumption that bugs exist. Optionally scope with `--focus security`, `--focus performance`, `--focus correctness`, or `--focus all` (default). Without a file argument, reviews `git diff HEAD`.
 
 ```bash
 #!/usr/bin/env bash
@@ -37,4 +37,3 @@ else
 fi
 printf '%s' "$CONTENT" | aco run copilot adversarial --focus "$FOCUS"
 ```
-

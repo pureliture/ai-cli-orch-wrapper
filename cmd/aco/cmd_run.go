@@ -8,9 +8,10 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 
-	"github.com/pureliture/ai-cli-orch-wrapper/internal/provider"
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/prompt"
+	"github.com/pureliture/ai-cli-orch-wrapper/internal/provider"
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/runner"
 )
 
@@ -24,6 +25,7 @@ const defaultTimeoutSecs = 300
 func cmdRun(d *deps, args []string) int {
 	var (
 		inputFlag   string
+		focusFlag   string
 		profileFlag = "default"
 		timeoutFlag int
 		positional  []string
@@ -32,21 +34,41 @@ func cmdRun(d *deps, args []string) int {
 		a := args[i]
 		switch {
 		case a == "--input" || a == "-input":
-			if i+1 < len(args) {
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
 				inputFlag = args[i+1]
 				i++
+			} else {
+				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+				return 1
 			}
 		case a == "--permission-profile" || a == "-permission-profile":
-			if i+1 < len(args) {
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
 				profileFlag = args[i+1]
 				i++
+			} else {
+				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+				return 1
 			}
 		case a == "--timeout" || a == "-timeout":
-			if i+1 < len(args) {
-				if v, err := strconv.Atoi(args[i+1]); err == nil {
-					timeoutFlag = v
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
+				v, err := strconv.Atoi(args[i+1])
+				if err != nil {
+					fmt.Fprintf(d.stderr, "flag --timeout: invalid value %q\n", args[i+1])
+					return 1
 				}
+				timeoutFlag = v
 				i++
+			} else {
+				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+				return 1
+			}
+		case a == "--focus":
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
+				focusFlag = args[i+1]
+				i++
+			} else {
+				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+				return 1
 			}
 		case len(a) > 0 && a[0] != '-':
 			positional = append(positional, a)
@@ -95,16 +117,24 @@ func cmdRun(d *deps, args []string) int {
 	if content == "" && !isTerminal(os.Stdin) {
 		data, err := io.ReadAll(os.Stdin)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "aco: read stdin: %v\n", err)
+			fmt.Fprintf(d.stderr, "aco: read stdin: %v\n", err)
 			return 1
 		}
 		content = string(data)
+	}
+	if focusFlag != "" {
+		focusHeader := fmt.Sprintf("Focus area: %s", focusFlag)
+		if content == "" {
+			content = focusHeader
+		} else {
+			content = focusHeader + "\n\n" + content
+		}
 	}
 
 	cwd, _ := os.Getwd()
 	promptText, err := prompt.Load(cwd, providerKey, command)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "aco: load prompt: %v\n", err)
+		fmt.Fprintf(d.stderr, "aco: load prompt: %v\n", err)
 		return 1
 	}
 
@@ -119,7 +149,7 @@ func cmdRun(d *deps, args []string) int {
 	})
 
 	if runErr != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", runErr)
+		fmt.Fprintf(d.stderr, "Error: %v\n", runErr)
 		return 1
 	}
 	return 0

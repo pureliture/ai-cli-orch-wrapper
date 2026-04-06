@@ -25,6 +25,8 @@ import (
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/provider"
 )
 
+const maxStderrBytes = 64 * 1024
+
 // forceKillDelaySecs is the delay between SIGTERM and SIGKILL.
 // Reference: ccg-workflow main.go:67 — default 5, stored as atomic int32.
 // Tests can override via forceKillDelaySecs.Store(N).
@@ -84,7 +86,7 @@ func (ProcessRunner) Run(ctx context.Context, opts RunOpts) (RunResult, error) {
 	// Node.js CLIs that spawn workers which would otherwise orphan the pipe.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	var stderrBuf strings.Builder
+	stderrBuf := newTailBuffer(maxStderrBytes)
 	cmd.Stderr = &stderrBuf
 
 	out := opts.Stdout
@@ -143,6 +145,35 @@ waitLoop:
 	result, err := classifyWaitError(ctx, opts.Provider, timeoutSecs, stderrBuf.String(), waitErr)
 	result.Duration = time.Since(start)
 	return result, err
+}
+
+type tailBuffer struct {
+	limit int
+	buf   []byte
+}
+
+func newTailBuffer(limit int) tailBuffer {
+	return tailBuffer{limit: limit}
+}
+
+func (b *tailBuffer) Write(p []byte) (int, error) {
+	if b.limit <= 0 {
+		return len(p), nil
+	}
+	if len(p) >= b.limit {
+		b.buf = append(b.buf[:0], p[len(p)-b.limit:]...)
+		return len(p), nil
+	}
+	needed := len(b.buf) + len(p) - b.limit
+	if needed > 0 {
+		b.buf = append([]byte(nil), b.buf[needed:]...)
+	}
+	b.buf = append(b.buf, p...)
+	return len(p), nil
+}
+
+func (b *tailBuffer) String() string {
+	return string(b.buf)
 }
 
 // forwardSignals forwards SIGINT/SIGTERM from the OS to the child process.

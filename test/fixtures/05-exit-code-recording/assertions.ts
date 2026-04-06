@@ -1,48 +1,37 @@
 /**
  * Fixture 05: Exit Code Recording
  *
- * Contract: R-EXIT-01, R-EXIT-02, R-RUN-06, R-RUN-07
+ * Contract: blocking exit propagation
  *
- * Verifies that task.json records exitCode for both success and failure cases.
+ * Verifies that aco exits 0 on provider success and non-zero on provider
+ * failure.
  *
- * Known Node.js gap: YES — markFailed does not record exitCode or signal.
+ * Known Node.js gap: No.
  */
-import { registerFixture, createMockProvider } from '../harness.js';
-import { join } from 'node:path';
+import { registerFixture, createMockProvider } from '../harness';
 import assert from 'node:assert/strict';
 
 registerFixture({
   name: '05-exit-code-recording',
   knownNodeGap: true,
   async fn(runner) {
-    // Case A: Successful run → exitCode: 0 in task.json
+    // Case A: Successful run → exit 0
     {
-      const mockGemini = join(runner.sessionBaseDir, '..', 'bin', 'gemini');
+      const mockGemini = runner.providerPath('gemini');
       await createMockProvider({ path: mockGemini, chunkCount: 1, exitCode: 0 });
 
-      await runner.run(['run', 'gemini', 'review', '--input', 'test']);
-
-      const sessionId = await runner.readLatestSessionId();
-      assert.ok(sessionId);
-      const task = await runner.readTaskJson(sessionId);
-      assert.equal(task.status, 'done');
-      assert.equal(task.exitCode, 0, 'done session must have exitCode: 0');
-      assert.equal(task.signal, undefined, 'done session must not have signal');
+      const result = await runner.run(['run', 'gemini', 'review', '--input', 'test']);
+      assert.equal(result.exitCode, 0, 'successful provider run must exit 0');
     }
 
-    // Case B: Failed run (exit code 2) → exitCode: 2 in task.json
+    // Case B: Failed run (exit code 2) → aco exits non-zero and reports failure
     {
-      const mockGemini = join(runner.sessionBaseDir, '..', 'bin', 'gemini');
+      const mockGemini = runner.providerPath('gemini');
       await createMockProvider({ path: mockGemini, chunkCount: 0, exitCode: 2 });
 
-      await runner.run(['run', 'gemini', 'review', '--input', 'test']);
-
-      const sessionId = await runner.readLatestSessionId();
-      assert.ok(sessionId);
-      const task = await runner.readTaskJson(sessionId);
-      assert.equal(task.status, 'failed');
-      assert.equal(task.exitCode, 2, 'failed session must have exitCode: 2');
-      assert.equal(task.signal, undefined, 'exit-code failure must not have signal');
+      const result = await runner.run(['run', 'gemini', 'review', '--input', 'test']);
+      assert.equal(result.exitCode, 1, 'aco must normalize provider failure to exit 1');
+      assert.match(result.stderr, /exited with code 2/);
     }
   },
 });

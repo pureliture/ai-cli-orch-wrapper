@@ -32,13 +32,13 @@ type AgentSpec struct {
 }
 
 type Formatter struct {
-	Version          int                            `yaml:"version"`
-	ProviderDefaults map[string]ProviderDefault     `yaml:"providerDefaults"`
-	ModelAliasMap    map[string]Route               `yaml:"modelAliasMap"`
-	EffortMap        map[string]map[string]string   `yaml:"effortMap"`
-	RoleHintRules    map[string]RoleHintRule        `yaml:"roleHintRules"`
-	Fallback         Route                          `yaml:"fallback"`
-	ProviderModels   map[string][]string            `yaml:"providerModels"`
+	Version          int                          `yaml:"version"`
+	ProviderDefaults map[string]ProviderDefault   `yaml:"providerDefaults"`
+	ModelAliasMap    map[string]Route             `yaml:"modelAliasMap"`
+	EffortMap        map[string]map[string]string `yaml:"effortMap"`
+	RoleHintRules    map[string]RoleHintRule      `yaml:"roleHintRules"`
+	Fallback         Route                        `yaml:"fallback"`
+	ProviderModels   map[string][]string          `yaml:"providerModels"`
 }
 
 type ProviderDefault struct {
@@ -231,13 +231,37 @@ func BuildPrompt(spec AgentSpec, input string) (string, error) {
 }
 
 func splitFrontmatter(content string) (frontmatter, body string, hasFrontmatter bool, err error) {
-	if !strings.HasPrefix(content, "---\n") {
+	line, next, ok := readLine(content, 0)
+	if !ok || line != "---" {
 		return "", content, false, nil
 	}
-	rest := content[len("---\n"):]
-	idx := strings.Index(rest, "\n---\n")
-	if idx < 0 {
-		return "", "", false, errors.New("parse frontmatter: missing closing delimiter")
+
+	frontmatterStart := next
+	for cursor := next; cursor <= len(content); {
+		lineStart := cursor
+		line, next, ok = readLine(content, cursor)
+		if !ok {
+			break
+		}
+		if line == "---" {
+			return content[frontmatterStart:lineStart], content[next:], true, nil
+		}
+		cursor = next
 	}
-	return rest[:idx], rest[idx+len("\n---\n"):], true, nil
+	return "", "", false, errors.New("parse frontmatter: missing closing delimiter")
+}
+
+func readLine(content string, start int) (line string, next int, ok bool) {
+	if start > len(content) {
+		return "", start, false
+	}
+	if start == len(content) {
+		return "", start, false
+	}
+	end := strings.IndexByte(content[start:], '\n')
+	if end < 0 {
+		return strings.TrimSuffix(content[start:], "\r"), len(content), true
+	}
+	end += start
+	return strings.TrimSuffix(content[start:end], "\r"), end + 1, true
 }

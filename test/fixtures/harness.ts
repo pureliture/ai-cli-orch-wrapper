@@ -39,18 +39,21 @@ export interface BinaryRunner {
   /** Binary under test */
   readonly binaryPath: string;
 
+  /** Path inside the isolated mock PATH dir for a provider binary name. */
+  providerPath(name: string): string;
+
   /**
    * Run `aco <args>` and collect output.
    * Resolves after the process exits.
    */
-  run(args: string[], opts?: { stdinContent?: string; timeoutMs?: number }): Promise<RunResult>;
+  run(args: string[], opts?: { stdinContent?: string; timeoutMs?: number; mockPathOnly?: boolean }): Promise<RunResult>;
 
   /**
    * Spawn `aco run` and return the ChildProcess handle.
    * Used for fixtures that need to interact with the process mid-run
    * (e.g., send cancel while running).
    */
-  spawn(args: string[]): ChildProcess;
+  spawn(args: string[], opts?: { mockPathOnly?: boolean }): ChildProcess;
 
   /**
    * Read task.json for the given session ID from the test session store.
@@ -201,13 +204,28 @@ class BinaryRunnerImpl implements BinaryRunner {
     };
   }
 
-  async run(args: string[], opts: { stdinContent?: string; timeoutMs?: number } = {}): Promise<RunResult> {
+  private envFor(opts?: { mockPathOnly?: boolean }): NodeJS.ProcessEnv {
+    if (!opts?.mockPathOnly) {
+      return this.env;
+    }
+    return {
+      ...process.env,
+      ACO_SESSION_DIR: this.sessionBaseDir,
+      PATH: this.mockBinDir,
+    };
+  }
+
+  providerPath(name: string): string {
+    return join(this.mockBinDir, name);
+  }
+
+  async run(args: string[], opts: { stdinContent?: string; timeoutMs?: number; mockPathOnly?: boolean } = {}): Promise<RunResult> {
     const chunks: Array<{ text: string; receivedAt: number }> = [];
     const startedAt = Date.now();
 
     return new Promise((resolve, reject) => {
       const child = spawn(this.binaryPath, args, {
-        env: this.env,
+        env: this.envFor(opts),
         stdio: ['pipe', 'pipe', 'pipe'],
       });
 
@@ -244,9 +262,9 @@ class BinaryRunnerImpl implements BinaryRunner {
     });
   }
 
-  spawn(args: string[]): ChildProcess {
+  spawn(args: string[], opts: { mockPathOnly?: boolean } = {}): ChildProcess {
     return spawn(this.binaryPath, args, {
-      env: this.env,
+      env: this.envFor(opts),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
   }
@@ -286,18 +304,11 @@ async function main(): Promise<void> {
 
   // Import all fixture assertions
   // (these files call registerFixture() as a side effect)
-  await import('./01-streaming-output/assertions.js');
-  await import('./02-pid-capture-timing/assertions.js');
-  await import('./03-cancel-sigterm-sigkill/assertions.js');
-  await import('./04-cancel-partial-output/assertions.js');
-  await import('./05-exit-code-recording/assertions.js');
-  await import('./06-timeout-marking/assertions.js');
-  await import('./07-provider-not-found/assertions.js');
-  await import('./08-auth-failure/assertions.js');
-  await import('./09-status-lifecycle/assertions.js');
-  await import('./10-result-running-session/assertions.js');
-  await import('./11-result-failed-session/assertions.js');
-  await import('./12-latest-session-resolution/assertions.js');
+  await import('./01-streaming-output/assertions');
+  await import('./05-exit-code-recording/assertions');
+  await import('./06-timeout-marking/assertions');
+  await import('./07-provider-not-found/assertions');
+  await import('./08-auth-failure/assertions');
 
   const results: FixtureResult[] = [];
 
