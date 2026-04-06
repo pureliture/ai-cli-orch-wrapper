@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -227,23 +226,7 @@ func writeSentinel(w io.Writer, agentID, providerName, model string, exitCode in
 	return err
 }
 
-func classifyDelegateError(err error) int {
-	var exitErr *provider.ExitError
-	if errors.As(err, &exitErr) {
-		return 1
-	}
-	var authErr *provider.AuthError
-	if errors.As(err, &authErr) {
-		return 1
-	}
-	var timeoutErr *provider.TimeoutError
-	if errors.As(err, &timeoutErr) {
-		return 1
-	}
-	var signalErr *provider.SignalError
-	if errors.As(err, &signalErr) {
-		return 1
-	}
+func classifyDelegateError(_ error) int {
 	return 1
 }
 

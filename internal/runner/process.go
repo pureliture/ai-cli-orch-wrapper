@@ -98,15 +98,20 @@ func (ProcessRunner) Run(ctx context.Context, opts RunOpts) (RunResult, error) {
 		return RunResult{ExitCode: 1, Duration: time.Since(start)}, classifyStartError(opts.Provider, err)
 	}
 
-	// executor.go:1322-1358: forward OS signals (SIGTERM/SIGINT) to the child.
-	// Must be called after cmd.Start() so cmd.Process is non-nil.
-	forwardSignals(ctx, cmd.Process, func(s string) {
-		fmt.Fprintln(os.Stderr, s)
-	})
-
 	// executor.go:1138-1139: wait goroutine.
 	waitCh := make(chan error, 1)
 	go func() { waitCh <- cmd.Wait() }()
+
+	// done is closed when cmd.Wait() returns, notifying forwardSignals to cancel
+	// any pending SIGKILL timer and exit its goroutine without waiting for ctx.Done().
+	done := make(chan struct{})
+	defer close(done)
+
+	// executor.go:1322-1358: forward OS signals (SIGTERM/SIGINT) to the child.
+	// Must be called after cmd.Start() so cmd.Process is non-nil.
+	forwardSignals(ctx, cmd.Process, done, func(s string) {
+		fmt.Fprintln(os.Stderr, s)
+	})
 
 	// Wait loop — simplified from executor.go:1157-1213.
 	// Omitted: messageSeen/completeSeen (JSON parser output), fallback exit timer (Windows).
@@ -145,7 +150,12 @@ waitLoop:
 // Copied from executor.go:1322-1358.
 // Adapted: uses *os.Process instead of commandRunner interface.
 // Darwin/Linux only — Windows killProcessTree omitted.
-func forwardSignals(ctx context.Context, proc *os.Process, logErrFn func(string)) {
+//
+// done must be closed when cmd.Wait() returns. This allows the goroutine to
+// exit immediately on normal process exit (fixing a goroutine leak) and to
+// cancel the scheduled SIGKILL if the child exits promptly after SIGTERM
+// (preventing a stale SIGKILL against a recycled PGID).
+func forwardSignals(ctx context.Context, proc *os.Process, done <-chan struct{}, logErrFn func(string)) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 
@@ -155,13 +165,20 @@ func forwardSignals(ctx context.Context, proc *os.Process, logErrFn func(string)
 		case sig := <-sigCh:
 			logErrFn(fmt.Sprintf("Received signal: %v", sig))
 			if proc != nil {
-				// executor.go:1347-1352
+				// executor.go:1347-1352: SIGTERM first, then schedule SIGKILL.
+				// Use time.NewTimer (not AfterFunc) so the kill can be cancelled
+				// if the child exits before the delay expires.
 				_ = killProcessGroup(proc, syscall.SIGTERM)
-				time.AfterFunc(time.Duration(forceKillDelaySecs.Load())*time.Second, func() {
+				t := time.NewTimer(time.Duration(forceKillDelaySecs.Load()) * time.Second)
+				select {
+				case <-t.C:
 					_ = killProcessGroup(proc, syscall.SIGKILL)
-				})
+				case <-done:
+					t.Stop() // child exited — cancel scheduled SIGKILL
+				}
 			}
 		case <-ctx.Done():
+		case <-done:
 		}
 	}()
 }
