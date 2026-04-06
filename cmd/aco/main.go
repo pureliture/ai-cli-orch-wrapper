@@ -1,33 +1,33 @@
 // Command aco is the Go wrapper runtime for the ai-cli-orch-wrapper delegation product.
 //
-// It provides four subcommands:
+// It provides one subcommand:
 //
-//	aco run <provider> <command>   — delegate to provider CLI
-//	aco status [--session <id>]    — show session lifecycle state
-//	aco result [--session <id>]    — retrieve session output
-//	aco cancel [--session <id>]    — cancel a running session
+//	aco run <provider> <command>   — delegate to provider CLI (blocking)
 //
-// Architecture contract: docs/contract/runtime-contract.md
-// Session schema:        docs/contract/session-schema.md
-// ccg parity checklist:  docs/contract/ccg-parity-checklist.md
+// Architecture contract: docs/contract/blocking-execution-contract.md
+//
+// Removed in Phase A: aco status, aco result, aco cancel.
+// These were codex-plugin-cc surface, not ccg-workflow. See session-plan.md.
 package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/provider"
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/runner"
-	"github.com/pureliture/ai-cli-orch-wrapper/internal/session"
 )
 
-const version = "0.0.2-phase2"
+const version = "0.0.3-phase-a"
 
 // deps bundles the runtime dependencies injected into commands.
 type deps struct {
-	store    *session.Store
 	registry *provider.Registry
 	runner   runner.Runner
+	stdin    io.Reader
+	stdout   io.Writer
+	stderr   io.Writer
 }
 
 func main() {
@@ -37,33 +37,32 @@ func main() {
 	}
 
 	d := &deps{
-		store:    session.NewStore(),
 		registry: provider.NewRegistry(),
-		runner:   runner.ProcessRunner{}, // Phase 2: real process runner
+		runner:   runner.ProcessRunner{},
+		stdin:    os.Stdin,
+		stdout:   os.Stdout,
+		stderr:   os.Stderr,
 	}
 
-	d.registry.Register(provider.NewGemini())
-	d.registry.Register(provider.NewCopilot())
+	d.registry.Register(provider.NewCodex())
+	d.registry.Register(provider.NewGeminiCLI())
 
 	switch os.Args[1] {
 	case "--version", "-v":
 		fmt.Printf("aco %s\n", version)
 	case "run":
 		os.Exit(cmdRun(d, os.Args[2:]))
-	case "status":
-		os.Exit(cmdStatus(d, os.Args[2:]))
-	case "result":
-		os.Exit(cmdResult(d, os.Args[2:]))
-	case "cancel":
-		os.Exit(cmdCancel(d, os.Args[2:]))
+	case "delegate":
+		os.Exit(cmdDelegate(d, os.Args[2:]))
 	default:
-		fmt.Fprintf(os.Stderr, "aco: unknown command %q\n", os.Args[1])
+		fmt.Fprintf(d.stderr, "aco: unknown command %q\n", os.Args[1])
 		usage(os.Stderr)
 		os.Exit(1)
 	}
 }
 
 func usage(w *os.File) {
-	fmt.Fprintln(w, "Usage: aco <run|status|result|cancel> [options]")
+	fmt.Fprintln(w, "Usage: aco run <provider> <command> [options]")
+	fmt.Fprintln(w, "       aco delegate <agent-id> [options]")
 	fmt.Fprintln(w, "       aco --version")
 }

@@ -20,6 +20,9 @@ type InvokeOpts struct {
 	PermissionProfile PermissionProfile
 	SessionID         string
 	TimeoutSecs       int
+	Model             string
+	ReasoningEffort   string
+	ExtraArgs         []string
 }
 
 // Provider defines the per-provider implementation contract.

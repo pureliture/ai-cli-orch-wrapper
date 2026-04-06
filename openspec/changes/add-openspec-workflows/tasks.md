@@ -1,0 +1,4 @@
+- [x] Inspect the generated OpenSpec assets under `openspec/`, `.github/`, and `.claude/` and keep only the repository surfaces needed to resume workflow-driven work.
+- [x] Document the OpenSpec workflow entry points and key commands in `README.md`.
+- [x] Add a runbook section covering how to inspect, continue, and validate OpenSpec changes in this repository.
+- [x] Validate the OpenSpec change and run the repository test suite to confirm the documentation-only integration does not break existing behavior.

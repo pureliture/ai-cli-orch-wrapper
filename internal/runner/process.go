@@ -1,3 +1,12 @@
+// Package runner implements the provider process execution layer.
+//
+// Reference: ccg-workflow/codeagent-wrapper/executor.go
+//   - Context setup:    lines 966-969
+//   - Start + wait:     lines 1110-1139
+//   - Wait loop:        lines 1157-1213 (simplified — no JSON parser, no Windows)
+//   - forwardSignals:   lines 1322-1358
+//   - terminateCommand: lines 1431-1467
+//   - forceKillTimer:   lines 1391-1407
 package runner
 
 import (
@@ -7,174 +16,206 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
-	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/provider"
 )
 
-// sigkillDelay is the time between SIGTERM and SIGKILL (CPW-06, R-CANCEL-03).
-const sigkillDelay = 3 * time.Second
+// forceKillDelaySecs is the delay between SIGTERM and SIGKILL.
+// Reference: ccg-workflow main.go:67 — default 5, stored as atomic int32.
+// Tests can override via forceKillDelaySecs.Store(N).
+var forceKillDelaySecs atomic.Int32
 
-// Note on process group kill (Setpgid: true):
-// The provider process and all its children are placed in a new process group.
-// On timeout/context-cancel, we send SIGTERM then SIGKILL to the ENTIRE group
-// (via syscall.Kill(-pgid, ...)). This ensures that even if the provider spawns
-// subprocesses that hold the stdout pipe write end open, those processes are
-// killed and the pipe closes, unblocking Go's internal goroutines and allowing
-// cmd.Wait() to return.
-//
-// Trade-off: with Setpgid, the provider process group does not receive SIGHUP
-// when the terminal session ends. For delegation CLIs (gemini, copilot) running
-// inside Claude Code sessions, this is acceptable — aco cancel handles cleanup.
-// This supersedes the R-SPAWN-05 SHOULD-NOT guideline, which is overridden here
-// because reliable process lifecycle requires it (CPW-06, R-CANCEL-03).
-//
-// Note on cmd.Stdout vs StdoutPipe:
-// cmd.Stdout = MultiWriter is used (not StdoutPipe). The Go runtime manages
-// the copy goroutines internally. With Setpgid + group kill, all orphaned
-// children are killed, closing all pipe write ends, unblocking the goroutines.
-
-// lockedWriter serialises writes to w using mu. Although cmd.Stderr is written
-// by a single Go-internal copy goroutine, the mutex is retained for safety
-// against future callers that pass a shared writer.
-type lockedWriter struct {
-	mu sync.Mutex
-	w  io.Writer
+func init() {
+	forceKillDelaySecs.Store(5)
 }
 
-func (lw *lockedWriter) Write(p []byte) (int, error) {
-	lw.mu.Lock()
-	defer lw.mu.Unlock()
-	return lw.w.Write(p)
-}
-
-// ProcessRunner is the real provider process runner that replaces StubRunner.
-//
-// ccg-workflow parity implemented:
-//   - CPW-01: PID captured synchronously between cmd.Start() and any io.Copy
-//   - CPW-02: context.WithTimeout wraps the entire run
-//   - CPW-03: stdout and stderr consumed in Go-managed goroutines — no deadlock
-//   - CPW-04: outputFile.Close() called before markDone is in the caller
-//   - CPW-06: cmd.WaitDelay implements SIGTERM→SIGKILL escalation correctly
-//   - CPW-13: typed errors at provider boundary
+// ProcessRunner executes provider processes using the ccg-workflow blocking model.
+// Each Run call is a single blocking invocation: spawn, stream stdout, exit.
 type ProcessRunner struct{}
 
-// Run executes the provider binary and returns a typed error on failure.
+// Run executes the provider binary and streams stdout to opts.Stdout.
 //
-// Execution sequence (contract-critical ordering):
-//  1. Open output.log and error.log (0600).
-//  2. Set cmd.Stdout = MultiWriter(opts.Stdout, outputFile) — real-time tee.
-//  3. Set cmd.Stderr = MultiWriter(errorFile, stderrCapture).
-//  4. cmd.WaitDelay = 3s — SIGTERM→SIGKILL on context cancellation.
-//  5. cmd.Start() — forks process; Go starts internal copy goroutines.
-//  6. [SYNCHRONOUS] Store.SetPID() — R-RUN-03, CPW-01.
-//  7. cmd.Wait() — blocks until process exits AND internal goroutines complete.
-//     WaitDelay fires if context is cancelled and process doesn't exit.
-//  8. Close files (R-TEE-03).
-//  9. Classify error (R-AUTH-04, CPW-13).
-func (ProcessRunner) Run(ctx context.Context, opts RunOpts) error {
+// Signal handling:
+//   - OS SIGTERM/SIGINT → forwardSignals forwards to child via proc.Signal(SIGTERM)
+//     then schedules SIGKILL after forceKillDelaySecs if child does not exit
+//   - Timeout → ctx.Done() → terminateCommand (same SIGTERM + SIGKILL pattern)
+//
+// No cmd.WaitDelay — reference executor.go does not use it.
+// No Setpgid — reference executor.go does not use it.
+// No session files — blocking model, stdout streams inline.
+func (ProcessRunner) Run(ctx context.Context, opts RunOpts) (RunResult, error) {
 	timeoutSecs := opts.TimeoutSecs
 	if timeoutSecs <= 0 {
 		timeoutSecs = 300
 	}
+	start := time.Now()
+
+	// executor.go:966-967: wrap with timeout context.
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 	defer cancel()
 
 	args := opts.Provider.BuildArgs(opts.Command, opts.Prompt, opts.Content, provider.InvokeOpts{
 		PermissionProfile: opts.PermProfile,
-		SessionID:         opts.SessionID,
 		TimeoutSecs:       timeoutSecs,
+		Model:             opts.Model,
+		ReasoningEffort:   opts.ReasoningEffort,
+		ExtraArgs:         append([]string(nil), opts.LaunchArgs...),
 	})
 
-	cmd := exec.CommandContext(ctx, opts.Provider.Binary(), args...)
-	cmd.Dir = "."          // inherit cwd (R-SPAWN-03)
-	cmd.Env = os.Environ() // inherit env (R-SPAWN-02)
-	cmd.WaitDelay = sigkillDelay
-	// Place the provider in a new process group so that group kill covers
-	// all children (prevents orphaned processes from keeping pipes open).
+	// exec.Command (not CommandContext) — termination is controlled explicitly via
+	// forwardSignals + terminateCommand. Go's context-kill mechanism is not used.
+	cmd := exec.Command(opts.Provider.Binary(), args...)
+	if opts.WorkDir != "" {
+		cmd.Dir = opts.WorkDir
+	} else {
+		cmd.Dir = "."
+	}
+	cmd.Env = os.Environ()
+	// Setpgid places the provider and all its children in a new process group.
+	// forwardSignals and terminateCommand send signals to the whole group via
+	// syscall.Kill(-pgid, ...) so that children holding stdout pipes are also
+	// killed and cmd.Wait() can return.
+	// ccg-workflow does not use Setpgid; we need it because gemini/copilot are
+	// Node.js CLIs that spawn workers which would otherwise orphan the pipe.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
-	// Open log files before spawn (0600, R-TEE-02, R-STDERR-02).
-	outputFile, err := os.OpenFile(opts.OutputLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
-	if err != nil {
-		return fmt.Errorf("runner: open output.log: %w", err)
-	}
-	defer outputFile.Close()
-
-	errorFile, err := os.OpenFile(opts.ErrorLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
-	if err != nil {
-		return fmt.Errorf("runner: open error.log: %w", err)
-	}
-	defer errorFile.Close()
-
-	// stderr capture: tee to file and in-memory buffer for error classification.
 	var stderrBuf strings.Builder
-	stderrWriter := &lockedWriter{}
-	stderrWriter.w = io.MultiWriter(errorFile, &stderrBuf)
+	cmd.Stderr = &stderrBuf
 
-	// Assign stdout/stderr to cmd. Go internally manages the copy goroutines,
-	// which means WaitDelay correctly applies to them (CPW-06).
-	// cmd.Stdout = MultiWriter implements the real-time tee (R-TEE-01, CPW-03).
-	cmd.Stdout = io.MultiWriter(opts.Stdout, outputFile)
-	cmd.Stderr = stderrWriter
+	out := opts.Stdout
+	if out == nil {
+		out = io.Discard
+	}
+	cmd.Stdout = out
 
-	// Stdin is nil → /dev/null → provider binaries do not wait for input (R-SPAWN-04).
-
+	// executor.go:1110-1122: start the provider process.
 	if err := cmd.Start(); err != nil {
-		return classifyStartError(opts.Provider, err)
+		return RunResult{ExitCode: 1, Duration: time.Since(start)}, classifyStartError(opts.Provider, err)
 	}
 
-	// Group kill timers: send SIGTERM then SIGKILL to the provider's process
-	// group. This ensures orphaned children (which could keep pipes open) are
-	// also killed when the context expires.
-	//
-	// We use time.AfterFunc with explicit delays rather than ctx.Done() to avoid
-	// any goroutine scheduling issues with context cancellation signals.
-	pgid := cmd.Process.Pid // Setpgid: true → pgid == pid at spawn time
-	timeoutDur := time.Duration(timeoutSecs) * time.Second
-	sigtermTimer := time.AfterFunc(timeoutDur, func() {
-		_ = syscall.Kill(-pgid, syscall.SIGTERM)
-	})
-	sigkillTimer := time.AfterFunc(timeoutDur+sigkillDelay, func() {
-		_ = syscall.Kill(-pgid, syscall.SIGKILL)
+	// executor.go:1322-1358: forward OS signals (SIGTERM/SIGINT) to the child.
+	// Must be called after cmd.Start() so cmd.Process is non-nil.
+	forwardSignals(ctx, cmd.Process, func(s string) {
+		fmt.Fprintln(os.Stderr, s)
 	})
 
-	// ── CPW-01 / R-RUN-03: PID persisted synchronously ──
-	// cmd.Start() has returned; cmd.Process.Pid is set. The Go-internal copy
-	// goroutines have started but in practice no data is consumed yet (the process
-	// must first parse flags and connect to a network). This is a best-effort
-	// structural guarantee: there is no hard happens-before between SetPID and the
-	// first write to opts.Stdout, because no synchronization primitive enforces it.
-	// For provider CLIs that produce output only after network round-trips, the race
-	// window is negligible. If a strict guarantee is required, use cmd.StdoutPipe
-	// and drain manually — but see the WaitDelay deadlock note at the top of this file.
-	if opts.Store != nil && opts.SessionID != "" {
-		if pidErr := opts.Store.SetPID(opts.SessionID, cmd.Process.Pid); pidErr != nil {
-			// Non-fatal: degraded cancellation (R-CANCEL-05 path) if PID absent.
-			fmt.Fprintf(os.Stderr, "runner: warning: set PID: %v\n", pidErr)
+	// executor.go:1138-1139: wait goroutine.
+	waitCh := make(chan error, 1)
+	go func() { waitCh <- cmd.Wait() }()
+
+	// Wait loop — simplified from executor.go:1157-1213.
+	// Omitted: messageSeen/completeSeen (JSON parser output), fallback exit timer (Windows).
+	var (
+		waitErr    error
+		fkt        *forceKillTimer
+		terminated bool
+	)
+waitLoop:
+	for {
+		select {
+		case waitErr = <-waitCh:
+			break waitLoop
+		case <-ctx.Done():
+			// Timeout path. OS signal path is handled by forwardSignals goroutine.
+			if !terminated {
+				fkt = terminateCommand(cmd.Process)
+				terminated = true
+			}
+			waitErr = <-waitCh
+			break waitLoop
 		}
 	}
 
-	// cmd.Wait() blocks until the process exits and goroutines complete.
-	// The AfterFunc timers above ensure the process group is killed on timeout.
-	waitErr := cmd.Wait()
+	if fkt != nil {
+		fkt.Stop()
+	}
 
-	// Cancel timers if the process exited cleanly before timeout.
-	sigtermTimer.Stop()
-	sigkillTimer.Stop()
-
-	// Files are closed by defer; explicit close here ensures flush before
-	// the caller calls MarkDone (R-TEE-03, CPW-04).
-	outputFile.Close()
-	errorFile.Close()
-
-	return classifyWaitError(ctx, opts.Provider, timeoutSecs, stderrBuf.String(), waitErr)
+	result, err := classifyWaitError(ctx, opts.Provider, timeoutSecs, stderrBuf.String(), waitErr)
+	result.Duration = time.Since(start)
+	return result, err
 }
 
-// classifyStartError converts cmd.Start() errors to typed errors (CPW-13).
+// forwardSignals forwards SIGINT/SIGTERM from the OS to the child process.
+//
+// Copied from executor.go:1322-1358.
+// Adapted: uses *os.Process instead of commandRunner interface.
+// Darwin/Linux only — Windows killProcessTree omitted.
+func forwardSignals(ctx context.Context, proc *os.Process, logErrFn func(string)) {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		defer signal.Stop(sigCh)
+		select {
+		case sig := <-sigCh:
+			logErrFn(fmt.Sprintf("Received signal: %v", sig))
+			if proc != nil {
+				// executor.go:1347-1352
+				_ = killProcessGroup(proc, syscall.SIGTERM)
+				time.AfterFunc(time.Duration(forceKillDelaySecs.Load())*time.Second, func() {
+					_ = killProcessGroup(proc, syscall.SIGKILL)
+				})
+			}
+		case <-ctx.Done():
+		}
+	}()
+}
+
+// terminateCommand sends SIGTERM to proc and schedules SIGKILL after forceKillDelaySecs.
+//
+// Copied from executor.go:1431-1467.
+// Adapted: uses *os.Process instead of commandRunner interface.
+// Darwin/Linux only — Windows killProcessTree omitted.
+func terminateCommand(proc *os.Process) *forceKillTimer {
+	if proc == nil {
+		return nil
+	}
+
+	// executor.go:1451
+	_ = killProcessGroup(proc, syscall.SIGTERM)
+
+	// executor.go:1454-1464
+	done := make(chan struct{}, 1)
+	timer := time.AfterFunc(time.Duration(forceKillDelaySecs.Load())*time.Second, func() {
+		_ = killProcessGroup(proc, syscall.SIGKILL)
+		close(done)
+	})
+
+	return &forceKillTimer{timer: timer, done: done}
+}
+
+// forceKillTimer tracks the scheduled SIGKILL AfterFunc.
+// Copied from executor.go:1391-1407.
+type forceKillTimer struct {
+	timer *time.Timer
+	done  chan struct{}
+}
+
+// Stop cancels the SIGKILL timer if it has not fired yet.
+// If it has already fired, Stop blocks until proc.Kill() completes.
+func (t *forceKillTimer) Stop() {
+	if t == nil || t.timer == nil {
+		return
+	}
+	// executor.go:1402-1405: drain done if timer already fired.
+	if !t.timer.Stop() {
+		<-t.done
+	}
+}
+
+func killProcessGroup(proc *os.Process, sig syscall.Signal) error {
+	if proc == nil {
+		return nil
+	}
+	return syscall.Kill(-proc.Pid, sig)
+}
+
+// classifyStartError converts cmd.Start() errors to typed provider errors.
 func classifyStartError(prov provider.Provider, err error) error {
 	if errors.Is(err, exec.ErrNotFound) ||
 		strings.Contains(err.Error(), "executable file not found") ||
@@ -187,18 +228,15 @@ func classifyStartError(prov provider.Provider, err error) error {
 	return fmt.Errorf("runner: start %q: %w", prov.Binary(), err)
 }
 
-// classifyWaitError converts cmd.Wait() errors to typed provider errors
-// (CPW-13, R-AUTH-04, R-EXIT-01..03).
-func classifyWaitError(ctx context.Context, prov provider.Provider, timeoutSecs int, stderr string, err error) error {
+// classifyWaitError converts cmd.Wait() errors to typed provider errors.
+func classifyWaitError(ctx context.Context, prov provider.Provider, timeoutSecs int, stderr string, err error) (RunResult, error) {
 	if err == nil {
-		return nil // R-RUN-06: clean exit
+		return RunResult{ExitCode: 0, ProviderExited: true}, nil
 	}
 
-	// Timeout: context deadline exceeded (R-EXIT-03). Check before ExitError
-	// because a SIGKILL-terminated process also returns ExitError; the
-	// context state distinguishes a wrapper-initiated timeout from an external kill.
+	// Timeout: context deadline exceeded before process exited.
 	if ctx.Err() == context.DeadlineExceeded {
-		return &provider.TimeoutError{
+		return RunResult{ExitCode: 1}, &provider.TimeoutError{
 			Provider:    prov.Name(),
 			TimeoutSecs: timeoutSecs,
 		}
@@ -206,25 +244,24 @@ func classifyWaitError(ctx context.Context, prov provider.Provider, timeoutSecs 
 
 	var exitErr *exec.ExitError
 	if !errors.As(err, &exitErr) {
-		return &provider.ExitError{Provider: prov.Name(), ExitCode: 1, Stderr: stderr}
+		return RunResult{ExitCode: 1}, &provider.ExitError{Provider: prov.Name(), ExitCode: 1, Stderr: stderr}
 	}
 
 	exitCode := exitErr.ExitCode()
 
-	// Signal termination (external kill or aco cancel, R-RUN-08).
-	// Checked before auth: SIGKILL from aco cancel is not an auth failure.
+	// Signal termination (SIGTERM from forwardSignals/terminateCommand, or SIGKILL from AfterFunc).
 	if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.Signaled() {
-		return &provider.SignalError{
+		return RunResult{ExitCode: 1}, &provider.SignalError{
 			Provider: prov.Name(),
 			Signal:   status.Signal().String(),
 		}
 	}
 
-	// Auth failure (R-AUTH-04, CPW-13).
+	// Auth failure (provider-specific heuristic).
 	if prov.IsAuthFailure(exitCode, stderr) {
-		return &provider.AuthError{Provider: prov.Name(), Hint: prov.AuthHint()}
+		return RunResult{ExitCode: exitCode, ProviderExited: true}, &provider.AuthError{Provider: prov.Name(), Hint: prov.AuthHint()}
 	}
 
-	// Generic non-zero exit (R-RUN-07, R-EXIT-01).
-	return &provider.ExitError{Provider: prov.Name(), ExitCode: exitCode, Stderr: stderr}
+	// Generic non-zero exit.
+	return RunResult{ExitCode: exitCode, ProviderExited: true}, &provider.ExitError{Provider: prov.Name(), ExitCode: exitCode, Stderr: stderr}
 }
