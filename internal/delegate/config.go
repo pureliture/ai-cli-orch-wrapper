@@ -62,6 +62,9 @@ type Resolution struct {
 }
 
 func LoadAgentSpec(agentsDir, agentID string) (AgentSpec, error) {
+	if !agentIDPattern.MatchString(agentID) {
+		return AgentSpec{}, fmt.Errorf("invalid agent id %q", agentID)
+	}
 	specPath := filepath.Join(agentsDir, agentID+".md")
 	data, err := os.ReadFile(specPath)
 	if err != nil {

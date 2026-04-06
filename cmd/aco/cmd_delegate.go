@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/delegate"
 	"github.com/pureliture/ai-cli-orch-wrapper/internal/provider"
@@ -40,26 +41,41 @@ func cmdDelegate(d *deps, args []string) int {
 		a := args[i]
 		switch {
 		case a == "--input" || a == "-input":
-			if i+1 < len(args) {
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
 				inputFlag = args[i+1]
 				i++
+			} else {
+				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+				return 1
 			}
 		case a == "--agents-dir":
-			if i+1 < len(args) {
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
 				agentsDir = args[i+1]
 				i++
+			} else {
+				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+				return 1
 			}
 		case a == "--formatter":
-			if i+1 < len(args) {
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
 				formatterPath = args[i+1]
 				i++
+			} else {
+				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+				return 1
 			}
 		case a == "--timeout":
-			if i+1 < len(args) {
-				if v, err := strconv.Atoi(args[i+1]); err == nil {
-					timeoutFlag = v
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
+				v, err := strconv.Atoi(args[i+1])
+				if err != nil {
+					fmt.Fprintf(d.stderr, "flag --timeout: invalid value %q\n", args[i+1])
+					return 1
 				}
+				timeoutFlag = v
 				i++
+			} else {
+				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+				return 1
 			}
 		case a == "--no-formatter":
 			noFormatter = true
