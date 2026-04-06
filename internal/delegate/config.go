@@ -157,9 +157,10 @@ func Resolve(spec AgentSpec, formatter Formatter) (Resolution, error) {
 	}
 	if spec.RoleHint != "" {
 		if rule, ok := formatter.RoleHintRules[spec.RoleHint]; ok && rule.PreferredProvider != "" {
-			if route.Provider == "" {
-				route.Provider = rule.PreferredProvider
-			} else if route.Provider != rule.PreferredProvider {
+			if route.Provider == rule.PreferredProvider {
+				// already on the preferred provider — no change needed
+			} else {
+				// override provider (includes the route.Provider == "" case)
 				route.Provider = rule.PreferredProvider
 				if !formatter.supportsModel(route.Provider, route.Model) {
 					if models := formatter.ProviderModels[route.Provider]; len(models) > 0 {
