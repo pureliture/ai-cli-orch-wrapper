@@ -44,7 +44,6 @@ reference/*
 # Claude Code session files (non-persistent)
 .claude/session-intent.md
 .claude/session-plan.md
-.claude/agents/
 .claude/commands/
 .claude/skills/
 
@@ -55,8 +54,6 @@ reference/*
 .github/prompts/
 .github/skills/
 
-# OpenSpec local workspace
-openspec/
 
 # Go build artifacts
 /bin/

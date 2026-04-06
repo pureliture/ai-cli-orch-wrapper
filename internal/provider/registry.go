@@ -1,6 +1,9 @@
 package provider
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 // Registry maps provider keys to Provider implementations.
 // Phase 1: registry is empty. Phase 4 registers GeminiProvider and CopilotProvider.
@@ -37,5 +40,6 @@ func (r *Registry) Names() []string {
 	for k := range r.providers {
 		names = append(names, k)
 	}
+	sort.Strings(names)
 	return names
 }
