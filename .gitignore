@@ -47,6 +47,7 @@ reference/*
 .claude/commands/
 .claude/skills/
 !.claude/skills/
+.claude/skills/*
 !.claude/skills/github-jira-ops/
 !.claude/skills/github-jira-ops/**
 
