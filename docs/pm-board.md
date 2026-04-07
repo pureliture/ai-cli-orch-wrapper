@@ -2,12 +2,12 @@
 
 ## Setup Status
 
-- [x] Project created: #3 "ai-cli-orch-wrapper PM"
+- [x] Project created: #3 "AI-Harness-Construct"
 - [x] Status field: Backlog / Ready / In Progress / In Review / Done
 - [x] Priority field: P0 / P1 / P2
 - [x] Size field: S / M / L
 - [x] Target date field
-- [ ] Sprint (Iteration) field — add manually in GitHub UI
+- [x] Sprint (Iteration) field
 - [ ] Views (Active Sprint, Triage, Roadmap) — add manually in GitHub UI
 
 ## Setup Instructions (remaining)
@@ -37,10 +37,10 @@ Use one sprint epic plus child issues for sprint planning.
 Title format:
 
 ```text
-[Sprint v2.1][Epic] aco v2 hardening & stabilization
-[Sprint v2.1][Task] Fix gemini_cli unsupported reasoning-effort option
-[Sprint v2.1][Bug] Codex auth failure classification is unreachable
-[Sprint v2.1][Chore] Align fixture knownNodeGap metadata
+[Sprint V3][Epic] PM 하네스 구축 — GitHub Projects + Actions + Claude Code
+[Sprint V3][Task] GitHub Actions CI 파이프라인 구현
+[Sprint V3][Bug] Codex auth failure classification is unreachable
+[Sprint V3][Chore] Align fixture knownNodeGap metadata
 ```
 
 Rules:
@@ -48,7 +48,8 @@ Rules:
 - Use `[Sprint <id>][<Type>]` prefixes for sprint-scoped work.
 - Supported types are `Epic`, `Story`, `Task`, `Bug`, `Spike`, and `Chore`.
 - Keep priority and area out of titles; use `p0`/`p1`/`p2` and `area:*` labels.
-- Child issues must include `Parent epic: #N` in the body.
+- Child issues must be linked as GitHub native sub-issues of the sprint epic when the API supports it.
+- Child issues must also include `Parent epic: #N` in the body as a portable fallback.
 - Sprint epics must maintain a `Child Issues` checklist.
 - Add issues to the PM project and set `Status`, `Priority`, and `Size` when fields are available.
 
@@ -57,11 +58,11 @@ Generate standardized titles and bodies with:
 ```bash
 python3 .claude/skills/github-jira-ops/scripts/make_issue_body.py \
   --type task \
-  --sprint v2.1 \
-  --title "Fix gemini_cli unsupported reasoning-effort option" \
-  --summary "Gemini CLI does not support the reasoning-effort flag currently emitted by the wrapper." \
-  --parent "#6" \
-  --acceptance "[ ] gemini_cli no longer receives unsupported flags" \
+  --sprint V3 \
+  --title "GitHub Actions CI 파이프라인 구현" \
+  --summary "Implement the PM harness CI workflow." \
+  --parent "#22" \
+  --acceptance "[ ] lint/typecheck/test/smoke jobs are split" \
   --acceptance "[ ] go test ./... passes" \
   --format all
 ```

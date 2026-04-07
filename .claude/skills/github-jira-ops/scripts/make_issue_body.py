@@ -54,10 +54,12 @@ def sprint_section(args: argparse.Namespace) -> str | None:
 
 def parent_text(args: argparse.Namespace) -> str:
     if not args.parent:
-        return "Parent epic: #<issue-number>"
+        return "Parent epic: #<issue-number>\n\nAlso add this issue as a GitHub native sub-issue of the parent epic when supported."
     if args.parent.lower().startswith("parent"):
-        return args.parent
-    return f"Parent epic: {args.parent}"
+        parent = args.parent
+    else:
+        parent = f"Parent epic: {args.parent}"
+    return f"{parent}\n\nAlso add this issue as a GitHub native sub-issue of the parent epic when supported."
 
 
 def build_epic(args: argparse.Namespace) -> str:

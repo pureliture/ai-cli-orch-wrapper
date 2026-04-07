@@ -48,17 +48,18 @@ Use one sprint epic as the anchor for each sprint, then create child work items 
 
 Title format:
 
-- `[Sprint v2.1][Epic] aco v2 hardening & stabilization`
-- `[Sprint v2.1][Task] Fix gemini_cli unsupported reasoning-effort option`
-- `[Sprint v2.1][Bug] Codex auth failure classification is unreachable`
-- `[Sprint v2.1][Chore] Align fixture knownNodeGap metadata`
+- `[Sprint V3][Epic] PM 하네스 구축 — GitHub Projects + Actions + Claude Code`
+- `[Sprint V3][Task] GitHub Actions CI 파이프라인 구현`
+- `[Sprint V3][Bug] Codex auth failure classification is unreachable`
+- `[Sprint V3][Chore] Align fixture knownNodeGap metadata`
 
 Rules:
 
 - The first prefix is always `[Sprint <id>]`
 - The second prefix is always the issue type: `[Epic]`, `[Story]`, `[Task]`, `[Bug]`, `[Spike]`, or `[Chore]`
 - Do not encode priority or area in the title; use `p0`/`p1`/`p2` and `area:*` labels or project fields
-- Child issues must include `Parent epic: #N` in the `Parent` section
+- Child work items must be linked as GitHub native sub-issues of the sprint epic when the API supports it
+- Child issues must also include `Parent epic: #N` in the `Parent` section as a portable fallback
 - The sprint epic must maintain a `Child Issues` checklist
 - Add every sprint issue to the Projects V2 board and set `Status`, `Priority`, and `Size` when those fields exist
 
@@ -89,16 +90,22 @@ When creating epics, stories, tasks, bugs, spikes, or chores:
 
 Use concise issue titles. Put acceptance criteria and scope boundaries in the body, not in labels.
 
+When creating a child work item for a sprint epic, perform all three links:
+
+- Add the issue as a GitHub native sub-issue of the sprint epic when `addSubIssue` is available
+- Add `Parent epic: #N` to the child issue body
+- Add `- [ ] #N` to the sprint epic `Child Issues` checklist
+
 Example:
 
 ```bash
 python3 .claude/skills/github-jira-ops/scripts/make_issue_body.py \
   --type task \
-  --sprint v2.1 \
-  --title "Fix gemini_cli unsupported reasoning-effort option" \
-  --summary "Gemini CLI does not support the reasoning-effort flag currently emitted by the wrapper." \
-  --parent "#6" \
-  --acceptance "[ ] gemini_cli no longer receives unsupported flags" \
+  --sprint V3 \
+  --title "GitHub Actions CI 파이프라인 구현" \
+  --summary "Implement the PM harness CI workflow." \
+  --parent "#22" \
+  --acceptance "[ ] lint/typecheck/test/smoke jobs are split" \
   --acceptance "[ ] go test ./... passes" \
   --format all
 ```
@@ -135,6 +142,7 @@ Minimum rules:
 - Stories and tasks should reference their parent epic when one exists
 - Sprint issues must use `[Sprint <id>][<Type>]` title prefixes
 - Sprint child issues must link back to their sprint epic in the `Parent` section
+- Sprint child issues must be native GitHub sub-issues of the sprint epic when supported
 
 ## Guardrails
 

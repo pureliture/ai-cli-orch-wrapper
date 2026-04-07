@@ -124,6 +124,8 @@ Preferred pattern:
 - Release milestone groups the work that ships together
 - Sprint-scoped work uses `[Sprint <id>][<Type>]` title prefixes
 - Sprint planning uses one sprint epic with child task, bug, spike, story, or chore issues
+- When GitHub native sub-issues are available, child work items must be added as sub-issues of the sprint epic
+- Keep a body-level `Parent epic: #N` link and epic checklist as a portable fallback even when native sub-issues are used
 
 If GitHub tasklists are available, keep the parent epic's tasklist current. If they are not, maintain a plain markdown checklist in the epic body.
 

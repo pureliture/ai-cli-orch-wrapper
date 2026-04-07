@@ -22,6 +22,8 @@ Describe the concrete result expected when this issue is complete.
 
 Parent epic: #<issue-number>
 
+This issue must also be added as a GitHub native sub-issue of the parent epic when supported.
+
 ## Scope
 
 - Work item 1
