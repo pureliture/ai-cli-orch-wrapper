@@ -19,7 +19,7 @@ export async function* spawnStream(
   binary: string,
   args: string[],
   config: SpawnStreamConfig,
-  options?: InvokeOptions,
+  options?: InvokeOptions
 ): AsyncIterable<string> {
   const child = spawn(binary, args, {
     stdio: [config.stdin, 'pipe', 'pipe'],
@@ -51,9 +51,10 @@ export async function* spawnStream(
   await new Promise<void>((resolve, reject) => {
     child.on('close', (code, signal) => {
       if (code !== 0 || signal !== null) {
-        const reason = signal === null
-          ? `${config.processName} exited with code ${code}`
-          : `${config.processName} terminated by signal ${signal}`;
+        const reason =
+          signal === null
+            ? `${config.processName} exited with code ${code}`
+            : `${config.processName} terminated by signal ${signal}`;
         const detail = stderr.trim();
         reject(new Error(detail ? `${reason}\n${detail}` : reason));
       } else {

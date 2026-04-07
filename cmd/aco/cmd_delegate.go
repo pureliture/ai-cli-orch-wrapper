@@ -40,8 +40,16 @@ func cmdDelegate(d *deps, args []string) int {
 		a := args[i]
 		switch {
 		case a == "--input" || a == "-input":
-			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
-				inputFlag = args[i+1]
+			if i+1 < len(args) {
+				val := args[i+1]
+				// Only reject if it looks like another known flag
+				if val == "--agents-dir" || val == "--formatter" ||
+					val == "--no-formatter" || val == "--no-meta" ||
+					val == "--timeout" {
+					fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+					return 1
+				}
+				inputFlag = val
 				i++
 			} else {
 				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
@@ -82,6 +90,10 @@ func cmdDelegate(d *deps, args []string) int {
 			noMeta = true
 		case len(a) > 0 && a[0] != '-':
 			positional = append(positional, a)
+		default:
+			fmt.Fprintf(d.stderr, "unknown flag %q\n", a)
+			fmt.Fprintln(d.stderr, "Usage: aco delegate <agent-id> [--input <text>] [--agents-dir <dir>] [--formatter <path>] [--timeout <secs>] [--no-formatter] [--no-meta]")
+			return 1
 		}
 	}
 
@@ -131,7 +143,7 @@ func cmdDelegate(d *deps, args []string) int {
 		return 1
 	}
 	if !prov.IsAvailable() {
-		fmt.Fprintf(d.stderr, "provider not found: %s\n", resolution.Provider)
+		fmt.Fprintf(d.stderr, "provider %q not found in PATH\n  Install: %s\n", resolution.Provider, prov.InstallHint())
 		return 1
 	}
 

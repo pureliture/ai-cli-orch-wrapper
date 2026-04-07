@@ -25,7 +25,12 @@ export class SessionStore {
     this.baseDir = baseDir ?? join(homedir(), '.aco', 'sessions');
   }
 
-  async create(provider: string, command: string, pid?: number, permissionProfile?: string): Promise<TaskRecord> {
+  async create(
+    provider: string,
+    command: string,
+    pid?: number,
+    permissionProfile?: string
+  ): Promise<TaskRecord> {
     const id = randomUUID();
     const sessionDir = join(this.baseDir, id);
     await mkdir(sessionDir, { recursive: true, mode: 0o700 });

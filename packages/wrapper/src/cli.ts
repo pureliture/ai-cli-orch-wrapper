@@ -48,7 +48,9 @@ async function cmdRun(args: string[]): Promise<void> {
   const command = args[1];
 
   if (!providerKey || !command) {
-    console.error('Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]');
+    console.error(
+      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]'
+    );
     process.exit(EXIT_ERROR);
   }
 
@@ -60,7 +62,9 @@ async function cmdRun(args: string[]): Promise<void> {
 
   const permissionProfile = parseFlag<PermissionProfile>(args, '--permission-profile') ?? 'default';
   if (!VALID_PERMISSION_PROFILES.includes(permissionProfile)) {
-    console.error(`Invalid --permission-profile '${permissionProfile}'. Valid values: default|restricted|unrestricted`);
+    console.error(
+      `Invalid --permission-profile '${permissionProfile}'. Valid values: default|restricted|unrestricted`
+    );
     process.exit(EXIT_ERROR);
   }
   const inputFlag = parseFlag(args, '--input') ?? '';
@@ -74,8 +78,22 @@ async function cmdRun(args: string[]): Promise<void> {
   }
 
   // Load prompt: prefer cwd-local override, fall back to global ~/.claude
-  const cwdPromptPath = join(process.cwd(), '.claude', 'aco', 'prompts', providerKey, `${command}.md`);
-  const globalPromptPath = join(homedir(), '.claude', 'aco', 'prompts', providerKey, `${command}.md`);
+  const cwdPromptPath = join(
+    process.cwd(),
+    '.claude',
+    'aco',
+    'prompts',
+    providerKey,
+    `${command}.md`
+  );
+  const globalPromptPath = join(
+    homedir(),
+    '.claude',
+    'aco',
+    'prompts',
+    providerKey,
+    `${command}.md`
+  );
   let prompt = `You are a code reviewer. Perform a ${command} for the following content.`;
   if (existsSync(cwdPromptPath)) {
     prompt = await readFile(cwdPromptPath, 'utf8');
@@ -95,7 +113,10 @@ async function cmdRun(args: string[]): Promise<void> {
       onPid: (pid) => {
         // Fire-and-forget pid update so the session can be cancelled
         sessionStore.update(session.id, { pid }).catch((err: unknown) => {
-          console.warn('Failed to record process PID:', err instanceof Error ? err.message : String(err));
+          console.warn(
+            'Failed to record process PID:',
+            err instanceof Error ? err.message : String(err)
+          );
         });
       },
     })) {
@@ -117,7 +138,11 @@ async function cmdRun(args: string[]): Promise<void> {
   }
 
   if (!hasOutput && permissionProfile === 'restricted') {
-    await appendFile(sessionStore.errorLogPath(session.id), 'Permission profile: restricted — output may be blocked\n', { mode: 0o600 });
+    await appendFile(
+      sessionStore.errorLogPath(session.id),
+      'Permission profile: restricted — output may be blocked\n',
+      { mode: 0o600 }
+    );
   }
 
   await sessionStore.markDone(session.id);

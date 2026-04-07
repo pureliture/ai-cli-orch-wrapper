@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Jira Ops"
+  short_description: "Run GitHub Projects like a Jira board"
+  default_prompt: "Use $github-jira-ops to manage this repository with GitHub Projects and Issues in a Jira-style workflow."
