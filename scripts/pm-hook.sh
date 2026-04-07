@@ -18,21 +18,9 @@ set -uo pipefail
 # ── Read stdin payload once ────────────────────────────────────────────────
 PAYLOAD=$(cat)
 
-# ── Parse JSON in one pass ─────────────────────────────────────────────────
-read -r TOOL_NAME COMMAND <<EOF
-$(printf '%s' "$PAYLOAD" | python3 -c '
-import sys, json
-try:
-    d = json.load(sys.stdin)
-    ti = d.get("tool_input") or {}
-    if not isinstance(ti, dict): ti = {}
-    print(d.get("tool_name", ""))
-    print(ti.get("command", ""))
-except Exception:
-    print("")
-    print("")
-' 2>/dev/null || printf '\n\n')
-EOF
+# ── Parse JSON via jq (handles multiline commands safely) ─────────────────
+TOOL_NAME=$(printf '%s' "$PAYLOAD" | jq -r '.tool_name // ""' 2>/dev/null || echo "")
+COMMAND=$(printf '%s' "$PAYLOAD" | jq -r '.tool_input.command // ""' 2>/dev/null || echo "")
 
 # ── Fast path: exit immediately if not Bash or not gh pr create ───────────
 [[ "$TOOL_NAME" != "Bash" ]] && exit 0
