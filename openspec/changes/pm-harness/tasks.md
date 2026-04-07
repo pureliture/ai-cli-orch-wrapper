@@ -24,7 +24,7 @@
 - [x] 3.2 ci.yml에 typecheck job 추가 — wrapper build 후 순차 typecheck
 - [x] 3.3 ci.yml에 test job 추가 (`needs: [lint, typecheck]`)
 - [x] 3.4 ci.yml에 smoke job 추가 (`needs: [test]`) — find로 tarball 탐색, prefix 설치
-- [ ] 3.5 CI 워크플로우 PR로 검증 — 4개 job 모두 통과 확인
+- [x] 3.5 CI 워크플로우 PR #23 검증 완료 — lint/typecheck/test/smoke 4개 job 통과 (prettier 포맷팅 적용 후)
 - [x] 3.6 ci.yml job `name:` 값 고정 확인 (lint/typecheck/test/smoke)
 
 ## 4. GitHub Actions Release 워크플로우
@@ -37,7 +37,7 @@
 ## 5. PR 템플릿 및 브랜치 보호
 
 - [x] 5.1 `.github/PULL_REQUEST_TEMPLATE.md` 작성 — CI passes, Closes #N, openspec 링크 체크박스
-- [ ] 5.2 GitHub UI에서 브랜치 보호 규칙 설정 — lint/typecheck/test/smoke 필수, Squash-merge 강제
+- [x] 5.2 브랜치 보호 규칙 설정 완료 (gh API) — lint/typecheck/test/smoke 필수, 1 approval 필수, force push 금지
 
 ## 6. Claude Code 명령어
 
