@@ -10,7 +10,10 @@
     "build": "npm run build --workspace=packages/wrapper && npm run build --workspace=packages/installer",
     "test": "npm test --workspace=packages/wrapper",
     "test:smoke": "npm run test:smoke --workspace=packages/wrapper --if-present",
-    "test:fixtures": "npx ts-node test/fixtures/harness.ts"
+    "test:fixtures": "npx ts-node test/fixtures/harness.ts",
+    "typecheck": "npm run typecheck --workspace=packages/wrapper && npm run typecheck --workspace=packages/installer",
+    "format:check": "prettier --check \"packages/*/src/**/*.ts\"",
+    "release": "npm run build && changeset publish"
   },
   "keywords": [
     "claude-code",
@@ -18,5 +21,9 @@
     "copilot-cli",
     "slash-commands"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@changesets/cli": "^2.30.0",
+    "prettier": "^3.0.0"
+  }
 }
