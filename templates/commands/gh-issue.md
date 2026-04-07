@@ -4,6 +4,7 @@ Create a GitHub issue in `pureliture/ai-cli-orch-wrapper` following the conventi
 
 1. Ask the user for the following information if not already provided:
    - **Title**: Full issue title in `type: description` format. Valid types: `feat`, `fix`, `bug`, `chore`, `task`, `spike`, `epic`. Example: `feat: add gh-pm-workflow-commands`. Do NOT use `[Sprint V3][Task]` prefix — that convention is deprecated as of V3.
+   - **Sprint label**: The sprint label to apply (e.g., `sprint:v3` or `sprint:v4`). If not provided, ask before creating the issue rather than assuming a sprint.
    - **Parent epic** (optional): Epic issue number to link as parent (e.g., `22`)
 
 2. Infer the `type:*` label from the title prefix:
@@ -23,7 +24,7 @@ Create a GitHub issue in `pureliture/ai-cli-orch-wrapper` following the conventi
    gh issue create \
      --repo pureliture/ai-cli-orch-wrapper \
      --title "<title>" \
-     --label "<type-label>,sprint:v3" \
+     --label "<type-label>,<sprint-label>" \
      --body "<body>"
    ```
 

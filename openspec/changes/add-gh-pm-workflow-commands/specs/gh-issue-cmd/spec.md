@@ -4,8 +4,8 @@
 The system SHALL provide a `/gh-issue` Claude Code slash command that creates a GitHub issue in `pureliture/ai-cli-orch-wrapper` with conventional commit format title, appropriate labels, and automatic Project #3 Backlog assignment.
 
 #### Scenario: Basic issue creation
-- **WHEN** user invokes `/gh-issue` with a title and type
-- **THEN** system runs `gh issue create --repo pureliture/ai-cli-orch-wrapper` with the provided title, labels (`type:<type>`, `sprint:v3`), and assigns it to Project #3 Backlog
+- **WHEN** user invokes `/gh-issue` with a title, type, and sprint label
+- **THEN** system runs `gh issue create --repo pureliture/ai-cli-orch-wrapper` with the provided title, labels (`type:<type>`, provided `sprint:v*`), and assigns it to Project #3 Backlog
 
 #### Scenario: Title convention enforcement
 - **WHEN** user invokes `/gh-issue`

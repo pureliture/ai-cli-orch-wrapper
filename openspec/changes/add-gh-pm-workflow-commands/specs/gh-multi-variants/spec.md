@@ -5,7 +5,8 @@ The system SHALL provide `:multi` variant slash commands for each of the four `/
 
 #### Scenario: File structure as subdirectory
 - **WHEN** `:multi` variants are installed
-- **THEN** each variant SHALL exist at `.claude/commands/gh-<cmd>/multi.md` (e.g., `.claude/commands/gh-issue/multi.md`)
+- **THEN** each source template SHALL exist at `templates/commands/gh-<cmd>/multi.md` (e.g., `templates/commands/gh-issue/multi.md`)
+- **THEN** installation SHALL copy each variant to `.claude/commands/gh-<cmd>/multi.md`
 - **THEN** Claude Code SHALL invoke it as `/gh-issue:multi`
 
 #### Scenario: /octo:multi prerequisite check

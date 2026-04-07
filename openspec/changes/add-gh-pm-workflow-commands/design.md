@@ -13,7 +13,7 @@
 ## Goals / Non-Goals
 
 **Goals:**
-- 4개 base commands + 4개 `:multi` variants를 `.claude/commands/` 아래 Markdown 파일로 구현
+- 4개 base commands + 4개 `:multi` variants를 `templates/commands/` 아래 Markdown 파일로 구현
 - 각 커맨드는 `gh` CLI 호출 시퀀스만 포함 — 분기 로직 없음
 - 이슈 제목 컨벤션을 conventional commit 형식으로 전환 (V3부터)
 - `sprint:v3`, `sprint:v4`, `origin:review` 레이블을 idempotent하게 추가
@@ -28,14 +28,14 @@
 ## Decisions
 
 ### D1. 커맨드 구현 방식: Markdown slash command 파일
-**결정**: `.claude/commands/*.md` 파일에 `gh` CLI 호출 시퀀스 직접 작성.
+**결정**: `templates/commands/*.md` 파일에 `gh` CLI 호출 시퀀스 직접 작성.
 
 **Why**: Claude Code가 Markdown 파일을 slash command로 로드하는 기존 패턴 유지. bash 스크립트 별도 파일 불필요 — CLAUDE.md의 "Keep command template markdown files thin" 원칙과 일치.
 
 **Alternatives**: bash script + wrapper md → 불필요한 파일 증가, 경로 취약.
 
 ### D2. :multi variants 디렉토리 구조
-**결정**: `.claude/commands/gh-issue/multi.md` 형태의 서브디렉토리. Claude Code에서 `:`를 디렉토리 구분자로 인식해 `/gh-issue:multi`로 호출.
+**결정**: `templates/commands/gh-issue/multi.md` 형태의 서브디렉토리. 설치 시 `.claude/commands/gh-issue/multi.md`로 복사되어 Claude Code에서 `:`를 디렉토리 구분자로 인식해 `/gh-issue:multi`로 호출.
 
 **Why**: 3개 provider 합의. 기존 `:multi` suffix 패턴과 일치 (`/gh-issue:multi` = 의도가 명확한 invoation).
 
@@ -80,11 +80,11 @@ BRANCH="${TYPE}/${N}-${SLUG}"
 ## Migration Plan
 
 1. `scripts/setup-github-labels.sh` 업데이트 후 실행 → 레이블 동기화
-2. `.claude/commands/gh-*.md` 파일 생성 → 즉시 사용 가능 (Claude Code 재시작 불필요)
+2. `templates/commands/gh-*.md` 파일 생성 → `aco-install pack install`로 `.claude/commands/`에 설치
 3. V3 이후 신규 이슈부터 conventional commit 형식 적용 (기존 이슈 변경 없음)
 4. `docs/pm-board.md` 업데이트로 팀 공유
 
-**Rollback**: `.claude/commands/gh-*.md` 파일 삭제 → slash command 비활성화. 레이블은 남아있어도 무해.
+**Rollback**: `templates/commands/gh-*.md` 파일 삭제 후 재설치 → slash command 비활성화. 레이블은 남아있어도 무해.
 
 ## Open Questions
 

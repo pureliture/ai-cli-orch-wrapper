@@ -12,9 +12,9 @@ Transition a GitHub issue to "In Progress" on Project #3, add the `status:in-pro
 
 3. Find the project item ID for this issue in Project #3:
    ```bash
-   gh project item-list 3 --owner pureliture --format json --limit 500
+   gh project item-list 3 --owner pureliture --format json --limit 500 --jq '.items[] | select(.content.number == <N> and .content.type == "Issue") | .id'
    ```
-   Search the output for the item whose `content.number` matches `N` (or `content.url` matches the issue URL). Save its `id` field. If no match is found, warn the user that the issue may not have been added to Project #3 yet, then add it first with `gh project item-add 3 --owner pureliture --url <issue_url>`, then retry the item-list lookup.
+   Save the command output as the item ID. This uses `--jq` to select the matching issue by `content.number` instead of manually searching the full JSON. `--limit 500` only searches the first 500 returned items; if no item ID is returned and the project may contain more than 500 items, retry with a higher `--limit` before assuming the issue is absent. If no match is found, warn the user that the issue may not have been added to Project #3 yet, add it first with `gh project item-add 3 --owner pureliture --url <issue_url>`, then retry the item-list lookup.
 
 4. Update the project item status to "In Progress":
    ```bash

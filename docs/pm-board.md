@@ -44,7 +44,7 @@ Three command axes for PM workflow automation:
 
 | Command | What it does |
 |---------|-------------|
-| `/gh-issue` | Create issue + `type:*` + `sprint:v3` labels + Project #3 Backlog |
+| `/gh-issue` | Create issue + `type:*` + selected `sprint:v*` labels + Project #3 Backlog |
 | `/gh-start #N` | In Progress transition + `status:in-progress` label + branch creation |
 | `/gh-pr` | PR create + `Closes #N` + CI checklist + Epic reminder |
 | `/gh-followup` | Post-review issue + `origin:review` + `type:*` + Project #3 Backlog |
@@ -89,13 +89,49 @@ PR title format:
 feat(pm-harness): implement GitHub Projects + Actions + Claude Code PM harness
 ```
 
-PR rules:
-
-- Use conventional commit style: `type(scope): description`.
-- Do not add `[Sprint]`, `[Task]`, or `[Epic]` prefixes to PR titles.
-- Include `Closes #N` in the PR body.
+PR title rules:
+- Use conventional commit style: `type(scope): description`. Keep under 72 characters.
+- Do not add `[Sprint]`, `[Task]`, or `[Epic]` prefixes.
 - Add sprint-scoped PRs to the PM project and set PR `Status` to `In Review`.
-- Keep `Priority`, `Size`, and `Sprint` on issues by default; do not mirror them onto PR items unless needed.
+- Keep `Priority`, `Size`, and `Sprint` on issues; do not mirror onto PR items.
+
+### PR Body Guide
+
+Every PR body must contain four sections. `/gh-pr` enforces this structure.
+
+```markdown
+Closes #N
+
+## What
+
+What changed, specifically. Name the files, commands, or behaviors that are new
+or different. A reviewer who hasn't read the issue should understand the change
+from this paragraph alone. 2–4 sentences.
+
+## Why
+
+Why was this needed? The motivation beyond restating the title. Reference the
+problem or constraint from the issue. 1–3 sentences.
+
+## Changes
+
+- Add `path/to/file.md` — one-line description
+- Fix `scripts/foo.sh` — what was broken and how it's fixed
+- Update `docs/bar.md` — what was added or changed
+
+## Checklist
+- [ ] npm test passes
+- [ ] manual smoke test
+- [ ] docs updated if needed
+```
+
+**Quality bar** — a PR body fails if:
+- Any section is empty or contains only placeholder text
+- "What" restates the title without adding specifics
+- "Why" says "see issue" with no additional context
+- "Changes" is a single vague bullet like "updated files"
+
+Use `/gh-pr:multi` to get multi-AI validation of the body before submission.
 
 ### `origin:review` Label Usage
 
