@@ -30,43 +30,82 @@
 | Triage | Table | No iteration OR no labels | — |
 | Roadmap | Table | — | type:epic label |
 
+## Command Structure (V3+)
+
+Three command axes for PM workflow automation:
+
+| Axis | Commands | Purpose |
+|------|----------|---------|
+| `/opsx:*` | `opsx:propose`, `opsx:apply`, `opsx:archive` | OpenSpec change lifecycle |
+| `/gh-*` | `gh-issue`, `gh-start`, `gh-pr`, `gh-followup` | GitHub issue/PR operations |
+| `/octo:*` | `octo:multi`, `octo:review`, `octo:tdd`, … | Multi-AI orchestration |
+
+### `/gh-*` Command Reference
+
+| Command | What it does |
+|---------|-------------|
+| `/gh-issue` | Create issue + `type:*` + `sprint:v3` labels + Project #3 Backlog |
+| `/gh-start #N` | In Progress transition + `status:in-progress` label + branch creation |
+| `/gh-pr` | PR create + `Closes #N` + CI checklist + Epic reminder |
+| `/gh-followup` | Post-review issue + `origin:review` + `type:*` + Project #3 Backlog |
+| `/gh-issue:multi` | `/gh-issue` with multi-AI scope validation |
+| `/gh-start:multi` | `/gh-start` with multi-AI readiness check |
+| `/gh-pr:multi` | `/gh-pr` with multi-AI PR readiness validation |
+| `/gh-followup:multi` | `/gh-followup` with multi-AI content validation |
+
 ## Issue Authoring Rules
 
 Use one sprint epic plus child issues for sprint planning.
 
-Title format:
+### Title Convention (V3+)
+
+**From V3 onward**, issue titles use conventional commit format. The `[Sprint V*][Type]` prefix is deprecated.
 
 ```text
-[Sprint V3][Epic] PM 하네스 구축 — GitHub Projects + Actions + Claude Code
-[Sprint V3][Task] GitHub Actions CI 파이프라인 구현
-[Sprint V3][Bug] Codex auth failure classification is unreachable
-[Sprint V3][Chore] Align fixture knownNodeGap metadata
+feat: add gh-pm-workflow-commands
+fix: handle null session in wrapper
+chore: update typescript deps
+bug: codex auth failure classification unreachable
+spike: investigate gemini streaming API
 ```
 
 Rules:
-
-- Use `[Sprint <id>][<Type>]` prefixes for sprint-scoped work.
-- Supported types are `Epic`, `Story`, `Task`, `Bug`, `Spike`, and `Chore`.
+- Use `type: description` format (no sprint or type prefix in title).
+- Type is conveyed via the `type:*` label, not the title.
+- Sprint is conveyed via the `sprint:v*` label, not the title.
 - Keep priority and area out of titles; use `p0`/`p1`/`p2` and `area:*` labels.
-- Child issues must be linked as GitHub native sub-issues of the sprint epic when the API supports it.
-- Child issues must also include `Parent epic: #N` in the body as a portable fallback.
-- Sprint epics must maintain a `Child Issues` checklist.
-- Add issues to the PM project and set `Status`, `Priority`, and `Size` when fields are available.
+- Child issues must include `Parent epic: #N` as the first line of the body.
+- Sprint epics must maintain a `Child Issues` checklist in the body.
+
+**Legacy format** (pre-V3, for reference only):
+```text
+[Sprint V3][Epic] PM 하네스 구축 — GitHub Projects + Actions + Claude Code
+[Sprint V3][Task] GitHub Actions CI 파이프라인 구현
+```
 
 PR title format:
 
 ```text
-[Sprint V3] feat(pm-harness): implement GitHub Projects + Actions + Claude Code PM harness
+feat(pm-harness): implement GitHub Projects + Actions + Claude Code PM harness
 ```
 
 PR rules:
 
-- Prefix sprint-scoped PR titles with `[Sprint <id>]`.
-- Keep conventional commit style after the sprint prefix.
-- Do not add `[Task]` or `[Epic]` to PR titles; those prefixes are for issue titles only.
-- Include `Closes #N` or a parent epic/child issue reference in the PR body.
+- Use conventional commit style: `type(scope): description`.
+- Do not add `[Sprint]`, `[Task]`, or `[Epic]` prefixes to PR titles.
+- Include `Closes #N` in the PR body.
 - Add sprint-scoped PRs to the PM project and set PR `Status` to `In Review`.
 - Keep `Priority`, `Size`, and `Sprint` on issues by default; do not mirror them onto PR items unless needed.
+
+### `origin:review` Label Usage
+
+Use the `origin:review` label to track issues created from PR review feedback:
+
+- Apply `origin:review` + `type:task` for improvements or features surfaced in review.
+- Apply `origin:review` + `type:chore` for refactoring tasks surfaced in review.
+- Apply `origin:review` + `type:bug` for defects found during review.
+- Always use `/gh-followup` command to create these — it handles the body format and label assignment automatically.
+- The issue body must begin with `From: #<PR> review comment` and end with `See also: #<PR>`.
 
 Automation rule:
 
@@ -120,6 +159,7 @@ export PM_PROJECT_NUMBER="3"
 export PM_PROJECT_ID="PVT_kwHOA6302M4BT5fA"
 export PM_STATUS_FIELD_ID="PVTSSF_lAHOA6302M4BT5fAzhBFN48"
 export PM_IN_REVIEW_OPTION_ID="961ca78f"
+export PM_IN_PROGRESS_OPTION_ID="68368c4f"
 ```
 
 ## Branch Protection Rules (after CI runs once on main)
