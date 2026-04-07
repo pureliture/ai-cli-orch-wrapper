@@ -13,15 +13,15 @@ REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner' 2>/dev/null) || {
 
 echo "Setting up labels for: $REPO"
 
+LABEL_FAILURES=0
+
 create_or_update_label() {
   local name="$1" color="$2" description="$3"
-  if gh label list --repo "$REPO" --json name -q '.[].name' | grep -qx "$name"; then
-    gh label edit "$name" --repo "$REPO" --color "$color" --description "$description" 2>/dev/null \
-      && echo "  updated: $name" \
-      || echo "  skipped (no change): $name"
+  if gh label create "$name" --repo "$REPO" --color "$color" --description "$description" --force; then
+    echo "  upserted: $name"
   else
-    gh label create "$name" --repo "$REPO" --color "$color" --description "$description" \
-      && echo "  created: $name"
+    echo "  FAILED: $name" >&2
+    LABEL_FAILURES=$((LABEL_FAILURES + 1))
   fi
 }
 
@@ -50,7 +50,21 @@ create_or_update_label "p2" "CA8A04" "Normal backlog"
 
 echo ""
 echo "── Status labels ────────────────────────────"
-create_or_update_label "status:blocked" "64748B" "Waiting on external dependency"
+create_or_update_label "status:blocked"     "64748B" "Waiting on external dependency"
+create_or_update_label "status:in-progress" "0EA5E9" "Currently being worked on"
 
 echo ""
+echo "── Sprint labels ────────────────────────────"
+create_or_update_label "sprint:v3" "E9D5FF" "Sprint V3"
+create_or_update_label "sprint:v4" "E9D5FF" "Sprint V4"
+
+echo ""
+echo "── Origin labels ────────────────────────────"
+create_or_update_label "origin:review" "BFDBFE" "Originated from PR review comment"
+
+echo ""
+if [[ "$LABEL_FAILURES" -gt 0 ]]; then
+  echo "ERROR: $LABEL_FAILURES label(s) failed to upsert. Run 'gh label list' to check." >&2
+  exit 1
+fi
 echo "Done. Run 'gh label list' to verify."
