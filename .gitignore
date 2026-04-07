@@ -34,8 +34,26 @@ temp/
 .claude/worktrees/
 .codex/worktrees/
 .gemini/worktrees/
+.aco-worktrees/
 
 
 reference/*
 .codex/*
 .gemini/*
+
+# Claude Code session files (non-persistent)
+.claude/session-intent.md
+.claude/session-plan.md
+.claude/commands/
+.claude/skills/
+
+# Claude Octopus runtime state
+.claude-octopus/
+
+# GitHub Copilot prompts/skills
+.github/prompts/
+.github/skills/
+
+
+# Go build artifacts
+/bin/
