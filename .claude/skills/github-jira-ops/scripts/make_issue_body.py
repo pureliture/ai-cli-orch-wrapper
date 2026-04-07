@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate a Jira-style GitHub issue body."""
+"""Generate a Jira-style GitHub issue title or body."""
 
 from __future__ import annotations
 
@@ -7,69 +7,156 @@ import argparse
 import textwrap
 
 
+TYPE_LABELS = {
+    "epic": "Epic",
+    "story": "Story",
+    "task": "Task",
+    "bug": "Bug",
+    "spike": "Spike",
+    "chore": "Chore",
+}
+
+
 def section(title: str, body: str) -> str:
     return f"## {title}\n\n{body.strip()}\n"
 
 
 def join_sections(*parts: str) -> str:
-    return "\n".join(part.rstrip() for part in parts).strip() + "\n"
+    return "\n\n".join(part.rstrip() for part in parts).strip() + "\n"
 
 
 def bullet_list(items: list[str]) -> str:
     return "\n".join(f"- {item}" for item in items)
 
 
+def sprint_label(sprint: str | None) -> str:
+    if not sprint:
+        return ""
+    return sprint if sprint.lower().startswith("sprint ") else f"Sprint {sprint}"
+
+
+def build_title(args: argparse.Namespace) -> str:
+    title = args.title or args.summary
+    if not title:
+        title = f"Describe the {args.type}"
+    prefixes = []
+    if args.sprint:
+        prefixes.append(f"[{sprint_label(args.sprint)}]")
+    prefixes.append(f"[{TYPE_LABELS[args.type]}]")
+    return f"{''.join(prefixes)} {title}"
+
+
+def sprint_section(args: argparse.Namespace) -> str | None:
+    if not args.sprint:
+        return None
+    return section("Sprint", sprint_label(args.sprint))
+
+
+def parent_text(args: argparse.Namespace) -> str:
+    if not args.parent:
+        return "Parent epic: #<issue-number>"
+    if args.parent.lower().startswith("parent"):
+        return args.parent
+    return f"Parent epic: {args.parent}"
+
+
 def build_epic(args: argparse.Namespace) -> str:
     children = args.children or ["[ ] Child issue 1", "[ ] Child issue 2"]
-    return join_sections(
+    parts = [
         section("Summary", args.summary or "Describe the multi-issue outcome."),
         section("Outcome", args.outcome or "Describe the target result."),
-        section("Scope", args.scope or "List what is included and excluded."),
+    ]
+    sprint = sprint_section(args)
+    if sprint:
+        parts.append(sprint)
+    parts.extend([
+        section("Scope", args.scope or "Included:\n- Included item\n\nExcluded:\n- Out-of-scope item"),
         section("Child Issues", "\n".join(f"- {item}" for item in children)),
-        section("Exit Criteria", bullet_list(args.acceptance or ["Define the conditions for completion."])),
-    )
+        section(
+            "Exit Criteria",
+            bullet_list(
+                args.acceptance
+                or [
+                    "[ ] All P0 child issues are complete.",
+                    "[ ] Related PRs are merged or explicitly carried over.",
+                    "[ ] Test plan or validation notes are captured.",
+                    "[ ] Remaining follow-ups are split into separate issues.",
+                ]
+            ),
+        ),
+        section("Notes", args.notes or "Add related PRs, OpenSpec changes, docs, or decisions."),
+    ])
+    return join_sections(*parts)
 
 
 def build_story_or_task(args: argparse.Namespace, kind: str) -> str:
-    parent = args.parent or "Link the parent epic or parent issue."
-    return join_sections(
+    parts = [
         section("Summary", args.summary or f"Describe the {kind}."),
         section("Outcome", args.outcome or "Describe the expected user or system result."),
-        section("Parent", parent),
-        section("Acceptance Criteria", bullet_list(args.acceptance or ["Criterion 1", "Criterion 2"])),
+        section("Parent", parent_text(args)),
+        section("Scope", args.scope or "- Work item 1\n- Work item 2"),
+        section("Acceptance Criteria", bullet_list(args.acceptance or ["[ ] Criterion 1", "[ ] Criterion 2", "[ ] Validation method is documented."])),
         section("Notes", args.notes or "Add implementation notes, constraints, or links."),
-    )
+    ]
+    sprint = sprint_section(args)
+    if sprint:
+        parts.insert(1, sprint)
+    return join_sections(*parts)
 
 
 def build_bug(args: argparse.Namespace) -> str:
     reproduction = args.reproduction or ["Step 1", "Step 2", "Observed failure"]
-    return join_sections(
+    parts = [
         section("Summary", args.summary or "Describe the defect."),
+    ]
+    sprint = sprint_section(args)
+    if sprint:
+        parts.append(sprint)
+    parts.extend([
         section("Actual Behavior", args.actual or "What is happening now?"),
         section("Expected Behavior", args.expected or "What should happen instead?"),
         section("Reproduction", bullet_list(reproduction)),
         section("Impact", args.impact or "Describe severity, scope, and affected users."),
-        section("Acceptance Criteria", bullet_list(args.acceptance or ["Bug no longer reproduces.", "Relevant regression coverage exists."])),
-    )
+        section("Parent", parent_text(args)),
+        section("Acceptance Criteria", bullet_list(args.acceptance or ["[ ] Bug no longer reproduces.", "[ ] Relevant regression coverage or validation exists."])),
+        section("Notes", args.notes or "Add logs, PR review links, or affected files."),
+    ])
+    return join_sections(*parts)
 
 
 def build_spike(args: argparse.Namespace) -> str:
-    return join_sections(
+    parts = [
         section("Question", args.summary or "What needs to be learned or decided?"),
+    ]
+    sprint = sprint_section(args)
+    if sprint:
+        parts.append(sprint)
+    parts.extend([
         section("Scope", args.scope or "State what the investigation will and will not cover."),
         section("Expected Output", args.outcome or "Decision memo, recommendation, prototype, or findings."),
         section("Time Box", args.time_box or "Define the investigation time box."),
         section("Acceptance Criteria", bullet_list(args.acceptance or ["Questions are answered.", "Findings are documented."])),
-    )
+        section("Parent", parent_text(args)),
+        section("Notes", args.notes or "Add related issues, PRs, or docs."),
+    ])
+    return join_sections(*parts)
 
 
 def build_chore(args: argparse.Namespace) -> str:
-    return join_sections(
+    parts = [
         section("Summary", args.summary or "Describe the maintenance work."),
+    ]
+    sprint = sprint_section(args)
+    if sprint:
+        parts.append(sprint)
+    parts.extend([
         section("Operational Goal", args.outcome or "Describe the operational improvement."),
         section("Constraints", args.scope or "List limits, dependencies, or windows."),
-        section("Definition of Done", bullet_list(args.acceptance or ["Operational work is complete.", "Follow-up actions are captured if needed."])),
-    )
+        section("Parent", parent_text(args)),
+        section("Definition of Done", bullet_list(args.acceptance or ["[ ] Operational work is complete.", "[ ] Follow-up actions are captured if needed."])),
+        section("Notes", args.notes or "Add operational context or links."),
+    ])
+    return join_sections(*parts)
 
 
 def build_issue(args: argparse.Namespace) -> str:
@@ -89,16 +176,18 @@ def build_issue(args: argparse.Namespace) -> str:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Generate a Jira-style GitHub issue body.",
+        description="Generate a Jira-style GitHub issue title or body.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=textwrap.dedent(
             """\
             Example:
-              make_issue_body.py --type story --summary "Add streaming logs" --parent "#123"
+              make_issue_body.py --type task --sprint v2.1 --title "Add streaming logs" --parent "#123" --format all
             """
         ),
     )
     parser.add_argument("--type", required=True, choices=["epic", "story", "task", "bug", "spike", "chore"])
+    parser.add_argument("--sprint", help='Sprint identifier, e.g. "v2.1" or "Sprint v2.1".')
+    parser.add_argument("--title", help="Concise issue title without [Sprint][Type] prefixes.")
     parser.add_argument("--summary")
     parser.add_argument("--outcome")
     parser.add_argument("--scope")
@@ -111,11 +200,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--acceptance", action="append")
     parser.add_argument("--reproduction", action="append")
     parser.add_argument("--children", action="append")
+    parser.add_argument("--format", choices=["body", "title", "all"], default="body")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+    if args.format == "title":
+        print(build_title(args))
+        return
+    if args.format == "all":
+        print(f"TITLE: {build_title(args)}\n")
     print(build_issue(args), end="")
 
 

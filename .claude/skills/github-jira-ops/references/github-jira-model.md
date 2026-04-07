@@ -122,6 +122,8 @@ Preferred pattern:
 - Epic issue owns the child list
 - Child issues link back to the epic
 - Release milestone groups the work that ships together
+- Sprint-scoped work uses `[Sprint <id>][<Type>]` title prefixes
+- Sprint planning uses one sprint epic with child task, bug, spike, story, or chore issues
 
 If GitHub tasklists are available, keep the parent epic's tasklist current. If they are not, maintain a plain markdown checklist in the epic body.
 

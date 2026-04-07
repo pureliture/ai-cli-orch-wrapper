@@ -38,8 +38,29 @@ Default mapping:
 - Labels hold durable classification: `type:*`, `area:*`
 - Milestones hold releases or larger delivery targets
 - Epic hierarchy lives in issues, links, and tasklists, not in a second external tracker
+- Sprint planning uses one sprint epic plus child issues by default
 
 Do not duplicate workflow status across both labels and project fields unless the repository already does so and changing it would be disruptive.
+
+## Sprint Issue Model
+
+Use one sprint epic as the anchor for each sprint, then create child work items for tasks, bugs, spikes, and chores.
+
+Title format:
+
+- `[Sprint v2.1][Epic] aco v2 hardening & stabilization`
+- `[Sprint v2.1][Task] Fix gemini_cli unsupported reasoning-effort option`
+- `[Sprint v2.1][Bug] Codex auth failure classification is unreachable`
+- `[Sprint v2.1][Chore] Align fixture knownNodeGap metadata`
+
+Rules:
+
+- The first prefix is always `[Sprint <id>]`
+- The second prefix is always the issue type: `[Epic]`, `[Story]`, `[Task]`, `[Bug]`, `[Spike]`, or `[Chore]`
+- Do not encode priority or area in the title; use `p0`/`p1`/`p2` and `area:*` labels or project fields
+- Child issues must include `Parent epic: #N` in the `Parent` section
+- The sprint epic must maintain a `Child Issues` checklist
+- Add every sprint issue to the Projects V2 board and set `Status`, `Priority`, and `Size` when those fields exist
 
 ## Execution Patterns
 
@@ -61,12 +82,26 @@ When the user wants setup or cleanup:
 When creating epics, stories, tasks, bugs, spikes, or chores:
 
 1. Pick the issue type from the reference model.
-2. Generate a consistent issue body with `scripts/make_issue_body.py`.
+2. Generate a consistent title and issue body with `scripts/make_issue_body.py`.
 3. Add the issue to the project.
 4. Set project fields instead of encoding everything in prose.
 5. Link the issue to its parent epic or release milestone.
 
 Use concise issue titles. Put acceptance criteria and scope boundaries in the body, not in labels.
+
+Example:
+
+```bash
+python3 .claude/skills/github-jira-ops/scripts/make_issue_body.py \
+  --type task \
+  --sprint v2.1 \
+  --title "Fix gemini_cli unsupported reasoning-effort option" \
+  --summary "Gemini CLI does not support the reasoning-effort flag currently emitted by the wrapper." \
+  --parent "#6" \
+  --acceptance "[ ] gemini_cli no longer receives unsupported flags" \
+  --acceptance "[ ] go test ./... passes" \
+  --format all
+```
 
 ### Plan or Triage a Sprint
 
@@ -98,6 +133,8 @@ Minimum rules:
 - Bugs must include actual behavior, expected behavior, and a reproducible path
 - Epics must list child deliverables or a tasklist
 - Stories and tasks should reference their parent epic when one exists
+- Sprint issues must use `[Sprint <id>][<Type>]` title prefixes
+- Sprint child issues must link back to their sprint epic in the `Parent` section
 
 ## Guardrails
 

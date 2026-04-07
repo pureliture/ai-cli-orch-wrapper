@@ -30,6 +30,42 @@
 | Triage | Table | No iteration OR no labels | — |
 | Roadmap | Table | — | type:epic label |
 
+## Issue Authoring Rules
+
+Use one sprint epic plus child issues for sprint planning.
+
+Title format:
+
+```text
+[Sprint v2.1][Epic] aco v2 hardening & stabilization
+[Sprint v2.1][Task] Fix gemini_cli unsupported reasoning-effort option
+[Sprint v2.1][Bug] Codex auth failure classification is unreachable
+[Sprint v2.1][Chore] Align fixture knownNodeGap metadata
+```
+
+Rules:
+
+- Use `[Sprint <id>][<Type>]` prefixes for sprint-scoped work.
+- Supported types are `Epic`, `Story`, `Task`, `Bug`, `Spike`, and `Chore`.
+- Keep priority and area out of titles; use `p0`/`p1`/`p2` and `area:*` labels.
+- Child issues must include `Parent epic: #N` in the body.
+- Sprint epics must maintain a `Child Issues` checklist.
+- Add issues to the PM project and set `Status`, `Priority`, and `Size` when fields are available.
+
+Generate standardized titles and bodies with:
+
+```bash
+python3 .claude/skills/github-jira-ops/scripts/make_issue_body.py \
+  --type task \
+  --sprint v2.1 \
+  --title "Fix gemini_cli unsupported reasoning-effort option" \
+  --summary "Gemini CLI does not support the reasoning-effort flag currently emitted by the wrapper." \
+  --parent "#6" \
+  --acceptance "[ ] gemini_cli no longer receives unsupported flags" \
+  --acceptance "[ ] go test ./... passes" \
+  --format all
+```
+
 ## IDs (fill in after setup)
 
 Run the following after Projects V2 is configured:
