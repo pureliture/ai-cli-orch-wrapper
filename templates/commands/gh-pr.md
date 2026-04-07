@@ -68,5 +68,52 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
      --title "<title>" \
      --body "<body>"
    ```
+   Capture the PR URL from the output (e.g., `https://github.com/pureliture/ai-cli-orch-wrapper/pull/<PR_NUM>`).
 
-7. Report the created PR URL to the user.
+7. Add PR to Project #3 and set status to "In Review":
+   ```bash
+   gh project item-add 3 --owner pureliture --url <pr_url>
+   ```
+   Then find the PR's Project item ID:
+   ```bash
+   gh project item-list 3 --owner pureliture --format json --limit 500
+   ```
+   Match the item whose `content.url` equals `<pr_url>` and get its `id`. Then set status:
+   ```bash
+   gh project item-edit \
+     --project-id PVT_kwHOA6302M4BT5fA \
+     --id <pr_item_id> \
+     --field-id PVTSSF_lAHOA6302M4BT5fAzhBFN48 \
+     --single-select-option-id 961ca78f
+   ```
+   If any step fails, print `⚠ PR Project status update failed — update manually` and continue.
+
+8. Set linked issue status to "In Review":
+   Parse the PR body for `Closes #N`, `Fixes #N`, or `Resolves #N` (case-insensitive). If found:
+   - Verify the issue exists: `gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json number`
+   - Find the issue's Project item ID from `gh project item-list` (match `content.number == N`)
+   - If the item is not in the Project yet, add it first: `gh project item-add 3 --owner pureliture --url https://github.com/pureliture/ai-cli-orch-wrapper/issues/<N>`
+   - Set status to "In Review":
+     ```bash
+     gh project item-edit \
+       --project-id PVT_kwHOA6302M4BT5fA \
+       --id <issue_item_id> \
+       --field-id PVTSSF_lAHOA6302M4BT5fAzhBFN48 \
+       --single-select-option-id 961ca78f
+     ```
+   - If no linked issue keyword found, skip this step silently.
+   - If any step fails, print `⚠ Issue Project status update failed — update manually` and continue.
+
+9. Apply priority label to PR (inherit from linked issue, default `p1`):
+   If a linked issue number N was found in step 8:
+   ```bash
+   gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json labels -q '.labels[].name'
+   ```
+   Find the first label matching `p0`, `p1`, or `p2`. If none found or no linked issue, use `p1`.
+   Apply to PR:
+   ```bash
+   gh pr edit <pr_url> --repo pureliture/ai-cli-orch-wrapper --add-label <priority>
+   ```
+   If multiple linked issues have different priorities, use the highest (`p0` > `p1` > `p2`).
+
+10. Report the created PR URL to the user.

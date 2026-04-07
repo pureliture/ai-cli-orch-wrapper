@@ -1,4 +1,4 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
 ### Requirement: /gh-pr command creates a pull request
 The system SHALL provide a `/gh-pr` Claude Code slash command that creates a GitHub PR in `pureliture/ai-cli-orch-wrapper` with a conventional commit title, `Closes #N` reference, a CI checklist body, an Epic checkbox reminder, explicit PM Project status management, and priority label inheritance.
@@ -21,7 +21,7 @@ The system SHALL provide a `/gh-pr` Claude Code slash command that creates a Git
 
 #### Scenario: PR added to PM Project with In Review status
 - **WHEN** PR is successfully created
-- **THEN** system SHALL add the PR to Project #3 and set its Status to "In Review" via `gh project item-edit`
+- **THEN** system SHALL add the PR to Project #3 and set its Status to "In Review"
 
 #### Scenario: Linked issue set to In Review
 - **WHEN** PR body contains `Closes #N`, `Fixes #N`, or `Resolves #N`
@@ -30,7 +30,3 @@ The system SHALL provide a `/gh-pr` Claude Code slash command that creates a Git
 #### Scenario: Priority label applied to PR
 - **WHEN** PR is created
 - **THEN** system SHALL apply a `p0`/`p1`/`p2` priority label, inheriting from linked issue or defaulting to `p1`
-
-#### Scenario: Project update failure does not block PR
-- **WHEN** any Project status update step fails
-- **THEN** system SHALL print a warning and continue without aborting the PR creation
