@@ -16,6 +16,7 @@ var agentIDPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
 type AgentSpec struct {
 	Path              string
 	ID                string   `yaml:"id"`
+	Name              string   `yaml:"name"`
 	When              string   `yaml:"when"`
 	ModelAlias        string   `yaml:"modelAlias"`
 	RoleHint          string   `yaml:"roleHint"`
@@ -101,6 +102,15 @@ func ParseAgentSpec(path, content string) (AgentSpec, error) {
 		return AgentSpec{}, fmt.Errorf("parse frontmatter: %w", err)
 	}
 	spec.Body = strings.TrimSpace(body)
+	// Accept "name" as alias for "id" to support Claude agent files that use "name".
+	// Fall back to the filename (without extension) when both are absent.
+	if spec.ID == "" {
+		if spec.Name != "" {
+			spec.ID = spec.Name
+		} else if path != "" {
+			spec.ID = strings.TrimSuffix(filepath.Base(path), ".md")
+		}
+	}
 	if spec.ID == "" {
 		return AgentSpec{}, errors.New("parse frontmatter: missing required field \"id\"")
 	}
@@ -211,9 +221,9 @@ func BuildPrompt(spec AgentSpec, input string) (string, error) {
 	if spec.PromptSeedFile != "" {
 		seedPath := spec.PromptSeedFile
 		if !filepath.IsAbs(seedPath) {
-			if cwd, err := os.Getwd(); err == nil {
-				seedPath = filepath.Join(cwd, seedPath)
-			}
+			// Resolve relative to the agent spec file's directory, not CWD,
+			// so agent bundles work regardless of where aco is invoked.
+			seedPath = filepath.Join(filepath.Dir(spec.Path), seedPath)
 		}
 		data, err := os.ReadFile(seedPath)
 		if err != nil {
