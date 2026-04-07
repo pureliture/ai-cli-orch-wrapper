@@ -26,9 +26,16 @@ COMMAND=$(printf '%s' "$PAYLOAD" | jq -r '.tool_input.command // ""' 2>/dev/null
 [[ "$TOOL_NAME" != "Bash" ]] && exit 0
 [[ "$COMMAND" =~ (^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+create([[:space:]]|$) ]] || exit 0
 
-# ── Verify we're in the right repo ─────────────────────────────────────────
+# ── Derive owner/repo from git remote ─────────────────────────────────────
 REMOTE=$(git remote get-url origin 2>/dev/null || echo "")
-[[ "$REMOTE" != *"pureliture/ai-cli-orch-wrapper"* ]] && exit 0
+[[ -z "$REMOTE" ]] && exit 0
+
+# Normalize SSH (git@github.com:owner/repo.git) and HTTPS URLs
+REPO=$(echo "$REMOTE" \
+  | sed -E 's|git@github\.com:||; s|https://github\.com/||; s|\.git$||')
+OWNER=$(echo "$REPO" | cut -d'/' -f1)
+
+[[ -z "$OWNER" || -z "$REPO" ]] && exit 0
 
 # ── Config check ───────────────────────────────────────────────────────────
 PROJECT_NUMBER="${PM_PROJECT_NUMBER:-}"
@@ -62,17 +69,15 @@ if [[ -z "$ISSUE_NUM" ]]; then
   exit 0
 fi
 
-REPO="pureliture/ai-cli-orch-wrapper"
-
 # ── Get or add project item ────────────────────────────────────────────────
 ITEM_ID=$(gh project item-list "$PROJECT_NUMBER" \
-  --owner pureliture --format json \
+  --owner "$OWNER" --format json \
   --jq ".items[] | select(.content.number == $ISSUE_NUM) | .id" 2>/dev/null || echo "")
 
 if [[ -z "$ITEM_ID" ]]; then
   ISSUE_URL="https://github.com/${REPO}/issues/${ISSUE_NUM}"
   ITEM_ID=$(gh project item-add "$PROJECT_NUMBER" \
-    --owner pureliture \
+    --owner "$OWNER" \
     --url "$ISSUE_URL" \
     --format json \
     --jq '.id' 2>/dev/null || echo "")
