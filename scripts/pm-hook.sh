@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # pm-hook.sh — Claude Code PostToolUse hook
-# Detects 'gh pr create' and moves the linked issue to "In Review" in GitHub Projects V2.
+# Detects 'gh pr create' and moves the created PR plus linked issue to "In Review"
+# in GitHub Projects V2.
 #
 # Payload (stdin JSON):
 #   { "tool_name": "Bash", "tool_input": { "command": "..." }, ... }
@@ -66,13 +67,61 @@ fi
 
 if [[ -z "$ISSUE_NUM" ]]; then
   echo "[pm-hook] No issue number found in command or branch — skipping" >&2
-  exit 0
 fi
 
-# ── Get or add project item ────────────────────────────────────────────────
+# ── Helpers ────────────────────────────────────────────────────────────────
+get_project_item_id() {
+  local content_number="$1"
+  local content_type="$2"
+  gh project item-list "$PROJECT_NUMBER" \
+    --owner "$OWNER" --format json \
+    --jq ".items[] | select(.content.number == ${content_number} and .content.type == \"${content_type}\") | .id" 2>/dev/null || echo ""
+}
+
+add_project_url() {
+  local url="$1"
+  gh project item-add "$PROJECT_NUMBER" \
+    --owner "$OWNER" \
+    --url "$url" \
+    --format json \
+    --jq '.id' 2>/dev/null || echo ""
+}
+
+set_in_review() {
+  local item_id="$1"
+  gh project item-edit \
+    --project-id "$PROJECT_ID" \
+    --id "$item_id" \
+    --field-id "$STATUS_FIELD_ID" \
+    --single-select-option-id "$IN_REVIEW_OPTION_ID" 2>/dev/null
+}
+
+# ── Add/update the PR item ─────────────────────────────────────────────────
+PR_JSON=$(gh pr view --json number,url 2>/dev/null || echo "")
+PR_NUM=$(printf '%s' "$PR_JSON" | jq -r '.number // ""' 2>/dev/null || echo "")
+PR_URL=$(printf '%s' "$PR_JSON" | jq -r '.url // ""' 2>/dev/null || echo "")
+
+if [[ -n "$PR_NUM" && -n "$PR_URL" ]]; then
+  PR_ITEM_ID=$(get_project_item_id "$PR_NUM" "PullRequest")
+  if [[ -z "$PR_ITEM_ID" ]]; then
+    PR_ITEM_ID=$(add_project_url "$PR_URL")
+  fi
+
+  if [[ -n "$PR_ITEM_ID" ]] && set_in_review "$PR_ITEM_ID"; then
+    echo "[pm-hook] PR #${PR_NUM} → In Review" >&2
+  else
+    echo "[pm-hook] WARN: Failed to add/update PR #${PR_NUM}" >&2
+  fi
+else
+  echo "[pm-hook] WARN: Could not resolve created PR from current branch" >&2
+fi
+
+[[ -z "$ISSUE_NUM" ]] && exit 0
+
+# ── Get or add linked issue project item ───────────────────────────────────
 ITEM_ID=$(gh project item-list "$PROJECT_NUMBER" \
   --owner "$OWNER" --format json \
-  --jq ".items[] | select(.content.number == $ISSUE_NUM) | .id" 2>/dev/null || echo "")
+  --jq ".items[] | select(.content.number == $ISSUE_NUM and .content.type == \"Issue\") | .id" 2>/dev/null || echo "")
 
 if [[ -z "$ITEM_ID" ]]; then
   ISSUE_URL="https://github.com/${REPO}/issues/${ISSUE_NUM}"
@@ -88,12 +137,8 @@ if [[ -z "$ITEM_ID" ]]; then
   exit 0
 fi
 
-# ── Update status to "In Review" (PROJECT_ID = node GUID) ─────────────────
-if gh project item-edit \
-  --project-id "$PROJECT_ID" \
-  --id "$ITEM_ID" \
-  --field-id "$STATUS_FIELD_ID" \
-  --single-select-option-id "$IN_REVIEW_OPTION_ID" 2>/dev/null; then
+# ── Update linked issue status to "In Review" ──────────────────────────────
+if set_in_review "$ITEM_ID"; then
   echo "[pm-hook] Issue #${ISSUE_NUM} → In Review" >&2
 else
   echo "[pm-hook] WARN: Failed to update issue #${ISSUE_NUM} status" >&2

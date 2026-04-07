@@ -73,6 +73,8 @@ PR rules:
 - Keep the conventional commit style after the sprint prefix: `feat(scope): summary`, `fix(scope): summary`, `docs(scope): summary`
 - Do not add issue type prefixes such as `[Task]` or `[Epic]` to PR titles; issue type belongs to GitHub Issues
 - Include `Closes #N` or a parent epic/child issue reference in the PR body
+- Add sprint-scoped PRs to the Projects V2 board and set PR `Status` to `In Review`
+- Do not duplicate `Priority`, `Size`, or `Sprint` onto PR items by default; keep those fields on issues as the source of truth
 
 ## Execution Patterns
 
@@ -106,6 +108,13 @@ When creating a child work item for a sprint epic, perform all three links:
 - Add the issue as a GitHub native sub-issue of the sprint epic when `addSubIssue` is available
 - Add `Parent epic: #N` to the child issue body
 - Add `- [ ] #N` to the sprint epic `Child Issues` checklist
+
+When creating a PR for sprint work:
+
+- Add the PR item to the Projects V2 board
+- Set the PR item `Status` to `In Review`
+- Add or move the linked issue to `In Review`
+- Keep `Priority`, `Size`, and `Sprint` on the linked issue unless the repository explicitly chooses to mirror them
 
 Example:
 

@@ -65,6 +65,15 @@ PR rules:
 - Keep conventional commit style after the sprint prefix.
 - Do not add `[Task]` or `[Epic]` to PR titles; those prefixes are for issue titles only.
 - Include `Closes #N` or a parent epic/child issue reference in the PR body.
+- Add sprint-scoped PRs to the PM project and set PR `Status` to `In Review`.
+- Keep `Priority`, `Size`, and `Sprint` on issues by default; do not mirror them onto PR items unless needed.
+
+Automation rule:
+
+```text
+gh pr create → PR item Status = In Review
+             → linked issue #N Status = In Review
+```
 
 Generate standardized titles and bodies with:
 
