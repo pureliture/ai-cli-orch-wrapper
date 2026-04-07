@@ -10,7 +10,8 @@ const AUTH_CHECK_TIMEOUT_MS = 5_000;
 
 export class CopilotProvider implements IProvider {
   readonly key = 'copilot';
-  readonly installHint = 'npm install -g @github/copilot\n  gh auth login  # GitHub CLI must be installed';
+  readonly installHint =
+    'npm install -g @github/copilot\n  gh auth login  # GitHub CLI must be installed';
 
   isAvailable(): boolean {
     return which('copilot') !== null;
@@ -41,7 +42,12 @@ export class CopilotProvider implements IProvider {
     return base;
   }
 
-  async *invoke(command: string, prompt: string, content: string, options?: InvokeOptions): AsyncIterable<string> {
+  async *invoke(
+    command: string,
+    prompt: string,
+    content: string,
+    options?: InvokeOptions
+  ): AsyncIterable<string> {
     const binary = which('copilot');
     if (!binary) throw new Error('copilot CLI not found in PATH');
 
