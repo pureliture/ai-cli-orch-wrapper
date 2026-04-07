@@ -12,10 +12,10 @@
 
 ## 2. GitHub Projects V2 보드 설정
 
-- [ ] 2.1 GitHub UI에서 Projects V2 생성 — Status 5단계 옵션 설정
-- [ ] 2.2 Priority(P0/P1/P2), Size(S/M/L), Sprint(Iteration), Target date 필드 추가
-- [ ] 2.3 Active Sprint(Board), Triage(Table), Roadmap(Table) 3종 뷰 생성
-- [x] 2.4 `docs/pm-board.md` 템플릿 작성 — Projects 설정 후 IDs 기입 안내 포함
+- [x] 2.1 Projects V2 생성 — #3 "ai-cli-orch-wrapper PM", Status 5단계 설정 (CLI)
+- [x] 2.2 Priority(P0/P1/P2), Size(S/M/L), Target date 필드 추가 (CLI) — Sprint은 UI 필요
+- [ ] 2.3 Active Sprint(Board), Triage(Table), Roadmap(Table) 3종 뷰 생성 — UI 필요
+- [x] 2.4 `docs/pm-board.md` IDs 기록 완료 (PM_PROJECT_NUMBER=3, IDs 확정)
 
 ## 3. GitHub Actions CI 워크플로우
 

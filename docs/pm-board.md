@@ -1,10 +1,16 @@
 # GitHub Projects V2 — PM Board Configuration
 
-## Setup Instructions
+## Setup Status
 
-1. Go to https://github.com/pureliture/ai-cli-orch-wrapper → Projects → New project
-2. Select "Board" template, name it "ai-cli-orch-wrapper PM"
-3. Configure fields and views as described below
+- [x] Project created: #3 "ai-cli-orch-wrapper PM"
+- [x] Status field: Backlog / Ready / In Progress / In Review / Done
+- [x] Priority field: P0 / P1 / P2
+- [x] Size field: S / M / L
+- [x] Target date field
+- [ ] Sprint (Iteration) field — add manually in GitHub UI
+- [ ] Views (Active Sprint, Triage, Roadmap) — add manually in GitHub UI
+
+## Setup Instructions (remaining)
 
 ## Fields
 
@@ -51,10 +57,10 @@ PM_IN_REVIEW_OPTION_ID=""  # "In Review" option node ID
 Set these in your shell rc (`.zshrc` / `.bashrc`):
 
 ```bash
-export PM_PROJECT_NUMBER="1"
-export PM_PROJECT_ID="PVT_xxxxxxxxxxxx"
-export PM_STATUS_FIELD_ID="PVTF_xxxxxxxxxxxx"
-export PM_IN_REVIEW_OPTION_ID="xxxxxxxxxxxx"
+export PM_PROJECT_NUMBER="3"
+export PM_PROJECT_ID="PVT_kwHOA6302M4BT5fA"
+export PM_STATUS_FIELD_ID="PVTSSF_lAHOA6302M4BT5fAzhBFN48"
+export PM_IN_REVIEW_OPTION_ID="961ca78f"
 ```
 
 ## Branch Protection Rules (after CI runs once on main)
