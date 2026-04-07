@@ -33,7 +33,13 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
 
   const installedFiles: string[] = [];
   await copyTree(commandsSrc, commandsDest, options.force ?? false, 'command', installedFiles);
-  await copyTree(promptsSrc, promptsDest, options.force ?? false, 'prompt template', installedFiles);
+  await copyTree(
+    promptsSrc,
+    promptsDest,
+    options.force ?? false,
+    'prompt template',
+    installedFiles
+  );
 
   // Write manifest for selective uninstall
   const manifestPath = MANIFEST_PATH(targetBase);
@@ -59,7 +65,10 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
     try {
       manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { files?: string[] };
     } catch (err) {
-      console.warn('  [warn] Could not read install manifest; falling back to directory removal.', err instanceof Error ? err.message : String(err));
+      console.warn(
+        '  [warn] Could not read install manifest; falling back to directory removal.',
+        err instanceof Error ? err.message : String(err)
+      );
     }
 
     if (manifest.files && manifest.files.length > 0) {
@@ -87,7 +96,9 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
       }
     }
   } else {
-    console.warn('  [warn] No aco install manifest found. Pack may not have been installed via this tool.');
+    console.warn(
+      '  [warn] No aco install manifest found. Pack may not have been installed via this tool.'
+    );
   }
 
   console.log('✓ Pack uninstalled.');
@@ -111,10 +122,7 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
     console.log('Commands:');
     for (const f of installedFiles) {
       const rel = relative(commandsDest, f);
-      const slashName = rel
-        .replace(/\.md$/, '')
-        .split(sep)
-        .join(':');
+      const slashName = rel.replace(/\.md$/, '').split(sep).join(':');
       console.log(`  /${slashName}`);
     }
   }
@@ -127,7 +135,9 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
     const auth = available ? await provider.checkAuth() : { ok: false, hint: provider.installHint };
     const avIcon = available ? '✓' : '✗';
     const authIcon = auth.ok ? '✓' : '✗';
-    console.log(`  ${key}: installed ${avIcon}  auth ${authIcon}${auth.ok ? '' : `  → ${auth.hint}`}`);
+    console.log(
+      `  ${key}: installed ${avIcon}  auth ${authIcon}${auth.ok ? '' : `  → ${auth.hint}`}`
+    );
   }
 }
 
@@ -175,7 +185,13 @@ export async function providerSetup(name: string): Promise<void> {
 // Internal helpers
 // ---------------------------------------------------------------------------
 
-async function copyTree(src: string, dest: string, force: boolean, kind: string, manifest: string[]): Promise<void> {
+async function copyTree(
+  src: string,
+  dest: string,
+  force: boolean,
+  kind: string,
+  manifest: string[]
+): Promise<void> {
   if (!existsSync(src)) {
     console.warn(`  [warn] template source not found: ${src}`);
     return;
@@ -212,20 +228,26 @@ async function collectFiles(dir: string, out: string[]): Promise<void> {
 async function placeWrapperBinary(_targetBase: string, binaryName: string): Promise<void> {
   // Check if already in PATH and appears to be the expected @aco/wrapper binary
   try {
-    const { stdout } = await execFileAsync(binaryName, ['--version'], { timeout: BINARY_CHECK_TIMEOUT_MS });
+    const { stdout } = await execFileAsync(binaryName, ['--version'], {
+      timeout: BINARY_CHECK_TIMEOUT_MS,
+    });
     const versionOutput = typeof stdout === 'string' ? stdout.trim().toLowerCase() : '';
     if (versionOutput.startsWith('aco ')) {
       console.log(`  binary: '${binaryName}' already in PATH ✓`);
       return;
     }
-    console.warn(`  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like @aco/wrapper. Proceeding to install @aco/wrapper globally.`);
+    console.warn(
+      `  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like @aco/wrapper. Proceeding to install @aco/wrapper globally.`
+    );
   } catch {
     // Not found in PATH — proceed to global npm install
   }
 
   try {
     console.log(`  binary: installing @aco/wrapper globally …`);
-    await execFileAsync('npm', ['install', '-g', '@aco/wrapper'], { timeout: NPM_INSTALL_TIMEOUT_MS });
+    await execFileAsync('npm', ['install', '-g', '@aco/wrapper'], {
+      timeout: NPM_INSTALL_TIMEOUT_MS,
+    });
     console.log(`  binary: '${binaryName}' installed globally ✓`);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);

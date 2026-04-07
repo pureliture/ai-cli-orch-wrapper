@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -34,7 +35,10 @@ func (c *CodexProvider) BuildArgs(_ string, prompt, content string, opts InvokeO
 		combined += content
 	}
 
-	args := []string{"exec", "--full-auto", "--skip-git-repo-check"}
+	args := []string{"exec", "--skip-git-repo-check"}
+	if opts.PermissionProfile != ProfileRestricted {
+		args = append(args, "--full-auto")
+	}
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
 	}
@@ -47,7 +51,13 @@ func (c *CodexProvider) BuildArgs(_ string, prompt, content string, opts InvokeO
 }
 
 func (c *CodexProvider) IsAuthFailure(exitCode int, stderr string) bool {
-	return exitCode == 401 || exitCode == 403
+	if exitCode == 401 || exitCode == 403 {
+		return true
+	}
+	if exitCode != 0 && (strings.Contains(stderr, "Unauthorized") || strings.Contains(stderr, "Authentication failed")) {
+		return true
+	}
+	return false
 }
 
 func (c *CodexProvider) AuthHint() string {

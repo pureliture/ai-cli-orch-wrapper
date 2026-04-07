@@ -1,7 +1,7 @@
 // Package provider defines the provider interface and typed error hierarchy
 // for the aco delegation runtime.
 //
-// Contract: docs/contract/runtime-contract.md R-AUTH-01, R-AUTH-04
+// Contract: docs/contract/blocking-execution-contract.md
 package provider
 
 import "fmt"

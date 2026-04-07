@@ -48,7 +48,9 @@ type ProcessRunner struct{}
 //   - Timeout → ctx.Done() → terminateCommand (same SIGTERM + SIGKILL pattern)
 //
 // No cmd.WaitDelay — reference executor.go does not use it.
-// No Setpgid — reference executor.go does not use it.
+// Setpgid is used to place the provider and all its children in a new process group.
+// This is a necessary deviation from ccg-workflow to ensure Node.js CLIs (Gemini, Copilot)
+// and their spawned workers are properly terminated without orphaning pipes.
 // No session files — blocking model, stdout streams inline.
 func (ProcessRunner) Run(ctx context.Context, opts RunOpts) (RunResult, error) {
 	timeoutSecs := opts.TimeoutSecs

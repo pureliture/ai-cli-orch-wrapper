@@ -12,10 +12,6 @@ const (
 )
 
 // InvokeOpts contains per-invocation options for provider.BuildArgs.
-// PID recording is the runner's responsibility (R-RUN-03, CPW-01),
-// not the provider's — the runner calls store.SetPID directly after cmd.Start().
-// OnPID was removed to avoid misleading Phase 2 implementers into routing
-// PID recording through the provider interface.
 type InvokeOpts struct {
 	PermissionProfile PermissionProfile
 	SessionID         string

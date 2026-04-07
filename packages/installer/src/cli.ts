@@ -5,7 +5,13 @@ const MIN_NODE = '18.0.0';
 const EXIT_ERROR = 1;
 checkNodeVersion();
 
-import { packInstall, packUninstall, packStatus, packSetup, providerSetup } from './commands/pack-install.js';
+import {
+  packInstall,
+  packUninstall,
+  packStatus,
+  packSetup,
+  providerSetup,
+} from './commands/pack-install.js';
 
 async function main(): Promise<void> {
   const [, , group, subOrName, ...rest] = process.argv;
@@ -81,7 +87,9 @@ function checkNodeVersion(): void {
   const [major, minor] = process.versions.node.split('.').map(Number);
   const [reqMajor, reqMinor] = MIN_NODE.split('.').map(Number);
   if (major < reqMajor || (major === reqMajor && minor < reqMinor)) {
-    console.error(`aco-install requires Node.js >= ${MIN_NODE} (current: ${process.versions.node})`);
+    console.error(
+      `aco-install requires Node.js >= ${MIN_NODE} (current: ${process.versions.node})`
+    );
     process.exit(EXIT_ERROR);
   }
 }

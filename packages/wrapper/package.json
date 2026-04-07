@@ -10,7 +10,9 @@
   "scripts": {
     "build": "tsc",
     "test": "node --require tsx/cjs --test tests/providers.test.ts tests/session.test.ts",
-    "test:smoke": "tsx tests/smoke.ts"
+    "test:smoke": "tsx tests/smoke.ts",
+    "typecheck": "tsc --noEmit",
+    "format:check": "prettier --check \"src/**/*.ts\""
   },
   "engines": {
     "node": ">=18.0.0"

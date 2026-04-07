@@ -37,12 +37,13 @@ When `aco run` receives SIGTERM or SIGINT (from the OS or Claude Code):
 **Reference:** `executor.go:1322-1358` (`forwardSignals`)
 
 ```go
-// ccg-workflow pattern — copy exactly:
-_ = proc.Signal(syscall.SIGTERM)
+// ccg-workflow pattern — deviation for Node.js stability:
+// We use Setpgid: true to ensure all children are killed.
+cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+_ = syscall.Kill(-pgid, syscall.SIGTERM)
 time.AfterFunc(time.Duration(forceKillDelay)*time.Second, func() {
-    if p := cmd.Process(); p != nil {
-        _ = p.Kill()
-    }
+    _ = syscall.Kill(-pgid, syscall.SIGKILL)
 })
 ```
 

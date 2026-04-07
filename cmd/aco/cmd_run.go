@@ -34,8 +34,16 @@ func cmdRun(d *deps, args []string) int {
 		a := args[i]
 		switch {
 		case a == "--input" || a == "-input":
-			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
-				inputFlag = args[i+1]
+			if i+1 < len(args) {
+				val := args[i+1]
+				// Only reject if it looks like another known flag
+				if val == "--permission-profile" || val == "-permission-profile" ||
+					val == "--timeout" || val == "-timeout" ||
+					val == "--focus" {
+					fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
+					return 1
+				}
+				inputFlag = val
 				i++
 			} else {
 				fmt.Fprintf(d.stderr, "flag %q requires a value\n", a)
@@ -72,11 +80,15 @@ func cmdRun(d *deps, args []string) int {
 			}
 		case len(a) > 0 && a[0] != '-':
 			positional = append(positional, a)
+		default:
+			fmt.Fprintf(d.stderr, "unknown flag %q\n", a)
+			fmt.Fprintln(d.stderr, "Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <secs>]")
+			return 1
 		}
 	}
 
 	if len(positional) < 2 {
-		fmt.Fprintln(os.Stderr, "Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <secs>]")
+		fmt.Fprintln(d.stderr, "Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <secs>]")
 		return 1
 	}
 
@@ -87,7 +99,7 @@ func cmdRun(d *deps, args []string) int {
 	switch profile {
 	case provider.ProfileDefault, provider.ProfileRestricted, provider.ProfileUnrestricted:
 	default:
-		fmt.Fprintf(os.Stderr, "invalid --permission-profile %q: must be default|restricted|unrestricted\n", profileFlag)
+		fmt.Fprintf(d.stderr, "invalid --permission-profile %q: must be default|restricted|unrestricted\n", profileFlag)
 		return 1
 	}
 
@@ -105,11 +117,11 @@ func cmdRun(d *deps, args []string) int {
 
 	prov, err := d.registry.Get(providerKey)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintln(d.stderr, err)
 		return 1
 	}
 	if !prov.IsAvailable() {
-		fmt.Fprintf(os.Stderr, "provider %q not found in PATH\n  Install: %s\n", providerKey, prov.InstallHint())
+		fmt.Fprintf(d.stderr, "provider %q not found in PATH\n  Install: %s\n", providerKey, prov.InstallHint())
 		return 1
 	}
 
