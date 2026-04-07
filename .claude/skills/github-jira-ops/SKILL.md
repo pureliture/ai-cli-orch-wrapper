@@ -63,6 +63,17 @@ Rules:
 - The sprint epic must maintain a `Child Issues` checklist
 - Add every sprint issue to the Projects V2 board and set `Status`, `Priority`, and `Size` when those fields exist
 
+PR title format:
+
+- `[Sprint V3] feat(pm-harness): implement GitHub Projects + Actions + Claude Code PM harness`
+
+PR rules:
+
+- Prefix sprint-scoped PR titles with `[Sprint <id>]`
+- Keep the conventional commit style after the sprint prefix: `feat(scope): summary`, `fix(scope): summary`, `docs(scope): summary`
+- Do not add issue type prefixes such as `[Task]` or `[Epic]` to PR titles; issue type belongs to GitHub Issues
+- Include `Closes #N` or a parent epic/child issue reference in the PR body
+
 ## Execution Patterns
 
 ### Set Up Jira-Style GitHub Management
