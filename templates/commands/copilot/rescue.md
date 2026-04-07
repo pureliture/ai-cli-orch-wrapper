@@ -26,10 +26,7 @@ STDIN_CONTENT=""
 if [ ! -t 0 ]; then STDIN_CONTENT=$(cat); fi
 
 PROBLEM_CONTENT=""
-if [[ -n "$FROM_FILE" ]] && [[ -n "$ERROR_MSG" ]]; then
-  if [[ ! -f "$FROM_FILE" ]]; then echo "Error: --from file not found: $FROM_FILE" >&2; exit 1; fi
-  PROBLEM_CONTENT="Error message: ${ERROR_MSG}"$'\n\n'"File content (${FROM_FILE}):"$'\n'"$(cat "$FROM_FILE")"
-elif [[ -n "$FROM_FILE" ]]; then
+if [[ -n "$FROM_FILE" ]]; then
   if [[ ! -f "$FROM_FILE" ]]; then echo "Error: --from file not found: $FROM_FILE" >&2; exit 1; fi
   PROBLEM_CONTENT=$(cat "$FROM_FILE")
 elif [[ -n "$ERROR_MSG" ]]; then
@@ -46,8 +43,5 @@ if [[ -z "$PROBLEM_CONTENT" ]]; then
   exit 1
 fi
 
-GIT_LOG=$(git log -5 --oneline 2>/dev/null || echo "(no git history available)")
-FULL_CONTEXT="Recent git history:"$'\n'"${GIT_LOG}"$'\n\n'"Problem:"$'\n'"${PROBLEM_CONTENT}"
-
-printf '%s' "$FULL_CONTEXT" | aco run copilot rescue
+printf '%s' "$PROBLEM_CONTENT" | aco run copilot rescue
 ```

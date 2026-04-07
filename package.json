@@ -9,7 +9,8 @@
   "scripts": {
     "build": "npm run build --workspace=packages/wrapper && npm run build --workspace=packages/installer",
     "test": "npm test --workspace=packages/wrapper",
-    "test:smoke": "npm run test:smoke --workspace=packages/wrapper --if-present"
+    "test:smoke": "npm run test:smoke --workspace=packages/wrapper --if-present",
+    "test:fixtures": "npx ts-node test/fixtures/harness.ts"
   },
   "keywords": [
     "claude-code",
