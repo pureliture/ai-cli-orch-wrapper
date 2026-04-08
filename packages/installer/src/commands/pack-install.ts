@@ -4,7 +4,7 @@ import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { providerRegistry } from '@aco/wrapper';
+import { providerRegistry } from '@pureliture/aco-wrapper';
 
 const execFileAsync = promisify(execFile);
 
@@ -237,22 +237,22 @@ async function placeWrapperBinary(_targetBase: string, binaryName: string): Prom
       return;
     }
     console.warn(
-      `  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like @aco/wrapper. Proceeding to install @aco/wrapper globally.`
+      `  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like @pureliture/aco-wrapper. Proceeding to install @pureliture/aco-wrapper globally.`
     );
   } catch {
     // Not found in PATH — proceed to global npm install
   }
 
   try {
-    console.log(`  binary: installing @aco/wrapper globally …`);
-    await execFileAsync('npm', ['install', '-g', '@aco/wrapper'], {
+    console.log(`  binary: installing @pureliture/aco-wrapper globally …`);
+    await execFileAsync('npm', ['install', '-g', '@pureliture/aco-wrapper'], {
       timeout: NPM_INSTALL_TIMEOUT_MS,
     });
     console.log(`  binary: '${binaryName}' installed globally ✓`);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     console.warn(`  [warn] Could not install '${binaryName}' globally: ${reason}`);
-    console.warn(`         Run manually: npm install -g @aco/wrapper`);
+    console.warn(`         Run manually: npm install -g @pureliture/aco-wrapper`);
   }
 }
 

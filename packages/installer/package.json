@@ -1,5 +1,5 @@
 {
-  "name": "aco-install",
+  "name": "@pureliture/aco-install",
   "version": "0.4.0",
   "description": "Installer CLI for the aco Claude Code command pack.",
   "main": "dist/cli.js",
@@ -16,7 +16,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@aco/wrapper": "^0.4.0"
+    "@pureliture/aco-wrapper": "^0.4.0"
   },
   "license": "MIT",
   "devDependencies": {

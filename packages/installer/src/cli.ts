@@ -88,7 +88,7 @@ function checkNodeVersion(): void {
   const [reqMajor, reqMinor] = MIN_NODE.split('.').map(Number);
   if (major < reqMajor || (major === reqMajor && minor < reqMinor)) {
     console.error(
-      `aco-install requires Node.js >= ${MIN_NODE} (current: ${process.versions.node})`
+      `@pureliture/aco-install requires Node.js >= ${MIN_NODE} (current: ${process.versions.node})`
     );
     process.exit(EXIT_ERROR);
   }

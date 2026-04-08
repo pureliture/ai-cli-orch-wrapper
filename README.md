@@ -6,7 +6,7 @@ provider 기반 Node.js wrapper runtime 위에 구성된, Gemini CLI와 GitHub C
 
 ```bash
 # 방법 1: npx 사용 (로컬 설치 불필요)
-npx aco-install
+npx @pureliture/aco-install
 
 # 방법 2: 이 저장소에서 직접 설치
 npm install
@@ -16,8 +16,8 @@ aco-install pack setup
 설치 후에는 배포된 CLI가 실제로 실행 가능한지 확인합니다.
 
 ```bash
-npx aco-install --version
-npx @aco/wrapper --version
+npx @pureliture/aco-install --version
+npx @pureliture/aco-wrapper --version
 ```
 
 ## Provider 설정
@@ -69,14 +69,14 @@ aco cancel --session <id>        # 실행 중인 세션 취소
 | `error.log` | `0600` | provider stderr 및 wrapper 오류 상세 |
 
 세션 디렉터리 자체는 `0700` 권한으로 생성됩니다.
-
 ## 저장소 구조
 
 ```text
 packages/
-  wrapper/          — aco wrapper runtime (provider interface, session store, CLI)
-  installer/        — aco-install CLI (pack install, provider setup)
+  wrapper/          — @pureliture/aco-wrapper runtime (provider interface, session store, CLI)
+  installer/        — @pureliture/aco-install CLI (pack install, provider setup)
 templates/
+...
   commands/         — Claude Code slash command templates (installed to .claude/commands/)
     gemini/
     copilot/
@@ -130,7 +130,7 @@ npm run test:smoke  # provider 실행 가능 여부 smoke check
 wrapper 바이너리를 명시적으로 설치합니다.
 
 ```bash
-npm install -g @aco/wrapper
+npm install -g @pureliture/aco-wrapper
 ```
 
 ### Provider를 찾을 수 없거나 인증되지 않은 경우

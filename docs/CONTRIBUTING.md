@@ -21,14 +21,14 @@ Build order is fixed: `packages/wrapper` must compile before `packages/installer
 
 ```
 packages/
-  wrapper/           — @aco/wrapper: provider interface, session store, aco CLI
+  wrapper/           — @pureliture/aco-wrapper: provider interface, session store, aco CLI
     src/
       cli.ts         — aco entry point
       providers/     — gemini.ts, copilot.ts, interface.ts, registry.ts
       session/       — store.ts (task.json + output.log lifecycle)
       util/          — spawn-stream.ts, which.ts
       index.ts       — public API re-exports
-  installer/         — aco-install: npx installer
+  installer/         — @pureliture/aco-install: npx installer
     src/
       cli.ts
       commands/pack-install.ts

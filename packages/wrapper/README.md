@@ -1,4 +1,4 @@
-# @aco/wrapper
+# @pureliture/aco-wrapper
 
 Provider-based wrapper runtime for the `aco` CLI. Owns execution dispatch, session lifecycle, and output management for Gemini CLI and GitHub Copilot CLI.
 

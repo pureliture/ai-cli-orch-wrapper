@@ -8,8 +8,8 @@
 
 ```
 packages/
-  wrapper/     # @aco/wrapper — provider 기반 Node.js 런타임
-  installer/   # aco-install — npx 설치 CLI
+  wrapper/     # @pureliture/aco-wrapper — provider 기반 Node.js 런타임
+  installer/   # @pureliture/aco-install — npx 설치 CLI
 templates/
   commands/    # slash command 템플릿 (설치 시 .claude/commands/ 로 복사)
   prompts/     # provider별 프롬프트 템플릿

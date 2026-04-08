@@ -7,7 +7,7 @@ The repository has a Node.js wrapper that already spawns provider CLIs and manag
 - Add an OpenSpec change that defines a narrow `ccg-workflow` compatibility contract for this repository's wrapper behavior.
 - Document the compatibility scope around process spawn, stdout/stderr streaming, PID tracking, cancellation, and exit/timeout semantics.
 - Explicitly exclude `ccg-workflow` surfaces that are not needed in the current environment, including Windows-only process handling, browser opening, and SSE/web UI features.
-- Record the current implementation gaps between `@aco/wrapper` and `ccg-workflow`'s `codeagent-wrapper` so later implementation work has a stable baseline.
+- Record the current implementation gaps between @pureliture/aco-wrapper and ccg-workflow's codeagent-wrapper so later implementation work has a stable baseline.
 
 ## Capabilities
 

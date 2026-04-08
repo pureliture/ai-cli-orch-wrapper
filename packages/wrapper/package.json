@@ -1,5 +1,5 @@
 {
-  "name": "@aco/wrapper",
+  "name": "@pureliture/aco-wrapper",
   "version": "0.4.0",
   "description": "Provider-based wrapper runtime for aco CLI — execution, session, and output lifecycle.",
   "main": "dist/index.js",

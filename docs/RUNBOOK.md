@@ -21,8 +21,8 @@ cd ../installer && npm publish
 ### 3. Verify
 
 ```bash
-npx aco-install --version
-npx @aco/wrapper --version
+npx @pureliture/aco-install --version
+npx @pureliture/aco-wrapper --version
 ```
 
 ---
@@ -31,7 +31,7 @@ npx @aco/wrapper --version
 
 ```bash
 # Option 1: npx (no local install)
-npx aco-install
+npx @pureliture/aco-install
 
 # Option 2: from repo
 npm install
@@ -98,10 +98,10 @@ aco cancel --session <id>
 
 ### `aco: command not found`
 
-The `aco` binary is provided by `@aco/wrapper`. Run `npm install` from the repo root or install globally:
+The `aco` binary is provided by `@pureliture/aco-wrapper`. Run `npm install` from the repo root or install globally:
 
 ```bash
-npm install -g @aco/wrapper
+npm install -g @pureliture/aco-wrapper
 ```
 
 ### Provider not found / not authenticated

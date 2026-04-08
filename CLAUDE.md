@@ -4,8 +4,8 @@
 
 This repo is an npm workspace with the following layout:
 
-- **`packages/wrapper/`** — `@aco/wrapper`: Node.js wrapper runtime. Owns the `aco` CLI binary, provider interface (`IProvider`), provider implementations (`GeminiProvider`, `CopilotProvider`), provider registry, and session/task/output lifecycle (`SessionStore`).
-- **`packages/installer/`** — `aco-install`: npm-publishable installer CLI. Provides `aco-install pack install/uninstall/status/setup` and `aco-install provider setup <name>`.
+- **`packages/wrapper/`** — `@pureliture/aco-wrapper`: Node.js wrapper runtime. Owns the `aco` CLI binary, provider interface (`IProvider`), provider implementations (`GeminiProvider`, `CopilotProvider`), provider registry, and session/task/output lifecycle (`SessionStore`).
+- **`packages/installer/`** — `@pureliture/aco-install`: npm-publishable installer CLI. Provides `aco-install pack install/uninstall/status/setup` and `aco-install provider setup <name>`.
 - **`templates/commands/`** — Source for Claude Code slash command markdown files. Installed to `.claude/commands/` by `aco-install pack install`. Thin wrappers that delegate all logic to `aco run <provider> <command>`.
 - **`templates/prompts/`** — Provider-specific prompt text. Installed to `.claude/aco/prompts/` by `aco-install pack install`.
 - **`openspec/`** — Architecture change proposals, specs, design docs, and task lists.
