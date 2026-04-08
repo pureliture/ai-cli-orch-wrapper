@@ -1,5 +1,7 @@
 ---
+name: gh-pr:multi
 description: "Pull Request readiness validation with multi-AI"
+allowed-tools: [Bash]
 ---
 
 # Multi-AI GH PR

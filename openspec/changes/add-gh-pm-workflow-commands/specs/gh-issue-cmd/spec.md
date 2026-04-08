@@ -18,3 +18,7 @@ The system SHALL provide a `/gh-issue` Claude Code slash command that creates a 
 #### Scenario: Project Backlog assignment
 - **WHEN** issue is created
 - **THEN** system SHALL add the issue to GitHub Project #3 (`PVT_kwHOA6302M4BT5fA`) with status "Backlog" using `gh project item-add`
+
+#### Scenario: Priority label applied at creation
+- **WHEN** user invokes `/gh-issue`
+- **THEN** system SHALL prompt for or infer a `p0`/`p1`/`p2` priority label and include it in the `gh issue create --label` argument (default: `p1`)

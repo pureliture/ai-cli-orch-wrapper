@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: /gh-pr command creates a pull request
-The system SHALL provide a `/gh-pr` Claude Code slash command that creates a GitHub PR in `pureliture/ai-cli-orch-wrapper` with a conventional commit title, `Closes #N` reference, a CI checklist body, and an Epic checkbox reminder.
+The system SHALL provide a `/gh-pr` Claude Code slash command that creates a GitHub PR in `pureliture/ai-cli-orch-wrapper` with a conventional commit title, `Closes #N` reference, a CI checklist body, an Epic checkbox reminder, explicit PM Project status management, and priority label inheritance.
 
 #### Scenario: PR creation with issue reference
 - **WHEN** user invokes `/gh-pr` with issue number N
@@ -18,3 +18,19 @@ The system SHALL provide a `/gh-pr` Claude Code slash command that creates a Git
 #### Scenario: Conventional commit title
 - **WHEN** user invokes `/gh-pr`
 - **THEN** PR title SHALL follow `<type>: <description>` format, matching the issue's conventional commit title
+
+#### Scenario: PR added to PM Project with In Review status
+- **WHEN** PR is successfully created
+- **THEN** system SHALL add the PR to Project #3 and set its Status to "In Review" via `gh project item-edit`
+
+#### Scenario: Linked issue set to In Review
+- **WHEN** PR body contains `Closes #N`, `Fixes #N`, or `Resolves #N`
+- **THEN** system SHALL set the linked issue's Project Status to "In Review"
+
+#### Scenario: Priority label applied to PR
+- **WHEN** PR is created
+- **THEN** system SHALL apply a `p0`/`p1`/`p2` priority label, inheriting from linked issue or defaulting to `p1`
+
+#### Scenario: Project update failure does not block PR
+- **WHEN** any Project status update step fails
+- **THEN** system SHALL print a warning and continue without aborting the PR creation

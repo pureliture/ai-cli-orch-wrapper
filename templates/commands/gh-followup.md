@@ -1,5 +1,7 @@
 ---
+name: gh-followup
 description: "Review followup issue creation and Project #3 backlog addition"
+allowed-tools: [Bash]
 ---
 
 # GH Followup

@@ -1,5 +1,7 @@
 ---
+name: gh-followup:multi
 description: "Review followup validation with multi-AI"
+allowed-tools: [Bash]
 ---
 
 # Multi-AI GH Followup
