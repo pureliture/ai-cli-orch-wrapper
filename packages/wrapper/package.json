@@ -1,7 +1,7 @@
 {
-  "name": "@aco/wrapper",
+  "name": "@pureliture/ai-cli-orch-wrapper",
   "version": "0.4.0",
-  "description": "Provider-based wrapper runtime for aco CLI — execution, session, and output lifecycle.",
+  "description": "Installable aco CLI package for command pack setup, provider setup, execution, and session lifecycle.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {

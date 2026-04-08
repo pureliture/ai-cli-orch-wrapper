@@ -16,7 +16,7 @@ import {
 async function main(): Promise<void> {
   const [, , group, subOrName, ...rest] = process.argv;
 
-  // npx aco-install  → shorthand for pack setup
+  // Internal compatibility entrypoint → shorthand for pack setup
   if (!group) {
     await packSetup({});
     return;
@@ -60,14 +60,14 @@ async function main(): Promise<void> {
   if (group === 'provider') {
     const name = subOrName;
     if (!name) {
-      console.error('Usage: aco-install provider setup <name>');
+      console.error('Usage: aco provider setup <name>');
       process.exit(EXIT_ERROR);
     }
     if (name === 'setup') {
-      // aco-install provider setup <name>
+      // aco provider setup <name>
       const providerName = rest[0];
       if (!providerName) {
-        console.error('Usage: aco-install provider setup <name>');
+        console.error('Usage: aco provider setup <name>');
         process.exit(EXIT_ERROR);
       }
       await providerSetup(providerName);
@@ -88,7 +88,7 @@ function checkNodeVersion(): void {
   const [reqMajor, reqMinor] = MIN_NODE.split('.').map(Number);
   if (major < reqMajor || (major === reqMajor && minor < reqMinor)) {
     console.error(
-      `aco-install requires Node.js >= ${MIN_NODE} (current: ${process.versions.node})`
+      `@internal/aco-installer requires Node.js >= ${MIN_NODE} (current: ${process.versions.node})`
     );
     process.exit(EXIT_ERROR);
   }
@@ -97,12 +97,11 @@ function checkNodeVersion(): void {
 function printUsage(): void {
   console.log(`
 Usage:
-  aco-install                    — shorthand for 'aco-install pack setup'
-  aco-install pack install [--global] [--force] [--binary-name <name>]
-  aco-install pack uninstall [--global]
-  aco-install pack status [--global]
-  aco-install pack setup [--global] [--force]
-  aco-install provider setup <gemini|copilot>
+  aco pack install [--global] [--force] [--binary-name <name>]
+  aco pack uninstall [--global]
+  aco pack status [--global]
+  aco pack setup [--global] [--force]
+  aco provider setup <gemini|copilot>
 `);
 }
 

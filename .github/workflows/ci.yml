@@ -32,13 +32,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # Build wrapper first so installer can resolve @aco/wrapper types (dist/index.d.ts)
-      - name: build wrapper (for types)
+      - name: build aco package
         run: npm run build --workspace=packages/wrapper
       - name: typecheck wrapper
         run: npm run typecheck --workspace=packages/wrapper
-      - name: typecheck installer
-        run: npm run typecheck --workspace=packages/installer
 
   test:
     name: test
@@ -66,16 +63,16 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Pack workspaces
+      - name: Pack aco package
         run: |
           mkdir -p "$RUNNER_TEMP/aco-pack"
-          npm pack --workspaces --pack-destination "$RUNNER_TEMP/aco-pack"
+          npm pack --workspace=packages/wrapper --pack-destination "$RUNNER_TEMP/aco-pack" --json > "$RUNNER_TEMP/aco-pack/pack.json"
       - name: Install aco binary (local prefix, no sudo)
         run: |
-          TARBALL=$(find "$RUNNER_TEMP/aco-pack" -maxdepth 1 -name 'aco-wrapper-*.tgz' -print -quit)
-          test -n "$TARBALL" || { echo "ERROR: aco-wrapper tarball not found"; exit 1; }
-          npm install --prefix "$RUNNER_TEMP/aco-install" "$TARBALL"
-          echo "$RUNNER_TEMP/aco-install/node_modules/.bin" >> "$GITHUB_PATH"
+          TARBALL=$(node -e "const fs=require('node:fs'); const path=require('node:path'); const pack=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/aco-pack/pack.json','utf8')); const filename=Array.isArray(pack) ? pack[0]?.filename : pack?.filename; if (!filename) process.exit(1); process.stdout.write(path.join(process.env.RUNNER_TEMP, 'aco-pack', filename));")
+          test -n "$TARBALL" || { echo "ERROR: ai-cli-orch-wrapper tarball not found"; exit 1; }
+          npm install --prefix "$RUNNER_TEMP/aco-prefix" "$TARBALL"
+          echo "$RUNNER_TEMP/aco-prefix/node_modules/.bin" >> "$GITHUB_PATH"
       - name: Smoke test aco binary
         run: |
           aco --version
