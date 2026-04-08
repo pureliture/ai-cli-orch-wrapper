@@ -44,9 +44,9 @@ Three command axes for PM workflow automation:
 
 | Command | What it does |
 |---------|-------------|
-| `/gh-issue` | Create issue + `type:*` + selected `sprint:v*` labels + Project #3 Backlog |
+| `/gh-issue` | Create issue + `type:*` + priority + selected `sprint:v*` labels + Project #3 Backlog |
 | `/gh-start #N` | In Progress transition + `status:in-progress` label + branch creation |
-| `/gh-pr` | PR create + `Closes #N` + CI checklist + Epic reminder |
+| `/gh-pr` | PR create + `Closes #N` + inherited priority label + PR/issue Project status → In Review + CI checklist + Epic reminder |
 | `/gh-followup` | Post-review issue + `origin:review` + `type:*` + Project #3 Backlog |
 | `/gh-issue:multi` | `/gh-issue` with multi-AI scope validation |
 | `/gh-start:multi` | `/gh-start` with multi-AI readiness check |

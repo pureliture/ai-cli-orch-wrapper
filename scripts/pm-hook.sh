@@ -19,10 +19,6 @@
 #   PM_PROJECT_ID          — Projects V2 node ID (GUID)
 #   PM_STATUS_FIELD_ID     — Status field node ID
 #   PM_IN_REVIEW_OPTION_ID — "In Review" option node ID
-#   PM_PRIORITY_FIELD_ID   — Priority field node ID (PVTSSF_lAHOA6302M4BT5fAzhBFN_U)
-#   PM_P0_OPTION_ID        — P0 option node ID (65dd5d04)
-#   PM_P1_OPTION_ID        — P1 option node ID (ed47fdcf)
-#   PM_P2_OPTION_ID        — P2 option node ID (6eb1a525)
 #
 # Run 'bash scripts/setup-project-ids.sh' after Projects V2 setup to get IDs.
 
@@ -55,11 +51,6 @@ PROJECT_NUMBER="${PM_PROJECT_NUMBER:-}"
 PROJECT_ID="${PM_PROJECT_ID:-}"        # Node ID (GUID) — needed for item-edit
 STATUS_FIELD_ID="${PM_STATUS_FIELD_ID:-}"
 IN_REVIEW_OPTION_ID="${PM_IN_REVIEW_OPTION_ID:-}"
-PRIORITY_FIELD_ID="${PM_PRIORITY_FIELD_ID:-PVTSSF_lAHOA6302M4BT5fAzhBFN_U}"
-P0_OPTION_ID="${PM_P0_OPTION_ID:-65dd5d04}"
-P1_OPTION_ID="${PM_P1_OPTION_ID:-ed47fdcf}"
-P2_OPTION_ID="${PM_P2_OPTION_ID:-6eb1a525}"
-
 if [[ -z "$PROJECT_NUMBER" || -z "$PROJECT_ID" || -z "$STATUS_FIELD_ID" || -z "$IN_REVIEW_OPTION_ID" ]]; then
   echo "[pm-hook] Projects V2 config not set — skipping (run setup-project-ids.sh)" >&2
   exit 0

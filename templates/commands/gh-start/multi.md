@@ -1,5 +1,7 @@
 ---
+name: gh-start:multi
 description: "GitHub issue start validation with multi-AI"
+allowed-tools: [Bash]
 ---
 
 # Multi-AI GH Start

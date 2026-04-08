@@ -1,3 +1,9 @@
+---
+name: gh-pr
+description: "Create a GitHub Pull Request with substantive body, Project status management, and priority label inheritance"
+allowed-tools: [Bash]
+---
+
 Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body must be substantive — not boilerplate. Derive content from the linked issue and the actual changes made.
 
 ## Steps
@@ -76,9 +82,10 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
    ```
    Then find the PR's Project item ID:
    ```bash
-   gh project item-list 3 --owner pureliture --format json --limit 500
+   gh project item-list 3 --owner pureliture --format json --limit 500 \
+     --jq ".items[] | select(.content.url == \"<pr_url>\") | .id"
    ```
-   Match the item whose `content.url` equals `<pr_url>` and get its `id`. Then set status:
+   If no ID is returned and the project may contain more than 500 items, retry with a higher `--limit` before assuming the item is absent. Then set status:
    ```bash
    gh project item-edit \
      --project-id PVT_kwHOA6302M4BT5fA \
@@ -91,7 +98,12 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
 8. Set linked issue status to "In Review":
    Parse the PR body for `Closes #N`, `Fixes #N`, or `Resolves #N` (case-insensitive). If found:
    - Verify the issue exists: `gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json number`
-   - Find the issue's Project item ID from `gh project item-list` (match `content.number == N`)
+   - Find the issue's Project item ID:
+     ```bash
+     gh project item-list 3 --owner pureliture --format json --limit 500 \
+       --jq ".items[] | select(.content.number == <N> and .content.type == \"Issue\") | .id"
+     ```
+     If no ID is returned and the project may contain more than 500 items, retry with a higher `--limit`.
    - If the item is not in the Project yet, add it first: `gh project item-add 3 --owner pureliture --url https://github.com/pureliture/ai-cli-orch-wrapper/issues/<N>`
    - Set status to "In Review":
      ```bash
