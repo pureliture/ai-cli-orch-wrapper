@@ -4,14 +4,14 @@ import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { providerRegistry } from '@pureliture/ai-cli-orch-wrapper';
+import { providerRegistry } from '../providers/registry.js';
 
 const execFileAsync = promisify(execFile);
 
 const BINARY_CHECK_TIMEOUT_MS = 5_000;
 const NPM_INSTALL_TIMEOUT_MS = 60_000;
 const EXIT_ERROR = 1;
-
+const PUBLIC_PACKAGE_NAME = '@pureliture/ai-cli-orch-wrapper';
 const TEMPLATES_DIR = resolve(__dirname, '..', '..', '..', '..', 'templates');
 
 export interface PackInstallOptions {
@@ -41,13 +41,12 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
     installedFiles
   );
 
-  // Write manifest for selective uninstall
   const manifestPath = MANIFEST_PATH(targetBase);
   await mkdir(dirname(manifestPath), { recursive: true });
   await writeFile(manifestPath, JSON.stringify({ files: installedFiles }, null, 2));
 
   const binaryName = options.binaryName ?? 'aco';
-  await placeWrapperBinary(targetBase, binaryName);
+  await placeWrapperBinary(binaryName);
 
   console.log(`\n✓ Pack installed. Run 'aco pack setup' to verify provider readiness.`);
 }
@@ -60,7 +59,6 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
   console.log('Uninstalling aco command pack …');
 
   if (existsSync(manifestPath)) {
-    // Selective removal: only delete files recorded in the install manifest
     let manifest: { files?: string[] } = {};
     try {
       manifest = JSON.parse(await readFile(manifestPath, 'utf8')) as { files?: string[] };
@@ -85,7 +83,6 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
       }
       await rm(manifestPath, { force: true });
     } else {
-      // Fallback: remove tracked directories
       const commandsDest = join(targetBase, 'commands');
       const promptsDest = join(targetBase, 'aco', 'prompts');
       for (const dir of [commandsDest, promptsDest]) {
@@ -111,7 +108,6 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
   console.log('aco pack status\n');
   console.log(`Target: ${targetBase}`);
 
-  // List installed commands
   const installedFiles: string[] = [];
   if (existsSync(commandsDest)) {
     await collectFiles(commandsDest, installedFiles);
@@ -127,7 +123,6 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
     }
   }
 
-  // Per-provider status
   console.log('\nProviders:');
   for (const key of providerRegistry.keys()) {
     const provider = providerRegistry.get(key)!;
@@ -181,10 +176,6 @@ export async function providerSetup(name: string): Promise<void> {
   console.log(`${name}: installed ✓  auth: ok ✓`);
 }
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
-
 async function copyTree(
   src: string,
   dest: string,
@@ -225,8 +216,7 @@ async function collectFiles(dir: string, out: string[]): Promise<void> {
   }
 }
 
-async function placeWrapperBinary(_targetBase: string, binaryName: string): Promise<void> {
-  // Check if already in PATH and appears to be the expected public aco binary
+async function placeWrapperBinary(binaryName: string): Promise<void> {
   try {
     const { stdout } = await execFileAsync(binaryName, ['--version'], {
       timeout: BINARY_CHECK_TIMEOUT_MS,
@@ -237,22 +227,22 @@ async function placeWrapperBinary(_targetBase: string, binaryName: string): Prom
       return;
     }
     console.warn(
-      `  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like @pureliture/ai-cli-orch-wrapper. Proceeding to install @pureliture/ai-cli-orch-wrapper globally.`
+      `  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like ${PUBLIC_PACKAGE_NAME}. Proceeding to install ${PUBLIC_PACKAGE_NAME} globally.`
     );
   } catch {
     // Not found in PATH — proceed to global npm install
   }
 
   try {
-    console.log(`  binary: installing @pureliture/ai-cli-orch-wrapper globally …`);
-    await execFileAsync('npm', ['install', '-g', '@pureliture/ai-cli-orch-wrapper'], {
+    console.log(`  binary: installing ${PUBLIC_PACKAGE_NAME} globally …`);
+    await execFileAsync('npm', ['install', '-g', PUBLIC_PACKAGE_NAME], {
       timeout: NPM_INSTALL_TIMEOUT_MS,
     });
     console.log(`  binary: '${binaryName}' installed globally ✓`);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     console.warn(`  [warn] Could not install '${binaryName}' globally: ${reason}`);
-    console.warn(`         Run manually: npm install -g @pureliture/ai-cli-orch-wrapper`);
+    console.warn(`         Run manually: npm install -g ${PUBLIC_PACKAGE_NAME}`);
   }
 }
 

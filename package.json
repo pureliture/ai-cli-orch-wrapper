@@ -7,11 +7,11 @@
     "packages/*"
   ],
   "scripts": {
-    "build": "npm run build --workspace=packages/wrapper && npm run build --workspace=packages/installer",
+    "build": "npm run build --workspace=packages/wrapper",
     "test": "npm test --workspace=packages/wrapper",
     "test:smoke": "npm run test:smoke --workspace=packages/wrapper --if-present",
     "test:fixtures": "npx tsx test/fixtures/harness.ts",
-    "typecheck": "npm run typecheck --workspace=packages/wrapper && npm run typecheck --workspace=packages/installer",
+    "typecheck": "npm run typecheck --workspace=packages/wrapper",
     "format:check": "prettier --check \"packages/*/src/**/*.ts\"",
     "release": "npm run build && changeset publish"
   },

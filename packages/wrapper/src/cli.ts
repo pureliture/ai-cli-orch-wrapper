@@ -5,6 +5,13 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import process from 'node:process';
 import type { Writable } from 'node:stream';
+import {
+  packInstall,
+  packSetup,
+  packStatus,
+  packUninstall,
+  providerSetup,
+} from './commands/pack-install.js';
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile } from './providers/interface.js';
@@ -21,6 +28,12 @@ async function main(): Promise<void> {
     case '-v':
       console.log(`aco ${VERSION}`);
       break;
+    case 'pack':
+      await cmdPack(rest);
+      break;
+    case 'provider':
+      await cmdProvider(rest);
+      break;
     case 'run':
       await cmdRun(rest);
       break;
@@ -35,9 +48,60 @@ async function main(): Promise<void> {
       break;
     default:
       console.error(`aco: unknown command '${subcommand ?? ''}'`);
-      console.error('Usage: aco <run|result|status|cancel> [options]');
+      printUsage();
       process.exit(EXIT_ERROR);
   }
+}
+
+async function cmdPack(args: string[]): Promise<void> {
+  const sub = args[0];
+  switch (sub) {
+    case 'install': {
+      const isGlobal = args.includes('--global');
+      const force = args.includes('--force');
+      const bnIdx = args.indexOf('--binary-name');
+      const binaryName = bnIdx !== -1 ? args[bnIdx + 1] : undefined;
+      await packInstall({ global: isGlobal, force, binaryName });
+      return;
+    }
+    case 'uninstall': {
+      const isGlobal = args.includes('--global');
+      await packUninstall({ global: isGlobal });
+      return;
+    }
+    case 'status': {
+      const isGlobal = args.includes('--global');
+      await packStatus({ global: isGlobal });
+      return;
+    }
+    case 'setup':
+    case undefined: {
+      const isGlobal = args.includes('--global');
+      const force = args.includes('--force');
+      await packSetup({ global: isGlobal, force });
+      return;
+    }
+    default:
+      console.error(`Unknown pack sub-command: ${sub}`);
+      printUsage();
+      process.exit(EXIT_ERROR);
+  }
+}
+
+async function cmdProvider(args: string[]): Promise<void> {
+  const sub = args[0];
+  if (sub !== 'setup') {
+    console.error(`Unknown provider sub-command: ${sub ?? ''}`);
+    printUsage();
+    process.exit(EXIT_ERROR);
+  }
+
+  const providerName = args[1];
+  if (!providerName) {
+    console.error('Usage: aco provider setup <name>');
+    process.exit(EXIT_ERROR);
+  }
+  await providerSetup(providerName);
 }
 
 // ---------------------------------------------------------------------------
@@ -250,6 +314,20 @@ function loadVersion(): string {
   } catch {
     return '0.0.0';
   }
+}
+
+function printUsage(): void {
+  console.error(`Usage:
+  aco --version
+  aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]
+  aco result [--session <id>]
+  aco status [--session <id>]
+  aco cancel [--session <id>]
+  aco pack install [--global] [--force] [--binary-name <name>]
+  aco pack uninstall [--global]
+  aco pack status [--global]
+  aco pack setup [--global] [--force]
+  aco provider setup <gemini|copilot>`);
 }
 
 async function endWritable(stream: Writable): Promise<void> {
