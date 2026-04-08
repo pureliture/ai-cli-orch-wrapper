@@ -309,10 +309,15 @@ func stdinHasData(r io.Reader) bool {
 // It cleans the path and verifies that the cleaned path does not escape its base.
 // Returns the cleaned path if valid, or an error if the path contains traversal.
 func validatePath(path, base string) (string, error) {
-	// Reject any path that contains ".." components before cleaning
-	// This catches attempts like "/tmp/../../etc" which clean to "/etc"
-	if strings.Contains(path, "..") {
-		return "", fmt.Errorf("invalid file path: path traversal not allowed")
+	// Check each path component for ".." to reject actual traversal attempts
+	// while allowing legitimate names like "foo..bar"
+	components := strings.FieldsFunc(path, func(r rune) bool {
+		return r == '/' || r == '\\' || r == rune(filepath.Separator)
+	})
+	for _, component := range components {
+		if component == ".." {
+			return "", fmt.Errorf("invalid file path: path traversal not allowed")
+		}
 	}
 
 	// Clean the path to resolve any . components

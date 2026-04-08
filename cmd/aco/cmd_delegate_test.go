@@ -111,7 +111,7 @@ fallback:
 		t.Fatalf("permission profile = %q, want restricted", testRunner.last.PermProfile)
 	}
 	if testRunner.last.ReasoningEffort != "max" {
-		t.Fatalf("reasoning effort = %q, want high", testRunner.last.ReasoningEffort)
+		t.Fatalf("reasoning effort = %q, want max", testRunner.last.ReasoningEffort)
 	}
 	// Check that sentinel has new format with random identifier
 	got := stdout.String()

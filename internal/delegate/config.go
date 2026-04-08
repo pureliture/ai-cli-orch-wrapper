@@ -225,9 +225,15 @@ func BuildPrompt(spec AgentSpec, input string) (string, error) {
 			seedPath = filepath.Join(filepath.Dir(spec.Path), seedPath)
 		}
 		// Validate the path to prevent traversal attacks
-		// Reject any path that contains ".." before cleaning
-		if strings.Contains(spec.PromptSeedFile, "..") {
-			return "", fmt.Errorf("invalid promptSeedFile: path traversal not allowed")
+		// Check each path component for ".." to reject actual traversal attempts
+		// while allowing legitimate names like "foo..bar"
+		components := strings.FieldsFunc(seedPath, func(r rune) bool {
+			return r == '/' || r == '\\' || r == rune(filepath.Separator)
+		})
+		for _, component := range components {
+			if component == ".." {
+				return "", fmt.Errorf("invalid promptSeedFile: path traversal not allowed")
+			}
 		}
 		cleanedPath := filepath.Clean(seedPath)
 		data, err := os.ReadFile(cleanedPath)

@@ -20,7 +20,7 @@ Go 바이너리가 전적으로 담당하는 레이어:
 - `--model` 값이 제공된 경우 유효한 모델 식별자인지 검증
 
 ### 4. Provider Binary Execution
-프로바이더 바이너리를 `exec.LookPath`로 PATH에서 탐색하고 `syscall.Exec`로 실행한다. 바이너리가 PATH에 없으면 즉시 에러를 반환한다.
+프로바이더 바이너리를 자식 프로세스로 실행한다. Go 레이어는 `exec.Command`로 프로세스를 구성하고 `cmd.Start`/`cmd.Wait`로 실행 및 종료를 관리한다. 실행 가능한 바이너리를 찾지 못하거나 시작에 실패하면 즉시 에러를 반환한다.
 
 ### 5. File Path Validation (보안)
 모든 파일 경로 입력에 대해:

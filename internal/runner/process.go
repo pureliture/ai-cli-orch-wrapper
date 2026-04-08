@@ -30,9 +30,14 @@ const maxStderrBytes = 64 * 1024
 // envAllowlist defines which environment variables are passed to providers.
 // This prevents sensitive environment variables (API keys, tokens, etc.)
 // from being exposed to provider processes.
-// Per docs/contract/go-node-boundary.md, only ACO_TIMEOUT_SECONDS is allowed.
 var envAllowlist = map[string]bool{
 	"ACO_TIMEOUT_SECONDS": true,
+	"PATH":                true,
+	"HOME":                true,
+	"USER":                true,
+	"TERM":                true,
+	"LANG":                true,
+	"LC_ALL":              true,
 }
 
 // filterEnvForAllowlist filters environment variables to only those in the allowlist.

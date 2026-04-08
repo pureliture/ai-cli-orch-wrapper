@@ -259,17 +259,27 @@ func TestProcessRunner_ProviderNotFound(t *testing.T) {
 	}
 }
 
-// TestProcessRunner_EnvAllowlistOnly verifies that only ACO_TIMEOUT_SECONDS is
-// passed through to the provider process; other env vars are filtered out.
+// TestProcessRunner_EnvAllowlistOnly verifies that only allowlisted env vars
+// are passed through to the provider process; others are filtered out.
+// Regression: PATH and HOME must be included so npm-installed CLIs (shebang
+// `#!/usr/bin/env node`) can find their interpreter and config files.
 func TestProcessRunner_EnvAllowlistOnly(t *testing.T) {
 	script := `
-if [ -n "$SECRET_API_KEY" ]; then echo "LEAK: $SECRET_API_KEY"; exit 1; fi
+if [ -n "$SECRET_API_KEY" ]; then echo "LEAK_SECRET: $SECRET_API_KEY"; exit 1; fi
 if [ -n "$ACO_TIMEOUT_SECONDS" ]; then echo "OK_TIMEOUT: $ACO_TIMEOUT_SECONDS"; fi
+if [ -n "$PATH" ]; then echo "OK_PATH"; else echo "MISSING_PATH"; exit 1; fi
+if [ -n "$HOME" ]; then echo "OK_HOME"; else echo "MISSING_HOME"; exit 1; fi
 echo "OK"
 `
 	prov := scriptProvider(t, script)
 	opts, stdout := newRunOpts(t, prov)
 	opts.TimeoutSecs = 10
+
+	// Set a secret env var that must NOT be leaked to the provider.
+	if err := os.Setenv("SECRET_API_KEY", "hunter2"); err != nil {
+		t.Fatalf("Setenv: %v", err)
+	}
+	t.Cleanup(func() { os.Unsetenv("SECRET_API_KEY") })
 
 	r := runner.ProcessRunner{}
 	if _, err := r.Run(context.Background(), opts); err != nil {
@@ -277,8 +287,11 @@ echo "OK"
 	}
 
 	out := stdout.String()
-	if strings.Contains(out, "LEAK:") {
+	if strings.Contains(out, "LEAK_SECRET:") {
 		t.Errorf("stdout leaked secret env var: %q", out)
+	}
+	if strings.Contains(out, "MISSING_PATH") || strings.Contains(out, "MISSING_HOME") {
+		t.Errorf("PATH or HOME not passed through: %q", out)
 	}
 	if !strings.Contains(out, "OK") {
 		t.Errorf("stdout missing OK marker: %q", out)
@@ -332,7 +345,7 @@ sleep 30
 	}
 }
 
-// TestProcessRunner_SIGTEMRForceKill verifies that a provider that ignores
+// TestProcessRunner_SIGTERMForceKill verifies that a provider that ignores
 // SIGTERM is killed with SIGKILL after forceKillDelay.
 func TestProcessRunner_SIGTERMForceKill(t *testing.T) {
 	if testing.Short() {
