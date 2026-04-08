@@ -1,5 +1,7 @@
 ---
+name: gh-issue:multi
 description: "GitHub issue creation with multi-AI consensus"
+allowed-tools: [Bash]
 ---
 
 # Multi-AI GH Issue

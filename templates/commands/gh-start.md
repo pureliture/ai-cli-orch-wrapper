@@ -1,3 +1,9 @@
+---
+name: gh-start
+description: "Transition a GitHub issue to In Progress on Project #3, apply status label, and create a local git branch"
+allowed-tools: [Bash]
+---
+
 Transition a GitHub issue to "In Progress" on Project #3, add the `status:in-progress` label, and create a local git branch derived from the issue title.
 
 ## Steps

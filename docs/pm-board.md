@@ -44,9 +44,9 @@ Three command axes for PM workflow automation:
 
 | Command | What it does |
 |---------|-------------|
-| `/gh-issue` | Create issue + `type:*` + selected `sprint:v*` labels + Project #3 Backlog |
+| `/gh-issue` | Create issue + `type:*` + priority + selected `sprint:v*` labels + Project #3 Backlog |
 | `/gh-start #N` | In Progress transition + `status:in-progress` label + branch creation |
-| `/gh-pr` | PR create + `Closes #N` + CI checklist + Epic reminder |
+| `/gh-pr` | PR create + `Closes #N` + inherited priority label + PR/issue Project status → In Review + CI checklist + Epic reminder |
 | `/gh-followup` | Post-review issue + `origin:review` + `type:*` + Project #3 Backlog |
 | `/gh-issue:multi` | `/gh-issue` with multi-AI scope validation |
 | `/gh-start:multi` | `/gh-start` with multi-AI readiness check |
@@ -196,6 +196,10 @@ export PM_PROJECT_ID="PVT_kwHOA6302M4BT5fA"
 export PM_STATUS_FIELD_ID="PVTSSF_lAHOA6302M4BT5fAzhBFN48"
 export PM_IN_REVIEW_OPTION_ID="961ca78f"
 export PM_IN_PROGRESS_OPTION_ID="68368c4f"
+export PM_PRIORITY_FIELD_ID="PVTSSF_lAHOA6302M4BT5fAzhBFN_U"
+export PM_P0_OPTION_ID="65dd5d04"
+export PM_P1_OPTION_ID="ed47fdcf"
+export PM_P2_OPTION_ID="6eb1a525"
 ```
 
 ## Branch Protection Rules (after CI runs once on main)
