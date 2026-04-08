@@ -1,11 +1,9 @@
 {
-  "name": "aco-install",
+  "name": "@internal/aco-installer",
   "version": "0.4.0",
-  "description": "Installer CLI for the aco Claude Code command pack.",
+  "description": "Internal installer workspace for legacy implementation code.",
+  "private": true,
   "main": "dist/cli.js",
-  "bin": {
-    "aco-install": "dist/cli.js"
-  },
   "scripts": {
     "build": "tsc",
     "prepublishOnly": "npm run build",
@@ -16,7 +14,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "@aco/wrapper": "^0.4.0"
+    "@pureliture/ai-cli-orch-wrapper": "file:../wrapper"
   },
   "license": "MIT",
   "devDependencies": {

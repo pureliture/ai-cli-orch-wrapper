@@ -4,7 +4,7 @@ import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
 import { homedir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { providerRegistry } from '@aco/wrapper';
+import { providerRegistry } from '@pureliture/ai-cli-orch-wrapper';
 
 const execFileAsync = promisify(execFile);
 
@@ -49,7 +49,7 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
   const binaryName = options.binaryName ?? 'aco';
   await placeWrapperBinary(targetBase, binaryName);
 
-  console.log(`\n✓ Pack installed. Run 'aco-install pack setup' to verify provider readiness.`);
+  console.log(`\n✓ Pack installed. Run 'aco pack setup' to verify provider readiness.`);
 }
 
 export async function packUninstall(options: { global?: boolean } = {}): Promise<void> {
@@ -108,7 +108,7 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
   const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
   const commandsDest = join(targetBase, 'commands');
 
-  console.log('aco-install pack status\n');
+  console.log('aco pack status\n');
   console.log(`Target: ${targetBase}`);
 
   // List installed commands
@@ -148,12 +148,12 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
     const provider = providerRegistry.get(key)!;
     const available = provider.isAvailable();
     if (!available) {
-      console.log(`  ${key}: not installed  → run: aco-install provider setup ${key}`);
+      console.log(`  ${key}: not installed  → run: aco provider setup ${key}`);
     } else {
       console.log(`  ${key}: installed ✓`);
     }
   }
-  console.log('\nNext step: aco-install provider setup <gemini|copilot>');
+  console.log('\nNext step: aco provider setup <gemini|copilot>');
 }
 
 export async function providerSetup(name: string): Promise<void> {
@@ -226,7 +226,7 @@ async function collectFiles(dir: string, out: string[]): Promise<void> {
 }
 
 async function placeWrapperBinary(_targetBase: string, binaryName: string): Promise<void> {
-  // Check if already in PATH and appears to be the expected @aco/wrapper binary
+  // Check if already in PATH and appears to be the expected public aco binary
   try {
     const { stdout } = await execFileAsync(binaryName, ['--version'], {
       timeout: BINARY_CHECK_TIMEOUT_MS,
@@ -237,22 +237,22 @@ async function placeWrapperBinary(_targetBase: string, binaryName: string): Prom
       return;
     }
     console.warn(
-      `  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like @aco/wrapper. Proceeding to install @aco/wrapper globally.`
+      `  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like @pureliture/ai-cli-orch-wrapper. Proceeding to install @pureliture/ai-cli-orch-wrapper globally.`
     );
   } catch {
     // Not found in PATH — proceed to global npm install
   }
 
   try {
-    console.log(`  binary: installing @aco/wrapper globally …`);
-    await execFileAsync('npm', ['install', '-g', '@aco/wrapper'], {
+    console.log(`  binary: installing @pureliture/ai-cli-orch-wrapper globally …`);
+    await execFileAsync('npm', ['install', '-g', '@pureliture/ai-cli-orch-wrapper'], {
       timeout: NPM_INSTALL_TIMEOUT_MS,
     });
     console.log(`  binary: '${binaryName}' installed globally ✓`);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     console.warn(`  [warn] Could not install '${binaryName}' globally: ${reason}`);
-    console.warn(`         Run manually: npm install -g @aco/wrapper`);
+    console.warn(`         Run manually: npm install -g @pureliture/ai-cli-orch-wrapper`);
   }
 }
 
