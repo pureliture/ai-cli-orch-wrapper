@@ -2,8 +2,8 @@
 
 The repository currently has two workspace packages with two user-facing binaries:
 
-- `packages/wrapper`: runtime package, currently named `@pureliture/aco-wrapper`, exposing `aco`
-- `packages/installer`: installer/setup package, currently named `@pureliture/aco-install`, exposing `aco-install`
+- `packages/wrapper`: runtime package, now named `@pureliture/ai-cli-orch-wrapper`, exposing `aco`
+- `packages/installer`: installer/setup package, now named `@internal/aco-installer` (private/internal), previously exposing `aco-install`
 
 Issue #31 changes the target product model to one publishable npm package and one public CLI:
 
