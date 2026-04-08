@@ -33,13 +33,12 @@ type AgentSpec struct {
 }
 
 type Formatter struct {
-	Version          int                          `yaml:"version"`
-	ProviderDefaults map[string]ProviderDefault   `yaml:"providerDefaults"`
-	ModelAliasMap    map[string]Route             `yaml:"modelAliasMap"`
-	EffortMap        map[string]map[string]string `yaml:"effortMap"`
-	RoleHintRules    map[string]RoleHintRule      `yaml:"roleHintRules"`
-	Fallback         Route                        `yaml:"fallback"`
-	ProviderModels   map[string][]string          `yaml:"providerModels"`
+	Version          int                        `yaml:"version"`
+	ProviderDefaults map[string]ProviderDefault `yaml:"providerDefaults"`
+	ModelAliasMap    map[string]Route           `yaml:"modelAliasMap"`
+	RoleHintRules    map[string]RoleHintRule   `yaml:"roleHintRules"`
+	Fallback         Route                      `yaml:"fallback"`
+	ProviderModels   map[string][]string        `yaml:"providerModels"`
 }
 
 type ProviderDefault struct {
@@ -195,7 +194,7 @@ func Resolve(spec AgentSpec, formatter Formatter) (Resolution, error) {
 		LaunchArgs: append([]string(nil), formatter.ProviderDefaults[route.Provider].LaunchArgs...),
 	}
 	if spec.ReasoningEffort != "" {
-		resolution.ReasoningEffort = formatter.EffortMap[route.Provider][spec.ReasoningEffort]
+		resolution.ReasoningEffort = spec.ReasoningEffort
 	}
 	return resolution, nil
 }
@@ -225,7 +224,13 @@ func BuildPrompt(spec AgentSpec, input string) (string, error) {
 			// so agent bundles work regardless of where aco is invoked.
 			seedPath = filepath.Join(filepath.Dir(spec.Path), seedPath)
 		}
-		data, err := os.ReadFile(seedPath)
+		// Validate the path to prevent traversal attacks
+		// Reject any path that contains ".." before cleaning
+		if strings.Contains(spec.PromptSeedFile, "..") {
+			return "", fmt.Errorf("invalid promptSeedFile: path traversal not allowed")
+		}
+		cleanedPath := filepath.Clean(seedPath)
+		data, err := os.ReadFile(cleanedPath)
 		if err != nil {
 			return "", fmt.Errorf("read promptSeedFile: %w", err)
 		}

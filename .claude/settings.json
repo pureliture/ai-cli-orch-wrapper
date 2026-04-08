@@ -7,11 +7,14 @@
           {
             "type": "command",
             "command": "bash scripts/pm-hook.sh",
-            "async": true,
-            "timeout": 15
+            "timeout": 15,
+            "async": true
           }
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "claude-hud@claude-hud": true
   }
 }

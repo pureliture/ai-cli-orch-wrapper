@@ -27,6 +27,31 @@ import (
 
 const maxStderrBytes = 64 * 1024
 
+// envAllowlist defines which environment variables are passed to providers.
+// This prevents sensitive environment variables (API keys, tokens, etc.)
+// from being exposed to provider processes.
+// Per docs/contract/go-node-boundary.md, only ACO_TIMEOUT_SECONDS is allowed.
+var envAllowlist = map[string]bool{
+	"ACO_TIMEOUT_SECONDS": true,
+}
+
+// filterEnvForAllowlist filters environment variables to only those in the allowlist.
+func filterEnvForAllowlist(env []string) []string {
+	var filtered []string
+	for _, e := range env {
+		// Split on first '=' to get the key
+		idx := strings.Index(e, "=")
+		if idx <= 0 {
+			continue
+		}
+		key := e[:idx]
+		if envAllowlist[key] {
+			filtered = append(filtered, e)
+		}
+	}
+	return filtered
+}
+
 // forceKillDelaySecs is the delay between SIGTERM and SIGKILL.
 // Reference: ccg-workflow main.go:67 — default 5, stored as atomic int32.
 // Tests can override via forceKillDelaySecs.Store(N).
@@ -34,6 +59,18 @@ var forceKillDelaySecs atomic.Int32
 
 func init() {
 	forceKillDelaySecs.Store(5)
+}
+
+// SetForceKillDelay overrides the delay between SIGTERM and SIGKILL.
+// Exported for use in tests. Not safe for concurrent use outside of tests.
+func SetForceKillDelay(secs int32) {
+	forceKillDelaySecs.Store(secs)
+}
+
+// ForceKillDelay returns the current forceKillDelaySecs value.
+// Exported for use in tests.
+func ForceKillDelay() int32 {
+	return forceKillDelaySecs.Load()
 }
 
 // ProcessRunner executes provider processes using the ccg-workflow blocking model.
@@ -80,6 +117,8 @@ func (ProcessRunner) Run(ctx context.Context, opts RunOpts) (RunResult, error) {
 		cmd.Dir = "."
 	}
 	cmd.Env = os.Environ()
+	// Filter environment variables to allowlist for security
+	cmd.Env = filterEnvForAllowlist(cmd.Env)
 	// Setpgid places the provider and all its children in a new process group.
 	// forwardSignals and terminateCommand send signals to the whole group via
 	// syscall.Kill(-pgid, ...) so that children holding stdout pipes are also
