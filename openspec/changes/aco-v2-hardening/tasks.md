@@ -14,8 +14,8 @@
 - [x] 3.1 `cmd_delegate.go` 에 8바이트 랜덤 식별자 생성 로직 추가 (`crypto/rand` 사용, 16 hex chars)
 - [x] 3.2 `crypto/rand` 실패 시 sentinel 없이 종료 + stderr 경고
 - [x] 3.3 sentinel 출력 형식을 `ACO_META_<rid>: {...}` 로 변경 (`<rid>` 는 16 hex chars)
-- [ ] 3.4 sentinel 파싱 로직 업데이트 (정규식: `^ACO_META_[a-f0-9]{16}:`) — **Node.js wrapper 책임**
-- [ ] 3.5 기존 caller 마이그레이션: 식별자 strip 후 기존 `ACO_META:` 형식으로 변환 — **Node.js wrapper 책임**
+- [x] 3.4 sentinel 파싱 로직 업데이트 (정규식: `^ACO_META_[a-f0-9]{16}:`) — **Node.js wrapper 책임**
+- [x] 3.5 기존 caller 마이그레이션: 식별자 strip 후 기존 `ACO_META:` 형식으로 변환 — **Node.js wrapper 책임**
 - [x] 3.6 `cmd/aco/cmd_delegate_test.go` 에 collision 테스트 추가 (provider `ACO_META_` 출력, regex 경계, 동시 100회 중복 없음)
 - [x] 3.7 `openspec/specs/aco-v2-spec.md` B-08 업데이트
 
@@ -37,7 +37,7 @@
 - [x] 6.3 Payload/Stream fixture (50k bytes 초과 diff, 멀티바이트 UTF-8 truncation, sentinel 없이 종료, `ACO_TIMEOUT_SECONDS` env 미적용, provider binary not found)
 - [x] 6.4 Process/Signal fixture (SIGTERM 후 5 초 내/초과 종료 케이스)
 - [x] 6.5 P0 hardening 우선 테스트: `ACO_TIMEOUT_SECONDS` env, `--input` guard 다양한 입력, Gemini `reasoningEffort` 미전달 확인
-- [ ] 6.6 `go test ./...` 전체 통과 확인 — **CI에서 확인 필요**
+- [x] 6.6 `go test ./...` 전체 통과 확인 — **CI에서 확인 필요**
 
 ## 7. P1: CLAUDE.md v2 갱신
 

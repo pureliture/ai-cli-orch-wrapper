@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import type { InvokeOptions } from '../providers/interface.js';
+import { parseSentinel, stripRid, type SentinelMeta } from './sentinel.js';
 
 export interface SpawnStreamConfig {
   /** Process name used in error messages, e.g. "gemini" or "copilot". */
@@ -8,18 +9,28 @@ export interface SpawnStreamConfig {
   stdin: 'pipe' | 'ignore';
 }
 
+export interface SpawnStreamOptions extends InvokeOptions {
+  /** Callback invoked when a sentinel line is detected. */
+  onSentinel?: (meta: SentinelMeta, rid: string) => void;
+}
+
 const MAX_STDERR_CHARS = 4_000;
 
 /**
  * Spawns a child process and yields its stdout as string chunks.
  * Captures stderr so provider failures remain diagnosable.
  * Calls options.onPid once the process has a PID.
+ *
+ * Sentinel handling:
+ * - Detects ACO_META_<rid>: lines at end of output
+ * - Calls onSentinel callback when detected
+ * - Strips rid from sentinel for backward compatibility
  */
 export async function* spawnStream(
   binary: string,
   args: string[],
   config: SpawnStreamConfig,
-  options?: InvokeOptions
+  options?: SpawnStreamOptions
 ): AsyncIterable<string> {
   const child = spawn(binary, args, {
     stdio: [config.stdin, 'pipe', 'pipe'],
@@ -44,8 +55,27 @@ export async function* spawnStream(
     throw new Error(`${config.processName}: failed to open stdout pipe`);
   }
 
+  // Buffer to accumulate chunks and detect sentinel at the end
+  let buffer = '';
+  let sentinelDetected = false;
+
   for await (const chunk of child.stdout) {
-    yield (chunk as Buffer).toString();
+    const text = (chunk as Buffer).toString();
+    buffer += text;
+    yield text;
+  }
+
+  // Process the buffer to detect and handle sentinel
+  const lines = buffer.split('\n');
+  const lastLine = lines[lines.length - 1] || lines[lines.length - 2];
+
+  if (lastLine) {
+    const trimmed = lastLine.trim();
+    const parsed = parseSentinel(trimmed);
+    if (parsed) {
+      sentinelDetected = true;
+      options?.onSentinel?.(parsed.meta, parsed.rid);
+    }
   }
 
   await new Promise<void>((resolve, reject) => {
