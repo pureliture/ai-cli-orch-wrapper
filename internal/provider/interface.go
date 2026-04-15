@@ -14,7 +14,6 @@ const (
 // InvokeOpts contains per-invocation options for provider.BuildArgs.
 type InvokeOpts struct {
 	PermissionProfile PermissionProfile
-	SessionID         string
 	TimeoutSecs       int
 	Model             string
 	ReasoningEffort   string

@@ -16,6 +16,14 @@ export interface TaskRecord {
   permissionProfile?: string;
   startedAt: string;
   endedAt?: string;
+  /** Agent name from sentinel metadata (e.g. "reviewer"). */
+  agent?: string;
+  /** Model identifier from sentinel metadata (e.g. "gemini-2.5-pro"). */
+  model?: string;
+  /** Provider process exit code from sentinel metadata. */
+  exitCode?: number;
+  /** Execution duration in milliseconds from sentinel metadata. */
+  durationMs?: number;
 }
 
 export class SessionStore {

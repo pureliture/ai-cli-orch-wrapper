@@ -44,7 +44,6 @@ reference/*
 # Claude Code session files (non-persistent)
 .claude/session-intent.md
 .claude/session-plan.md
-.claude/commands/
 .claude/skills/
 !.claude/skills/
 .claude/skills/*

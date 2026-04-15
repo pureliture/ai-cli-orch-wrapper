@@ -205,20 +205,23 @@ fallback:                     # 필수. 최종 해석 실패 시 사용
 aco는 provider stdout 스트리밍 직후 다음 형식의 줄을 stdout에 추가한다:
 
 ```
-ACO_META: {"agent":"<agent-id>","provider":"<provider>","model":"<model>","exit_code":<n>,"duration_ms":<n>}
+ACO_META_<rid>: {"agent":"<agent-id>","provider":"<provider>","model":"<model>","exit_code":<n>,"duration_ms":<n>}
 ```
+
+`<rid>` 는 16 hex chars 길이의 랜덤 식별자 (8바이트 crypto/rand 기반).
 
 **규칙**:
 - sentinel은 항상 마지막 줄
 - provider raw output과 sentinel 사이 빈 줄 없음
 - sentinel이 없으면 caller가 비정상 종료로 판단해도 됨
 - `--no-meta` 플래그로 생략 가능
+- crypto/rand 실패 시 sentinel 없이 종료 (stderr 경고)
 
 **예시**:
 ```
 이 코드에서 다음과 같은 문제를 발견했습니다...
 (provider raw output 계속)
-ACO_META: {"agent":"reviewer","provider":"gemini_cli","model":"gemini-2.5-pro","exit_code":0,"duration_ms":3812}
+ACO_META_a3f2b1c4d5e6f789: {"agent":"reviewer","provider":"gemini_cli","model":"gemini-2.5-pro","exit_code":0,"duration_ms":3812}
 ```
 
 ---
