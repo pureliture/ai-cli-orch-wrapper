@@ -219,11 +219,12 @@ func BuildPrompt(spec AgentSpec, input string) (string, error) {
 	sections := []string{}
 	if spec.PromptSeedFile != "" {
 		seedPath := spec.PromptSeedFile
-		if !filepath.IsAbs(seedPath) {
-			// Resolve relative to the agent spec file's directory, not CWD,
-			// so agent bundles work regardless of where aco is invoked.
-			seedPath = filepath.Join(filepath.Dir(spec.Path), seedPath)
+		if filepath.IsAbs(seedPath) {
+			return "", fmt.Errorf("promptSeedFile must be relative path")
 		}
+		// Resolve relative to the agent spec file's directory, not CWD,
+		// so agent bundles work regardless of where aco is invoked.
+		seedPath = filepath.Join(filepath.Dir(spec.Path), seedPath)
 		// Validate the path to prevent traversal attacks
 		// Check each path component for ".." to reject actual traversal attempts
 		// while allowing legitimate names like "foo..bar"

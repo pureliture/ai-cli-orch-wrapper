@@ -12,6 +12,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ function checkDrift(goMethods: Method[], tsMethods: Method[]): string[] {
 
 // ── Main ───────────────────────────────────────────────────────────────────
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(__dirname, "..");
 const goFile = path.join(root, "internal", "provider", "interface.go");
 const tsFile = path.join(root, "packages", "wrapper", "src", "providers", "interface.ts");

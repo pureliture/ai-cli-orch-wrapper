@@ -29,7 +29,8 @@ const maxStderrBytes = 64 * 1024
 
 // envAllowlist defines which environment variables are passed to providers.
 // This prevents sensitive environment variables (API keys, tokens, etc.)
-// from being exposed to provider processes.
+// from being exposed to provider processes, while allowing provider-specific
+// auth variables needed for CI/headless operation.
 var envAllowlist = map[string]bool{
 	"ACO_TIMEOUT_SECONDS": true,
 	"PATH":                true,
@@ -38,6 +39,10 @@ var envAllowlist = map[string]bool{
 	"TERM":                true,
 	"LANG":                true,
 	"LC_ALL":              true,
+	// Provider auth variables for CI/headless operation
+	"GEMINI_API_KEY":  true,
+	"GITHUB_TOKEN":    true,
+	"ANTHROPIC_API_KEY": true,
 }
 
 // filterEnvForAllowlist filters environment variables to only those in the allowlist.

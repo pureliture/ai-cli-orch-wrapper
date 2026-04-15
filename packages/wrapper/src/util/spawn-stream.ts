@@ -55,23 +55,26 @@ export async function* spawnStream(
     throw new Error(`${config.processName}: failed to open stdout pipe`);
   }
 
-  // Buffer to accumulate chunks and detect sentinel at the end
-  let buffer = '';
+  // Track the last line to detect sentinel without buffering entire output
+  let lastLineBuffer = '';
   let sentinelDetected = false;
 
   for await (const chunk of child.stdout) {
     const text = (chunk as Buffer).toString();
-    buffer += text;
+    lastLineBuffer += text;
+    // Keep only content after last newline to minimize memory usage
+    const lastNewlineIndex = lastLineBuffer.lastIndexOf('\n');
+    if (lastNewlineIndex !== -1) {
+      // Discard everything before the last newline, keep only the last line
+      lastLineBuffer = lastLineBuffer.substring(lastNewlineIndex + 1);
+    }
     yield text;
   }
 
-  // Process the buffer to detect and handle sentinel
-  const lines = buffer.split('\n');
-  const lastLine = lines[lines.length - 1] || lines[lines.length - 2];
-
+  // Process the last line to detect and handle sentinel
+  const lastLine = lastLineBuffer.trim();
   if (lastLine) {
-    const trimmed = lastLine.trim();
-    const parsed = parseSentinel(trimmed);
+    const parsed = parseSentinel(lastLine);
     if (parsed) {
       sentinelDetected = true;
       options?.onSentinel?.(parsed.meta, parsed.rid);

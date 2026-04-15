@@ -51,7 +51,8 @@ func cmdDelegate(d *deps, args []string) int {
 				val := args[i+1]
 				switch val {
 				case "--":
-					// Terminator: no more args
+					// Terminator: stop flag parsing, --input remains empty
+					// Note: if user wants literal "--" as input, use --input="--"
 					i++
 				case "--input", "--input=value",
 					"--agents-dir", "--formatter",
@@ -332,6 +333,11 @@ func validatePath(path, base string) (string, error) {
 		absBase, err := filepath.Abs(base)
 		if err != nil {
 			return "", fmt.Errorf("invalid base path: %w", err)
+		}
+		// Ensure absBase ends with separator for strict prefix checking
+		// to prevent attacks like base=/tmp/foobar and path=/tmp/foo
+		if !strings.HasSuffix(absBase, string(filepath.Separator)) {
+			absBase += string(filepath.Separator)
 		}
 		if !strings.HasPrefix(absPath, absBase) {
 			return "", fmt.Errorf("invalid file path: escapes base directory")
