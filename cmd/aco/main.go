@@ -1,8 +1,9 @@
 // Command aco is the Go wrapper runtime for the ai-cli-orch-wrapper delegation product.
 //
-// It provides one subcommand:
+// It provides two subcommands:
 //
-//	aco run <provider> <command>   — delegate to provider CLI (blocking)
+//	aco delegate <agent-id> [options] — delegate to provider via agent frontmatter (blocking)
+//	aco run <provider> <command> [options] — legacy: delegate to provider CLI directly (blocking)
 //
 // Architecture contract: docs/contract/blocking-execution-contract.md
 //

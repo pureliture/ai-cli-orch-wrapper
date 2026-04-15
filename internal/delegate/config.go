@@ -33,13 +33,12 @@ type AgentSpec struct {
 }
 
 type Formatter struct {
-	Version          int                          `yaml:"version"`
-	ProviderDefaults map[string]ProviderDefault   `yaml:"providerDefaults"`
-	ModelAliasMap    map[string]Route             `yaml:"modelAliasMap"`
-	EffortMap        map[string]map[string]string `yaml:"effortMap"`
-	RoleHintRules    map[string]RoleHintRule      `yaml:"roleHintRules"`
-	Fallback         Route                        `yaml:"fallback"`
-	ProviderModels   map[string][]string          `yaml:"providerModels"`
+	Version          int                        `yaml:"version"`
+	ProviderDefaults map[string]ProviderDefault `yaml:"providerDefaults"`
+	ModelAliasMap    map[string]Route           `yaml:"modelAliasMap"`
+	RoleHintRules    map[string]RoleHintRule   `yaml:"roleHintRules"`
+	Fallback         Route                      `yaml:"fallback"`
+	ProviderModels   map[string][]string        `yaml:"providerModels"`
 }
 
 type ProviderDefault struct {
@@ -195,7 +194,7 @@ func Resolve(spec AgentSpec, formatter Formatter) (Resolution, error) {
 		LaunchArgs: append([]string(nil), formatter.ProviderDefaults[route.Provider].LaunchArgs...),
 	}
 	if spec.ReasoningEffort != "" {
-		resolution.ReasoningEffort = formatter.EffortMap[route.Provider][spec.ReasoningEffort]
+		resolution.ReasoningEffort = spec.ReasoningEffort
 	}
 	return resolution, nil
 }
@@ -220,12 +219,25 @@ func BuildPrompt(spec AgentSpec, input string) (string, error) {
 	sections := []string{}
 	if spec.PromptSeedFile != "" {
 		seedPath := spec.PromptSeedFile
-		if !filepath.IsAbs(seedPath) {
-			// Resolve relative to the agent spec file's directory, not CWD,
-			// so agent bundles work regardless of where aco is invoked.
-			seedPath = filepath.Join(filepath.Dir(spec.Path), seedPath)
+		if filepath.IsAbs(seedPath) {
+			return "", fmt.Errorf("promptSeedFile must be relative path")
 		}
-		data, err := os.ReadFile(seedPath)
+		// Resolve relative to the agent spec file's directory, not CWD,
+		// so agent bundles work regardless of where aco is invoked.
+		seedPath = filepath.Join(filepath.Dir(spec.Path), seedPath)
+		// Validate the path to prevent traversal attacks
+		// Check each path component for ".." to reject actual traversal attempts
+		// while allowing legitimate names like "foo..bar"
+		components := strings.FieldsFunc(seedPath, func(r rune) bool {
+			return r == '/' || r == '\\' || r == rune(filepath.Separator)
+		})
+		for _, component := range components {
+			if component == ".." {
+				return "", fmt.Errorf("invalid promptSeedFile: path traversal not allowed")
+			}
+		}
+		cleanedPath := filepath.Clean(seedPath)
+		data, err := os.ReadFile(cleanedPath)
 		if err != nil {
 			return "", fmt.Errorf("read promptSeedFile: %w", err)
 		}
