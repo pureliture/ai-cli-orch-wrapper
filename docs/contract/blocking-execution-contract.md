@@ -30,21 +30,42 @@ There is no daemon. There is no session registry. There is no IPC.
 
 When `aco run` receives SIGTERM or SIGINT (from the OS or Claude Code):
 
-1. Forward `SIGTERM` to the provider process via `proc.Signal(syscall.SIGTERM)`
-2. Start `time.AfterFunc(forceKillDelay, proc.Kill)` — sends SIGKILL if process still alive
+1. Forward `SIGTERM` to the provider **process group** via `syscall.Kill(-pgid, syscall.SIGTERM)`
+2. Start `time.AfterFunc(forceKillDelay, func() { syscall.Kill(-pgid, syscall.SIGKILL) })`
 3. Wait for provider to exit
 
-**Reference:** `executor.go:1322-1358` (`forwardSignals`)
+Using process groups ensures that if a provider (like a Node.js CLI) spawns workers or child processes, the entire tree is terminated, preventing orphaned processes from holding pipes open and blocking `cmd.Wait()`.
+
+**Reference Implementation Pattern:**
 
 ```go
-// ccg-workflow pattern — deviation for Node.js stability:
-// We use Setpgid: true to ensure all children are killed.
-cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+// 1. Prepare command with a new process group
+cmd := exec.Command(binary, args...)
+cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true} // Provider becomes PGID leader
 
-_ = syscall.Kill(-pgid, syscall.SIGTERM)
-time.AfterFunc(time.Duration(forceKillDelay)*time.Second, func() {
-    _ = syscall.Kill(-pgid, syscall.SIGKILL)
-})
+// 2. Start process to obtain PID (which is also the PGID)
+if err := cmd.Start(); err != nil {
+    return err
+}
+pgid := cmd.Process.Pid
+
+// 3. Forward signals to the entire group
+sigCh := make(chan os.Signal, 1)
+signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
+go func() {
+    sig := <-sigCh
+    // Send SIGTERM to the process group (negative PID)
+    _ = syscall.Kill(-pgid, syscall.SIGTERM)
+
+    // Schedule SIGKILL as fallback
+    time.AfterFunc(5 * time.Second, func() {
+        _ = syscall.Kill(-pgid, syscall.SIGKILL)
+    })
+}()
+
+// 4. Wait for completion
+err := cmd.Wait()
 ```
 
 **Force-kill delay:** 5 seconds (ccg-workflow default, `main.go:67`).
