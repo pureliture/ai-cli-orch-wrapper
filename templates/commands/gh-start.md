@@ -1,10 +1,10 @@
 ---
 name: gh-start
-description: "Transition a GitHub issue to In Progress on Project #3, apply status label, and create a local git branch"
+description: "Transition a GitHub issue to In Progress on Project #3, apply status label, and create a local git worktree"
 allowed-tools: [Bash]
 ---
 
-Transition a GitHub issue to "In Progress" on Project #3, add the `status:in-progress` label, and create a local git branch derived from the issue title.
+Transition a GitHub issue to "In Progress" on Project #3, add the `status:in-progress` label, and create a local git worktree for the branch derived from the issue title.
 
 ## Steps
 
@@ -53,10 +53,15 @@ Transition a GitHub issue to "In Progress" on Project #3, add the `status:in-pro
    - `type:spike` → `spike`
    - If no type label found → `feat`
 
-8. Create the branch:
+8. Create a local git worktree for the branch:
    ```bash
-   git checkout -b <type>/<N>-<slug>
+   BRANCH_NAME="<type>/<N>-<slug>"
+   WORKTREE_PATH=".aco-worktrees/fix-<N>"
+   
+   # Always ensure we are starting from the latest main
+   git fetch origin main
+   git worktree add -b "$BRANCH_NAME" "$WORKTREE_PATH" origin/main
    ```
-   Example: `feat/25-add-gh-pm-workflow-commands`
+   Example: `git worktree add -b feat/25-add-gh-pm-workflow-commands .aco-worktrees/fix-25 origin/main`
 
-9. Report the branch name and confirm the issue is now In Progress.
+9. Report the worktree path and branch name, and confirm the issue is now In Progress.
