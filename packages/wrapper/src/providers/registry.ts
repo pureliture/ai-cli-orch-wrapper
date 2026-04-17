@@ -1,13 +1,13 @@
 import type { IProvider } from './interface.js';
 import { GeminiProvider } from './gemini.js';
-import { CopilotProvider } from './copilot.js';
 
 export class ProviderRegistry {
   private readonly providers = new Map<string, IProvider>();
 
   constructor() {
-    this.register('gemini', new GeminiProvider());
-    this.register('copilot', new CopilotProvider());
+    const geminiProvider = new GeminiProvider();
+    this.register('gemini', geminiProvider);
+    this.register('copilot', geminiProvider);
   }
 
   register(key: string, provider: IProvider): void {

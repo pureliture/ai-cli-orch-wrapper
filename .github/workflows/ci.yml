@@ -88,4 +88,4 @@ jobs:
       - name: Smoke test aco binary
         run: |
           aco --version
-          aco run --help || true
+          aco run --help
