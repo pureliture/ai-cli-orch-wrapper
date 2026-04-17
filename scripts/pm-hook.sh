@@ -60,13 +60,13 @@ fi
 RAW_ISSUES=""
 
 # 1. From command string (immediate)
-CMD_ISSUES=$(echo "$COMMAND" | grep -oiE '(closes|fixes|resolves):?[[:space:]]+#?[0-9]+' | grep -oE '[0-9]+' || true)
+# Match closing keyword then extract all subsequent issue numbers until next word or line end
+CMD_ISSUES=$(echo "$COMMAND" | grep -oiE '(closes|fixes|resolves):?[[:space:]]+(#[0-9]+|[0-9]+)([[:space:],]+(#[0-9]+|[0-9]+))*' | grep -oE '[0-9]+' || true)
 RAW_ISSUES="${RAW_ISSUES}${CMD_ISSUES}"$'\n'
 
 # 2. From actual PR body (handles --fill and manual edits)
-# Always check PR body to augment command-line parsing
 PR_BODY=$(gh pr view --json body --jq '.body' 2>/dev/null || echo "")
-BODY_ISSUES=$(echo "$PR_BODY" | grep -oiE '(closes|fixes|resolves):?[[:space:]]+#?[0-9]+' | grep -oE '[0-9]+' || true)
+BODY_ISSUES=$(echo "$PR_BODY" | grep -oiE '(closes|fixes|resolves):?[[:space:]]+(#[0-9]+|[0-9]+)([[:space:],]+(#[0-9]+|[0-9]+))*' | grep -oE '[0-9]+' || true)
 RAW_ISSUES="${RAW_ISSUES}${BODY_ISSUES}"$'\n'
 
 # 3. Fallback: current branch name feat/42-slug or fix/42-slug (only if no keywords found)
@@ -80,7 +80,7 @@ fi
 ISSUE_NUMS=$(echo "$RAW_ISSUES" | grep -v '^$' | awk '!x[$0]++' || true)
 
 if [[ -z "$ISSUE_NUMS" ]]; then
-  echo "[pm-hook] No linked issue keywords or branch-issue found — skipping" >&2
+  echo "[pm-hook] No linked issue found — skipping linked-issue processing" >&2
 fi
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -164,7 +164,7 @@ while read -r ISSUE_NUM; do
     case "$lbl" in
       p0) PRIORITY_LABEL="p0" ;; # Highest, can't be beaten
       p1) [[ "$PRIORITY_LABEL" != "p0" ]] && PRIORITY_LABEL="p1" ;;
-      p2) [[ -z "$PRIORITY_LABEL" || "$PRIORITY_LABEL" == "p2" ]] && [[ "$PRIORITY_LABEL" != "p0" && "$PRIORITY_LABEL" != "p1" ]] && PRIORITY_LABEL="p2" ;;
+      p2) [[ -z "$PRIORITY_LABEL" ]] && PRIORITY_LABEL="p2" ;;
     esac
   done <<< "$ISSUE_LABELS"
 done <<< "$ISSUE_NUMS"

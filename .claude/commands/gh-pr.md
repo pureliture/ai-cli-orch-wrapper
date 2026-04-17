@@ -140,4 +140,10 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
    If no linked issue keyword is found, skip `type:*`, `area:*`, and `origin:review`, but still apply default priority `p1`.
    If any label step fails, print `⚠ PR label sync failed — update manually` and continue.
 
-10. Report the created PR URL to the user.
+10. Epic Relationship Check:
+    If a parent epic number was provided in step 1:
+    - Verify native linkage: `gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json parent -q .parent.number`
+    - If native linkage is missing, recommend setting it: `gh api graphql -f query='mutation($parent: ID!, $child: ID!) { addSubIssue(input: {issueId: $parent, subIssueId: $child}) }' ...`
+    - Remind the user about the epic's child issues checklist if applicable.
+
+11. Report the created PR URL to the user.
