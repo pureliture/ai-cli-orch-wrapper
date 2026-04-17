@@ -7,8 +7,13 @@
   "bin": {
     "aco": "dist/cli.js"
   },
+  "files": [
+    "dist",
+    "templates"
+  ],
   "scripts": {
     "build": "tsc",
+    "prepack": "mkdir -p templates && cp -r ../../templates/* templates/",
     "test": "node --require tsx/cjs --test tests/providers.test.ts tests/session.test.ts tests/sentinel.test.ts",
     "test:smoke": "tsx tests/smoke.ts",
     "typecheck": "tsc --noEmit",
