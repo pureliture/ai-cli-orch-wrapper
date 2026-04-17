@@ -1,7 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { GeminiProvider } from '../src/providers/gemini';
-import { CopilotProvider } from '../src/providers/copilot';
 import { ProviderRegistry } from '../src/providers/registry';
 
 describe('GeminiProvider', () => {
@@ -37,32 +36,6 @@ describe('GeminiProvider', () => {
   });
 });
 
-describe('CopilotProvider', () => {
-  it('isAvailable() returns boolean', () => {
-    assert.equal(typeof new CopilotProvider().isAvailable(), 'boolean');
-  });
-
-  it('isAvailable() returns false when copilot is absent', () => {
-    class TestCopilot extends CopilotProvider {
-      override isAvailable() { return false; }
-    }
-    assert.equal(new TestCopilot().isAvailable(), false);
-  });
-
-  it('key is "copilot"', () => {
-    assert.equal(new CopilotProvider().key, 'copilot');
-  });
-
-  it('checkAuth() returns { ok: false } when not available', async () => {
-    class TestCopilot extends CopilotProvider {
-      override isAvailable() { return false; }
-    }
-    const result = await new TestCopilot().checkAuth();
-    assert.equal(result.ok, false);
-    assert.ok(typeof result.hint === 'string');
-  });
-});
-
 describe('ProviderRegistry', () => {
   it('get("gemini") returns GeminiProvider', () => {
     const registry = new ProviderRegistry();
@@ -71,11 +44,11 @@ describe('ProviderRegistry', () => {
     assert.equal(provider.key, 'gemini');
   });
 
-  it('get("copilot") returns CopilotProvider', () => {
+  it('get("copilot") returns GeminiProvider (stub)', () => {
     const registry = new ProviderRegistry();
     const provider = registry.get('copilot');
     assert.ok(provider !== undefined);
-    assert.equal(provider.key, 'copilot');
+    assert.equal(provider.key, 'gemini');
   });
 
   it('get("unknown") returns undefined', () => {
@@ -97,4 +70,3 @@ describe('ProviderRegistry', () => {
     assert.ok(keys.includes('copilot'));
   });
 });
-

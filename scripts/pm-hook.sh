@@ -59,12 +59,20 @@ fi
 # ── Extract issue number ───────────────────────────────────────────────────
 ISSUE_NUM=""
 
-# From PR body "Closes #N" / "closes #N"
-if [[ "$COMMAND" =~ [Cc]loses[[:space:]]#([0-9]+) ]]; then
-  ISSUE_NUM="${BASH_REMATCH[1]}"
+# 1. From command string (immediate)
+if [[ "$COMMAND" =~ ([Cc]loses|[Ff]ixes|[Rr]esolves):?[[:space:]]+#?([0-9]+) ]]; then
+  ISSUE_NUM="${BASH_REMATCH[2]}"
 fi
 
-# Fallback: current branch name feat/42-slug or fix/42-slug
+# 2. From actual PR body (handles --fill and manual edits)
+if [[ -z "$ISSUE_NUM" ]]; then
+  PR_BODY=$(gh pr view --json body --jq '.body' 2>/dev/null || echo "")
+  if [[ "$PR_BODY" =~ ([Cc]loses|[Ff]ixes|[Rr]esolves):?[[:space:]]+#?([0-9]+) ]]; then
+    ISSUE_NUM="${BASH_REMATCH[2]}"
+  fi
+fi
+
+# 3. Fallback: current branch name feat/42-slug or fix/42-slug
 if [[ -z "$ISSUE_NUM" ]]; then
   BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
   if [[ "$BRANCH" =~ /([0-9]+)- ]]; then

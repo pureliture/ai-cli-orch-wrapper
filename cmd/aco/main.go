@@ -63,7 +63,7 @@ func main() {
 	}
 }
 
-func usage(w *os.File) {
+func usage(w io.Writer) {
 	fmt.Fprintln(w, "Usage: aco run <provider> <command> [options]")
 	fmt.Fprintln(w, "       aco delegate <agent-id> [options]")
 	fmt.Fprintln(w, "       aco --version")

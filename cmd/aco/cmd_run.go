@@ -33,6 +33,9 @@ func cmdRun(d *deps, args []string) int {
 	for i := 0; i < len(args); i++ {
 		a := args[i]
 		switch {
+		case a == "--help" || a == "-h":
+			usage(d.stdout)
+			return 0
 		case a == "--input" || a == "-input":
 			if i+1 < len(args) {
 				val := args[i+1]
