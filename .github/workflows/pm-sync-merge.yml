@@ -1,0 +1,60 @@
+name: PM Sync Merge
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+
+jobs:
+  sync_project_status:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Sync PR and Linked Issue to Done
+        env:
+          # A Personal Access Token (PAT) with `project` scope is required to edit User-owned Projects V2.
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          OWNER: pureliture
+          PROJECT_NUMBER: 3
+          PROJECT_ID: PVT_kwHOA6302M4BT5fA
+          STATUS_FIELD_ID: PVTSSF_lAHOA6302M4BT5fAzhBFN48
+          DONE_OPTION_ID: b36b62fa
+        run: |
+          set -euo pipefail
+          
+          echo "Processing merged PR: $PR_URL"
+          
+          # 1. Update PR Status to Done
+          PR_ITEM_ID=$(gh project item-list "$PROJECT_NUMBER" --owner "$OWNER" --format json --limit 500 --jq ".items[] | select(.content.url == \"$PR_URL\") | .id" 2>/dev/null || echo "")
+          
+          if [[ -n "$PR_ITEM_ID" && "$PR_ITEM_ID" != "null" ]]; then
+            echo "Moving PR to Done..."
+            gh project item-edit --project-id "$PROJECT_ID" --id "$PR_ITEM_ID" --field-id "$STATUS_FIELD_ID" --single-select-option-id "$DONE_OPTION_ID"
+          else
+            echo "PR not found in project. Skipping."
+          fi
+
+          # 2. Update Linked Issue Status to Done
+          # Parse Closes #N, Fixes #N, Resolves #N from PR body
+          ISSUE_NUM=""
+          if [[ "$PR_BODY" =~ (Closes|closes|Fixes|fixes|Resolves|resolves)[[:space:]]*#([0-9]+) ]]; then
+            ISSUE_NUM="${BASH_REMATCH[2]}"
+          fi
+
+          if [[ -n "$ISSUE_NUM" ]]; then
+            echo "Found linked issue: #$ISSUE_NUM"
+            ISSUE_ITEM_ID=$(gh project item-list "$PROJECT_NUMBER" --owner "$OWNER" --format json --limit 500 --jq ".items[] | select(.content.number == $ISSUE_NUM and .content.type == \"Issue\") | .id" 2>/dev/null || echo "")
+            
+            if [[ -n "$ISSUE_ITEM_ID" && "$ISSUE_ITEM_ID" != "null" ]]; then
+              echo "Moving Linked Issue #$ISSUE_NUM to Done..."
+              gh project item-edit --project-id "$PROJECT_ID" --id "$ISSUE_ITEM_ID" --field-id "$STATUS_FIELD_ID" --single-select-option-id "$DONE_OPTION_ID"
+            else
+              echo "Linked issue not found in project. Skipping."
+            fi
+          else
+            echo "No linked issue found in PR body."
+          fi
