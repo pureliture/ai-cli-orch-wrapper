@@ -58,7 +58,7 @@ Create a GitHub issue in `pureliture/ai-cli-orch-wrapper` following the conventi
    - Get node IDs for both issues:
      ```bash
      PARENT_ID=$(gh issue view <parent-N> --repo pureliture/ai-cli-orch-wrapper --json id -q .id)
-     CHILD_ID=$(gh issue view <new-N> --repo pureliture/ai-cli-orch-wrapper --json id -q .id)
+     CHILD_ID=$(gh issue view <issue_url> --repo pureliture/ai-cli-orch-wrapper --json id -q .id)
      ```
    - Call GraphQL to add sub-issue:
      ```bash
