@@ -12,7 +12,25 @@ const BINARY_CHECK_TIMEOUT_MS = 5_000;
 const NPM_INSTALL_TIMEOUT_MS = 60_000;
 const EXIT_ERROR = 1;
 const PUBLIC_PACKAGE_NAME = '@pureliture/ai-cli-orch-wrapper';
-const TEMPLATES_DIR = resolve(__dirname, '..', '..', '..', '..', 'templates');
+
+function findTemplatesDir(startDir: string): string {
+  const packageRoot = resolve(startDir, '..', '..');
+  const monorepoRoot = resolve(packageRoot, '..', '..');
+  const devPath = join(monorepoRoot, 'templates');
+  const prodPath = join(packageRoot, 'templates');
+
+  // In development (not inside node_modules), prioritize the monorepo root templates
+  const isDev = !startDir.split(sep).includes('node_modules');
+  if (isDev && existsSync(devPath)) {
+    return devPath;
+  }
+
+  // Fall back to the package-root location so validation reports the expected
+  // production path when templates are missing from an installed package.
+  return prodPath;
+}
+
+const TEMPLATES_DIR = findTemplatesDir(__dirname);
 
 export interface PackInstallOptions {
   global?: boolean;
@@ -23,6 +41,10 @@ export interface PackInstallOptions {
 const MANIFEST_PATH = (targetBase: string) => join(targetBase, 'aco', 'aco-manifest.json');
 
 export async function packInstall(options: PackInstallOptions = {}): Promise<void> {
+  if (!existsSync(TEMPLATES_DIR)) {
+    throw new Error(`Template source not found at ${TEMPLATES_DIR}`);
+  }
+
   const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
   const commandsSrc = join(TEMPLATES_DIR, 'commands');
   const promptsSrc = join(TEMPLATES_DIR, 'prompts');
@@ -42,8 +64,23 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
   );
 
   const manifestPath = MANIFEST_PATH(targetBase);
-  await mkdir(dirname(manifestPath), { recursive: true });
-  await writeFile(manifestPath, JSON.stringify({ files: installedFiles }, null, 2));
+  let existingFiles: string[] = [];
+  if (existsSync(manifestPath)) {
+    try {
+      const existing = JSON.parse(await readFile(manifestPath, 'utf8')) as { files?: string[] };
+      existingFiles = existing.files || [];
+    } catch {
+      // Ignore parse errors, just overwrite
+    }
+  }
+
+  const allFiles = Array.from(new Set([...existingFiles, ...installedFiles]));
+  if (allFiles.length > 0) {
+    await mkdir(dirname(manifestPath), { recursive: true });
+    await writeFile(manifestPath, JSON.stringify({ files: allFiles }, null, 2));
+  } else {
+    console.log('  no files were copied (already up to date or empty source)');
+  }
 
   const binaryName = options.binaryName ?? 'aco';
   await placeWrapperBinary(binaryName);
@@ -83,14 +120,9 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
       }
       await rm(manifestPath, { force: true });
     } else {
-      const commandsDest = join(targetBase, 'commands');
-      const promptsDest = join(targetBase, 'aco', 'prompts');
-      for (const dir of [commandsDest, promptsDest]) {
-        if (existsSync(dir)) {
-          await rm(dir, { recursive: true, force: true });
-          console.log(`  removed ${dir}`);
-        }
-      }
+      console.warn('  [warn] Manifest is empty; removing stale manifest.');
+      await rm(manifestPath, { force: true });
+      console.log(`  removed ${manifestPath}`);
     }
   } else {
     console.warn(
