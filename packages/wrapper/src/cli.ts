@@ -28,6 +28,11 @@ async function main(): Promise<void> {
     case '-v':
       console.log(`aco ${VERSION}`);
       break;
+    case '--help':
+    case '-h':
+      printUsage();
+      process.exit(0);
+      break;
     case 'pack':
       await cmdPack(rest);
       break;
@@ -112,6 +117,13 @@ async function cmdProvider(args: string[]): Promise<void> {
 // aco run <provider> <command> [--input <text>] [--permission-profile <profile>]
 // ---------------------------------------------------------------------------
 async function cmdRun(args: string[]): Promise<void> {
+  if (args.includes('--help') || args.includes('-h')) {
+    console.error(
+      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]'
+    );
+    process.exit(0);
+  }
+
   const providerKey = args[0];
   const command = args[1];
 
@@ -323,6 +335,7 @@ function loadVersion(): string {
 function printUsage(): void {
   console.error(`Usage:
   aco --version
+  aco --help
   aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]
   aco result [--session <id>]
   aco status [--session <id>]
@@ -331,7 +344,7 @@ function printUsage(): void {
   aco pack uninstall [--global]
   aco pack status [--global]
   aco pack setup [--global] [--force]
-  aco provider setup <gemini|copilot>`);
+  aco provider setup <gemini>`);
 }
 
 async function endWritable(stream: Writable): Promise<void> {
