@@ -21,14 +21,17 @@
 | Size | Single select | S, M, L |
 | Sprint | Iteration | 2-week cycles |
 | Target date | Date | — |
+| Parent issue | ProjectV2Field | (GitHub Native) Source of truth for Epic |
+| epic | ProjectV2Field | **DEPRECATED** — use Parent issue instead |
 
 ## Views
 
 | View | Type | Filter | Group by |
 |------|------|--------|----------|
 | Active Sprint | Board | Sprint: @current | Status |
-| Triage | Table | No iteration OR no labels | — |
-| Roadmap | Table | — | type:epic label |
+| Triage | Table | Status: Backlog OR Status: (empty) | Priority |
+| Roadmap | Table | type:epic label | (none) |
+| Epics (Sub-issues) | Table | — | Parent issue |
 
 ## Command Structure (V3+)
 
@@ -74,8 +77,14 @@ Rules:
 - Type is conveyed via the `type:*` label, not the title.
 - Sprint is conveyed via the `sprint:v*` label, not the title.
 - Keep priority and area out of titles; use `p0`/`p1`/`p2` and `area:*` labels.
-- Child issues must include `Parent epic: #N` as the first line of the body.
-- Sprint epics must maintain a `Child Issues` checklist in the body.
+- **Epic Relationship**:
+  - Child issues MUST be linked to a parent issue via GitHub's native `Parent issue` field.
+  - Body-level `Parent epic: #N` is maintained as a portable fallback (first line of body).
+  - Sprint epics should maintain a `Child Issues` checklist in the body for visibility.
+- **Project Fields**:
+  - Every issue MUST be added to Project #3.
+  - Initial `Status` must be set to `Backlog`.
+  - `Priority` (`P0`/`P1`/`P2`) must be mirrored from label to Project field.
 
 **Legacy format** (pre-V3, for reference only):
 ```text
