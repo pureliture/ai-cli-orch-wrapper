@@ -59,8 +59,12 @@ async function cmdPack(args: string[]): Promise<void> {
     case 'install': {
       const isGlobal = args.includes('--global');
       const force = args.includes('--force');
-      const bnIdx = args.indexOf('--binary-name');
-      const binaryName = bnIdx !== -1 ? args[bnIdx + 1] : undefined;
+      const binaryName = parseFlag(args, '--binary-name');
+      if (args.includes('--binary-name') && (!binaryName || binaryName.startsWith('-'))) {
+        console.error('Error: --binary-name requires a valid value');
+        printUsage();
+        process.exit(EXIT_ERROR);
+      }
       await packInstall({ global: isGlobal, force, binaryName });
       return;
     }
