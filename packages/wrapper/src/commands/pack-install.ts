@@ -14,20 +14,20 @@ const EXIT_ERROR = 1;
 const PUBLIC_PACKAGE_NAME = '@pureliture/ai-cli-orch-wrapper';
 
 function findTemplatesDir(startDir: string): string {
-  // 1. Production: Look for 'templates' sibling to the package 'dist' or 'src'
-  // When installed, templates should be in the package root.
-  // __dirname is usually packages/wrapper/dist/commands or packages/wrapper/src/commands
   const packageRoot = resolve(startDir, '..', '..');
-  const prodPath = join(packageRoot, 'templates');
-  if (existsSync(prodPath)) return prodPath;
-
-  // 2. Development: Look for 'templates' in the monorepo root
   const monorepoRoot = resolve(packageRoot, '..', '..');
   const devPath = join(monorepoRoot, 'templates');
-  if (existsSync(devPath)) return devPath;
+  const prodPath = join(packageRoot, 'templates');
 
-  // Fallback to dev path if nothing found (validation will handle the failure)
-  return devPath;
+  // In development (not inside node_modules), prioritize the monorepo root templates
+  const isDev = !startDir.split(sep).includes('node_modules');
+  if (isDev && existsSync(devPath)) {
+    return devPath;
+  }
+
+  // Fall back to the package-root location so validation reports the expected
+  // production path when templates are missing from an installed package.
+  return prodPath;
 }
 
 const TEMPLATES_DIR = findTemplatesDir(__dirname);
@@ -42,8 +42,7 @@ const MANIFEST_PATH = (targetBase: string) => join(targetBase, 'aco', 'aco-manif
 
 export async function packInstall(options: PackInstallOptions = {}): Promise<void> {
   if (!existsSync(TEMPLATES_DIR)) {
-    console.error(`Error: template source not found at ${TEMPLATES_DIR}`);
-    process.exit(EXIT_ERROR);
+    throw new Error(`Template source not found at ${TEMPLATES_DIR}`);
   }
 
   const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
@@ -64,10 +63,21 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
     installedFiles
   );
 
-  if (installedFiles.length > 0) {
-    const manifestPath = MANIFEST_PATH(targetBase);
+  const manifestPath = MANIFEST_PATH(targetBase);
+  let existingFiles: string[] = [];
+  if (existsSync(manifestPath)) {
+    try {
+      const existing = JSON.parse(await readFile(manifestPath, 'utf8')) as { files?: string[] };
+      existingFiles = existing.files || [];
+    } catch {
+      // Ignore parse errors, just overwrite
+    }
+  }
+
+  const allFiles = Array.from(new Set([...existingFiles, ...installedFiles]));
+  if (allFiles.length > 0) {
     await mkdir(dirname(manifestPath), { recursive: true });
-    await writeFile(manifestPath, JSON.stringify({ files: installedFiles }, null, 2));
+    await writeFile(manifestPath, JSON.stringify({ files: allFiles }, null, 2));
   } else {
     console.log('  no files were copied (already up to date or empty source)');
   }
@@ -110,7 +120,9 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
       }
       await rm(manifestPath, { force: true });
     } else {
-      console.warn('  [warn] Manifest is empty; nothing to remove.');
+      console.warn('  [warn] Manifest is empty; removing stale manifest.');
+      await rm(manifestPath, { force: true });
+      console.log(`  removed ${manifestPath}`);
     }
   } else {
     console.warn(
