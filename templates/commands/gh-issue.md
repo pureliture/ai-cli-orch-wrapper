@@ -38,9 +38,37 @@ Create a GitHub issue in `pureliture/ai-cli-orch-wrapper` following the conventi
 
 5. Capture the created issue URL from the output.
 
-6. Add the issue to Project #3 Backlog:
+6. Add the issue to Project #3 and set fields:
+   Add to project and capture the item ID:
    ```bash
-   gh project item-add 3 --owner pureliture --url <issue_url>
+   ITEM_ID=$(gh project item-add 3 --owner pureliture --url <issue_url> --format json --jq '.id')
+   ```
+   Set **Status=Backlog** (a490720c):
+   ```bash
+   gh project item-edit --project-id PVT_kwHOA6302M4BT5fA --id "$ITEM_ID" \
+     --field-id PVTSSF_lAHOA6302M4BT5fAzhBFN48 --single-select-option-id a490720c
+   ```
+   Set **Priority** (mapping `p0`→65dd5d04, `p1`→ed47fdcf, `p2`→6eb1a525):
+   ```bash
+   gh project item-edit --project-id PVT_kwHOA6302M4BT5fA --id "$ITEM_ID" \
+     --field-id PVTSSF_lAHOA6302M4BT5fAzhBFN_U --single-select-option-id <priority-option-id>
    ```
 
-7. Report the created issue URL and number to the user.
+7. If a parent epic was provided, establish native sub-issue linkage:
+   - Get node IDs for both issues:
+     ```bash
+     PARENT_ID=$(gh issue view <parent-N> --repo pureliture/ai-cli-orch-wrapper --json id -q .id)
+     CHILD_ID=$(gh issue view <issue_url> --repo pureliture/ai-cli-orch-wrapper --json id -q .id)
+     ```
+   - Call GraphQL to add sub-issue:
+     ```bash
+     gh api graphql -f query='
+       mutation($parent: ID!, $child: ID!) {
+         addSubIssue(input: {issueId: $parent, subIssueId: $child}) {
+           issue { title }
+         }
+       }' -f parent="$PARENT_ID" -f child="$CHILD_ID"
+     ```
+   - If this step fails, print a warning `⚠ Native epic linkage failed — body reference maintained` and continue. Do NOT fail the command.
+
+8. Report the created issue URL and number to the user.
