@@ -1,6 +1,6 @@
 ---
 name: gh-pr
-description: "Create a GitHub Pull Request with substantive body, Project status management, and priority label inheritance"
+description: "Create a GitHub Pull Request with substantive body, Project status management, and tracking label inheritance"
 allowed-tools: [Bash]
 ---
 
@@ -77,15 +77,20 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
    Capture the PR URL from the output (e.g., `https://github.com/pureliture/ai-cli-orch-wrapper/pull/<PR_NUM>`).
 
 7. Add PR to Project #3 and set status to "In Review":
+   Resolve the PR number first:
+   ```bash
+   gh pr view <pr_url> --repo pureliture/ai-cli-orch-wrapper --json number -q .number
+   ```
+   Add the PR to Project #3:
    ```bash
    gh project item-add 3 --owner pureliture --url <pr_url>
    ```
-   Then find the PR's Project item ID:
+   Then find the PR's Project item ID by PR number, retrying up to 5 times with a short sleep because Projects indexing can lag immediately after `item-add`:
    ```bash
    gh project item-list 3 --owner pureliture --format json --limit 500 \
-     --jq ".items[] | select(.content.url == \"<pr_url>\") | .id"
+     --jq ".items[] | select(.content.number == <pr_number> and .content.type == \"PullRequest\") | .id"
    ```
-   If no ID is returned and the project may contain more than 500 items, retry with a higher `--limit` before assuming the item is absent. Then set status:
+   If the project may contain more than 500 items, retry with a higher `--limit` before assuming the item is absent. Once an ID is found, set status:
    ```bash
    gh project item-edit \
      --project-id PVT_kwHOA6302M4BT5fA \
@@ -93,7 +98,7 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
      --field-id PVTSSF_lAHOA6302M4BT5fAzhBFN48 \
      --single-select-option-id 961ca78f
    ```
-   If any step fails, print `⚠ PR Project status update failed — update manually` and continue.
+   If no ID is found after retries, or any step fails, print `⚠ PR Project status update failed — update manually` and continue.
 
 8. Set linked issue status to "In Review":
    Parse the PR body for `Closes #N`, `Fixes #N`, or `Resolves #N` (case-insensitive). If found:
@@ -103,8 +108,8 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
      gh project item-list 3 --owner pureliture --format json --limit 500 \
        --jq ".items[] | select(.content.number == <N> and .content.type == \"Issue\") | .id"
      ```
-     If no ID is returned and the project may contain more than 500 items, retry with a higher `--limit`.
    - If the item is not in the Project yet, add it first: `gh project item-add 3 --owner pureliture --url https://github.com/pureliture/ai-cli-orch-wrapper/issues/<N>`
+   - After adding, retry the lookup up to 5 times with a short sleep before assuming the item is absent.
    - Set status to "In Review":
      ```bash
      gh project item-edit \
@@ -116,16 +121,27 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
    - If no linked issue keyword found, skip this step silently.
    - If any step fails, print `⚠ Issue Project status update failed — update manually` and continue.
 
-9. Apply priority label to PR (inherit from linked issue, default `p1`):
+9. Apply tracking labels to PR (inherit from linked issue; default priority `p1`):
    If a linked issue number N was found in step 8:
    ```bash
    gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json labels -q '.labels[].name'
    ```
-   Find the first label matching `p0`, `p1`, or `p2`. If none found or no linked issue, use `p1`.
-   Apply to PR:
+   Build the desired PR label set from the linked issue:
+   - highest priority label `p0`, `p1`, or `p2` (default `p1` if none found)
+   - first `type:*` label
+   - first `area:*` label
+   - `origin:review` if present
+   Do NOT copy `status:*` or `sprint:*` labels onto the PR.
+   Inspect the PR's current labels first:
    ```bash
-   gh pr edit <pr_url> --repo pureliture/ai-cli-orch-wrapper --add-label <priority>
+   gh pr view <pr_url> --repo pureliture/ai-cli-orch-wrapper --json labels -q '.labels[].name'
+   ```
+   Only add missing namespaces so the PR never ends up with multiple `p*`, `type:*`, or `area:*` labels. Apply each missing label with:
+   ```bash
+   gh pr edit <pr_url> --repo pureliture/ai-cli-orch-wrapper --add-label <label>
    ```
    If multiple linked issues have different priorities, use the highest (`p0` > `p1` > `p2`).
+   If no linked issue keyword is found, skip `type:*`, `area:*`, and `origin:review`, but still apply default priority `p1`.
+   If any label step fails, print `⚠ PR label sync failed — update manually` and continue.
 
 10. Report the created PR URL to the user.

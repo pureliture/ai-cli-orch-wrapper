@@ -37,7 +37,7 @@ Three command axes for PM workflow automation:
 | Axis | Commands | Purpose |
 |------|----------|---------|
 | `/opsx:*` | `opsx:propose`, `opsx:apply`, `opsx:archive` | OpenSpec change lifecycle |
-| `/gh-*` | `gh-issue`, `gh-start`, `gh-pr`, `gh-followup` | GitHub issue/PR operations |
+| `/gh-*` | `gh-issue`, `gh-start`, `gh-pr`, `gh-pr-followup` | GitHub issue/PR operations |
 | `/octo:*` | `octo:multi`, `octo:review`, `octo:tdd`, … | Multi-AI orchestration |
 
 ### `/gh-*` Command Reference
@@ -46,12 +46,12 @@ Three command axes for PM workflow automation:
 |---------|-------------|
 | `/gh-issue` | Create issue + `type:*` + priority + selected `sprint:v*` labels + Project #3 Backlog |
 | `/gh-start #N` | In Progress transition + `status:in-progress` label + branch creation |
-| `/gh-pr` | PR create + `Closes #N` + inherited priority label + PR/issue Project status → In Review + CI checklist + Epic reminder |
-| `/gh-followup` | Post-review issue + `origin:review` + `type:*` + Project #3 Backlog |
+| `/gh-pr` | PR create + `Closes #N` + inherited tracking labels (`type:*`, `area:*`, `origin:review`, `p*`) + PR/issue Project status → In Review + CI checklist + Epic reminder |
+| `/gh-pr-followup` | PR review threads triage (immediate fix + reply/resolve OR new issue deferral) |
 | `/gh-issue:multi` | `/gh-issue` with multi-AI scope validation |
 | `/gh-start:multi` | `/gh-start` with multi-AI readiness check |
 | `/gh-pr:multi` | `/gh-pr` with multi-AI PR readiness validation |
-| `/gh-followup:multi` | `/gh-followup` with multi-AI content validation |
+| `/gh-pr-followup:multi` | `/gh-pr-followup` with multi-AI content validation |
 
 ## Issue Authoring Rules
 
@@ -93,7 +93,9 @@ PR title rules:
 - Use conventional commit style: `type(scope): description`. Keep under 72 characters.
 - Do not add `[Sprint]`, `[Task]`, or `[Epic]` prefixes.
 - Add sprint-scoped PRs to the PM project and set PR `Status` to `In Review`.
-- Keep `Priority`, `Size`, and `Sprint` on issues; do not mirror onto PR items.
+- Keep `Size` and `Sprint` on issues; do not mirror those planning fields onto PR items.
+- Inherit `type:*`, `area:*`, `origin:review`, and priority `p*` labels from the linked issue when available.
+- Do not copy `status:*` or `sprint:*` labels onto the PR.
 
 ### PR Body Guide
 
@@ -140,7 +142,7 @@ Use the `origin:review` label to track issues created from PR review feedback:
 - Apply `origin:review` + `type:task` for improvements or features surfaced in review.
 - Apply `origin:review` + `type:chore` for refactoring tasks surfaced in review.
 - Apply `origin:review` + `type:bug` for defects found during review.
-- Always use `/gh-followup` command to create these — it handles the body format and label assignment automatically.
+- Always use `/gh-pr-followup` command to evaluate and create these — it handles the body format and label assignment automatically.
 - The issue body must begin with `From: #<PR> review comment` and end with `See also: #<PR>`.
 
 Automation rule:
@@ -196,6 +198,7 @@ export PM_PROJECT_ID="PVT_kwHOA6302M4BT5fA"
 export PM_STATUS_FIELD_ID="PVTSSF_lAHOA6302M4BT5fAzhBFN48"
 export PM_IN_REVIEW_OPTION_ID="961ca78f"
 export PM_IN_PROGRESS_OPTION_ID="68368c4f"
+export PM_DONE_OPTION_ID="b36b62fa"
 export PM_PRIORITY_FIELD_ID="PVTSSF_lAHOA6302M4BT5fAzhBFN_U"
 export PM_P0_OPTION_ID="65dd5d04"
 export PM_P1_OPTION_ID="ed47fdcf"
@@ -210,3 +213,4 @@ GitHub UI → Settings → Branches → Add rule → `main`:
 - [x] Require branches to be up to date before merging
 - [x] Require a pull request before merging
 - [x] Require squash merge (Allowed merge methods: Squash only)
+
