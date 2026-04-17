@@ -47,11 +47,11 @@ Three command axes for PM workflow automation:
 | `/gh-issue` | Create issue + `type:*` + priority + selected `sprint:v*` labels + Project #3 Backlog |
 | `/gh-start #N` | In Progress transition + `status:in-progress` label + branch creation |
 | `/gh-pr` | PR create + `Closes #N` + inherited priority label + PR/issue Project status → In Review + CI checklist + Epic reminder |
-| `/gh-followup` | Post-review issue + `origin:review` + `type:*` + Project #3 Backlog |
+| `/gh-pr-followup` | PR review threads triage (immediate fix + reply/resolve OR new issue deferral) |
 | `/gh-issue:multi` | `/gh-issue` with multi-AI scope validation |
 | `/gh-start:multi` | `/gh-start` with multi-AI readiness check |
 | `/gh-pr:multi` | `/gh-pr` with multi-AI PR readiness validation |
-| `/gh-followup:multi` | `/gh-followup` with multi-AI content validation |
+| `/gh-pr-followup:multi` | `/gh-pr-followup` with multi-AI content validation |
 
 ## Issue Authoring Rules
 
@@ -140,7 +140,7 @@ Use the `origin:review` label to track issues created from PR review feedback:
 - Apply `origin:review` + `type:task` for improvements or features surfaced in review.
 - Apply `origin:review` + `type:chore` for refactoring tasks surfaced in review.
 - Apply `origin:review` + `type:bug` for defects found during review.
-- Always use `/gh-followup` command to create these — it handles the body format and label assignment automatically.
+- Always use `/gh-pr-followup` command to evaluate and create these — it handles the body format and label assignment automatically.
 - The issue body must begin with `From: #<PR> review comment` and end with `See also: #<PR>`.
 
 Automation rule:
@@ -210,3 +210,4 @@ GitHub UI → Settings → Branches → Add rule → `main`:
 - [x] Require branches to be up to date before merging
 - [x] Require a pull request before merging
 - [x] Require squash merge (Allowed merge methods: Squash only)
+h only)

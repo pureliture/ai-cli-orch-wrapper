@@ -1,0 +1,144 @@
+diff --git a/packages/wrapper/src/cli.ts b/packages/wrapper/src/cli.ts
+index e9c84c7..fefe31c 100644
+--- a/packages/wrapper/src/cli.ts
++++ b/packages/wrapper/src/cli.ts
+@@ -59,8 +59,11 @@ async function cmdPack(args: string[]): Promise<void> {
+     case 'install': {
+       const isGlobal = args.includes('--global');
+       const force = args.includes('--force');
+-      const bnIdx = args.indexOf('--binary-name');
+-      const binaryName = bnIdx !== -1 ? args[bnIdx + 1] : undefined;
++      const binaryName = parseFlag(args, '--binary-name');
++      if (args.includes('--binary-name') && binaryName === undefined) {
++        console.error('Error: --binary-name requires a value');
++        process.exit(EXIT_ERROR);
++      }
+       await packInstall({ global: isGlobal, force, binaryName });
+       return;
+     }
+diff --git a/templates/commands/gh-followup.md b/templates/commands/gh-followup.md
+index 8dc5d6c..1d8babd 100644
+--- a/templates/commands/gh-followup.md
++++ b/templates/commands/gh-followup.md
+@@ -15,10 +15,21 @@ This command creates a post-review followup issue and adds it to Project #3.
+    - Description: A clear description of the followup work.
+    - Type: Choose between 'task', 'chore', or 'bug'.
+ 
+-2. Create the GitHub issue by running the `gh issue create` command with these parameters:
++2. Map the type to the correct label:
++   - if type is 'bug', use label `type:bug`
++   - if type is 'task', use label `type:task`
++   - if type is 'chore', use label `type:chore`
++
++3. Infer the `area:*` label from the description or files mentioned:
++   - if it mentions `packages/wrapper` or `cli.ts` → `area:wrapper`
++   - if it mentions `packages/installer` → `area:installer`
++   - if it mentions `templates/` → `area:templates`
++   - if it mentions `ci.yml` or GitHub Actions → `area:ci`
++
++4. Create the GitHub issue by running the `gh issue create` command with these parameters:
+    - Repository: `pureliture/ai-cli-orch-wrapper`
+    - Title: Use the format `<type>: <description>`
+-   - Labels: Apply `type:<type>` and `origin:review`
++   - Labels: Apply the mapped `type:*` label, the inferred `area:*` label (if any), `origin:review`, and `sprint:v3`
+    - Body: 
+      Line 1: `From: #<PR_NUMBER> review comment`
+      Line 2: (empty)
+@@ -26,8 +37,8 @@ This command creates a post-review followup issue and adds it to Project #3.
+      Line 4: (empty)
+      Line 5: `See also: #<PR_NUMBER>`
+ 
+-3. Once the issue is created, extract the issue URL from the command output.
++5. Once the issue is created, extract the issue URL from the command output.
+ 
+-4. Add the new issue to the Project #3 Backlog by running `gh project item-add 3 --owner pureliture --url <issue_url>`.
++6. Add the new issue to the Project #3 Backlog by running `gh project item-add 3 --owner pureliture --url <issue_url>`.
+ 
+-5. Confirm to the user that the issue has been created and added to the project backlog.
++7. Confirm to the user that the issue has been created and added to the project backlog.
+\ No newline at end of file
+diff --git a/templates/commands/gh-issue.md b/templates/commands/gh-issue.md
+index 0ab8c06..b822a5c 100644
+--- a/templates/commands/gh-issue.md
++++ b/templates/commands/gh-issue.md
+@@ -1,6 +1,6 @@
+ ---
+ name: gh-issue
+-description: "Create a GitHub issue with conventional commit title, type/sprint/priority labels, and Project #3 Backlog assignment"
++description: "Create a GitHub issue with conventional commit title, type/area/sprint/priority labels, and Project #3 Backlog assignment"
+ allowed-tools: [Bash]
+ ---
+ 
+@@ -9,38 +9,44 @@ Create a GitHub issue in `pureliture/ai-cli-orch-wrapper` following the conventi
+ ## Steps
+ 
+ 1. Ask the user for the following information if not already provided:
+-   - **Title**: Full issue title in `type: description` format. Valid types: `feat`, `fix`, `bug`, `chore`, `task`, `spike`, `epic`. Example: `feat: add gh-pm-workflow-commands`. Do NOT use `[Sprint V3][Task]` prefix — that convention is deprecated as of V3.
++   - **Title**: Full issue title in `type: description` or `type(scope): description` format. Valid types: `feat`, `fix`, `bug`, `chore`, `task`, `spike`, `epic`. Example: `feat(cli): add gh-pm-workflow-commands`. Do NOT use `[Sprint V3][Task]` prefix — that convention is deprecated as of V3.
+    - **Sprint label**: The sprint label to apply (e.g., `sprint:v3` or `sprint:v4`). If not provided, ask before creating the issue rather than assuming a sprint.
+    - **Priority**: If the user explicitly mentions urgency (e.g., "critical", "blocking", "low priority"), map it to `p0`/`p1`/`p2` accordingly. Otherwise, default to `p1` without asking.
+    - **Parent epic** (optional): Epic issue number to link as parent (e.g., `22`)
+ 
+-2. Infer the `type:*` label from the title prefix:
+-   - `feat:` → `type:feature`
+-   - `fix:` or `bug:` → `type:bug`
+-   - `chore:` → `type:chore`
+-   - `task:` → `type:task`
+-   - `spike:` → `type:spike`
+-   - `epic:` → `type:epic`
+-
+-3. Construct the issue body:
++2. Infer the `type:*` label from the title prefix (handles both `type:` and `type(scope):`):
++   - `feat` → `type:feature`
++   - `fix` or `bug` → `type:bug`
++   - `chore` → `type:chore`
++   - `task` → `type:task`
++   - `spike` → `type:spike`
++   - `epic` → `type:epic`
++
++3. Infer the `area:*` label from the scope in the title or the description:
++   - `(wrapper)` or `(cli)` → `area:wrapper`
++   - `(installer)` → `area:installer`
++   - `(templates)` → `area:templates`
++   - `(ci)` or `(actions)` → `area:ci`
++
++4. Construct the issue body:
+    - If a parent epic number was provided, the first line of the body MUST be: `Parent epic: #<N>`
+    - Otherwise, leave the body empty.
+ 
+-4. Create the issue:
++5. Create the issue:
+    ```bash
+    gh issue create \
+      --repo pureliture/ai-cli-orch-wrapper \
+      --title "<title>" \
+-     --label "<type-label>,<sprint-label>,<priority>" \
++     --label "<type-label>,<area-label (if any)>,<sprint-label>,<priority>" \
+      --body "<body>"
+    ```
+    Where `<priority>` is one of `p0`, `p1`, or `p2` (default: `p1` if not specified).
+ 
+-5. Capture the created issue URL from the output.
++6. Capture the created issue URL from the output.
+ 
+-6. Add the issue to Project #3 Backlog:
++7. Add the issue to Project #3 Backlog:
+    ```bash
+    gh project item-add 3 --owner pureliture --url <issue_url>
+    ```
+ 
+-7. Report the created issue URL and number to the user.
++8. Report the created issue URL and number to the user.
+diff --git a/templates/commands/gh-start.md b/templates/commands/gh-start.md
+index 44d9846..a0f5b80 100644
+--- a/templates/commands/gh-start.md
++++ b/templates/commands/gh-start.md
+@@ -20,7 +20,7 @@ Transition a GitHub issue to "In Progress" on Project #3, add the `status:in-pro
+    ```bash
+    gh project item-list 3 --owner pureliture --format json --limit 500 --jq '.items[] | select(.content.number == <N> and .content.type == "Issue") | .id'
+    ```
+-   Save the command output as the item ID. This uses `--jq` to select the matching issue by `content.number` instead of manually searching the full JSON. `--limit 500` only searches the first 500 returned items; if no item ID is returned and the project may contain more than 500 items, retry with a higher `--limit` before assuming the issue is absent. If no match is found, warn the user that the issue may not have been added to Project #3 yet, add it first with `gh project item-add 3 --owner pureliture --url <issue_url>`, then retry the item-list lookup.
++   Save the command output as the item ID. This uses `--jq` to select the matching issue by `content.number` instead of manually searching the full JSON. `--limit 500` only searches the first 500 returned items; if no item ID is returned and the project may contain more than 500 items, retry with a higher `--limit` before assuming the issue is absent. If no match is found, warn the user that the issue may not have been added to Project #3 yet, then add it first with `gh project item-add 3 --owner pureliture --url <issue_url> --format json --jq .id` and use the returned ID directly.
+ 
+ 4. Update the project item status to "In Progress":
+    ```bash

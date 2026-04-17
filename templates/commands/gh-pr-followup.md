@@ -1,0 +1,76 @@
+---
+name: gh-pr-followup
+description: "Fetch PR review threads and either resolve them immediately (fix + reply) or defer them to a new issue"
+allowed-tools: [Bash]
+---
+
+Fetch unresolved review threads for a Pull Request and intelligently evaluate whether to resolve them immediately (apply the fix to code, reply, and mark as resolved) or defer them (create a new issue for future work).
+
+## Steps
+
+1. Ask the user for the Pull Request Number (`<PR_NUMBER>`) if not provided.
+
+2. Fetch unresolved review threads for the PR:
+   ```bash
+   gh api graphql -F owner="pureliture" -F name="ai-cli-orch-wrapper" -F number=<PR_NUMBER> -f query='
+   query($owner: String!, $name: String!, $number: Int!) {
+     repository(owner: $owner, name: $name) {
+       pullRequest(number: $number) {
+         reviewThreads(first: 20) {
+           nodes {
+             id
+             isResolved
+             comments(first: 10) {
+               nodes {
+                 id
+                 body
+                 path
+                 line
+               }
+             }
+           }
+         }
+       }
+     }
+   }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)'
+   ```
+
+3. Evaluate each unresolved thread and categorize it:
+   - **Immediate Fix (Resolve)**: Small, localized changes (e.g., typos, simple logic fixes, adding a single check).
+   - **Deferred Task (Issue)**: Large architectural changes, tasks requiring new features, or things explicitly requested to be deferred.
+   *If unsure, ask the user whether to resolve immediately or defer.*
+
+4. For each thread categorized as **Immediate Fix**:
+   - Make the necessary code changes locally using available tools.
+   - Reply to the thread and mark it as resolved:
+     ```bash
+     THREAD_ID="<thread_id_from_graphql>"
+     REPLY_BODY="<your_reply_message>"
+     
+     gh api graphql -f query='mutation($id: ID!, $body: String!) { addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $id, body: $body}) { clientMutationId } }' -F id="$THREAD_ID" -F body="$REPLY_BODY"
+     
+     gh api graphql -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' -F id="$THREAD_ID"
+     ```
+
+5. For each thread categorized as **Deferred Task**:
+   - Ask the user for a brief description and type (`task`, `chore`, or `bug`).
+   - Map the type to the correct label (`type:bug`, `type:task`, `type:chore`).
+   - Infer the `area:*` label from the context (e.g., `packages/wrapper` -> `area:wrapper`).
+   - Create a new issue:
+     ```bash
+     gh issue create \
+       --repo pureliture/ai-cli-orch-wrapper \
+       --title "<type>: <description>" \
+       --label "<type-label>,<area-label (if any)>,origin:review,sprint:v3" \
+       --body "From: #<PR_NUMBER> review comment
+
+     <description>
+
+     See also: #<PR_NUMBER>"
+     ```
+   - Add the created issue to Project #3 Backlog:
+     ```bash
+     gh project item-add 3 --owner pureliture --url <issue_url>
+     ```
+
+6. Summarize the actions taken (resolved threads vs. deferred issues) to the user.
