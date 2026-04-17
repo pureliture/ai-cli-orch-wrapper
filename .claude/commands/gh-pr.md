@@ -101,7 +101,7 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
    If no ID is found after retries, or any step fails, print `⚠ PR Project status update failed — update manually` and continue.
 
 8. Set linked issue status to "In Review":
-   Parse the PR body for `Closes #N`, `Fixes #N`, or `Resolves #N` (case-insensitive). If found:
+   Parse the PR body for ALL occurrences of `Closes #N`, `Fixes #N`, or `Resolves #N` (case-insensitive). Collect all unique issue numbers in order of appearance. For each unique linked issue N:
    - Verify the issue exists: `gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json number`
    - Find the issue's Project item ID:
      ```bash
@@ -118,19 +118,16 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
        --field-id PVTSSF_lAHOA6302M4BT5fAzhBFN48 \
        --single-select-option-id 961ca78f
      ```
-   - If no linked issue keyword found, skip this step silently.
-   - If any step fails, print `⚠ Issue Project status update failed — update manually` and continue.
+   - If any step fails for an issue, print `⚠ Issue Project status update failed for #<N> — update manually` and continue to the next linked issue.
 
-9. Apply tracking labels to PR (inherit from linked issue; default priority `p1`):
-   If a linked issue number N was found in step 8:
-   ```bash
-   gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json labels -q '.labels[].name'
-   ```
-   Build the desired PR label set from the linked issue:
-   - highest priority label `p0`, `p1`, or `p2` (default `p1` if none found)
-   - first `type:*` label
-   - first `area:*` label
-   - `origin:review` if present
+9. Apply tracking labels to PR (inherit from linked issues; default priority `p1`):
+   If any linked issue numbers were found in step 8:
+   - For EACH linked issue, fetch labels: `gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json labels -q '.labels[].name'`
+   - Collect all labels from all linked issues.
+   - Determine the highest priority label among all discovered labels (`p0` > `p1` > `p2`). If no priority label is found on any issue, use `p1`.
+   - Take the first `type:*` label found across the issues (prioritizing the first issue's type).
+   - Take the first `area:*` label found across the issues (prioritizing the first issue's area).
+   - Include `origin:review` if it exists on ANY of the linked issues.
    Do NOT copy `status:*` or `sprint:*` labels onto the PR.
    Inspect the PR's current labels first:
    ```bash
@@ -140,7 +137,6 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
    ```bash
    gh pr edit <pr_url> --repo pureliture/ai-cli-orch-wrapper --add-label <label>
    ```
-   If multiple linked issues have different priorities, use the highest (`p0` > `p1` > `p2`).
    If no linked issue keyword is found, skip `type:*`, `area:*`, and `origin:review`, but still apply default priority `p1`.
    If any label step fails, print `⚠ PR label sync failed — update manually` and continue.
 
