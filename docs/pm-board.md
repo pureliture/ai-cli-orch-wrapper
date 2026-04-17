@@ -8,7 +8,7 @@
 - [x] Size field: S / M / L
 - [x] Target date field
 - [x] Sprint (Iteration) field
-- [ ] Views (Active Sprint, Triage, Roadmap) — add manually in GitHub UI
+- [x] Views (Active Sprint, Triage, Roadmap) configured in GitHub UI
 
 ## Setup Instructions (remaining)
 
@@ -28,10 +28,9 @@
 
 | View | Type | Filter | Group by |
 |------|------|--------|----------|
-| Active Sprint | Board | Sprint: @current | Status |
-| Triage | Table | Status: Backlog OR Status: (empty) | Priority |
-| Roadmap | Table | type:epic label | (none) |
-| Epics (Sub-issues) | Table | — | Parent issue |
+| Active Sprint | Board | `sprint:@current` | Status |
+| Triage | Table | `No:label` | (none) |
+| Roadmap | Table | (none) | (none) |
 
 ## Command Structure (V3+)
 
@@ -222,4 +221,3 @@ GitHub UI → Settings → Branches → Add rule → `main`:
 - [x] Require branches to be up to date before merging
 - [x] Require a pull request before merging
 - [x] Require squash merge (Allowed merge methods: Squash only)
-
