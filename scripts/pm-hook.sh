@@ -56,32 +56,31 @@ if [[ -z "$PROJECT_NUMBER" || -z "$PROJECT_ID" || -z "$STATUS_FIELD_ID" || -z "$
   exit 0
 fi
 
-# ── Extract issue number ───────────────────────────────────────────────────
-ISSUE_NUM=""
+# ── Extract linked issue numbers ──────────────────────────────────────────
+RAW_ISSUES=""
 
 # 1. From command string (immediate)
-if [[ "$COMMAND" =~ ([Cc]loses|[Ff]ixes|[Rr]esolves):?[[:space:]]+#?([0-9]+) ]]; then
-  ISSUE_NUM="${BASH_REMATCH[2]}"
-fi
+CMD_ISSUES=$(echo "$COMMAND" | grep -oiE '(closes|fixes|resolves):?[[:space:]]+#?[0-9]+' | grep -oE '[0-9]+' || true)
+RAW_ISSUES="${RAW_ISSUES}${CMD_ISSUES}"$'\n'
 
 # 2. From actual PR body (handles --fill and manual edits)
-if [[ -z "$ISSUE_NUM" ]]; then
-  PR_BODY=$(gh pr view --json body --jq '.body' 2>/dev/null || echo "")
-  if [[ "$PR_BODY" =~ ([Cc]loses|[Ff]ixes|[Rr]esolves):?[[:space:]]+#?([0-9]+) ]]; then
-    ISSUE_NUM="${BASH_REMATCH[2]}"
-  fi
-fi
+# Always check PR body to augment command-line parsing
+PR_BODY=$(gh pr view --json body --jq '.body' 2>/dev/null || echo "")
+BODY_ISSUES=$(echo "$PR_BODY" | grep -oiE '(closes|fixes|resolves):?[[:space:]]+#?[0-9]+' | grep -oE '[0-9]+' || true)
+RAW_ISSUES="${RAW_ISSUES}${BODY_ISSUES}"$'\n'
 
-# 3. Fallback: current branch name feat/42-slug or fix/42-slug
-if [[ -z "$ISSUE_NUM" ]]; then
+# 3. Fallback: current branch name feat/42-slug or fix/42-slug (only if no keywords found)
+if [[ -z "$(echo "$RAW_ISSUES" | tr -d '[:space:]')" ]]; then
   BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
-  if [[ "$BRANCH" =~ /([0-9]+)- ]]; then
-    ISSUE_NUM="${BASH_REMATCH[1]}"
-  fi
+  BRANCH_ISSUE=$(echo "$BRANCH" | grep -oE '/[0-9]+-' | grep -oE '[0-9]+' || true)
+  RAW_ISSUES="${RAW_ISSUES}${BRANCH_ISSUE}"$'\n'
 fi
 
-if [[ -z "$ISSUE_NUM" ]]; then
-  echo "[pm-hook] No issue number found in command or branch — skipping" >&2
+# Unique issue numbers in order of appearance
+ISSUE_NUMS=$(echo "$RAW_ISSUES" | grep -v '^$' | awk '!x[$0]++' || true)
+
+if [[ -z "$ISSUE_NUMS" ]]; then
+  echo "[pm-hook] No linked issue keywords or branch-issue found — skipping" >&2
 fi
 
 # ── Helpers ────────────────────────────────────────────────────────────────
@@ -131,57 +130,56 @@ else
   echo "[pm-hook] WARN: Could not resolve created PR from current branch" >&2
 fi
 
-[[ -z "$ISSUE_NUM" ]] && exit 0
+[[ -z "$ISSUE_NUMS" ]] && exit 0
 
-# ── Get or add linked issue project item ───────────────────────────────────
-ITEM_ID=$(gh project item-list "$PROJECT_NUMBER" \
-  --owner "$OWNER" --format json \
-  --jq ".items[] | select(.content.number == $ISSUE_NUM and .content.type == \"Issue\") | .id" 2>/dev/null || echo "")
+# ── Process every linked issue ─────────────────────────────────────────────
+PRIORITY_LABEL=""
 
-if [[ -z "$ITEM_ID" ]]; then
-  ISSUE_URL="https://github.com/${REPO}/issues/${ISSUE_NUM}"
-  ITEM_ID=$(gh project item-add "$PROJECT_NUMBER" \
-    --owner "$OWNER" \
-    --url "$ISSUE_URL" \
-    --format json \
-    --jq '.id' 2>/dev/null || echo "")
-fi
+while read -r ISSUE_NUM; do
+  [[ -z "$ISSUE_NUM" ]] && continue
 
-if [[ -z "$ITEM_ID" ]]; then
-  echo "[pm-hook] Could not get/add project item for issue #${ISSUE_NUM}" >&2
-  exit 0
-fi
+  # 1. Get or add linked issue project item
+  ITEM_ID=$(get_project_item_id "$ISSUE_NUM" "Issue")
 
-# ── Update linked issue status to "In Review" ──────────────────────────────
-if set_in_review "$ITEM_ID"; then
-  echo "[pm-hook] Issue #${ISSUE_NUM} → In Review" >&2
-else
-  echo "[pm-hook] WARN: Failed to update issue #${ISSUE_NUM} status" >&2
-fi
+  if [[ -z "$ITEM_ID" ]]; then
+    ISSUE_URL="https://github.com/${REPO}/issues/${ISSUE_NUM}"
+    ITEM_ID=$(add_project_url "$ISSUE_URL")
+  fi
 
-# ── Inherit priority label from linked issue → apply to PR ────────────────
-# Reads p0/p1/p2 label from issue; defaults to p1 if none found.
-# Only runs when a PR and linked issue are both resolved.
-if [[ -n "$PR_NUM" && -n "$ISSUE_NUM" ]]; then
+  if [[ -n "$ITEM_ID" ]]; then
+    if set_in_review "$ITEM_ID"; then
+      echo "[pm-hook] Issue #${ISSUE_NUM} → In Review" >&2
+    else
+      echo "[pm-hook] WARN: Failed to update issue #${ISSUE_NUM} status" >&2
+    fi
+  else
+    echo "[pm-hook] Could not get/add project item for issue #${ISSUE_NUM}" >&2
+  fi
+
+  # 2. Collect priority labels for PR inheritance
   ISSUE_LABELS=$(gh issue view "$ISSUE_NUM" --repo "$REPO" --json labels \
     --jq '.labels[].name' 2>/dev/null || echo "")
 
-  PRIORITY_LABEL=""
   while IFS= read -r lbl; do
     case "$lbl" in
-      p0) PRIORITY_LABEL="p0"; break ;;
-      p1) PRIORITY_LABEL="p1"; break ;;
-      p2) [[ -z "$PRIORITY_LABEL" ]] && PRIORITY_LABEL="p2" ;;
+      p0) PRIORITY_LABEL="p0" ;; # Highest, can't be beaten
+      p1) [[ "$PRIORITY_LABEL" != "p0" ]] && PRIORITY_LABEL="p1" ;;
+      p2) [[ -z "$PRIORITY_LABEL" || "$PRIORITY_LABEL" == "p2" ]] && [[ "$PRIORITY_LABEL" != "p0" && "$PRIORITY_LABEL" != "p1" ]] && PRIORITY_LABEL="p2" ;;
     esac
   done <<< "$ISSUE_LABELS"
-  [[ -z "$PRIORITY_LABEL" ]] && PRIORITY_LABEL="p1"
+done <<< "$ISSUE_NUMS"
 
-  # Apply label to PR if not already present
+# ── Apply inherited priority label to PR ──────────────────────────────────
+# Default to p1 if no priority label found on any linked issue.
+[[ -z "$PRIORITY_LABEL" ]] && PRIORITY_LABEL="p1"
+
+if [[ -n "$PR_NUM" ]]; then
   PR_LABELS=$(gh pr view "$PR_NUM" --repo "$REPO" --json labels \
     --jq '.labels[].name' 2>/dev/null || echo "")
+
   if ! grep -qwE 'p0|p1|p2' <<< "$PR_LABELS"; then
     if gh pr edit "$PR_NUM" --repo "$REPO" --add-label "$PRIORITY_LABEL" 2>/dev/null; then
-      echo "[pm-hook] PR #${PR_NUM} ← priority ${PRIORITY_LABEL} (from issue #${ISSUE_NUM})" >&2
+      echo "[pm-hook] PR #${PR_NUM} ← priority ${PRIORITY_LABEL} (resolved across linked issues)" >&2
     else
       echo "[pm-hook] WARN: Failed to apply priority label to PR #${PR_NUM}" >&2
     fi
