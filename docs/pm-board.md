@@ -213,4 +213,4 @@ GitHub UI → Settings → Branches → Add rule → `main`:
 - [x] Require branches to be up to date before merging
 - [x] Require a pull request before merging
 - [x] Require squash merge (Allowed merge methods: Squash only)
-h only)
+

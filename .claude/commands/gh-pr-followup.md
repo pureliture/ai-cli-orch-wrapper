@@ -16,7 +16,7 @@ Fetch unresolved review threads for a Pull Request and intelligently evaluate wh
    query($owner: String!, $name: String!, $number: Int!) {
      repository(owner: $owner, name: $name) {
        pullRequest(number: $number) {
-         reviewThreads(first: 20) {
+         reviewThreads(first: 50) {
            nodes {
              id
              isResolved
@@ -30,43 +30,43 @@ Fetch unresolved review threads for a Pull Request and intelligently evaluate wh
              }
            }
          }
-       }
-     }
-   }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)'
-   ```
+         }
+         }
+         }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false)'
 
-3. Evaluate each unresolved thread and categorize it:
-   - **Immediate Fix (Resolve)**: Small, localized changes (e.g., typos, simple logic fixes, adding a single check).
-   - **Deferred Task (Issue)**: Large architectural changes, tasks requiring new features, or things explicitly requested to be deferred.
-   *If unsure, ask the user whether to resolve immediately or defer.*
+         3. Evaluate each unresolved thread and categorize it:
+         - **Immediate Fix (Resolve)**: Small, localized changes (e.g., typos, simple logic fixes, adding a single check).
+         - **Deferred Task (Issue)**: Large architectural changes, tasks requiring new features, or things explicitly requested to be deferred.
+         *If unsure, ask the user whether to resolve immediately or defer.*
 
-4. For each thread categorized as **Immediate Fix**:
-   - Make the necessary code changes locally using available tools.
-   - Reply to the thread and mark it as resolved:
-     ```bash
-     THREAD_ID="<thread_id_from_graphql>"
-     REPLY_BODY="<your_reply_message>"
-     
-     gh api graphql -f query='mutation($id: ID!, $body: String!) { addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $id, body: $body}) { clientMutationId } }' -F id="$THREAD_ID" -F body="$REPLY_BODY"
-     
-     gh api graphql -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' -F id="$THREAD_ID"
-     ```
+         4. For each thread categorized as **Immediate Fix**:
+         - Make the necessary code changes locally using available tools.
+         - Reply to the thread and mark it as resolved:
+         ```bash
+         THREAD_ID="<thread_id_from_graphql>"
+         REPLY_BODY="<your_reply_message>"
 
-5. For each thread categorized as **Deferred Task**:
-   - Ask the user for a brief description and type (`task`, `chore`, or `bug`).
-   - Map the type to the correct label (`type:bug`, `type:task`, `type:chore`).
-   - Infer the `area:*` label from the context (e.g., `packages/wrapper` -> `area:wrapper`).
-   - Create a new issue:
-     ```bash
-     gh issue create \
-       --repo pureliture/ai-cli-orch-wrapper \
-       --title "<type>: <description>" \
-       --label "<type-label>,<area-label (if any)>,origin:review,sprint:v3" \
-       --body "From: #<PR_NUMBER> review comment
+         gh api graphql -f query='mutation($id: ID!, $body: String!) { addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $id, body: $body}) { clientMutationId } }' -F id="$THREAD_ID" -F body="$REPLY_BODY"
 
-     <description>
+         gh api graphql -f query='mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { thread { isResolved } } }' -F id="$THREAD_ID"
+         ```
 
-     See also: #<PR_NUMBER>"
+         5. For each thread categorized as **Deferred Task**:
+         - Ask the user for a brief description, type (`task`, `chore`, or `bug`), and sprint label (e.g., `sprint:v3`).
+         - Map the type to the correct label (`type:bug`, `type:task`, `type:chore`).
+         - Infer the `area:*` label from the context (e.g., `packages/wrapper` -> `area:wrapper`).
+         - Create a new issue:
+         ```bash
+         gh issue create \
+         --repo pureliture/ai-cli-orch-wrapper \
+         --title "<type>: <description>" \
+         --label "<type-label>,<area-label (if any)>,origin:review,<sprint-label>" \
+         --body "From: #<PR_NUMBER> review comment
+
+         <description>
+
+         See also: #<PR_NUMBER>"
+         ```
      ```
    - Add the created issue to Project #3 Backlog:
      ```bash
