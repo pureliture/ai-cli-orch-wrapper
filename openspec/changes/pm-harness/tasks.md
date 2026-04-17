@@ -7,7 +7,7 @@
 ## 1. GitHub 레이블 체계
 
 - [x] 1.1 `scripts/setup-github-labels.sh` 작성 — type/area/priority/status 레이블 일괄 생성, 색상 그룹 적용 (중복 실행 idempotent 보장)
-- [x] 1.2 스크립트 실행 및 레이블 생성 검증 (18개 레이블 생성 확인)
+- [x] 1.2 스크립트 실행 및 레이블 생성 검증 (20개 레이블 생성 확인)
 - [x] 1.3 기존 이슈에 레이블 소급 적용 (issue #6 → type:epic, area:wrapper, p1)
 
 ## 2. GitHub Projects V2 보드 설정

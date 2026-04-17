@@ -5,6 +5,7 @@
 This repo is an npm workspace with the following layout:
 
 - **`packages/wrapper/`** — `@pureliture/ai-cli-orch-wrapper`: Node.js wrapper runtime. Owns the `aco` CLI binary, provider interface (`IProvider`), provider implementations (`GeminiProvider`), provider registry, and session/task/output lifecycle (`SessionStore`). Exposes `aco pack install/setup`, `aco provider setup <name>`, and `aco run ...`.
+- **`packages/installer/`** — Installer package for setup flows and install-time entrypoints used by `aco-install`, including `pack setup` and `provider setup <name>`.
 - **`templates/commands/`** — Source for Claude Code slash command markdown files. Installed to `.claude/commands/` by `aco pack install`. Thin wrappers that delegate all logic to `aco run <provider> <command>`.
 - **`templates/prompts/`** — Provider-specific prompt text. Installed to `.claude/aco/prompts/` by `aco pack install`.
 - **`.claude/agents/`** — Agent definition files with frontmatter. Used by `aco delegate` for provider routing.

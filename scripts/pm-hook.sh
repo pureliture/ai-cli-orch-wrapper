@@ -60,17 +60,15 @@ fi
 ISSUE_NUM=""
 
 # 1. From command string (immediate)
-if [[ "$COMMAND" =~ [Cc]loses[[:space:]]+#([0-9]+) ]]; then
-  ISSUE_NUM="${BASH_REMATCH[1]}"
-elif [[ "$COMMAND" =~ [Cc]loses[[:space:]]+([0-9]+) ]]; then
-  ISSUE_NUM="${BASH_REMATCH[1]}"
+if [[ "$COMMAND" =~ ([Cc]loses|[Ff]ixes|[Rr]esolves):?[[:space:]]+#?([0-9]+) ]]; then
+  ISSUE_NUM="${BASH_REMATCH[2]}"
 fi
 
 # 2. From actual PR body (handles --fill and manual edits)
 if [[ -z "$ISSUE_NUM" ]]; then
   PR_BODY=$(gh pr view --json body --jq '.body' 2>/dev/null || echo "")
-  if [[ "$PR_BODY" =~ [Cc]loses[[:space:]]+#([0-9]+) ]]; then
-    ISSUE_NUM="${BASH_REMATCH[1]}"
+  if [[ "$PR_BODY" =~ ([Cc]loses|[Ff]ixes|[Rr]esolves):?[[:space:]]+#?([0-9]+) ]]; then
+    ISSUE_NUM="${BASH_REMATCH[2]}"
   fi
 fi
 

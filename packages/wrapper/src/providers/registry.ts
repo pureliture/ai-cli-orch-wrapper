@@ -5,7 +5,9 @@ export class ProviderRegistry {
   private readonly providers = new Map<string, IProvider>();
 
   constructor() {
-    this.register('gemini', new GeminiProvider());
+    const geminiProvider = new GeminiProvider();
+    this.register('gemini', geminiProvider);
+    this.register('copilot', geminiProvider);
   }
 
   register(key: string, provider: IProvider): void {

@@ -52,9 +52,13 @@ pgid := cmd.Process.Pid
 // 3. Forward signals to the entire group
 sigCh := make(chan os.Signal, 1)
 signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+defer signal.Stop(sigCh)
 
 go func() {
-    sig := <-sigCh
+    sig, ok := <-sigCh
+    if !ok {
+        return
+    }
     // Send SIGTERM to the process group (negative PID)
     _ = syscall.Kill(-pgid, syscall.SIGTERM)
 
