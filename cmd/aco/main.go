@@ -5,7 +5,7 @@
 //	aco delegate <agent-id> [options] — delegate to provider via agent frontmatter (blocking)
 //	aco run <provider> <command> [options] — legacy: delegate to provider CLI directly (blocking)
 //
-// Architecture contract: docs/contract/blocking-execution-contract.md
+// Architecture contract: docs/contract/process-execution-contract.md
 //
 // Removed in Phase A: aco status, aco result, aco cancel.
 // These were codex-plugin-cc surface, not ccg-workflow. See session-plan.md.

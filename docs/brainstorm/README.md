@@ -174,7 +174,7 @@ review    → gemini (기본) or codex (--patch-level)
 
 - CC가 prose 파싱 없이 structured reasoning 적용
 - ccg `SESSION-ID: xxx` sentinel 패턴의 output 버전
-- blocking-execution-contract의 "No tee" 원칙과 trade-off 있음
+- process-execution-contract의 "No tee" 원칙과 trade-off 있음
 
 ### G. Warm Process Pool
 

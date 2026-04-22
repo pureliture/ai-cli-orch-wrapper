@@ -5,7 +5,7 @@ This directory contains the behavioral contract fixture suite for the `aco` wrap
 ## Purpose
 
 These fixtures define the current blocking-execution behavior of the Go wrapper.
-They are written against `docs/contract/blocking-execution-contract.md`.
+They are written against `docs/contract/process-execution-contract.md`.
 
 ## Structure
 
