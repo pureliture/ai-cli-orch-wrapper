@@ -7,7 +7,7 @@ const fsExists = promisify(exists);
 const BEGIN_MARKER = '<!-- BEGIN ACO GENERATED CONTEXT -->';
 const END_MARKER = '<!-- END ACO GENERATED CONTEXT -->';
 
-export async function updateManagedBlock(filePath: string, content: string): Promise<void> {
+export async function getManagedBlockUpdate(filePath: string, content: string): Promise<string> {
   let fileContent = '';
   try {
     if (await fsExists(filePath)) {
@@ -24,11 +24,14 @@ export async function updateManagedBlock(filePath: string, content: string): Pro
     // Replace existing block
     const before = fileContent.slice(0, beginIndex);
     const after = fileContent.slice(endIndex + END_MARKER.length);
-    fileContent = `${before}${BEGIN_MARKER}\n${content}\n${END_MARKER}${after}`;
+    return `${before}${BEGIN_MARKER}\n${content}\n${END_MARKER}${after}`;
   } else {
     // Append block if markers don't exist or are broken
-    fileContent = `${fileContent.trimEnd()}\n\n${BEGIN_MARKER}\n${content}\n${END_MARKER}\n`;
+    return `${fileContent.trimEnd()}\n\n${BEGIN_MARKER}\n${content}\n${END_MARKER}\n`;
   }
+}
 
-  await writeFile(filePath, fileContent);
+export async function updateManagedBlock(filePath: string, content: string): Promise<void> {
+  const updatedContent = await getManagedBlockUpdate(filePath, content);
+  await writeFile(filePath, updatedContent);
 }

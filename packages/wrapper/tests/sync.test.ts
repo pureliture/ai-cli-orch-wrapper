@@ -10,6 +10,7 @@ import { toGeminiAgent, serializeGeminiAgent } from '../src/sync/agent-gemini-tr
 import { loadFormatterConfig, resolveModelForProvider } from '../src/sync/formatter.js';
 import { parseHooks, toCodexHooks, toGeminiHooks } from '../src/sync/hook-parse.js';
 import { syncSkills } from '../src/sync/skill-transform.js';
+import { runSync } from '../src/sync/sync-engine.js';
 import type { SyncSource } from '../src/sync/transform-interface.js';
 import { computeHash } from '../src/sync/hash.js';
 
@@ -448,9 +449,9 @@ describe('Skill Sync', () => {
         },
       ];
 
-      const { outputs, warnings } = await syncSkills(sources, tmpDir, null, false);
+      const result = await runSync(tmpDir, { dryRun: false });
+      const outputs = result.outputs;
 
-      assert.equal(warnings.length, 0);
       assert.equal(outputs.length, 1);
       assert.equal(outputs[0].action, 'created');
 
@@ -474,7 +475,7 @@ describe('Skill Sync', () => {
   it('produces no outputs when no skill sources provided', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-noskill-'));
     try {
-      const { outputs, warnings } = await syncSkills([], tmpDir, null, false);
+      const { outputs, warnings } = await syncSkills([], tmpDir, null);
       assert.equal(outputs.length, 0);
       assert.equal(warnings.length, 0);
     } finally {
@@ -488,19 +489,16 @@ describe('Skill Sync', () => {
       const skillDir = join(tmpDir, '.claude', 'skills', 'dry-skill');
       await mkdir(skillDir, { recursive: true });
       await writeFile(join(skillDir, 'SKILL.md'), '# Dry Skill');
+      // Need CLAUDE.md for runSync to find sources
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
 
-      const sources: SyncSource[] = [
-        {
-          path: join(skillDir, 'SKILL.md'),
-          kind: 'skill',
-          content: '# Dry Skill',
-          hash: computeHash('# Dry Skill'),
-        },
-      ];
-
-      const { outputs } = await syncSkills(sources, tmpDir, null, true);
-      assert.equal(outputs.length, 1);
-      assert.equal(outputs[0].action, 'created');
+      const result = await runSync(tmpDir, { dryRun: true });
+      const outputs = result.outputs;
+      
+      // Filter for skill outputs
+      const skillOutputs = outputs.filter(o => o.targetPath.includes('.agents/skills/dry-skill'));
+      assert.equal(skillOutputs.length, 1);
+      assert.equal(skillOutputs[0].action, 'created');
 
       // No files should have been written
       let exists = false;

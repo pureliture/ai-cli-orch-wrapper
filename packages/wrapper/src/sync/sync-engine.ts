@@ -1,6 +1,6 @@
 import { discoverSources } from './source-discovery.js';
 import { aggregateContext } from './context-transform.js';
-import { updateManagedBlock } from './managed-block.js';
+import { getManagedBlockUpdate } from './managed-block.js';
 import { syncSkills } from './skill-transform.js';
 import { syncCodexAgents } from './agent-codex-transform.js';
 import { syncGeminiAgents } from './agent-gemini-transform.js';
@@ -8,6 +8,8 @@ import { syncCodexHooks } from './hook-codex-transform.js';
 import { syncGeminiHooks } from './hook-gemini-transform.js';
 import { readManifest, writeManifest, calculateDrift } from './manifest.js';
 import { computeHash } from './hash.js';
+import { readFile, mkdir, writeFile, cp, rm, readdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import type {
   SyncOptions,
   SyncResult,
@@ -33,15 +35,50 @@ export async function runSync(
   // 2. Read existing manifest
   const existingManifest = await readManifest(repoRoot);
 
-  // 3. Compute transform plan
-  const plan = await computeTransformPlan(sources, repoRoot, existingManifest, dryRun);
+  // 3. Compute transform plan (pure planning pass)
+  const plan = await computeTransformPlan(sources, repoRoot, existingManifest);
 
-  // 4. Check mode: verify without writing
+  // 4. Detect conflicts for planned outputs against existing manifest
+  if (existingManifest) {
+    for (const output of plan.outputs) {
+      const existingHash = existingManifest.targetHashes[output.targetPath];
+      if (existingHash && (output.kind === 'file' || output.kind === 'managed-block')) {
+        try {
+          const diskContent = await readFile(output.targetPath, 'utf8');
+          const diskHash = computeHash(diskContent);
+          if (diskHash !== existingHash) {
+            output.action = 'conflict';
+          }
+        } catch (err: any) {
+          if (err.code !== 'ENOENT') {
+            throw err;
+          }
+        }
+      }
+    }
+  }
+
+  // Determine actual actions (created vs updated) for non-conflicts
+  for (const output of plan.outputs) {
+    if (output.action === 'conflict') continue;
+    if (output.action === 'removed') continue;
+    
+    const existingHash = existingManifest?.targetHashes[output.targetPath];
+    if (!existingHash) {
+      output.action = 'created';
+    } else if (existingHash === output.hash) {
+      output.action = 'skipped';
+    } else {
+      output.action = 'updated';
+    }
+  }
+
+  // 5. Check mode: verify without writing
+  const conflicts = plan.outputs.filter((o) => o.action === 'conflict');
   if (check) {
     const isDrift = calculateDrift(existingManifest, plan.manifest);
-    if (isDrift) {
+    if (isDrift || conflicts.length > 0) {
       const staleOutputs = plan.outputs.filter((o) => o.action === 'updated');
-      const conflicts = plan.outputs.filter((o) => o.action === 'conflict');
       const messages: string[] = [];
       if (staleOutputs.length > 0) {
         messages.push(`Stale outputs: ${staleOutputs.map((o) => o.targetPath).join(', ')}`);
@@ -62,8 +99,7 @@ export async function runSync(
     };
   }
 
-  // 5. Handle conflicts unless --force
-  const conflicts = plan.outputs.filter((o) => o.action === 'conflict');
+  // 6. Handle conflicts unless --force
   if (conflicts.length > 0 && !force) {
     const conflictPaths = conflicts.map((c) => c.targetPath).join(', ');
     throw new Error(
@@ -72,12 +108,40 @@ export async function runSync(
     );
   }
 
-  // 6. Write outputs (unless dry-run)
+  // 7. Write outputs (execution pass)
   if (!dryRun) {
+    for (const output of plan.outputs) {
+      if (output.action === 'skipped') continue;
+
+      if (output.action === 'removed') {
+        if (output.kind === 'directory') {
+          try {
+            const entries = await readdir(output.targetPath);
+            if (entries.length === 0) {
+              await rm(output.targetPath, { recursive: true, force: true });
+            }
+          } catch { /* Ignore */ }
+        } else {
+          await rm(output.targetPath, { force: true });
+        }
+        continue;
+      }
+
+      // Write/Copy
+      if (output.kind === 'file' || output.kind === 'managed-block') {
+        if (output.content !== undefined) {
+          await mkdir(dirname(output.targetPath), { recursive: true });
+          await writeFile(output.targetPath, output.content, 'utf8');
+        }
+      } else if (output.kind === 'directory' && output.sourcePath) {
+        await mkdir(dirname(output.targetPath), { recursive: true });
+        await cp(output.sourcePath, output.targetPath, { recursive: true, force: true });
+      }
+    }
     await writeManifest(repoRoot, plan.manifest);
   }
 
-  // 7. Compute result
+  // 8. Compute result
   return {
     created: plan.outputs.filter((o) => o.action === 'created').length,
     updated: plan.outputs.filter((o) => o.action === 'updated').length,
@@ -92,8 +156,7 @@ export async function runSync(
 async function computeTransformPlan(
   sources: ReturnType<typeof discoverSources> extends Promise<infer T> ? T : never,
   repoRoot: string,
-  existingManifest: SyncManifest | null,
-  dryRun: boolean
+  existingManifest: SyncManifest | null
 ): Promise<TransformPlan> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
@@ -111,30 +174,29 @@ async function computeTransformPlan(
     const agentsMdPath = `${repoRoot}/AGENTS.md`;
     const geminiMdPath = `${repoRoot}/GEMINI.md`;
 
-    if (!dryRun) {
-      await updateManagedBlock(agentsMdPath, contextContent);
-      await updateManagedBlock(geminiMdPath, contextContent);
-    }
-
+    const updatedAgents = await getManagedBlockUpdate(agentsMdPath, contextContent);
     outputs.push({
       targetPath: agentsMdPath,
       kind: 'managed-block',
       action: 'updated',
-      hash: computeHash(contextContent),
+      content: updatedAgents,
+      hash: computeHash(updatedAgents),
     });
-    targetHashes[agentsMdPath] = computeHash(contextContent);
+    targetHashes[agentsMdPath] = computeHash(updatedAgents);
 
+    const updatedGemini = await getManagedBlockUpdate(geminiMdPath, contextContent);
     outputs.push({
       targetPath: geminiMdPath,
       kind: 'managed-block',
       action: 'updated',
-      hash: computeHash(contextContent),
+      content: updatedGemini,
+      hash: computeHash(updatedGemini),
     });
-    targetHashes[geminiMdPath] = computeHash(contextContent);
+    targetHashes[geminiMdPath] = computeHash(updatedGemini);
   }
 
   // 2. Skills
-  const skillResult = await syncSkills(sources, repoRoot, existingManifest, dryRun);
+  const skillResult = await syncSkills(sources, repoRoot, existingManifest);
   outputs.push(...skillResult.outputs);
   warnings.push(...skillResult.warnings);
   for (const o of skillResult.outputs) {
@@ -142,7 +204,7 @@ async function computeTransformPlan(
   }
 
   // 3. Codex agents
-  const codexAgentResult = await syncCodexAgents(sources, repoRoot, dryRun);
+  const codexAgentResult = await syncCodexAgents(sources, repoRoot);
   outputs.push(...codexAgentResult.outputs);
   warnings.push(...codexAgentResult.warnings);
   for (const o of codexAgentResult.outputs) {
@@ -150,7 +212,7 @@ async function computeTransformPlan(
   }
 
   // 4. Gemini agents
-  const geminiAgentResult = await syncGeminiAgents(sources, repoRoot, dryRun);
+  const geminiAgentResult = await syncGeminiAgents(sources, repoRoot);
   outputs.push(...geminiAgentResult.outputs);
   warnings.push(...geminiAgentResult.warnings);
   for (const o of geminiAgentResult.outputs) {
@@ -158,7 +220,7 @@ async function computeTransformPlan(
   }
 
   // 5. Codex hooks
-  const codexHookResult = await syncCodexHooks(sources, repoRoot, dryRun);
+  const codexHookResult = await syncCodexHooks(sources, repoRoot);
   outputs.push(...codexHookResult.outputs);
   warnings.push(...codexHookResult.warnings);
   for (const o of codexHookResult.outputs) {
@@ -166,7 +228,7 @@ async function computeTransformPlan(
   }
 
   // 6. Gemini hooks
-  const geminiHookResult = await syncGeminiHooks(sources, repoRoot, dryRun);
+  const geminiHookResult = await syncGeminiHooks(sources, repoRoot);
   outputs.push(...geminiHookResult.outputs);
   warnings.push(...geminiHookResult.warnings);
   for (const o of geminiHookResult.outputs) {

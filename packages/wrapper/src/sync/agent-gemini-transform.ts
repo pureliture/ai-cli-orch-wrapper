@@ -58,11 +58,9 @@ export function serializeGeminiAgent(agent: GeminiAgent): string {
 
   return ['---', yaml, '---', '', agent.body].join('\n');
 }
-
 export async function syncGeminiAgents(
   sources: SyncSource[],
-  repoRoot: string,
-  dryRun: boolean
+  repoRoot: string
 ): Promise<{ outputs: SyncOutput[]; warnings: SyncWarning[] }> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
@@ -79,17 +77,14 @@ export async function syncGeminiAgents(
 
     const fileName = `${spec.id || 'agent'}.md`;
     const targetPath = join(targetDir, fileName);
-
-    if (!dryRun) {
-      await mkdir(targetDir, { recursive: true });
-      await writeFile(targetPath, serializeGeminiAgent(agent), 'utf8');
-    }
+    const content = serializeGeminiAgent(agent);
 
     outputs.push({
       targetPath,
       kind: 'file',
-      action: existsSync(targetPath) ? 'updated' : 'created',
-      hash: computeHash(serializeGeminiAgent(agent)),
+      action: 'updated', // Default, refined by sync-engine
+      content,
+      hash: computeHash(content),
     });
 
     if (spec.reasoningEffort) {

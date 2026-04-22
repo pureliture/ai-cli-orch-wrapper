@@ -1,4 +1,4 @@
-import { mkdir, writeFile, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseHooks, toCodexHooks } from './hook-parse.js';
@@ -7,8 +7,7 @@ import type { SyncSource, SyncOutput, SyncWarning } from './transform-interface.
 
 export async function syncCodexHooks(
   sources: SyncSource[],
-  repoRoot: string,
-  dryRun: boolean
+  repoRoot: string
 ): Promise<{ outputs: SyncOutput[]; warnings: SyncWarning[] }> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
@@ -31,23 +30,19 @@ export async function syncCodexHooks(
 
   if (codexHooks.length === 0) return { outputs, warnings };
 
-  // Write .codex/hooks.json
+  // Plan .codex/hooks.json
   const hooksPath = join(repoRoot, '.codex', 'hooks.json');
   const hooksContent = JSON.stringify(codexHooks, null, 2) + '\n';
-
-  if (!dryRun) {
-    await mkdir(join(repoRoot, '.codex'), { recursive: true });
-    await writeFile(hooksPath, hooksContent, 'utf8');
-  }
 
   outputs.push({
     targetPath: hooksPath,
     kind: 'file',
-    action: existsSync(hooksPath) ? 'updated' : 'created',
+    action: 'updated',
+    content: hooksContent,
     hash: computeHash(hooksContent),
   });
 
-  // Write/merge .codex/config.toml with codex_hooks feature flag
+  // Plan/merge .codex/config.toml with codex_hooks feature flag
   const configPath = join(repoRoot, '.codex', 'config.toml');
   let configContent = '';
 
@@ -74,14 +69,11 @@ export async function syncCodexHooks(
     configContent = configContent.trimEnd() + '\n\n' + managedBlock + '\n';
   }
 
-  if (!dryRun) {
-    await writeFile(configPath, configContent, 'utf8');
-  }
-
   outputs.push({
     targetPath: configPath,
     kind: 'file',
-    action: existsSync(configPath) ? 'updated' : 'created',
+    action: 'updated',
+    content: configContent,
     hash: computeHash(configContent),
   });
 

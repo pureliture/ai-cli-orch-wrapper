@@ -81,8 +81,7 @@ function escapeTomlString(s: string): string {
 
 export async function syncCodexAgents(
   sources: SyncSource[],
-  repoRoot: string,
-  dryRun: boolean
+  repoRoot: string
 ): Promise<{ outputs: SyncOutput[]; warnings: SyncWarning[] }> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
@@ -99,17 +98,14 @@ export async function syncCodexAgents(
 
     const fileName = `${spec.id || 'agent'}.toml`;
     const targetPath = join(targetDir, fileName);
-
-    if (!dryRun) {
-      await mkdir(targetDir, { recursive: true });
-      await writeFile(targetPath, serializeCodexAgent(agent), 'utf8');
-    }
+    const content = serializeCodexAgent(agent);
 
     outputs.push({
       targetPath,
       kind: 'file',
-      action: existsSync(targetPath) ? 'updated' : 'created',
-      hash: computeHash(serializeCodexAgent(agent)),
+      action: 'updated', // Default, refined by sync-engine
+      content,
+      hash: computeHash(content),
     });
 
     if (spec.reasoningEffort && !agent.model_reasoning_effort) {
