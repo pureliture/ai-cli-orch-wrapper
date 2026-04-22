@@ -1,10 +1,10 @@
-import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { dump as dumpYaml } from 'js-yaml';
 import { parseAgentSpec } from './agent-parse.js';
 import { computeHash } from './hash.js';
 import { loadFormatterConfig, resolveModelForProvider } from './formatter.js';
+import { DEFAULT_GEMINI_MODEL } from './model-defaults.js';
 import type { SyncSource, SyncOutput, SyncWarning } from './transform-interface.js';
 
 export interface GeminiAgent {
@@ -73,7 +73,7 @@ export async function syncGeminiAgents(
     const agent = toGeminiAgent(spec);
 
     const resolvedModel = resolveModelForProvider(formatterConfig, spec.modelAlias, 'gemini_cli');
-    agent.model = resolvedModel ?? 'gemini-2.5-pro';
+    agent.model = resolvedModel ?? DEFAULT_GEMINI_MODEL;
 
     const fileName = `${spec.id || 'agent'}.md`;
     const targetPath = join(targetDir, fileName);

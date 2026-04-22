@@ -1,9 +1,9 @@
-import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseAgentSpec } from './agent-parse.js';
 import { computeHash } from './hash.js';
 import { loadFormatterConfig, resolveModelForProvider } from './formatter.js';
+import { DEFAULT_CODEX_MODEL } from './model-defaults.js';
 import type { SyncSource, SyncOutput, SyncWarning } from './transform-interface.js';
 
 export interface CodexAgent {
@@ -94,7 +94,7 @@ export async function syncCodexAgents(
     const agent = toCodexAgent(spec);
 
     const resolvedModel = resolveModelForProvider(formatterConfig, spec.modelAlias, 'codex');
-    agent.model = resolvedModel ?? 'gpt-5.4';
+    agent.model = resolvedModel ?? DEFAULT_CODEX_MODEL;
 
     const fileName = `${spec.id || 'agent'}.toml`;
     const targetPath = join(targetDir, fileName);

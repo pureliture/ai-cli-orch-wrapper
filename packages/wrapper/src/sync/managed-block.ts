@@ -1,11 +1,17 @@
-import { readFile, writeFile } from 'node:fs/promises';
-import { exists } from 'node:fs';
-import { promisify } from 'node:util';
-
-const fsExists = promisify(exists);
+import { readFile, writeFile, access } from 'node:fs/promises';
+import { constants } from 'node:fs';
 
 const BEGIN_MARKER = '<!-- BEGIN ACO GENERATED CONTEXT -->';
 const END_MARKER = '<!-- END ACO GENERATED CONTEXT -->';
+
+async function fsExists(path: string): Promise<boolean> {
+  try {
+    await access(path, constants.F_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function getManagedBlockUpdate(filePath: string, content: string): Promise<string> {
   let fileContent = '';

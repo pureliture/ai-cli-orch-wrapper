@@ -19,17 +19,24 @@ import type {
   TransformPlan,
 } from './transform-interface.js';
 
-export async function runSync(
-  repoRoot: string,
-  options: SyncOptions = {}
-): Promise<SyncResult> {
+interface ErrorWithCode extends Error {
+  code?: string;
+}
+
+function isErrorWithCode(err: unknown): err is ErrorWithCode {
+  return err instanceof Error && 'code' in err;
+}
+
+export async function runSync(repoRoot: string, options: SyncOptions = {}): Promise<SyncResult> {
   const { dryRun = false, check = false, force = false } = options;
 
   // 1. Discover sources
   const sources = await discoverSources(repoRoot);
 
   if (sources.length === 0) {
-    throw new Error('No sync sources found. Ensure CLAUDE.md, .claude/agents/, or .claude/settings.json exists.');
+    throw new Error(
+      'No sync sources found. Ensure CLAUDE.md, .claude/agents/, or .claude/settings.json exists.'
+    );
   }
 
   // 2. Read existing manifest
@@ -49,8 +56,8 @@ export async function runSync(
           if (diskHash !== existingHash) {
             output.action = 'conflict';
           }
-        } catch (err: any) {
-          if (err.code !== 'ENOENT') {
+        } catch (err: unknown) {
+          if (!isErrorWithCode(err) || err.code !== 'ENOENT') {
             throw err;
           }
         }
@@ -62,7 +69,7 @@ export async function runSync(
   for (const output of plan.outputs) {
     if (output.action === 'conflict') continue;
     if (output.action === 'removed') continue;
-    
+
     const existingHash = existingManifest?.targetHashes[output.targetPath];
     if (!existingHash) {
       output.action = 'created';
@@ -104,7 +111,7 @@ export async function runSync(
     const conflictPaths = conflicts.map((c) => c.targetPath).join(', ');
     throw new Error(
       `Sync conflicts detected: ${conflictPaths}\n` +
-      `Run 'aco sync --check' for details, or 'aco sync --force' to overwrite.`
+        `Run 'aco sync --check' for details, or 'aco sync --force' to overwrite.`
     );
   }
 
@@ -120,7 +127,9 @@ export async function runSync(
             if (entries.length === 0) {
               await rm(output.targetPath, { recursive: true, force: true });
             }
-          } catch { /* Ignore */ }
+          } catch {
+            /* Ignore */
+          }
         } else {
           await rm(output.targetPath, { force: true });
         }

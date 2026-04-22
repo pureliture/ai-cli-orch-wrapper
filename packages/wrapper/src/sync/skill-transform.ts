@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename, dirname } from 'node:path';
 import type { SyncSource, SyncOutput, SyncWarning, SyncManifest } from './transform-interface.js';
 
 export async function syncSkills(
@@ -20,7 +20,7 @@ export async function syncSkills(
       if (!targetPath.startsWith(targetBase)) continue;
       // Find if this target corresponds to a skill that still exists
       const stillExists = skillSources.some((s) => {
-        const skillName = s.path.split('/').slice(-2)[0];
+        const skillName = basename(dirname(s.path));
         const expectedTarget = join(targetBase, skillName);
         return targetPath.startsWith(expectedTarget);
       });
@@ -42,8 +42,8 @@ export async function syncSkills(
 
   // Sync current skills (deferred to sync-engine)
   for (const skillSource of skillSources) {
-    const skillName = skillSource.path.split('/').slice(-2)[0];
-    const sourceDir = skillSource.path.replace(/\/SKILL\.md$/, '');
+    const skillName = basename(dirname(skillSource.path));
+    const sourceDir = dirname(skillSource.path);
     const targetDir = join(targetBase, skillName);
 
     const action = existsSync(targetDir) ? 'updated' : 'created';
