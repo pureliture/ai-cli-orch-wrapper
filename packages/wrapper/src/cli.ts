@@ -4,6 +4,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import process from 'node:process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import type { Writable } from 'node:stream';
 import {
   packInstall,
@@ -15,6 +17,9 @@ import {
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile } from './providers/interface.js';
+import { runSync } from './sync/sync-engine.js';
+
+const execFileAsync = promisify(execFile);
 
 const VERSION = loadVersion();
 const EXIT_ERROR = 1;
@@ -50,6 +55,9 @@ async function main(): Promise<void> {
       break;
     case 'cancel':
       await cmdCancel(rest);
+      break;
+    case 'sync':
+      await cmdSync(rest);
       break;
     default:
       console.error(`aco: unknown command '${subcommand ?? ''}'`);
@@ -314,6 +322,91 @@ async function cmdCancel(args: string[]): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
+// aco sync [--check] [--dry-run] [--force]
+// ---------------------------------------------------------------------------
+async function cmdSync(args: string[]): Promise<void> {
+  if (args.includes('--help') || args.includes('-h')) {
+    console.error(
+      'Usage: aco sync [--check] [--dry-run] [--force]\n' +
+      '\n' +
+      '  --check    Verify sync is current without writing files (exits 1 if stale)\n' +
+      '  --dry-run  Show planned changes without writing files\n' +
+      '  --force    Overwrite manifest-owned generated targets that have drifted'
+    );
+    process.exit(0);
+  }
+
+  const check = args.includes('--check');
+  const dryRun = args.includes('--dry-run');
+  const force = args.includes('--force');
+
+  const repoRoot = await findRepoRoot(process.cwd());
+  if (!repoRoot) {
+    console.error('aco sync: could not find repository root (no git repo or CLAUDE.md found)');
+    process.exit(EXIT_ERROR);
+  }
+
+  let result;
+  try {
+    result = await runSync(repoRoot, { check, dryRun, force });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`aco sync: ${msg}`);
+    process.exit(EXIT_ERROR);
+  }
+
+  const { created, updated, removed, skipped, warnings, conflicts } = result;
+  const manifestPath = `${repoRoot}/.aco/sync-manifest.json`;
+
+  if (check) {
+    console.log('Sync check: context is current ✓');
+    if (warnings > 0) {
+      console.log(`  ${warnings} warning(s) — run 'aco sync' to view details`);
+    }
+    return;
+  }
+
+  const label = dryRun ? 'Dry-run plan' : 'Sync complete';
+  console.log(`${label}:`);
+  console.log(`  created:   ${created}`);
+  console.log(`  updated:   ${updated}`);
+  console.log(`  removed:   ${removed}`);
+  console.log(`  skipped:   ${skipped}`);
+  console.log(`  warnings:  ${warnings}`);
+  console.log(`  conflicts: ${conflicts}`);
+
+  if (!dryRun && conflicts > 0) {
+    console.error(`\n  ${conflicts} conflict(s) detected — targets were overwritten by --force.`);
+  }
+
+  if (warnings > 0) {
+    console.log(`\n  warnings: ${warnings} — see manifest for details: ${manifestPath}`);
+  }
+
+  if (!dryRun) {
+    console.log(`\nManifest: ${manifestPath}`);
+  }
+}
+
+async function findRepoRoot(startDir: string): Promise<string | null> {
+  try {
+    const { stdout } = await execFileAsync('git', ['rev-parse', '--show-toplevel'], {
+      cwd: startDir,
+    });
+    return stdout.trim();
+  } catch {
+    // Not a git repo or git not available — walk up to find CLAUDE.md
+    let dir = startDir;
+    while (true) {
+      if (existsSync(join(dir, 'CLAUDE.md'))) return dir;
+      const parent = join(dir, '..');
+      if (parent === dir) return null;
+      dir = parent;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 function parseFlag<T extends string = string>(args: string[], flag: string): T | undefined {
@@ -336,6 +429,7 @@ function printUsage(): void {
   console.error(`Usage:
   aco --version
   aco --help
+  aco sync [--check] [--dry-run] [--force]
   aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]
   aco result [--session <id>]
   aco status [--session <id>]

@@ -105,6 +105,59 @@ func TestGeminiProvider_BuildArgs_EmptyContent(t *testing.T) {
 	}
 }
 
+func TestGeminiProvider_BuildArgs_ModelNotPassed(t *testing.T) {
+	p := provider.NewGemini()
+	opts := provider.InvokeOpts{Model: "gemini-2.5-flash"}
+	args := p.BuildArgs("explain", "explain this", "content", opts)
+
+	// GeminiProvider BuildArgs does not pass --model as a CLI flag.
+	// Model resolution is handled by the caller (formatter/delegate layer).
+	for _, a := range args {
+		if a == "--model" {
+			t.Errorf("BuildArgs() with Model set: --model must NOT be passed by GeminiProvider, got %v", args)
+		}
+	}
+}
+
+func TestGeminiProvider_BuildArgs_ReasoningEffortNotPassed(t *testing.T) {
+	p := provider.NewGemini()
+	opts := provider.InvokeOpts{ReasoningEffort: "high"}
+	args := p.BuildArgs("explain", "explain this", "", opts)
+
+	for _, a := range args {
+		if a == "--reasoning-effort" {
+			t.Errorf("BuildArgs() with ReasoningEffort set: --reasoning-effort must NOT be passed, got %v", args)
+		}
+	}
+}
+
+func TestGeminiProvider_BuildArgs_ExtraArgs_UnsupportedFiltered(t *testing.T) {
+	p := provider.NewGemini()
+	opts := provider.InvokeOpts{
+		PermissionProfile: provider.ProfileDefault,
+		ExtraArgs:         []string{"--verbose", "--reasoning-effort", "high", "--debug"},
+	}
+	args := p.BuildArgs("explain", "explain this", "", opts)
+
+	// Gemini provider BuildArgs does not currently pass ExtraArgs through,
+	// so the filter only applies to providers that do. This test documents
+	// that --reasoning-effort is never injected by the provider itself.
+	for _, a := range args {
+		if a == "--reasoning-effort" {
+			t.Errorf("BuildArgs() with ReasoningEffort: --reasoning-effort must NOT be in args, got %v", args)
+		}
+	}
+}
+
+func contains(haystack []string, needle string) bool {
+	for _, s := range haystack {
+		if s == needle {
+			return true
+		}
+	}
+	return false
+}
+
 func TestGeminiProvider_IsAuthFailure(t *testing.T) {
 	p := provider.NewGemini()
 

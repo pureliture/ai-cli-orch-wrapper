@@ -42,10 +42,7 @@ func (c *CodexProvider) BuildArgs(_ string, prompt, content string, opts InvokeO
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
 	}
-	if opts.ReasoningEffort != "" {
-		args = append(args, "--reasoning-effort", opts.ReasoningEffort)
-	}
-	args = append(args, opts.ExtraArgs...)
+	args = append(args, filterUnsupportedArgs(opts.ExtraArgs)...)
 	args = append(args, combined)
 	return args
 }

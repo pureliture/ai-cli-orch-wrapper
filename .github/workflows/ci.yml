@@ -73,7 +73,7 @@ jobs:
           go-version: '1.22'
       - run: go build ./cmd/aco
       - name: Verify binary exists
-        run: test -f aco || test -f aco-linux-amd64 || ls cmd/aco/
+        run: test -f aco || test -f aco-linux-amd64 || { echo "go build produced no binary"; exit 1; }
 
   go-test:
     name: go-test
