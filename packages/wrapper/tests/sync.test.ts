@@ -51,6 +51,15 @@ workspaceMode: edit
 
 You are an implementation specialist. Write and modify code to complete tasks.`;
 
+  const claudeAgentFrontmatter = `---
+name: typescript-reviewer
+description: Expert TypeScript/JavaScript code reviewer
+tools: ["Read", "Grep", "Glob", "Bash"]
+model: haiku
+---
+
+You are a senior TypeScript engineer.`;
+
   describe('parseAgentSpec', () => {
     it('parses reviewer frontmatter correctly', () => {
       const spec = parseAgentSpec(reviewerFrontmatter);
@@ -74,6 +83,13 @@ You are an implementation specialist. Write and modify code to complete tasks.`;
       assert.equal(spec.id, 'executor');
       assert.equal(spec.workspaceMode, 'edit');
     });
+
+    it('parses Claude-style agent description when when is absent', () => {
+      const spec = parseAgentSpec(claudeAgentFrontmatter);
+      assert.equal(spec.id, 'typescript-reviewer');
+      assert.equal(spec.description, 'Expert TypeScript/JavaScript code reviewer');
+      assert.equal(spec.when, '');
+    });
   });
 
   describe('Codex agent transform', () => {
@@ -90,6 +106,13 @@ You are an implementation specialist. Write and modify code to complete tasks.`;
       const spec = parseAgentSpec(executorFrontmatter);
       const agent = toCodexAgent(spec);
       assert.equal(agent.sandbox_mode, 'workspace-write');
+    });
+
+    it('uses Claude-style description for Codex agent descriptions when when is absent', () => {
+      const spec = parseAgentSpec(claudeAgentFrontmatter);
+      const agent = toCodexAgent(spec);
+      assert.equal(agent.name, 'typescript-reviewer');
+      assert.equal(agent.description, 'Expert TypeScript/JavaScript code reviewer');
     });
 
     it('serializes Codex agent to TOML format with expected keys', () => {
@@ -130,6 +153,13 @@ You are an implementation specialist. Write and modify code to complete tasks.`;
       assert.ok(md.includes('model: gemini-2.5-pro'));
       assert.ok(md.includes('kind: local'));
       assert.ok(md.includes('max_turns: 20'));
+    });
+
+    it('uses Claude-style description for Gemini agent descriptions when when is absent', () => {
+      const spec = parseAgentSpec(claudeAgentFrontmatter);
+      const agent = toGeminiAgent(spec);
+      assert.equal(agent.name, 'typescript-reviewer');
+      assert.equal(agent.description, 'Expert TypeScript/JavaScript code reviewer');
     });
 
     it('omits reasoningEffort from Gemini agent output', () => {

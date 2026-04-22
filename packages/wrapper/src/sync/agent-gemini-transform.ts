@@ -22,8 +22,9 @@ export function toGeminiAgent(spec: ReturnType<typeof parseAgentSpec>): GeminiAg
     body: spec.body || '',
   };
 
-  if (spec.when) {
-    agent.description = spec.when;
+  const description = spec.when || spec.description;
+  if (description) {
+    agent.description = description;
   }
 
   if (spec.turnLimit > 0) {

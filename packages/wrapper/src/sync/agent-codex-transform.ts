@@ -20,8 +20,9 @@ export function toCodexAgent(spec: ReturnType<typeof parseAgentSpec>): CodexAgen
     name: spec.id,
   };
 
-  if (spec.when) {
-    agent.description = spec.when;
+  const description = spec.when || spec.description;
+  if (description) {
+    agent.description = description;
   }
 
   // Model is set by caller after formatter resolution
@@ -55,7 +56,9 @@ export function serializeCodexAgent(agent: CodexAgent): string {
     lines.push(`model = "${escapeTomlString(agent.model)}"`);
   }
   if (agent.developer_instructions) {
-    lines.push(`developer_instructions = """${agent.developer_instructions}"""`);
+    // Escape """ sequences to prevent breaking TOML multiline string syntax
+    const escaped = agent.developer_instructions.replace(/"""/g, '\\"\\"\\"');
+    lines.push(`developer_instructions = """${escaped}"""`);
   }
   if (agent.sandbox_mode) {
     lines.push(`sandbox_mode = "${escapeTomlString(agent.sandbox_mode)}"`);
@@ -68,7 +71,12 @@ export function serializeCodexAgent(agent: CodexAgent): string {
 }
 
 function escapeTomlString(s: string): string {
-  return s.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+  return s
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\t/g, '\\t');
 }
 
 export async function syncCodexAgents(

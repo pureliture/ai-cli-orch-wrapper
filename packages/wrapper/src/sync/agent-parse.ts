@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 export interface AgentSpec {
   id: string;
   name: string;
+  description: string;
   when: string;
   modelAlias: string;
   roleHint: string;
@@ -22,6 +23,7 @@ export function parseAgentSpec(content: string): AgentSpec {
   const spec: AgentSpec = {
     id: '',
     name: '',
+    description: '',
     when: '',
     modelAlias: '',
     roleHint: '',
@@ -58,6 +60,7 @@ export function parseAgentSpec(content: string): AgentSpec {
 
   if (yaml.id) spec.id = String(yaml.id);
   if (yaml.name) spec.name = String(yaml.name);
+  if (yaml.description) spec.description = String(yaml.description);
   if (yaml.when) spec.when = String(yaml.when);
   if (yaml.modelAlias) spec.modelAlias = String(yaml.modelAlias);
   if (yaml.roleHint) spec.roleHint = String(yaml.roleHint);
@@ -114,19 +117,19 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
           }
         } else if (value.startsWith('[') && value.endsWith(']')) {
           // Inline array: [a, b, c]
-          result[key] = value.slice(1, -1).split(',').map((s) => s.trim()).filter(Boolean);
+          result[key] = value.slice(1, -1).split(',').map((s) => unquoteYamlScalar(s.trim())).filter(Boolean);
         } else {
-          result[key] = value;
+          result[key] = unquoteYamlScalar(value);
         }
       } else if (indent > 0 && inArray) {
         // Array element
         const item = trimmed.trim();
         if (item.startsWith('- ')) {
-          currentArray.push(item.slice(2).trim());
+          currentArray.push(unquoteYamlScalar(item.slice(2).trim()));
         }
       }
     } else if (trimmed.trim().startsWith('- ') && inArray) {
-      currentArray.push(trimmed.trim().slice(2).trim());
+      currentArray.push(unquoteYamlScalar(trimmed.trim().slice(2).trim()));
     }
   }
 
@@ -135,4 +138,14 @@ function parseSimpleYaml(yaml: string): Record<string, unknown> {
   }
 
   return result;
+}
+
+function unquoteYamlScalar(value: string): string {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+  return value;
 }
