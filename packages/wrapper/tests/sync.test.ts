@@ -51,9 +51,9 @@ workspaceMode: edit
 
 You are an implementation specialist. Write and modify code to complete tasks.`;
 
-  const claudeAgentFrontmatter = `---
+const claudeAgentFrontmatter = `---
 name: typescript-reviewer
-description: Expert TypeScript/JavaScript code reviewer
+description: "Expert TypeScript/JavaScript code reviewer"
 tools: ["Read", "Grep", "Glob", "Bash"]
 model: haiku
 ---
