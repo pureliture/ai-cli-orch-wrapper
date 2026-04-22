@@ -31,9 +31,7 @@ export function parseHooks(content: string): ClaudeHooks | undefined {
 
     // Claude Code settings.json format: top-level event names with matcher arrays
     // { "PostToolUse": [{ "matcher": "Bash", "hooks": [{ "type": "command", "command": "..." }] }] }
-    const hasEventKeys = Object.keys(parsed).some(
-      (k) => k !== 'hooks' && Array.isArray(parsed[k])
-    );
+    const hasEventKeys = Object.keys(parsed).some((k) => k !== 'hooks' && Array.isArray(parsed[k]));
     if (hasEventKeys) {
       const normalized = normalizeHooks(parsed);
       return Object.keys(normalized).length > 0 ? normalized : undefined;
@@ -88,8 +86,11 @@ const CODEX_SUPPORTED_EVENTS = new Set(['PostToolUse']);
 // Gemini supported hook events
 const GEMINI_SUPPORTED_EVENTS = new Set(['PostToolUse']);
 
-export function toCodexHooks(hooks: ClaudeHooks): { hooks: Array<{event: string; command: string; matcher?: string; timeout?: number}>; warnings: string[] } {
-  const result: Array<{event: string; command: string; matcher?: string; timeout?: number}> = [];
+export function toCodexHooks(hooks: ClaudeHooks): {
+  hooks: Array<{ event: string; command: string; matcher?: string; timeout?: number }>;
+  warnings: string[];
+} {
+  const result: Array<{ event: string; command: string; matcher?: string; timeout?: number }> = [];
   const warnings: string[] = [];
 
   for (const [event, eventConfig] of Object.entries(hooks)) {
@@ -99,7 +100,7 @@ export function toCodexHooks(hooks: ClaudeHooks): { hooks: Array<{event: string;
     }
 
     for (const cmd of eventConfig.commands || []) {
-      const hook: {event: string; command: string; matcher?: string; timeout?: number} = {
+      const hook: { event: string; command: string; matcher?: string; timeout?: number } = {
         event,
         command: cmd.command,
       };
@@ -112,7 +113,9 @@ export function toCodexHooks(hooks: ClaudeHooks): { hooks: Array<{event: string;
       }
 
       if (cmd.async) {
-        warnings.push(`Hook "${event}" has async: true — Codex hooks are synchronous, async semantics will be lost`);
+        warnings.push(
+          `Hook "${event}" has async: true — Codex hooks are synchronous, async semantics will be lost`
+        );
       }
 
       result.push(hook);
@@ -122,8 +125,11 @@ export function toCodexHooks(hooks: ClaudeHooks): { hooks: Array<{event: string;
   return { hooks: result, warnings };
 }
 
-export function toGeminiHooks(hooks: ClaudeHooks): { hooks: Record<string, {command: string; matcher?: string; timeout?: number}>; warnings: string[] } {
-  const result: Record<string, {command: string; matcher?: string; timeout?: number}> = {};
+export function toGeminiHooks(hooks: ClaudeHooks): {
+  hooks: Record<string, { command: string; matcher?: string; timeout?: number }>;
+  warnings: string[];
+} {
+  const result: Record<string, { command: string; matcher?: string; timeout?: number }> = {};
   const warnings: string[] = [];
 
   for (const [event, eventConfig] of Object.entries(hooks)) {
@@ -136,7 +142,7 @@ export function toGeminiHooks(hooks: ClaudeHooks): { hooks: Record<string, {comm
     const cmd = eventConfig.commands?.[0];
     if (!cmd) continue;
 
-    const hook: {command: string; matcher?: string; timeout?: number} = {
+    const hook: { command: string; matcher?: string; timeout?: number } = {
       command: cmd.command,
     };
 
@@ -149,7 +155,9 @@ export function toGeminiHooks(hooks: ClaudeHooks): { hooks: Record<string, {comm
     }
 
     if (cmd.async) {
-      warnings.push(`Hook "${event}" has async: true — Gemini hooks are synchronous, async semantics will be lost`);
+      warnings.push(
+        `Hook "${event}" has async: true — Gemini hooks are synchronous, async semantics will be lost`
+      );
     }
 
     result[event] = hook;

@@ -61,7 +61,10 @@ export async function syncCodexHooks(
     const beginIdx = configContent.indexOf('# BEGIN ACO GENERATED');
     const endIdx = configContent.indexOf('# END ACO GENERATED');
     if (endIdx !== -1) {
-      configContent = configContent.slice(0, beginIdx) + managedBlock + configContent.slice(endIdx + '# END ACO GENERATED'.length);
+      configContent =
+        configContent.slice(0, beginIdx) +
+        managedBlock +
+        configContent.slice(endIdx + '# END ACO GENERATED'.length);
     } else {
       configContent = configContent.trimEnd() + '\n\n' + managedBlock + '\n';
     }

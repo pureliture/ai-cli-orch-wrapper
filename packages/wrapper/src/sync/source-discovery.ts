@@ -16,7 +16,7 @@ export async function discoverSources(rootPath: string): Promise<SyncSource[]> {
   const rulesDir = join(rootPath, '.claude/rules');
   try {
     const rules = await readdir(rulesDir);
-    const sortedRules = rules.filter(f => f.endsWith('.md')).sort();
+    const sortedRules = rules.filter((f) => f.endsWith('.md')).sort();
     for (const rule of sortedRules) {
       await tryAddSource(sources, join(rulesDir, rule), 'rule');
     }
@@ -39,7 +39,7 @@ export async function discoverSources(rootPath: string): Promise<SyncSource[]> {
   const agentsDir = join(rootPath, '.claude/agents');
   try {
     const agents = await readdir(agentsDir);
-    for (const agent of agents.filter(f => f.endsWith('.md'))) {
+    for (const agent of agents.filter((f) => f.endsWith('.md'))) {
       await tryAddSource(sources, join(agentsDir, agent), 'agent');
     }
   } catch {}
@@ -57,7 +57,7 @@ async function tryAddSource(sources: SyncSource[], path: string, kind: SyncSourc
       path,
       kind,
       content,
-      hash: computeHash(content)
+      hash: computeHash(content),
     });
   } catch {
     // File not found or unreadable - skip

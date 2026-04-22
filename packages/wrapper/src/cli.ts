@@ -328,10 +328,10 @@ async function cmdSync(args: string[]): Promise<void> {
   if (args.includes('--help') || args.includes('-h')) {
     console.error(
       'Usage: aco sync [--check] [--dry-run] [--force]\n' +
-      '\n' +
-      '  --check    Verify sync is current without writing files (exits 1 if stale)\n' +
-      '  --dry-run  Show planned changes without writing files\n' +
-      '  --force    Overwrite manifest-owned generated targets that have drifted'
+        '\n' +
+        '  --check    Verify sync is current without writing files (exits 1 if stale)\n' +
+        '  --dry-run  Show planned changes without writing files\n' +
+        '  --force    Overwrite manifest-owned generated targets that have drifted'
     );
     process.exit(0);
   }

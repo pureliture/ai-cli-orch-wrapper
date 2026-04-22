@@ -190,7 +190,9 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
     const { created, updated, removed, skipped, warnings, conflicts } = result;
     const manifestPath = join(repoRoot, '.aco', 'sync-manifest.json');
 
-    console.log(`  created: ${created}  updated: ${updated}  removed: ${removed}  skipped: ${skipped}`);
+    console.log(
+      `  created: ${created}  updated: ${updated}  removed: ${removed}  skipped: ${skipped}`
+    );
     if (warnings > 0) {
       console.log(`  warnings: ${warnings} — see manifest for details: ${manifestPath}`);
     }

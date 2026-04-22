@@ -24,12 +24,12 @@ export async function writeManifest(rootPath: string, manifest: SyncManifest): P
 
 export function calculateDrift(current: SyncManifest | null, updated: SyncManifest): boolean {
   if (!current) return true;
-  
+
   // Compare source hashes
   for (const [path, hash] of Object.entries(updated.sourceHashes)) {
     if (current.sourceHashes[path] !== hash) return true;
   }
-  
+
   // Check for removed sources
   if (Object.keys(current.sourceHashes).length !== Object.keys(updated.sourceHashes).length) {
     return true;
