@@ -85,6 +85,31 @@ Rules:
   - Initial `Status` must be set to `Backlog`.
   - `Priority` (`P0`/`P1`/`P2`) must be mirrored from label to Project field.
 
+### Issue Body Template
+
+`/gh-issue` must create actionable issue bodies, not empty placeholders. Every issue body should include:
+
+```md
+[Parent epic: #N]
+
+## Purpose
+<1-3 sentences explaining the problem or goal>
+
+## Scope & Requirements
+- [ ] <Concrete requirement or task>
+- [ ] <Concrete requirement or task>
+
+## Acceptance Criteria
+- [ ] <Observable completion condition>
+```
+
+Rules:
+- If a parent epic exists, `Parent epic: #N` remains the first line before the template sections.
+- Write issue body prose and checklist item descriptions in Korean by default. Keep conventional title prefixes, labels, file paths, command names, and established Markdown headings in their original language.
+- Ask at most two concise follow-up questions before creation when the available context is too vague to fill the required sections.
+- Use `--body-file` for multiline Markdown issue bodies so headings, checkboxes, and code spans are preserved.
+- Do not create an issue body containing placeholder text such as `<...>`, `TBD`, or `TODO`.
+
 **Legacy format** (pre-V3, for reference only):
 ```text
 [Sprint V3][Epic] PM 하네스 구축 — GitHub Projects + Actions + Claude Code
