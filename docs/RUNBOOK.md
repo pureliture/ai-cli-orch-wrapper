@@ -47,11 +47,9 @@ npm install -g @pureliture/ai-cli-orch-wrapper
 
 ```bash
 aco provider setup gemini
-aco provider setup copilot
 ```
 
-Gemini CLI: `npm install -g @google/gemini-cli`  
-Copilot CLI: `npm install -g @github/copilot && gh auth login`
+Gemini CLI: `npm install -g @google/gemini-cli`
 
 ### Slash commands missing after install
 

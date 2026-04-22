@@ -27,9 +27,9 @@ type InvokeOpts struct {
 //   - Return the install hint when IsAvailable() is false (R-AVAIL-01)
 //   - Classify auth failures via IsAuthFailure (R-AUTH-04)
 //
-// Phase 1: Implementations are stubs. Phase 4 adds Gemini and Copilot providers.
+// Phase 1: Implementations are stubs. Phase 4 adds Gemini provider.
 type Provider interface {
-	// Name returns the canonical provider key (e.g., "gemini", "copilot").
+	// Name returns the canonical provider key (e.g., "gemini").
 	Name() string
 
 	// Binary returns the executable name to locate via PATH.

@@ -2,7 +2,7 @@
  * Smoke test: verify aco providers are available at runtime.
  * Migrated from .claude/aco/tests/smoke-adapters.sh
  *
- * Run: npx tsx tests/smoke.ts [gemini|copilot|all]
+ * Run: npx tsx tests/smoke.ts [gemini|all]
  */
 import { ProviderRegistry } from '../src/providers/registry.js';
 
@@ -38,7 +38,6 @@ function testProvider(key: string): void {
 }
 
 if (target === 'gemini' || target === 'all') testProvider('gemini');
-if (target === 'copilot' || target === 'all') testProvider('copilot');
 
 console.log(`\nResults: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
