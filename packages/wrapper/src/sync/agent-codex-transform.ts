@@ -1,9 +1,9 @@
-import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseAgentSpec } from './agent-parse.js';
 import { computeHash } from './hash.js';
 import { loadFormatterConfig, resolveModelForProvider } from './formatter.js';
+import { DEFAULT_CODEX_MODEL } from './model-defaults.js';
 import type { SyncSource, SyncOutput, SyncWarning } from './transform-interface.js';
 
 export interface CodexAgent {
@@ -81,8 +81,7 @@ function escapeTomlString(s: string): string {
 
 export async function syncCodexAgents(
   sources: SyncSource[],
-  repoRoot: string,
-  dryRun: boolean
+  repoRoot: string
 ): Promise<{ outputs: SyncOutput[]; warnings: SyncWarning[] }> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
@@ -95,21 +94,18 @@ export async function syncCodexAgents(
     const agent = toCodexAgent(spec);
 
     const resolvedModel = resolveModelForProvider(formatterConfig, spec.modelAlias, 'codex');
-    agent.model = resolvedModel ?? 'gpt-5.4';
+    agent.model = resolvedModel ?? DEFAULT_CODEX_MODEL;
 
     const fileName = `${spec.id || 'agent'}.toml`;
     const targetPath = join(targetDir, fileName);
-
-    if (!dryRun) {
-      await mkdir(targetDir, { recursive: true });
-      await writeFile(targetPath, serializeCodexAgent(agent), 'utf8');
-    }
+    const content = serializeCodexAgent(agent);
 
     outputs.push({
       targetPath,
       kind: 'file',
-      action: existsSync(targetPath) ? 'updated' : 'created',
-      hash: computeHash(serializeCodexAgent(agent)),
+      action: 'updated', // Default, refined by sync-engine
+      content,
+      hash: computeHash(content),
     });
 
     if (spec.reasoningEffort && !agent.model_reasoning_effort) {

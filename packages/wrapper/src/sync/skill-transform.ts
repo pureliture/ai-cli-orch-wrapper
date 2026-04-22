@@ -1,13 +1,11 @@
-import { cp, readdir, rm, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, basename, dirname } from 'node:path';
 import type { SyncSource, SyncOutput, SyncWarning, SyncManifest } from './transform-interface.js';
 
 export async function syncSkills(
   sources: SyncSource[],
   repoRoot: string,
-  manifest: SyncManifest | null,
-  dryRun: boolean
+  manifest: SyncManifest | null
 ): Promise<{ outputs: SyncOutput[]; warnings: SyncWarning[] }> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
@@ -15,15 +13,14 @@ export async function syncSkills(
   const targetBase = join(repoRoot, '.agents', 'skills');
 
   // Determine which skills to remove: previously synced but source no longer exists
-  const currentSourcePaths = new Set(skillSources.map((s) => s.path));
   const staleTargets: string[] = [];
 
   if (manifest) {
-    for (const [targetPath, oldHash] of Object.entries(manifest.targetHashes)) {
+    for (const [targetPath] of Object.entries(manifest.targetHashes)) {
       if (!targetPath.startsWith(targetBase)) continue;
       // Find if this target corresponds to a skill that still exists
       const stillExists = skillSources.some((s) => {
-        const skillName = s.path.split('/').slice(-2)[0];
+        const skillName = basename(dirname(s.path));
         const expectedTarget = join(targetBase, skillName);
         return targetPath.startsWith(expectedTarget);
       });
@@ -33,19 +30,8 @@ export async function syncSkills(
     }
   }
 
-  // Remove stale targets
+  // Remove stale targets (deferred to sync-engine)
   for (const targetPath of staleTargets) {
-    if (!dryRun) {
-      try {
-        // Only remove if directory is empty or contains only manifest-owned content
-        const entries = await readdir(targetPath);
-        if (entries.length === 0) {
-          await rm(targetPath, { recursive: true, force: true });
-        }
-      } catch {
-        // Already removed or not accessible
-      }
-    }
     outputs.push({
       targetPath,
       kind: 'directory',
@@ -54,23 +40,20 @@ export async function syncSkills(
     });
   }
 
-  // Sync current skills
+  // Sync current skills (deferred to sync-engine)
   for (const skillSource of skillSources) {
-    const skillName = skillSource.path.split('/').slice(-2)[0];
-    const sourceDir = skillSource.path.replace(/\/SKILL\.md$/, '');
+    const skillName = basename(dirname(skillSource.path));
+    const sourceDir = dirname(skillSource.path);
     const targetDir = join(targetBase, skillName);
 
     const action = existsSync(targetDir) ? 'updated' : 'created';
-
-    if (!dryRun) {
-      await cp(sourceDir, targetDir, { recursive: true, force: true });
-    }
 
     outputs.push({
       targetPath: targetDir,
       kind: 'directory',
       action,
       hash: skillSource.hash,
+      sourcePath: sourceDir,
     });
   }
 

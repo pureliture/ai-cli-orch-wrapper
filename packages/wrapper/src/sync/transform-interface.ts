@@ -59,6 +59,8 @@ export interface SyncOutput {
   hash?: string;
   sourceHash?: string;
   targetHash?: string;
+  content?: string; // Content to write for files or managed blocks
+  sourcePath?: string; // Source path for directory copies
 }
 
 /**

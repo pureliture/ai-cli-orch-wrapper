@@ -1,10 +1,10 @@
-import { mkdir, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { dump as dumpYaml } from 'js-yaml';
 import { parseAgentSpec } from './agent-parse.js';
 import { computeHash } from './hash.js';
 import { loadFormatterConfig, resolveModelForProvider } from './formatter.js';
+import { DEFAULT_GEMINI_MODEL } from './model-defaults.js';
 import type { SyncSource, SyncOutput, SyncWarning } from './transform-interface.js';
 
 export interface GeminiAgent {
@@ -58,11 +58,9 @@ export function serializeGeminiAgent(agent: GeminiAgent): string {
 
   return ['---', yaml, '---', '', agent.body].join('\n');
 }
-
 export async function syncGeminiAgents(
   sources: SyncSource[],
-  repoRoot: string,
-  dryRun: boolean
+  repoRoot: string
 ): Promise<{ outputs: SyncOutput[]; warnings: SyncWarning[] }> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
@@ -75,21 +73,18 @@ export async function syncGeminiAgents(
     const agent = toGeminiAgent(spec);
 
     const resolvedModel = resolveModelForProvider(formatterConfig, spec.modelAlias, 'gemini_cli');
-    agent.model = resolvedModel ?? 'gemini-2.5-pro';
+    agent.model = resolvedModel ?? DEFAULT_GEMINI_MODEL;
 
     const fileName = `${spec.id || 'agent'}.md`;
     const targetPath = join(targetDir, fileName);
-
-    if (!dryRun) {
-      await mkdir(targetDir, { recursive: true });
-      await writeFile(targetPath, serializeGeminiAgent(agent), 'utf8');
-    }
+    const content = serializeGeminiAgent(agent);
 
     outputs.push({
       targetPath,
       kind: 'file',
-      action: existsSync(targetPath) ? 'updated' : 'created',
-      hash: computeHash(serializeGeminiAgent(agent)),
+      action: 'updated', // Default, refined by sync-engine
+      content,
+      hash: computeHash(content),
     });
 
     if (spec.reasoningEffort) {
