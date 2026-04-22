@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc",
     "prepack": "node -e \"const fs = require('fs'); const path = require('path'); const src = path.resolve(process.cwd(), '../../templates'); const dest = path.resolve(process.cwd(), 'templates'); fs.rmSync(dest, { recursive: true, force: true }); fs.mkdirSync(dest, { recursive: true }); fs.cpSync(src, dest, { recursive: true });\"",
-    "test": "node --require tsx/cjs --test tests/providers.test.ts tests/session.test.ts tests/sentinel.test.ts",
+    "test": "node --require tsx/cjs --test tests/providers.test.ts tests/session.test.ts tests/sentinel.test.ts tests/sync.test.ts tests/sync-conflict.test.ts",
     "test:smoke": "tsx tests/smoke.ts",
     "typecheck": "tsc --noEmit",
     "format:check": "prettier --check \"src/**/*.ts\""
@@ -24,8 +24,12 @@
   },
   "license": "MIT",
   "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.5.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.1"
   }
 }

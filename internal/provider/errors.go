@@ -4,7 +4,10 @@
 // Contract: docs/contract/process-execution-contract.md
 package provider
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // NotFoundError is returned when the provider binary is not present in PATH.
 // The session MUST NOT be created before this error is returned (R-AVAIL-02).
@@ -67,4 +70,42 @@ type SignalError struct {
 
 func (e *SignalError) Error() string {
 	return fmt.Sprintf("provider %q: terminated by signal %s", e.Provider, e.Signal)
+}
+
+// ValidationError is returned when provider args contain unsupported or disallowed flags.
+type ValidationError struct {
+	Provider string
+	Flag     string
+}
+
+func (e *ValidationError) Error() string {
+	return fmt.Sprintf("provider %q: unsupported flag %q", e.Provider, e.Flag)
+}
+
+// filterUnsupportedArgs removes known unsupported flags from ExtraArgs.
+// Returns a filtered copy; does not modify the original slice.
+// For LaunchArgs sourced from formatter providerDefaults, this acts as a
+// safety net to prevent unsupported CLI flags from reaching provider binaries.
+func filterUnsupportedArgs(args []string) []string {
+	unsupported := map[string]bool{
+		"--reasoning-effort": true,
+		"-reasoning-effort":  true,
+	}
+	var filtered []string
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		if unsupported[arg] {
+			// Skip the unsupported flag and its value
+			if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+				i++
+			}
+			continue
+		}
+		// Also skip --reasoning-effort=<value> equals form
+		if strings.HasPrefix(arg, "--reasoning-effort=") || strings.HasPrefix(arg, "-reasoning-effort=") {
+			continue
+		}
+		filtered = append(filtered, arg)
+	}
+	return filtered
 }

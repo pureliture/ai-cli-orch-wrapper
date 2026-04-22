@@ -40,11 +40,8 @@ func (g *GeminiCLIProvider) BuildArgs(_ string, prompt, content string, opts Inv
 	if opts.Model != "" {
 		args = append(args, "--model", opts.Model)
 	}
-	if opts.ReasoningEffort != "" {
-		args = append(args, "--reasoning-effort", opts.ReasoningEffort)
-	}
 	args = append(args, "--prompt", combined)
-	args = append(args, opts.ExtraArgs...)
+	args = append(args, filterUnsupportedArgs(opts.ExtraArgs)...)
 	return args
 }
 
