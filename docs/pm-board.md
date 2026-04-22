@@ -90,6 +90,8 @@ Rules:
 `/gh-issue` must create actionable issue bodies, not empty placeholders. Every issue body should include:
 
 ```md
+[Parent epic: #N]
+
 ## Purpose
 <1-3 sentences explaining the problem or goal>
 

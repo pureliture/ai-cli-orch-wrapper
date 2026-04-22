@@ -57,9 +57,10 @@ Create a GitHub issue in `pureliture/ai-cli-orch-wrapper` following the conventi
 5. Write the body to a temporary Markdown file. Use `--body-file` rather than inline `--body` so multiline Markdown, checkboxes, and backticks are preserved:
    ```bash
    BODY_FILE=$(mktemp)
-   cat > "$BODY_FILE" <<'EOF'
+   trap 'rm -f "$BODY_FILE"' EXIT
+   cat > "$BODY_FILE" <<'_CLAUDE_GH_ISSUE_BODY_'
    <body>
-   EOF
+   _CLAUDE_GH_ISSUE_BODY_
    ```
 
 6. Create the issue:
@@ -67,11 +68,19 @@ Create a GitHub issue in `pureliture/ai-cli-orch-wrapper` following the conventi
    gh issue create \
      --repo pureliture/ai-cli-orch-wrapper \
      --title "<title>" \
-     --label "<type-label>,<sprint-label>,<priority>,<additional-labels>" \
+     --label "$LABELS" \
      --body-file "$BODY_FILE"
    ```
    Where `<priority>` is one of `p0`, `p1`, or `p2` (default: `p1` if not specified).
-   If no additional labels were provided, omit `<additional-labels>` from the label string.
+   Construct `LABELS` to avoid trailing commas when `additional-labels` is empty:
+   ```bash
+   BASE_LABELS="<type-label>,<sprint-label>,<priority>"
+   if [ -n "<additional-labels>" ]; then
+     LABELS="$BASE_LABELS,<additional-labels>"
+   else
+     LABELS="$BASE_LABELS"
+   fi
+   ```
 
 7. Capture the created issue URL from the output.
 
