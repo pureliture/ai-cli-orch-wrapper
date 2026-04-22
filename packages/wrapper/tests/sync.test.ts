@@ -3,19 +3,24 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { load as loadYaml } from 'js-yaml';
 import { parseAgentSpec } from '../src/sync/agent-parse.js';
-import {
-  toCodexAgent,
-  serializeCodexAgent,
-} from '../src/sync/agent-codex-transform.js';
-import {
-  toGeminiAgent,
-  serializeGeminiAgent,
-} from '../src/sync/agent-gemini-transform.js';
+import { toCodexAgent, serializeCodexAgent } from '../src/sync/agent-codex-transform.js';
+import { toGeminiAgent, serializeGeminiAgent } from '../src/sync/agent-gemini-transform.js';
+import { loadFormatterConfig, resolveModelForProvider } from '../src/sync/formatter.js';
 import { parseHooks, toCodexHooks, toGeminiHooks } from '../src/sync/hook-parse.js';
 import { syncSkills } from '../src/sync/skill-transform.js';
 import type { SyncSource } from '../src/sync/transform-interface.js';
 import { computeHash } from '../src/sync/hash.js';
+
+function parseMarkdownFrontmatter(markdown: string): Record<string, unknown> {
+  const match = markdown.match(/^---\n([\s\S]*?)\n---\n\n([\s\S]*)$/);
+  assert.ok(match, 'expected markdown frontmatter block');
+
+  const parsed = loadYaml(match[1]);
+  assert.ok(parsed && typeof parsed === 'object' && !Array.isArray(parsed));
+  return parsed as Record<string, unknown>;
+}
 
 // ---------------------------------------------------------------------------
 // Agent parse + transform fixtures (Task 4.6)
@@ -89,6 +94,31 @@ You are a senior TypeScript engineer.`;
       assert.equal(spec.id, 'typescript-reviewer');
       assert.equal(spec.description, 'Expert TypeScript/JavaScript code reviewer');
       assert.equal(spec.when, '');
+    });
+
+    it('parses YAML quoted values, anchors, aliases, and multiline scalars', () => {
+      const content = `---
+id: yaml-edge-agent
+description: |
+  Review code: TypeScript
+  and "Node.js"
+sharedTools: &reviewTools
+  - "Read:Files"
+  - "Grep \\"pattern\\""
+skillRefs: *reviewTools
+memoryRefs: ["project:notes", "quote \\"memo\\""]
+turnLimit: "12"
+---
+Body text.`;
+
+      const spec = parseAgentSpec(content);
+
+      assert.equal(spec.id, 'yaml-edge-agent');
+      assert.equal(spec.description, 'Review code: TypeScript\nand "Node.js"\n');
+      assert.deepEqual(spec.skillRefs, ['Read:Files', 'Grep "pattern"']);
+      assert.deepEqual(spec.memoryRefs, ['project:notes', 'quote "memo"']);
+      assert.equal(spec.turnLimit, 12);
+      assert.equal(spec.body, 'Body text.');
     });
   });
 
@@ -177,6 +207,131 @@ Body text.`;
       assert.ok(!md.includes('reasoning_effort'));
       assert.ok(!md.includes('--reasoning-effort'));
     });
+
+    it('serializes YAML-sensitive Gemini frontmatter as valid YAML', () => {
+      const body = 'Line one.\nLine two.';
+      const md = serializeGeminiAgent({
+        name: 'yaml-agent',
+        description: 'Review code: TypeScript and "Node.js"\nUse care: yes',
+        model: 'gemini-2.5-pro',
+        kind: 'local',
+        max_turns: 7,
+        body,
+      });
+
+      const frontmatter = parseMarkdownFrontmatter(md);
+      assert.equal(frontmatter.name, 'yaml-agent');
+      assert.equal(frontmatter.description, 'Review code: TypeScript and "Node.js"\nUse care: yes');
+      assert.equal(frontmatter.model, 'gemini-2.5-pro');
+      assert.equal(frontmatter.kind, 'local');
+      assert.equal(frontmatter.max_turns, 7);
+      assert.ok(md.endsWith(`---\n\n${body}`));
+    });
+
+    it('omits absent optional Gemini frontmatter fields', () => {
+      const md = serializeGeminiAgent({
+        name: 'minimal-agent',
+        kind: 'local',
+        body: 'Body text.',
+      });
+
+      const frontmatter = parseMarkdownFrontmatter(md);
+      assert.deepEqual(Object.keys(frontmatter).sort(), ['kind', 'name']);
+      assert.ok(md.endsWith('---\n\nBody text.'));
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Formatter config parsing
+// ---------------------------------------------------------------------------
+
+describe('Formatter config', () => {
+  it('resolves simple formatter config as before', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-formatter-simple-'));
+    try {
+      await mkdir(join(tmpDir, '.aco'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.aco', 'formatter.yaml'),
+        `modelAliasMap:
+  sonnet-4.6:
+    provider: codex
+    model: gpt-5.4
+providerModels:
+  gemini_cli:
+    - gemini-2.5-pro
+fallback:
+  provider: codex
+  model: gpt-5.4-mini
+`
+      );
+
+      const config = await loadFormatterConfig(tmpDir);
+
+      assert.equal(resolveModelForProvider(config, 'sonnet-4.6', 'codex'), 'gpt-5.4');
+      assert.equal(resolveModelForProvider(config, '', 'gemini_cli'), 'gemini-2.5-pro');
+      assert.equal(resolveModelForProvider(config, 'missing', 'codex'), 'gpt-5.4-mini');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('parses nested formatter config with aliases and YAML-sensitive values', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-formatter-yaml-'));
+    try {
+      await mkdir(join(tmpDir, '.aco'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.aco', 'formatter.yaml'),
+        `modelAliasMap:
+  sonnet-4.6:
+    provider: &codexProvider codex
+    model: "gpt-5.4:release"
+  gemini-review:
+    provider: &geminiProvider gemini_cli
+    model: &geminiModel "gemini-2.5-pro:stable"
+providerModels:
+  codex:
+    - "gpt-5.4:release"
+    - "gpt-5.4 \\"fast\\""
+  gemini_cli:
+    - *geminiModel
+fallback:
+  provider: *codexProvider
+  model: "gpt-5.4 fallback: safe"
+`
+      );
+
+      const config = await loadFormatterConfig(tmpDir);
+
+      assert.equal(resolveModelForProvider(config, 'sonnet-4.6', 'codex'), 'gpt-5.4:release');
+      assert.equal(
+        resolveModelForProvider(config, 'gemini-review', 'gemini_cli'),
+        'gemini-2.5-pro:stable'
+      );
+      assert.equal(resolveModelForProvider(config, '', 'gemini_cli'), 'gemini-2.5-pro:stable');
+      assert.equal(resolveModelForProvider(config, 'missing', 'codex'), 'gpt-5.4:release');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('returns null for missing or invalid formatter config', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-formatter-invalid-'));
+    try {
+      assert.equal(await loadFormatterConfig(tmpDir), null);
+
+      await mkdir(join(tmpDir, '.aco'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.aco', 'formatter.yaml'),
+        `modelAliasMap:
+  broken: [unterminated
+`
+      );
+
+      assert.equal(await loadFormatterConfig(tmpDir), null);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
   });
 });
 

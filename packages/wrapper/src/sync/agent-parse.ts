@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { load as loadYaml } from 'js-yaml';
 
 export interface AgentSpec {
   id: string;
@@ -55,8 +56,8 @@ export function parseAgentSpec(content: string): AgentSpec {
     yamlLines.push(lines[i]);
   }
 
-  // Simple YAML parser for scalar and string-array fields
-  const yaml = parseSimpleYaml(yamlLines.join('\n'));
+  const parsedYaml = loadYaml(yamlLines.join('\n'));
+  const yaml = isRecord(parsedYaml) ? parsedYaml : {};
 
   if (yaml.id) spec.id = String(yaml.id);
   if (yaml.name) spec.name = String(yaml.name);
@@ -71,8 +72,14 @@ export function parseAgentSpec(content: string): AgentSpec {
   if (yaml.isolationMode) spec.isolationMode = String(yaml.isolationMode);
   if (yaml.promptSeedFile) spec.promptSeedFile = String(yaml.promptSeedFile);
   if (yaml.reasoningEffort) spec.reasoningEffort = String(yaml.reasoningEffort);
-  if (yaml.skillRefs) spec.skillRefs = Array.isArray(yaml.skillRefs) ? yaml.skillRefs.map(String) : [String(yaml.skillRefs)];
-  if (yaml.memoryRefs) spec.memoryRefs = Array.isArray(yaml.memoryRefs) ? yaml.memoryRefs.map(String) : [String(yaml.memoryRefs)];
+  if (yaml.skillRefs)
+    spec.skillRefs = Array.isArray(yaml.skillRefs)
+      ? yaml.skillRefs.map(String)
+      : [String(yaml.skillRefs)];
+  if (yaml.memoryRefs)
+    spec.memoryRefs = Array.isArray(yaml.memoryRefs)
+      ? yaml.memoryRefs.map(String)
+      : [String(yaml.memoryRefs)];
 
   // Fallback: name -> id
   if (!spec.id && spec.name) spec.id = spec.name;
@@ -81,71 +88,6 @@ export function parseAgentSpec(content: string): AgentSpec {
   return spec;
 }
 
-function parseSimpleYaml(yaml: string): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  const lines = yaml.split('\n');
-  let currentKey = '';
-  let currentArray: string[] = [];
-  let inArray = false;
-
-  for (const line of lines) {
-    const trimmed = line.trimEnd();
-    if (trimmed.length === 0) continue;
-
-    const match = trimmed.match(/^(\s*)([\w-]+):\s*(.*)$/);
-    if (match) {
-      const indent = match[1].length;
-      const key = match[2];
-      const value = match[3].trim();
-
-      if (indent === 0) {
-        // Top-level key
-        if (inArray) {
-          result[currentKey] = currentArray;
-          inArray = false;
-          currentArray = [];
-        }
-        currentKey = key;
-
-        if (value === '' || value === '[]') {
-          // Could be empty value or start of array
-          if (value === '[]') {
-            result[key] = [];
-          } else {
-            inArray = true;
-            currentArray = [];
-          }
-        } else if (value.startsWith('[') && value.endsWith(']')) {
-          // Inline array: [a, b, c]
-          result[key] = value.slice(1, -1).split(',').map((s) => unquoteYamlScalar(s.trim())).filter(Boolean);
-        } else {
-          result[key] = unquoteYamlScalar(value);
-        }
-      } else if (indent > 0 && inArray) {
-        // Array element
-        const item = trimmed.trim();
-        if (item.startsWith('- ')) {
-          currentArray.push(unquoteYamlScalar(item.slice(2).trim()));
-        }
-      }
-    } else if (trimmed.trim().startsWith('- ') && inArray) {
-      currentArray.push(unquoteYamlScalar(trimmed.trim().slice(2).trim()));
-    }
-  }
-
-  if (inArray && currentKey) {
-    result[currentKey] = currentArray;
-  }
-
-  return result;
-}
-
-function unquoteYamlScalar(value: string): string {
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value.slice(1, -1);
-  }
-  return value;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
