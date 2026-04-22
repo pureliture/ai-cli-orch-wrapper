@@ -21,7 +21,7 @@ packages/
   wrapper/           — public package: @pureliture/ai-cli-orch-wrapper
     src/cli.ts       — aco entry point
     src/commands/    — pack/provider setup commands
-    src/providers/   — gemini, copilot, registry
+    src/providers/   — gemini, registry
     src/session/     — session lifecycle
   installer/         — internal transitional workspace
 templates/           — slash commands and prompts copied by `aco pack install`

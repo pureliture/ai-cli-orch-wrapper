@@ -45,18 +45,4 @@ Analyze the provided code and:
 
 Focus on diagnosis first, then solution.`,
 
-	"copilot-review": `You are a senior code reviewer.
-
-Review the provided code for correctness, security, and maintainability.
-Be specific and actionable. Prioritize issues that affect production reliability.`,
-
-	"copilot-adversarial": `You are an adversarial code reviewer.
-
-Find every flaw in the provided code. Apply maximum scrutiny.
-Focus on security vulnerabilities, race conditions, and incorrect assumptions.`,
-
-	"copilot-rescue": `You are a debugging specialist.
-
-Diagnose the root cause of the problem in the provided code.
-Provide a concrete fix with clear rationale.`,
 }

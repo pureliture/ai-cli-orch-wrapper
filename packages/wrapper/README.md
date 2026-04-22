@@ -10,7 +10,7 @@ aco run <provider> <command>
 aco pack install
 aco pack setup
 aco pack status
-aco provider setup <gemini|copilot>
+aco provider setup gemini
 ```
 
 ## Development

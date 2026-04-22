@@ -6,7 +6,7 @@ import (
 )
 
 // Registry maps provider keys to Provider implementations.
-// Phase 1: registry is empty. Phase 4 registers GeminiProvider and CopilotProvider.
+// Phase 1: registry is empty. Phase 4 registers GeminiProvider.
 type Registry struct {
 	providers map[string]Provider
 }

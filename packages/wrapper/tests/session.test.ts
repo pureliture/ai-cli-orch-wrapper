@@ -28,7 +28,7 @@ describe('SessionStore', () => {
 
   it('read() returns the same record created', async () => {
     const { store } = await makeStore();
-    const created = await store.create('copilot', 'adversarial');
+    const created = await store.create('gemini', 'adversarial');
     const read = await store.read(created.id);
     assert.deepEqual(created, read);
   });
@@ -52,7 +52,7 @@ describe('SessionStore', () => {
 
   it('markCancelled() transitions status to cancelled', async () => {
     const { store } = await makeStore();
-    const record = await store.create('copilot', 'review');
+    const record = await store.create('gemini', 'review');
     await store.markCancelled(record.id);
     const updated = await store.read(record.id);
     assert.equal(updated.status, 'cancelled');
@@ -71,7 +71,7 @@ describe('SessionStore', () => {
     const { store } = await makeStore();
     await store.create('gemini', 'review');
     await new Promise(r => setTimeout(r, 5));
-    const second = await store.create('copilot', 'review');
+    const second = await store.create('gemini', 'rescue');
     const latest = store.latestId();
     assert.equal(latest, second.id);
   });
