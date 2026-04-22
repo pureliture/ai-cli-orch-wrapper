@@ -3,7 +3,7 @@ import type { InvokeOptions } from '../providers/interface.js';
 import { parseSentinel, stripRid, type SentinelMeta } from './sentinel.js';
 
 export interface SpawnStreamConfig {
-  /** Process name used in error messages, e.g. "gemini" or "copilot". */
+  /** Process name used in error messages, e.g. "gemini". */
   processName: string;
   /** Whether to pipe stdin (so it can be closed) or ignore it. */
   stdin: 'pipe' | 'ignore';

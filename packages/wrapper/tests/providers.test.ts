@@ -44,13 +44,6 @@ describe('ProviderRegistry', () => {
     assert.equal(provider.key, 'gemini');
   });
 
-  it('get("copilot") returns GeminiProvider (stub)', () => {
-    const registry = new ProviderRegistry();
-    const provider = registry.get('copilot');
-    assert.ok(provider !== undefined);
-    assert.equal(provider.key, 'gemini');
-  });
-
   it('get("unknown") returns undefined', () => {
     const registry = new ProviderRegistry();
     assert.equal(registry.get('unknown'), undefined);
@@ -63,10 +56,10 @@ describe('ProviderRegistry', () => {
     assert.equal(registry.get('my-provider'), custom);
   });
 
-  it('keys() includes gemini and copilot', () => {
+  it('keys() includes gemini', () => {
     const registry = new ProviderRegistry();
     const keys = registry.keys();
     assert.ok(keys.includes('gemini'));
-    assert.ok(keys.includes('copilot'));
+    assert.equal(keys.length, 1);
   });
 });

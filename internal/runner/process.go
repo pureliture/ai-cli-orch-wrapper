@@ -133,8 +133,8 @@ func (ProcessRunner) Run(ctx context.Context, opts RunOpts) (RunResult, error) {
 	// forwardSignals and terminateCommand send signals to the whole group via
 	// syscall.Kill(-pgid, ...) so that children holding stdout pipes are also
 	// killed and cmd.Wait() can return.
-	// ccg-workflow does not use Setpgid; we need it because gemini/copilot are
-	// Node.js CLIs that spawn workers which would otherwise orphan the pipe.
+	// ccg-workflow does not use Setpgid; we need it because gemini is a
+	// Node.js CLI that spawns workers which would otherwise orphan the pipe.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	stderrBuf := newTailBuffer(maxStderrBytes)

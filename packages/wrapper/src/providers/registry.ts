@@ -7,7 +7,6 @@ export class ProviderRegistry {
   constructor() {
     const geminiProvider = new GeminiProvider();
     this.register('gemini', geminiProvider);
-    this.register('copilot', geminiProvider);
   }
 
   register(key: string, provider: IProvider): void {

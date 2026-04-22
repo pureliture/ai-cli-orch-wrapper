@@ -1,6 +1,6 @@
 # ai-cli-orch-wrapper
 
-Gemini CLI와 GitHub Copilot CLI용 Claude Code command pack을 설치하고 실행하는 `aco` CLI 패키지입니다.
+Gemini CLI용 Claude Code command pack을 설치하고 실행하는 `aco` CLI 패키지입니다.
 
 ## 설치
 
@@ -25,12 +25,10 @@ aco --version
 
 ```bash
 aco provider setup gemini
-aco provider setup copilot
 ```
 
 필요한 외부 CLI:
 - Gemini CLI: `npm install -g @google/gemini-cli`
-- Copilot CLI: `npm install -g @github/copilot && gh auth login`
 
 ## CLI 개요
 
@@ -78,7 +76,6 @@ npm install -g @pureliture/ai-cli-orch-wrapper
 
 ```bash
 aco provider setup gemini
-aco provider setup copilot
 ```
 
 ### slash command가 보이지 않는 경우

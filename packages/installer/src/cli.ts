@@ -101,7 +101,7 @@ Usage:
   aco pack uninstall [--global]
   aco pack status [--global]
   aco pack setup [--global] [--force]
-  aco provider setup <gemini|copilot>
+  aco provider setup gemini
 `);
 }
 

@@ -39,8 +39,8 @@ Go 바이너리가 전적으로 담당하는 레이어:
 Node.js 래퍼가 전적으로 담당하는 레이어:
 
 ### 1. Provider Runtime (`IProvider`)
-각 프로바이더 구현체 (`GeminiProvider`, `CopilotProvider`)는 `IProvider` 인터페이스를 구현한다:
-- `key`: 프로바이더 키 ("gemini", "copilot")
+각 프로바이더 구현체 (`GeminiProvider`)는 `IProvider` 인터페이스를 구현한다:
+- `key`: 프로바이더 키 ("gemini")
 - `installHint`: 설치 안내 메시지
 - `isAvailable()`: 바이너리 가용성 체크
 - `checkAuth()`: 인증 상태 검사
@@ -113,20 +113,25 @@ type Provider interface {
 
 ---
 
-## Environment Variable Whitelist
+## Environment Variable Allowlist
+
+Go 바이너리는 호스트의 전체 환경변수 목록에서 **allowlist**에 포함된 변수만 프로바이더 프로세스에 전달한다.
 
 **허용 목록 (Allowlist)**
 
-| Variable | Go 전달 | 설명 |
-|----------|----------|------|
-| `ACO_TIMEOUT_SECONDS` | Yes | 타임아웃 값 (초 단위) |
+| Variable | 설명 |
+|----------|------|
+| `ACO_TIMEOUT_SECONDS` | 타임아웃 값 (초 단위) |
+| `PATH`, `HOME`, `USER` | 기본 환경 |
+| `TERM`, `LANG`, `LC_ALL` | 터미널/로케일 |
+| `GEMINI_API_KEY` | Gemini 인증 (CI/headless) |
+| `GITHUB_TOKEN` | GitHub 인증 (CI/headless) |
+| `ANTHROPIC_API_KEY` | Anthropic 인증 (CI/headless) |
 
-**차단 목록 (Blocklist)**
+**차단 목록 예시 (전달되지 않음)**
 
-다음 환경 변수들은 프로바이더 프로세스에 전달되지 **않는다**:
-- `ACO_API_KEY`, `GOOGLE_API_KEY`, `ANTHROPIC_API_KEY`, `AZURE_OPENAI_KEY`
-- `COPILOT_TOKEN`, `GEMINI_API_KEY`
-- `PATH`, `HOME`, `USER` (민감한 경로 정보 유출 방지)
+- `ACO_API_KEY`, `GOOGLE_API_KEY`, `AZURE_OPENAI_KEY`
+- `COPILOT_TOKEN`
 - 기타 모든 환경 변수
 
 ---
