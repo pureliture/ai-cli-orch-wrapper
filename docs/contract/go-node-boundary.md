@@ -29,8 +29,20 @@ Go 바이너리가 전적으로 담당하는 레이어:
 - 절대 경로와 상대 경로 모두 검증
 - 검증 실패 시 실행 거부
 
-### 6. Environment Variable Whitelist
-프로바이더 실행 시 환경 변수를 필터링하여 **오직 `ACO_TIMEOUT_SECONDS`만** 통과시킨다. `ACO_API_KEY`, `GOOGLE_API_KEY` 등 모든 민감한 환경 변수는 전달하지 않는다.
+### 6. Environment Variable Allowlist
+
+프로바이더 실행 시 환경 변수를 allowlist 기반으로 필터링한다. 아래 변수만 프로바이더 프로세스에 전달되며, 나머지는 모두 차단된다.
+
+| Variable | 설명 |
+|----------|------|
+| `ACO_TIMEOUT_SECONDS` | 타임아웃 값 (초 단위) |
+| `PATH`, `HOME`, `USER` | 기본 환경 |
+| `TERM`, `LANG`, `LC_ALL` | 터미널/로케일 |
+| `GEMINI_API_KEY` | Gemini 인증 (CI/headless) |
+| `GITHUB_TOKEN` | GitHub 인증 (CI/headless) |
+| `ANTHROPIC_API_KEY` | Anthropic 인증 (CI/headless) |
+
+차단되는 변수 예시: `ACO_API_KEY`, `GOOGLE_API_KEY`, `AZURE_OPENAI_KEY`, `COPILOT_TOKEN` 및 그 외 모든 환경 변수.
 
 ---
 

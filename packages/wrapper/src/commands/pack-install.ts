@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { providerRegistry } from '../providers/registry.js';
+import { runSync } from '../sync/sync-engine.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -170,6 +171,7 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
 
 export async function packSetup(options: PackInstallOptions = {}): Promise<void> {
   await packInstall(options);
+
   console.log('\n--- Provider Status ---');
   for (const key of providerRegistry.keys()) {
     const provider = providerRegistry.get(key)!;
@@ -180,6 +182,37 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
       console.log(`  ${key}: installed ✓`);
     }
   }
+
+  console.log('\n--- Context Sync ---');
+  const repoRoot = process.cwd();
+  try {
+    const result = await runSync(repoRoot, { dryRun: false, check: false, force: false });
+    const { created, updated, removed, skipped, warnings, conflicts } = result;
+    const manifestPath = join(repoRoot, '.aco', 'sync-manifest.json');
+
+    console.log(
+      `  created: ${created}  updated: ${updated}  removed: ${removed}  skipped: ${skipped}`
+    );
+    if (warnings > 0) {
+      console.log(`  warnings: ${warnings} — see manifest for details: ${manifestPath}`);
+    }
+    if (conflicts > 0) {
+      console.log(`  conflicts: ${conflicts} — run 'aco sync --check' for details`);
+    }
+    console.log(`  manifest: ${manifestPath}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('conflict') || msg.includes('Conflict')) {
+      console.error(`  [error] Sync conflict: ${msg}`);
+      console.error(`  Run 'aco sync --check' for details, or 'aco sync --force' to overwrite.`);
+      process.exit(1);
+    } else if (msg.includes('no sync sources') || msg.includes('No sync sources')) {
+      console.log(`  (skipped — no Claude context sources found)`);
+    } else {
+      console.warn(`  [warn] Sync skipped: ${msg}`);
+    }
+  }
+
   console.log('\nNext step: aco provider setup gemini');
 }
 
