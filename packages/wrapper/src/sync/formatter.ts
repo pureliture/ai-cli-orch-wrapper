@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { load as loadYaml } from 'js-yaml';
 
 export interface FormatterConfig {
   modelAliasMap: Record<string, { provider: string; model: string }>;
@@ -50,7 +51,8 @@ function parseFormatterYaml(content: string): FormatterConfig {
     fallback: { provider: 'codex', model: '' },
   };
 
-  const obj = parseYamlObject(content.split('\n'), { index: 0 }, 0);
+  const parsedYaml = loadYaml(content);
+  const obj = isRecord(parsedYaml) ? parsedYaml : {};
 
   const aliasMap = obj['modelAliasMap'];
   if (aliasMap && typeof aliasMap === 'object' && !Array.isArray(aliasMap)) {
@@ -85,102 +87,6 @@ function parseFormatterYaml(content: string): FormatterConfig {
   return config;
 }
 
-interface ParseState {
-  index: number;
-}
-
-function getIndent(line: string): number {
-  let i = 0;
-  while (i < line.length && line[i] === ' ') i++;
-  return i;
-}
-
-function parseYamlObject(
-  lines: string[],
-  state: ParseState,
-  baseIndent: number
-): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-
-  while (state.index < lines.length) {
-    const line = lines[state.index];
-    const trimmed = line.trimEnd();
-
-    if (!trimmed || trimmed.trimStart().startsWith('#')) {
-      state.index++;
-      continue;
-    }
-
-    const indent = getIndent(trimmed);
-
-    if (indent < baseIndent) break;
-
-    const content = trimmed.trimStart();
-
-    if (content.startsWith('- ')) {
-      break;
-    }
-
-    const colonIdx = content.indexOf(':');
-    if (colonIdx === -1) {
-      state.index++;
-      continue;
-    }
-
-    const key = content.slice(0, colonIdx).trim();
-    const rest = content.slice(colonIdx + 1).trim();
-
-    state.index++;
-
-    if (rest === '' || rest === '|' || rest === '>') {
-      if (state.index < lines.length) {
-        const nextLine = lines[state.index];
-        const nextTrimmed = nextLine?.trimEnd() ?? '';
-        const nextContent = nextTrimmed.trimStart();
-        const nextIndent = nextTrimmed ? getIndent(nextTrimmed) : 0;
-
-        if (nextIndent > indent && nextContent.startsWith('- ')) {
-          result[key] = parseYamlArray(lines, state, nextIndent);
-        } else if (nextIndent > indent) {
-          result[key] = parseYamlObject(lines, state, nextIndent);
-        } else {
-          result[key] = null;
-        }
-      } else {
-        result[key] = null;
-      }
-    } else if (rest === '[]') {
-      result[key] = [];
-    } else {
-      result[key] = rest;
-    }
-  }
-
-  return result;
-}
-
-function parseYamlArray(lines: string[], state: ParseState, baseIndent: number): unknown[] {
-  const result: unknown[] = [];
-
-  while (state.index < lines.length) {
-    const line = lines[state.index];
-    const trimmed = line.trimEnd();
-
-    if (!trimmed || trimmed.trimStart().startsWith('#')) {
-      state.index++;
-      continue;
-    }
-
-    const indent = getIndent(trimmed);
-    if (indent < baseIndent) break;
-
-    const content = trimmed.trimStart();
-    if (!content.startsWith('- ')) break;
-
-    const value = content.slice(2).trim();
-    result.push(value);
-    state.index++;
-  }
-
-  return result;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
