@@ -32,8 +32,8 @@ export class GeminiProvider implements IProvider {
     // 2. Fast path: Local OAuth credentials file
     try {
       const credsPath = join(homedir(), '.gemini', 'oauth_creds.json');
-      await stat(credsPath);
-      // If stat succeeds, we assume it exists and contains valid-ish data
+      const raw = await readFile(credsPath, 'utf8');
+      JSON.parse(raw); // Ensure it's valid JSON
       return { ok: true };
     } catch {
       // Ignore and fall back to CLI check
