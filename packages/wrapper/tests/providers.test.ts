@@ -1,19 +1,20 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { GeminiProvider } from '../src/providers/gemini';
+import { CodexProvider, GeminiProvider } from '../src/providers/gemini';
 import { ProviderRegistry } from '../src/providers/registry';
 
 describe('GeminiProvider', () => {
   it('isAvailable() returns true when gemini binary is in PATH', () => {
     const provider = new GeminiProvider();
-    // isAvailable result depends on actual PATH — just verify it returns boolean
     const result = provider.isAvailable();
     assert.equal(typeof result, 'boolean');
   });
 
   it('isAvailable() returns false when gemini is absent', () => {
     class TestGemini extends GeminiProvider {
-      override isAvailable() { return false; }
+      override isAvailable() {
+        return false;
+      }
     }
     assert.equal(new TestGemini().isAvailable(), false);
   });
@@ -28,9 +29,47 @@ describe('GeminiProvider', () => {
 
   it('checkAuth() returns { ok: false } when not available', async () => {
     class TestGemini extends GeminiProvider {
-      override isAvailable() { return false; }
+      override isAvailable() {
+        return false;
+      }
     }
     const result = await new TestGemini().checkAuth();
+    assert.equal(result.ok, false);
+    assert.ok(typeof result.hint === 'string');
+  });
+});
+
+describe('CodexProvider', () => {
+  it('isAvailable() returns true when codex binary is in PATH', () => {
+    const provider = new CodexProvider();
+    const result = provider.isAvailable();
+    assert.equal(typeof result, 'boolean');
+  });
+
+  it('isAvailable() returns false when codex is absent', () => {
+    class TestCodex extends CodexProvider {
+      override isAvailable() {
+        return false;
+      }
+    }
+    assert.equal(new TestCodex().isAvailable(), false);
+  });
+
+  it('key is "codex"', () => {
+    assert.equal(new CodexProvider().key, 'codex');
+  });
+
+  it('installHint is non-empty string', () => {
+    assert.ok(new CodexProvider().installHint.length > 0);
+  });
+
+  it('checkAuth() returns { ok: false } when not available', async () => {
+    class TestCodex extends CodexProvider {
+      override isAvailable() {
+        return false;
+      }
+    }
+    const result = await new TestCodex().checkAuth();
     assert.equal(result.ok, false);
     assert.ok(typeof result.hint === 'string');
   });
@@ -42,6 +81,13 @@ describe('ProviderRegistry', () => {
     const provider = registry.get('gemini');
     assert.ok(provider !== undefined);
     assert.equal(provider.key, 'gemini');
+  });
+
+  it('get("codex") returns CodexProvider', () => {
+    const registry = new ProviderRegistry();
+    const provider = registry.get('codex');
+    assert.ok(provider !== undefined);
+    assert.equal(provider.key, 'codex');
   });
 
   it('get("unknown") returns undefined', () => {
@@ -56,10 +102,11 @@ describe('ProviderRegistry', () => {
     assert.equal(registry.get('my-provider'), custom);
   });
 
-  it('keys() includes gemini', () => {
+  it('keys() includes gemini and codex', () => {
     const registry = new ProviderRegistry();
     const keys = registry.keys();
     assert.ok(keys.includes('gemini'));
-    assert.equal(keys.length, 1);
+    assert.ok(keys.includes('codex'));
+    assert.equal(keys.length, 2);
   });
 });
