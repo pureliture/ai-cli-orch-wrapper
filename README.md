@@ -86,6 +86,8 @@ aco pack install
 
 ## 문서
 
+전체 목차는 [docs/README.md](docs/README.md)를 참고한다. 주요 진입점:
+
 - [Architecture](docs/architecture.md)
-- [Contributing](docs/CONTRIBUTING.md)
-- [Runbook](docs/RUNBOOK.md)
+- [Contributing](docs/guides/contributing.md)
+- [Runbook](docs/guides/runbook.md)

@@ -107,14 +107,14 @@ echo "     - Table view: 'Roadmap' (group: type:epic)"
 echo "     https://github.com/orgs/${OWNER}/projects/${PROJECT_NUMBER}"
 echo "═══════════════════════════════════════════════════════"
 
-# ── Write IDs to docs/pm-board.md ──────────────────────────────────────────
-if [[ -f docs/pm-board.md ]]; then
+# ── Write IDs to docs/reference/project-board.md ───────────────────────────
+if [[ -f docs/reference/project-board.md ]]; then
   sed -i.bak \
     -e "s|PM_PROJECT_NUMBER=\"\"|PM_PROJECT_NUMBER=\"${PROJECT_NUMBER}\"|" \
     -e "s|PM_PROJECT_ID=\"\"|PM_PROJECT_ID=\"${PROJECT_ID}\"|" \
     -e "s|PM_STATUS_FIELD_ID=\"\"|PM_STATUS_FIELD_ID=\"${STATUS_FIELD_ID}\"|" \
     -e "s|PM_IN_REVIEW_OPTION_ID=\"\"|PM_IN_REVIEW_OPTION_ID=\"${IN_REVIEW_ID}\"|" \
-    docs/pm-board.md && rm -f docs/pm-board.md.bak
+    docs/reference/project-board.md && rm -f docs/reference/project-board.md.bak
   echo ""
-  echo "  docs/pm-board.md updated with IDs"
+  echo "  docs/reference/project-board.md updated with IDs"
 fi
