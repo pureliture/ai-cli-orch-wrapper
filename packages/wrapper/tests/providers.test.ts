@@ -74,6 +74,60 @@ describe('CodexProvider', () => {
     assert.equal(result.ok, false);
     assert.ok(typeof result.hint === 'string');
   });
+
+  describe('buildArgs()', () => {
+    it('includes --full-auto when profile is "default"', () => {
+      const provider = new CodexProvider();
+      const args = provider.buildArgs('test', { permissionProfile: 'default' });
+      assert.ok(args.includes('--full-auto'));
+    });
+
+    it('omits --full-auto when profile is "restricted"', () => {
+      const provider = new CodexProvider();
+      const args = provider.buildArgs('test', { permissionProfile: 'restricted' });
+      assert.ok(!args.includes('--full-auto'));
+    });
+
+    it('includes --skip-git-repo-check', () => {
+      const provider = new CodexProvider();
+      const args = provider.buildArgs('test');
+      assert.ok(args.includes('--skip-git-repo-check'));
+    });
+  });
+
+  describe('invoke()', () => {
+    it('combines prompt and content with double newline', async () => {
+      let capturedArgs: string[] = [];
+      class MockCodex extends CodexProvider {
+        // @ts-ignore - access private/protected for testing
+        async *invoke(command: string, prompt: string, content: string) {
+          const combined = content ? `${prompt}\n\n${content}` : prompt;
+          capturedArgs.push(combined);
+          yield '';
+        }
+      }
+      const provider = new MockCodex();
+      const iter = provider.invoke('test', 'Hello', 'World');
+      await iter.next();
+      assert.equal(capturedArgs[0], 'Hello\n\nWorld');
+    });
+
+    it('uses only prompt when content is empty', async () => {
+      let capturedArgs: string[] = [];
+      class MockCodex extends CodexProvider {
+        // @ts-ignore
+        async *invoke(command: string, prompt: string, content: string) {
+          const combined = content ? `${prompt}\n\n${content}` : prompt;
+          capturedArgs.push(combined);
+          yield '';
+        }
+      }
+      const provider = new MockCodex();
+      const iter = provider.invoke('test', 'Hello', '');
+      await iter.next();
+      assert.equal(capturedArgs[0], 'Hello');
+    });
+  });
 });
 
 describe('ProviderRegistry', () => {
