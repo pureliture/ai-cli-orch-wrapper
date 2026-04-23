@@ -8,12 +8,12 @@ const execFileAsync = promisify(execFile);
 
 const AUTH_CHECK_TIMEOUT_MS = 5_000;
 
-export class GeminiProvider implements IProvider {
-  readonly key = 'gemini';
-  readonly installHint = 'npm install -g @google/gemini-cli';
+export class CodexProvider implements IProvider {
+  readonly key = 'codex';
+  readonly installHint = 'npm install -g @openai/codex';
 
   isAvailable(): boolean {
-    return which('gemini') !== null;
+    return which('codex') !== null;
   }
 
   async checkAuth(): Promise<AuthResult> {
@@ -21,20 +21,20 @@ export class GeminiProvider implements IProvider {
       return { ok: false, hint: this.installHint };
     }
     try {
-      await execFileAsync('gemini', ['--version'], { timeout: AUTH_CHECK_TIMEOUT_MS });
+      await execFileAsync('codex', ['--version'], { timeout: AUTH_CHECK_TIMEOUT_MS });
       return { ok: true };
     } catch {
-      return { ok: false, hint: 'gemini auth login  # or run `gemini` interactively' };
+      return { ok: false, hint: 'codex login' };
     }
   }
 
   buildArgs(command: string, options?: InvokeOptions): string[] {
     const profile: PermissionProfile = options?.permissionProfile ?? 'default';
-    const base = ['-p'];
+    const args = ['exec', '--skip-git-repo-check'];
     if (profile !== 'restricted') {
-      base.unshift('--yolo');
+      args.push('--full-auto');
     }
-    return base;
+    return args;
   }
 
   async *invoke(
@@ -43,10 +43,11 @@ export class GeminiProvider implements IProvider {
     content: string,
     options?: InvokeOptions
   ): AsyncIterable<string> {
-    const binary = which('gemini');
-    if (!binary) throw new Error('gemini CLI not found in PATH');
+    const binary = which('codex');
+    if (!binary) throw new Error('codex CLI not found in PATH');
 
-    const args = [...this.buildArgs(command, options), `${prompt}\n\n${content}`];
-    yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe' }, options);
+    const combined = content ? `${prompt}\n\n${content}` : prompt;
+    const args = [...this.buildArgs(command, options), combined];
+    yield* spawnStream(binary, args, { processName: 'codex', stdin: 'pipe' }, options);
   }
 }

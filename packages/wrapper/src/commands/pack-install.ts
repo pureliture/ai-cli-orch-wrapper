@@ -20,6 +20,7 @@ function findTemplatesDir(startDir: string): string {
   const devPath = join(monorepoRoot, 'templates');
   const prodPath = join(packageRoot, 'templates');
 
+  // In development (not inside node_modules), prioritize the monorepo root templates
   const isDev = !startDir.split(sep).includes('node_modules');
   if (isDev && existsSync(devPath)) {
     return devPath;
@@ -157,9 +158,7 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
   for (const key of providerRegistry.keys()) {
     const provider = providerRegistry.get(key)!;
     const available = provider.isAvailable();
-    const auth = available
-      ? await provider.checkAuth()
-      : { ok: false, hint: provider.installHint };
+    const auth = available ? await provider.checkAuth() : { ok: false, hint: provider.installHint };
     const avIcon = available ? '✓' : '✗';
     const authIcon = auth.ok ? '✓' : '✗';
     console.log(

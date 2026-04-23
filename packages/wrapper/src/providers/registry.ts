@@ -1,5 +1,6 @@
 import type { IProvider } from './interface.js';
-import { CodexProvider, GeminiProvider } from './gemini.js';
+import { GeminiProvider } from './gemini.js';
+import { CodexProvider } from './codex.js';
 
 export class ProviderRegistry {
   private readonly providers = new Map<string, IProvider>();

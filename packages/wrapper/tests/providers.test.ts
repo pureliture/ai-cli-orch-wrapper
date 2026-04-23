@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { CodexProvider, GeminiProvider } from '../src/providers/gemini';
+import { GeminiProvider } from '../src/providers/gemini';
+import { CodexProvider } from '../src/providers/codex';
 import { ProviderRegistry } from '../src/providers/registry';
 
 describe('GeminiProvider', () => {
