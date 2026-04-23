@@ -52,7 +52,7 @@ Fetch unresolved review threads for a Pull Request and intelligently evaluate wh
          ```
 
          5. For each thread categorized as **Deferred Task**:
-         - Ask the user for a brief description, type (`task`, `chore`, or `bug`), and sprint label (e.g., `sprint:v3`).
+         - Ask the user for a brief description, type (`task`, `chore`, or `bug`).
          - Map the type to the correct label (`type:bug`, `type:task`, `type:chore`).
          - Infer the `area:*` label from the context (e.g., `packages/wrapper` -> `area:wrapper`).
          - Create a new issue:
@@ -60,7 +60,7 @@ Fetch unresolved review threads for a Pull Request and intelligently evaluate wh
          gh issue create \
          --repo pureliture/ai-cli-orch-wrapper \
          --title "<type>: <description>" \
-         --label "<type-label>,<area-label (if any)>,origin:review,<sprint-label>" \
+         --label "<type-label>,<area-label (if any)>,origin:review" \
          --body "From: #<PR_NUMBER> review comment
 
          <description>
