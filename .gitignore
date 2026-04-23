@@ -36,19 +36,31 @@ temp/
 .gemini/worktrees/
 .aco-worktrees/
 
+# Claude Octopus runtime state
+.omc/
+.omx/
 
-reference/*
+# Harness configuration (Whitelist approach)
 .codex/*
+!.codex/agents/
+!.codex/skills/
+!.codex/hooks.json
+
 .gemini/*
+!.gemini/agents/
+!.gemini/commands/
+!.gemini/skills/
+!.gemini/settings.json
+
+# Local settings (strictly ignored)
+.claude/settings.local.json
 
 # Claude Code session files (non-persistent)
 .claude/session-intent.md
 .claude/session-plan.md
 .claude/skills/
 !.claude/skills/
-.claude/skills/*
-!.claude/skills/github-jira-ops/
-!.claude/skills/github-jira-ops/**
+!.claude/skills/**
 
 # Claude Octopus runtime state
 .claude-octopus/
