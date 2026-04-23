@@ -47,7 +47,7 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body mu
    Example:
    - Add `templates/commands/gh-issue.md` slash command
    - Fix `setup-github-labels.sh` to propagate upsert failures via exit code
-   - Update `docs/pm-board.md` with V3 title convention and 3-axis command structure>
+   - Update `docs/guides/github-workflow.md` with V3 title convention and 3-axis command structure>
 
    ## Checklist
    - [ ] npm test passes
