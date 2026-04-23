@@ -9,7 +9,7 @@
 
 ```bash
 npx @pureliture/ai-cli-orch-wrapper pack setup
-aco provider setup gemini
+npx @pureliture/ai-cli-orch-wrapper provider setup gemini
 ```
 
 저장소 checkout에서 직접 확인할 때는 빌드 후 wrapper CLI를 실행한다.
@@ -18,6 +18,7 @@ aco provider setup gemini
 npm install
 npm run build
 node packages/wrapper/dist/cli.js pack setup
+node packages/wrapper/dist/cli.js provider setup gemini
 node packages/wrapper/dist/cli.js sync --check
 ```
 
