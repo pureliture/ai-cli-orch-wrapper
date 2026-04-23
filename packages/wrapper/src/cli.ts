@@ -438,7 +438,7 @@ function printUsage(): void {
   aco pack uninstall [--global]
   aco pack status [--global]
   aco pack setup [--global] [--force]
-  aco provider setup <gemini>`);
+  aco provider setup <name>`);
 }
 
 async function endWritable(stream: Writable): Promise<void> {
