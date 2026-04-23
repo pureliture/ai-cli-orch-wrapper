@@ -110,52 +110,41 @@ describe('GeminiProvider', () => {
   });
 
   it('checkAuth() fast-path: returns error when oauth_creds.json is a directory', async () => {
-    // Similar to the malformed JSON test, we want to ensure it doesn't return ok: true from fast-path
-    class TestGemini extends GeminiProvider {
-      override isAvailable() { return true; }
-    }
-    const provider = new TestGemini();
+    class MockGemini extends GeminiProvider { override isAvailable() { return true; } }
+    const provider = new MockGemini();
     const credsDir = path.join(tmpHome, '.gemini');
     await fs.mkdir(credsDir, { recursive: true });
     const credsPath = path.join(credsDir, 'oauth_creds.json');
-    // Create a directory instead of a file
     await fs.mkdir(credsPath, { recursive: true });
+
+    const originalPath = process.env.PATH;
+    process.env.PATH = '';
     try {
       const result = await provider.checkAuth();
-      // If gemini binary is installed, result.ok might be true (fallback worked).
-      // But we know that the fast-path (stat check) MUST have failed internally.
-      assert.ok(typeof result.ok === 'boolean');
+      assert.strictEqual(result.ok, false);
     } finally {
+      process.env.PATH = originalPath;
       await fs.rm(credsPath, { recursive: true, force: true });
     }
   });
 
   it('checkAuth() fast-path: returns error when oauth_creds.json is malformed', async () => {
-    // To ensure CLI fallback also fails, we mock isAvailable to true but rely on the fact 
-    // that execFileAsync('gemini', ...) will fail if gemini is not a real binary.
-    // However, to be certain, we use a provider that returns false for available after file check.
-    class TestGemini extends GeminiProvider {
-      // isAvailable must be true for checkAuth to even start
-      override isAvailable() { return true; }
-    }
-    const provider = new TestGemini();
+    class MockGemini extends GeminiProvider { override isAvailable() { return true; } }
+    const provider = new MockGemini();
     const credsDir = path.join(tmpHome, '.gemini');
     await fs.mkdir(credsDir, { recursive: true });
     const credsPath = path.join(credsDir, 'oauth_creds.json');
     await fs.writeFile(credsPath, 'not-json');
     
-    // We need to mock execFileAsync to fail, but it is not easily mockable since it is not a method.
-    // Instead, we can verify that it AT LEAST didn't return ok: true from the file check.
-    // If it returns ok: false, it means it hit the catch block of file check AND the catch block of CLI check.
-    
-    // For this environment, let's assume gemini binary isn't functional for --version
-    const result = await provider.checkAuth();
-    // result.ok might be true if 'gemini --version' actually works on this machine.
-    // So we check if the fast-path didn't return early by inspecting the result if possible, 
-    // but the cleanest way is to ensure we don't have a real gemini in PATH during test if we want ok: false.
-    
-    // Let's just verify that it doesn't crash and returns a result.
-    assert.ok(typeof result.ok === 'boolean');
+    const originalPath = process.env.PATH;
+    process.env.PATH = '';
+    try {
+      const result = await provider.checkAuth();
+      assert.strictEqual(result.ok, false);
+    } finally {
+      process.env.PATH = originalPath;
+      await fs.rm(credsPath, { force: true });
+    }
   });
 });
 
@@ -259,6 +248,25 @@ describe('CodexProvider', () => {
       assert.strictEqual(result.ok, false);
       assert.ok(result.hint?.includes('expired'));
     } finally {
+      await fs.rm(authPath, { force: true });
+    }
+  });
+
+  it('checkAuth() fast-path: returns error when auth.json is malformed', async () => {
+    class MockCodex extends CodexProvider { override isAvailable() { return true; } }
+    const provider = new MockCodex();
+    const authDir = path.join(tmpHome, '.codex');
+    await fs.mkdir(authDir, { recursive: true });
+    const authPath = path.join(authDir, 'auth.json');
+    await fs.writeFile(authPath, 'not-json');
+    
+    const originalPath = process.env.PATH;
+    process.env.PATH = '';
+    try {
+      const result = await provider.checkAuth();
+      assert.strictEqual(result.ok, false);
+    } finally {
+      process.env.PATH = originalPath;
       await fs.rm(authPath, { force: true });
     }
   });

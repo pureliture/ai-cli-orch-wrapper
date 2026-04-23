@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { stat } from 'node:fs/promises';
+import { stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { which } from '../util/which.js';
@@ -35,7 +35,14 @@ export class GeminiProvider implements IProvider {
       if (!(await stat(credsPath)).isFile()) {
         throw new Error('Not a file');
       }
-      return { ok: true };
+      const raw = await readFile(credsPath, 'utf8');
+      try {
+        JSON.parse(raw);
+        return { ok: true };
+      } catch (e) {
+        console.warn('Failed to parse Gemini auth file:', e instanceof Error ? e.message : String(e));
+        // Fall back to CLI check
+      }
     } catch {
       // Ignore and fall back to CLI check
     }

@@ -33,19 +33,28 @@ export class CodexProvider implements IProvider {
     try {
       const authPath = join(homedir(), '.codex', 'auth.json');
       const raw = await readFile(authPath, 'utf8');
-      const data = JSON.parse(raw) as { expires_at?: number } | null;
-      if (data && typeof data.expires_at === 'number') {
-        const now = Math.floor(Date.now() / 1000);
-        if (data.expires_at < now) {
-          return {
-            ok: false,
-            hint: 'Codex OAuth token expired. Run: codex login',
-          };
+      try {
+        const data = JSON.parse(raw);
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          throw new Error('Invalid auth file format');
         }
+        const expiresAt = (data as { expires_at?: number }).expires_at;
+        if (expiresAt !== null && expiresAt !== undefined && typeof expiresAt === 'number') {
+          const now = Math.floor(Date.now() / 1000);
+          if (expiresAt < now) {
+            return {
+              ok: false,
+              hint: 'Codex OAuth token expired. Run: codex login',
+            };
+          }
+        }
+        return { ok: true };
+      } catch (e) {
+        console.warn('Failed to parse Codex auth file:', e instanceof Error ? e.message : String(e));
+        // Fall back to CLI check
       }
-      return { ok: true };
     } catch {
-      // File missing or malformed - fall back to CLI check
+      // File missing or read failed - fall back to CLI check
     }
 
     // 3. Fallback: CLI execution
