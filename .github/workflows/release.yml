@@ -1,7 +1,11 @@
 name: Release
 
 on:
-  push:
+  workflow_dispatch:
+  # Auto-run only when a PR with the `release` label is merged into main.
+  # To trigger: add `release` label to PR and merge, or click "Run workflow" on Actions tab.
+  pull_request:
+    types: [closed]
     branches: [main]
 
 permissions:
@@ -12,6 +16,8 @@ jobs:
   release:
     name: release
     runs-on: ubuntu-latest
+    # Only run when triggered manually or when a PR with `release` label is merged to main
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release'))
     steps:
       - uses: actions/checkout@v4
         with:
