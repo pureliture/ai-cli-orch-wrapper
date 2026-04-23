@@ -303,7 +303,7 @@ flowchart LR
 | `typecheck` | `npm run build --workspace=packages/wrapper` and `npm run typecheck --workspace=packages/wrapper` | Build and TypeScript type validation              |
 | `test`      | `npm test --workspace=packages/wrapper`                                                           | Node wrapper unit tests                           |
 | `go-build`  | `go build ./cmd/aco`                                                                              | Go CLI compilation                                |
-| `go-test`   | `go test ./...`                                                                                   | Go unit tests                                     |
+| `go-test`  | `go test ./...`                                                                                   | Go unit tests                                     |
 | `smoke`     | `npm pack`, local install, `aco --version`, `aco run --help`                                      | Published package smoke path                      |
 | `fixtures`  | `npm run test:fixtures -- --binary ./aco`                                                         | Cross-runtime fixture suite against the Go binary |
 

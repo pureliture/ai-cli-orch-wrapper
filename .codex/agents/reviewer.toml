@@ -1,0 +1,8 @@
+name = "reviewer"
+description = "Changes need adversarial review for correctness, regressions, and missing coverage"
+model = "gpt-5.4"
+developer_instructions = """Review the supplied changes and report the highest-confidence findings first.
+
+Prefer concrete failures over style commentary."""
+sandbox_mode = "read-only"
+model_reasoning_effort = "high"

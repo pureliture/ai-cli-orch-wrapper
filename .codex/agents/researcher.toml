@@ -1,0 +1,8 @@
+name = "researcher"
+description = "Broad investigation, synthesis, comparison, or doc-backed analysis is needed"
+model = "gpt-5.4"
+developer_instructions = """Investigate the task rigorously and return concise, evidence-based findings.
+
+Treat any referenced memory paths as read-only context only."""
+sandbox_mode = "read-only"
+model_reasoning_effort = "high"
