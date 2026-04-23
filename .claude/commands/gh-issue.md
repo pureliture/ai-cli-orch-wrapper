@@ -1,6 +1,6 @@
 ---
 name: gh-issue
-description: "Create a GitHub issue with conventional commit title, type/sprint/priority labels, and Project #3 Backlog assignment"
+description: "Create a GitHub issue with conventional commit title, type/priority labels, and Project #3 Backlog assignment"
 allowed-tools: [Bash]
 ---
 
@@ -9,8 +9,7 @@ Create a GitHub issue in `pureliture/ai-cli-orch-wrapper` following the conventi
 ## Steps
 
 1. Ask the user for the following information if not already provided:
-   - **Title**: Full issue title in `type: description` format. Valid types: `feat`, `fix`, `bug`, `chore`, `task`, `spike`, `epic`. Example: `feat: add gh-pm-workflow-commands`. Do NOT use `[Sprint V3][Task]` prefix — that convention is deprecated as of V3.
-   - **Sprint label**: The sprint label to apply (e.g., `sprint:v3` or `sprint:v4`). If not provided, ask before creating the issue rather than assuming a sprint.
+   - **Title**: Full issue title in `type: description` format. Valid types: `feat`, `fix`, `bug`, `chore`, `task`, `spike`, `epic`. Example: `feat: add gh-pm-workflow-commands`.
    - **Priority**: If the user explicitly mentions urgency (e.g., "critical", "blocking", "low priority"), map it to `p0`/`p1`/`p2` accordingly. Otherwise, default to `p1` without asking.
    - **Additional labels** (optional): Extra labels to apply (e.g., `documentation`). Use `documentation` for docs-related issues.
    - **Parent epic** (optional): Epic issue number to link as parent (e.g., `22`)
@@ -74,7 +73,7 @@ Create a GitHub issue in `pureliture/ai-cli-orch-wrapper` following the conventi
    Where `<priority>` is one of `p0`, `p1`, or `p2` (default: `p1` if not specified).
    Construct `LABELS` to avoid trailing commas when `additional-labels` is empty:
    ```bash
-   BASE_LABELS="<type-label>,<sprint-label>,<priority>"
+   BASE_LABELS="<type-label>,<priority>"
    if [ -n "<additional-labels>" ]; then
      LABELS="$BASE_LABELS,<additional-labels>"
    else
