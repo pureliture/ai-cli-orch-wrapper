@@ -157,7 +157,6 @@ async function cmdRun(args: string[]): Promise<void> {
   }
   const inputFlag = parseFlag(args, '--input') ?? '';
 
-  // Read stdin if not a TTY and no --input flag
   let content = inputFlag;
   if (!content && !process.stdin.isTTY) {
     const chunks: Buffer[] = [];
@@ -165,7 +164,6 @@ async function cmdRun(args: string[]): Promise<void> {
     content = Buffer.concat(chunks).toString();
   }
 
-  // Load prompt: prefer cwd-local override, fall back to global ~/.claude
   const cwdPromptPath = join(
     process.cwd(),
     '.claude',
@@ -236,9 +234,6 @@ async function cmdRun(args: string[]): Promise<void> {
   await sessionStore.markDone(session.id);
 }
 
-// ---------------------------------------------------------------------------
-// aco result [--session <id>]
-// ---------------------------------------------------------------------------
 async function cmdResult(args: string[]): Promise<void> {
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
@@ -256,9 +251,6 @@ async function cmdResult(args: string[]): Promise<void> {
   process.stdout.write(output);
 }
 
-// ---------------------------------------------------------------------------
-// aco status [--session <id>]
-// ---------------------------------------------------------------------------
 async function cmdStatus(args: string[]): Promise<void> {
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
@@ -281,9 +273,6 @@ async function cmdStatus(args: string[]): Promise<void> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// aco cancel [--session <id>]
-// ---------------------------------------------------------------------------
 async function cmdCancel(args: string[]): Promise<void> {
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
@@ -321,9 +310,6 @@ async function cmdCancel(args: string[]): Promise<void> {
   console.log(`Session ${sessionId} cancelled.`);
 }
 
-// ---------------------------------------------------------------------------
-// aco sync [--check] [--dry-run] [--force]
-// ---------------------------------------------------------------------------
 async function cmdSync(args: string[]): Promise<void> {
   if (args.includes('--help') || args.includes('-h')) {
     console.error(
@@ -395,7 +381,6 @@ async function findRepoRoot(startDir: string): Promise<string | null> {
     });
     return stdout.trim();
   } catch {
-    // Not a git repo or git not available — walk up to find CLAUDE.md
     let dir = startDir;
     while (true) {
       if (existsSync(join(dir, 'CLAUDE.md'))) return dir;
@@ -406,9 +391,6 @@ async function findRepoRoot(startDir: string): Promise<string | null> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 function parseFlag<T extends string = string>(args: string[], flag: string): T | undefined {
   const idx = args.indexOf(flag);
   if (idx === -1 || idx + 1 >= args.length) return undefined;
@@ -438,7 +420,7 @@ function printUsage(): void {
   aco pack uninstall [--global]
   aco pack status [--global]
   aco pack setup [--global] [--force]
-  aco provider setup <gemini>`);
+  aco provider setup <name>`);
 }
 
 async function endWritable(stream: Writable): Promise<void> {
