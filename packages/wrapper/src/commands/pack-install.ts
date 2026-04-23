@@ -26,8 +26,6 @@ function findTemplatesDir(startDir: string): string {
     return devPath;
   }
 
-  // Fall back to the package-root location so validation reports the expected
-  // production path when templates are missing from an installed package.
   return prodPath;
 }
 
@@ -186,7 +184,11 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
   console.log('\n--- Context Sync ---');
   const repoRoot = process.cwd();
   try {
-    const result = await runSync(repoRoot, { dryRun: false, check: false, force: false });
+    const result = await runSync(repoRoot, {
+      dryRun: false,
+      check: false,
+      force: false,
+    });
     const { created, updated, removed, skipped, warnings, conflicts } = result;
     const manifestPath = join(repoRoot, '.aco', 'sync-manifest.json');
 
@@ -213,7 +215,10 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
     }
   }
 
-  console.log('\nNext step: aco provider setup gemini');
+  console.log('\nNext steps:');
+  for (const key of providerRegistry.keys()) {
+    console.log(`  aco provider setup ${key}`);
+  }
 }
 
 export async function providerSetup(name: string): Promise<void> {
