@@ -4,6 +4,8 @@
 자체의 참조 정보는 [reference/project-board.md](../reference/project-board.md)
 를 참고한다.
 
+문서 기준 주요 provider는 **gemini**와 **codex**다.
+
 ## Claude Code Harness Layout
 
 이 저장소는 repo-local `.claude/` 하네스를 기준으로 PM workflow와 OpenSpec 명령을
@@ -85,7 +87,7 @@ Three command axes for PM workflow automation:
 | `/pm-triage` | Triage PM backlog items                |
 | `/execute`   | Execute a prepared implementation plan |
 
-Packaged templates currently include the `/gh-*` commands and Gemini helper commands under
+Packaged templates currently include the `/gh-*` commands and provider helper commands under
 `templates/commands/`. Repo-local `.claude/commands/` may include additional commands used
 by maintainers.
 
@@ -275,8 +277,8 @@ Routing resolution for `aco delegate <agent-id>` is:
 3. Apply `roleHint` provider preference when configured
 4. Fall back to the formatter fallback route
 
-Current Go providers are `codex`, `gemini`, and `gemini_cli`. The Node wrapper package
-currently exposes Gemini through `aco run gemini <command>`.
+Current documented providers are `codex` and `gemini`. The Go runtime also registers
+`gemini_cli` for delegation compatibility.
 
 ## CI/CD Workflow
 
