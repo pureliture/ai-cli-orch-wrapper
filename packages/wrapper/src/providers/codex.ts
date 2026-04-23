@@ -1,5 +1,8 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
@@ -20,11 +23,40 @@ export class CodexProvider implements IProvider {
     if (!this.isAvailable()) {
       return { ok: false, hint: this.installHint };
     }
+
+    // 1. Fast path: Environment variables
+    if (process.env.OPENAI_API_KEY) {
+      return { ok: true };
+    }
+
+    // 2. Fast path: Local OAuth token file with expiration check
+    try {
+      const authPath = join(homedir(), '.codex', 'auth.json');
+      const raw = await readFile(authPath, 'utf8');
+      const data = JSON.parse(raw) as { expires_at?: number };
+      if (typeof data.expires_at === 'number') {
+        const now = Math.floor(Date.now() / 1000);
+        if (data.expires_at < now) {
+          return {
+            ok: false,
+            hint: 'Codex OAuth token expired. Run: codex login',
+          };
+        }
+      }
+      return { ok: true };
+    } catch {
+      // File missing or malformed - fall back to CLI check
+    }
+
+    // 3. Fallback: CLI execution
     try {
       await execFileAsync('codex', ['--version'], { timeout: AUTH_CHECK_TIMEOUT_MS });
       return { ok: true };
     } catch {
-      return { ok: false, hint: 'codex login' };
+      return {
+        ok: false,
+        hint: 'codex login OR export OPENAI_API_KEY="..."',
+      };
     }
   }
 
