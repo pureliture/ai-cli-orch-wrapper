@@ -53,7 +53,13 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
 
   const installedFiles: string[] = [];
   await copyTree(commandsSrc, commandsDest, options.force ?? false, 'command', installedFiles);
-  await copyTree(promptsSrc, promptsDest, options.force ?? false, 'prompt template', installedFiles);
+  await copyTree(
+    promptsSrc,
+    promptsDest,
+    options.force ?? false,
+    'prompt template',
+    installedFiles
+  );
 
   const manifestPath = MANIFEST_PATH(targetBase);
   let existingFiles: string[] = [];
@@ -117,7 +123,9 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
       console.log(`  removed ${manifestPath}`);
     }
   } else {
-    console.warn('  [warn] No aco install manifest found. Pack may not have been installed via this tool.');
+    console.warn(
+      '  [warn] No aco install manifest found. Pack may not have been installed via this tool.'
+    );
   }
 
   console.log('✓ Pack uninstalled.');
@@ -149,10 +157,14 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
   for (const key of providerRegistry.keys()) {
     const provider = providerRegistry.get(key)!;
     const available = provider.isAvailable();
-    const auth = available ? await provider.checkAuth() : { ok: false, hint: provider.installHint };
+    const auth = available
+      ? await provider.checkAuth()
+      : { ok: false, hint: provider.installHint };
     const avIcon = available ? '✓' : '✗';
     const authIcon = auth.ok ? '✓' : '✗';
-    console.log(`  ${key}: installed ${avIcon}  auth ${authIcon}${auth.ok ? '' : `  → ${auth.hint}`}`);
+    console.log(
+      `  ${key}: installed ${avIcon}  auth ${authIcon}${auth.ok ? '' : `  → ${auth.hint}`}`
+    );
   }
 }
 
@@ -173,11 +185,17 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
   console.log('\n--- Context Sync ---');
   const repoRoot = process.cwd();
   try {
-    const result = await runSync(repoRoot, { dryRun: false, check: false, force: false });
+    const result = await runSync(repoRoot, {
+      dryRun: false,
+      check: false,
+      force: false,
+    });
     const { created, updated, removed, skipped, warnings, conflicts } = result;
     const manifestPath = join(repoRoot, '.aco', 'sync-manifest.json');
 
-    console.log(`  created: ${created}  updated: ${updated}  removed: ${removed}  skipped: ${skipped}`);
+    console.log(
+      `  created: ${created}  updated: ${updated}  removed: ${removed}  skipped: ${skipped}`
+    );
     if (warnings > 0) {
       console.log(`  warnings: ${warnings} — see manifest for details: ${manifestPath}`);
     }
@@ -229,7 +247,13 @@ export async function providerSetup(name: string): Promise<void> {
   console.log(`${name}: installed ✓  auth: ok ✓`);
 }
 
-async function copyTree(src: string, dest: string, force: boolean, kind: string, manifest: string[]): Promise<void> {
+async function copyTree(
+  src: string,
+  dest: string,
+  force: boolean,
+  kind: string,
+  manifest: string[]
+): Promise<void> {
   if (!existsSync(src)) {
     console.warn(`  [warn] template source not found: ${src}`);
     return;
@@ -265,20 +289,26 @@ async function collectFiles(dir: string, out: string[]): Promise<void> {
 
 async function placeWrapperBinary(binaryName: string): Promise<void> {
   try {
-    const { stdout } = await execFileAsync(binaryName, ['--version'], { timeout: BINARY_CHECK_TIMEOUT_MS });
+    const { stdout } = await execFileAsync(binaryName, ['--version'], {
+      timeout: BINARY_CHECK_TIMEOUT_MS,
+    });
     const versionOutput = typeof stdout === 'string' ? stdout.trim().toLowerCase() : '';
     if (versionOutput.startsWith('aco ')) {
       console.log(`  binary: '${binaryName}' already in PATH ✓`);
       return;
     }
-    console.warn(`  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like ${PUBLIC_PACKAGE_NAME}. Proceeding to install ${PUBLIC_PACKAGE_NAME} globally.`);
+    console.warn(
+      `  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like ${PUBLIC_PACKAGE_NAME}. Proceeding to install ${PUBLIC_PACKAGE_NAME} globally.`
+    );
   } catch {
     // Not found in PATH — proceed to global npm install
   }
 
   try {
     console.log(`  binary: installing ${PUBLIC_PACKAGE_NAME} globally …`);
-    await execFileAsync('npm', ['install', '-g', PUBLIC_PACKAGE_NAME], { timeout: NPM_INSTALL_TIMEOUT_MS });
+    await execFileAsync('npm', ['install', '-g', PUBLIC_PACKAGE_NAME], {
+      timeout: NPM_INSTALL_TIMEOUT_MS,
+    });
     console.log(`  binary: '${binaryName}' installed globally ✓`);
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
