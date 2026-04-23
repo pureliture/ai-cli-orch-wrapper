@@ -33,8 +33,8 @@ export class CodexProvider implements IProvider {
     try {
       const authPath = join(homedir(), '.codex', 'auth.json');
       const raw = await readFile(authPath, 'utf8');
-      const data = JSON.parse(raw) as { expires_at?: number };
-      if (typeof data.expires_at === 'number') {
+      const data = JSON.parse(raw) as { expires_at?: number } | null;
+      if (data && typeof data.expires_at === 'number') {
         const now = Math.floor(Date.now() / 1000);
         if (data.expires_at < now) {
           return {

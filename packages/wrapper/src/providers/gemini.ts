@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { readFile, stat } from 'node:fs/promises';
+import { stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { which } from '../util/which.js';
@@ -32,8 +32,9 @@ export class GeminiProvider implements IProvider {
     // 2. Fast path: Local OAuth credentials file
     try {
       const credsPath = join(homedir(), '.gemini', 'oauth_creds.json');
-      const raw = await readFile(credsPath, 'utf8');
-      JSON.parse(raw); // Ensure it's valid JSON
+      if (!(await stat(credsPath)).isFile()) {
+        throw new Error('Not a file');
+      }
       return { ok: true };
     } catch {
       // Ignore and fall back to CLI check

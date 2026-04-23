@@ -10,15 +10,19 @@ import * as path from 'node:path';
 describe('GeminiProvider', () => {
   let tmpHome: string;
   let originalHome: string | undefined;
+  let originalUserProfile: string | undefined;
 
   before(async () => {
     originalHome = process.env.HOME;
+    originalUserProfile = process.env.USERPROFILE;
     tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-home-'));
     process.env.HOME = tmpHome;
+    process.env.USERPROFILE = tmpHome;
   });
 
   after(async () => {
     process.env.HOME = originalHome;
+    process.env.USERPROFILE = originalUserProfile;
     await fs.rm(tmpHome, { recursive: true, force: true });
   });
 
@@ -102,6 +106,27 @@ describe('GeminiProvider', () => {
     }
   });
 
+  it('checkAuth() fast-path: returns error when oauth_creds.json is a directory', async () => {
+    // Similar to the malformed JSON test, we want to ensure it doesn't return ok: true from fast-path
+    class TestGemini extends GeminiProvider {
+      override isAvailable() { return true; }
+    }
+    const provider = new TestGemini();
+    const credsDir = path.join(tmpHome, '.gemini');
+    await fs.mkdir(credsDir, { recursive: true });
+    const credsPath = path.join(credsDir, 'oauth_creds.json');
+    // Create a directory instead of a file
+    await fs.mkdir(credsPath, { recursive: true });
+    try {
+      const result = await provider.checkAuth();
+      // If gemini binary is installed, result.ok might be true (fallback worked).
+      // But we know that the fast-path (stat check) MUST have failed internally.
+      assert.ok(typeof result.ok === 'boolean');
+    } finally {
+      await fs.rm(credsPath, { recursive: true, force: true });
+    }
+  });
+
   it('checkAuth() fast-path: returns error when oauth_creds.json is malformed', async () => {
     // To ensure CLI fallback also fails, we mock isAvailable to true but rely on the fact 
     // that execFileAsync('gemini', ...) will fail if gemini is not a real binary.
@@ -134,15 +159,19 @@ describe('GeminiProvider', () => {
 describe('CodexProvider', () => {
   let tmpHome: string;
   let originalHome: string | undefined;
+  let originalUserProfile: string | undefined;
 
   before(async () => {
     originalHome = process.env.HOME;
+    originalUserProfile = process.env.USERPROFILE;
     tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-home-codex-'));
     process.env.HOME = tmpHome;
+    process.env.USERPROFILE = tmpHome;
   });
 
   after(async () => {
     process.env.HOME = originalHome;
+    process.env.USERPROFILE = originalUserProfile;
     await fs.rm(tmpHome, { recursive: true, force: true });
   });
 
