@@ -213,7 +213,10 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
     }
   }
 
-  console.log('\nNext step: aco provider setup gemini');
+  console.log('\nNext steps:');
+  for (const key of providerRegistry.keys()) {
+    console.log(`  aco provider setup ${key}`);
+  }
 }
 
 export async function providerSetup(name: string): Promise<void> {
