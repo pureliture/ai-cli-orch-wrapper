@@ -50,7 +50,10 @@ export class CodexProvider implements IProvider {
         }
         return { ok: true };
       } catch (e) {
-        console.warn('Failed to parse Codex auth file:', e instanceof Error ? e.message : String(e));
+        console.warn(
+          'Failed to parse Codex auth file:',
+          e instanceof Error ? e.message : String(e)
+        );
         // Fall back to CLI check
       }
     } catch {

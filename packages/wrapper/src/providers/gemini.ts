@@ -40,7 +40,10 @@ export class GeminiProvider implements IProvider {
         JSON.parse(raw);
         return { ok: true };
       } catch (e) {
-        console.warn('Failed to parse Gemini auth file:', e instanceof Error ? e.message : String(e));
+        console.warn(
+          'Failed to parse Gemini auth file:',
+          e instanceof Error ? e.message : String(e)
+        );
         // Fall back to CLI check
       }
     } catch {

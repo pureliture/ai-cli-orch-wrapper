@@ -61,7 +61,11 @@ describe('GeminiProvider', () => {
   });
 
   it('checkAuth() fast-path: returns ok when GEMINI_API_KEY is set', async () => {
-    class MockGemini extends GeminiProvider { override isAvailable() { return true; } }
+    class MockGemini extends GeminiProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
     const provider = new MockGemini();
     const originalEnv = process.env.GEMINI_API_KEY;
     process.env.GEMINI_API_KEY = 'test-key';
@@ -78,7 +82,11 @@ describe('GeminiProvider', () => {
   });
 
   it('checkAuth() fast-path: returns ok when GOOGLE_API_KEY is set', async () => {
-    class MockGemini extends GeminiProvider { override isAvailable() { return true; } }
+    class MockGemini extends GeminiProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
     const provider = new MockGemini();
     const originalEnv = process.env.GOOGLE_API_KEY;
     process.env.GOOGLE_API_KEY = 'test-key';
@@ -95,7 +103,11 @@ describe('GeminiProvider', () => {
   });
 
   it('checkAuth() fast-path: returns ok when oauth_creds.json exists', async () => {
-    class MockGemini extends GeminiProvider { override isAvailable() { return true; } }
+    class MockGemini extends GeminiProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
     const provider = new MockGemini();
     const credsDir = path.join(tmpHome, '.gemini');
     await fs.mkdir(credsDir, { recursive: true });
@@ -110,7 +122,11 @@ describe('GeminiProvider', () => {
   });
 
   it('checkAuth() fast-path: returns error when oauth_creds.json is a directory', async () => {
-    class MockGemini extends GeminiProvider { override isAvailable() { return true; } }
+    class MockGemini extends GeminiProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
     const provider = new MockGemini();
     const credsDir = path.join(tmpHome, '.gemini');
     await fs.mkdir(credsDir, { recursive: true });
@@ -129,13 +145,17 @@ describe('GeminiProvider', () => {
   });
 
   it('checkAuth() fast-path: returns error when oauth_creds.json is malformed', async () => {
-    class MockGemini extends GeminiProvider { override isAvailable() { return true; } }
+    class MockGemini extends GeminiProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
     const provider = new MockGemini();
     const credsDir = path.join(tmpHome, '.gemini');
     await fs.mkdir(credsDir, { recursive: true });
     const credsPath = path.join(credsDir, 'oauth_creds.json');
     await fs.writeFile(credsPath, 'not-json');
-    
+
     const originalPath = process.env.PATH;
     process.env.PATH = '';
     try {
@@ -202,7 +222,11 @@ describe('CodexProvider', () => {
   });
 
   it('checkAuth() fast-path: returns ok when OPENAI_API_KEY is set', async () => {
-    class MockCodex extends CodexProvider { override isAvailable() { return true; } }
+    class MockCodex extends CodexProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
     const provider = new MockCodex();
     const originalEnv = process.env.OPENAI_API_KEY;
     process.env.OPENAI_API_KEY = 'test-key';
@@ -219,7 +243,11 @@ describe('CodexProvider', () => {
   });
 
   it('checkAuth() fast-path: returns ok when valid auth.json exists', async () => {
-    class MockCodex extends CodexProvider { override isAvailable() { return true; } }
+    class MockCodex extends CodexProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
     const provider = new MockCodex();
     const authDir = path.join(tmpHome, '.codex');
     await fs.mkdir(authDir, { recursive: true });
@@ -236,7 +264,11 @@ describe('CodexProvider', () => {
   });
 
   it('checkAuth() fast-path: returns error when auth.json is expired', async () => {
-    class MockCodex extends CodexProvider { override isAvailable() { return true; } }
+    class MockCodex extends CodexProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
     const provider = new MockCodex();
     const authDir = path.join(tmpHome, '.codex');
     await fs.mkdir(authDir, { recursive: true });
@@ -253,13 +285,17 @@ describe('CodexProvider', () => {
   });
 
   it('checkAuth() fast-path: returns error when auth.json is malformed', async () => {
-    class MockCodex extends CodexProvider { override isAvailable() { return true; } }
+    class MockCodex extends CodexProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
     const provider = new MockCodex();
     const authDir = path.join(tmpHome, '.codex');
     await fs.mkdir(authDir, { recursive: true });
     const authPath = path.join(authDir, 'auth.json');
     await fs.writeFile(authPath, 'not-json');
-    
+
     const originalPath = process.env.PATH;
     process.env.PATH = '';
     try {
