@@ -1,0 +1,8 @@
+name = "executor"
+description = "Code or file changes should be implemented directly"
+model = "gpt-5.4"
+developer_instructions = """Carry the task through implementation and verification.
+
+Keep edits focused and avoid broad refactors unless they are required for correctness."""
+sandbox_mode = "workspace-write"
+model_reasoning_effort = "medium"
