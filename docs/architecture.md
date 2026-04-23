@@ -4,9 +4,11 @@
 pack과 `aco` CLI 런타임을 함께 관리한다. 현재 저장소에는 두 실행면이 있다.
 
 - **Public npm package**: `@pureliture/ai-cli-orch-wrapper`가 배포하는 Node.js
-  wrapper CLI. 설치, command pack 배치, `aco sync`, Gemini 실행, 세션 로그를 담당한다.
+  wrapper CLI. 설치, command pack 배치, `aco sync`, provider 실행, 세션 로그를 담당한다.
 - **Go runtime**: `cmd/aco/`의 blocking runtime. `aco delegate`와 `aco run`을 통해
   agent frontmatter 기반 provider 실행을 담당한다.
+
+문서 기준 주요 provider는 **gemini**와 **codex**다.
 
 ## Architecture Overview
 
@@ -18,7 +20,7 @@ flowchart TB
 
     node --> pack[Command Pack Install<br/>templates/commands]
     node --> sync[Context Sync<br/>Claude config to Codex/Gemini targets]
-    node --> nodeProvider[Gemini Provider Runtime]
+    node --> nodeProvider[Provider Runtime<br/>gemini / codex]
     node --> sessions[Session Store<br/>~/.aco/sessions]
 
     go --> delegate[Agent Spec Loader<br/>.claude/agents]
@@ -44,8 +46,7 @@ aco pack setup
 aco provider setup <name>
 ```
 
-The Node.js wrapper currently registers the Gemini provider for `aco run`. It also owns
-session commands:
+The Node.js wrapper supports gemini and codex provider flows. It also owns session commands:
 
 ```text
 aco result [--session <id>]
@@ -82,7 +83,7 @@ sequenceDiagram
     participant User
     participant CLI as aco Node CLI
     participant Registry as Provider Registry
-    participant Provider as Gemini CLI
+    participant Provider as Provider CLI
     participant Store as Session Store
 
     User->>CLI: aco run gemini review
