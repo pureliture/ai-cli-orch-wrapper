@@ -23,7 +23,11 @@ const execFileAsync = promisify(execFile);
 
 const VERSION = loadVersion();
 const EXIT_ERROR = 1;
-const VALID_PERMISSION_PROFILES: PermissionProfile[] = ['default', 'restricted', 'unrestricted'];
+const VALID_PERMISSION_PROFILES: PermissionProfile[] = [
+  'default',
+  'restricted',
+  'unrestricted',
+];
 
 async function main(): Promise<void> {
   const [, , subcommand, ...rest] = process.argv;
@@ -145,7 +149,8 @@ async function cmdRun(args: string[]): Promise<void> {
     process.exit(EXIT_ERROR);
   }
 
-  const permissionProfile = parseFlag<PermissionProfile>(args, '--permission-profile') ?? 'default';
+  const permissionProfile =
+    parseFlag<PermissionProfile>(args, '--permission-profile') ?? 'default';
   if (!VALID_PERMISSION_PROFILES.includes(permissionProfile)) {
     console.error(
       `Invalid --permission-profile '${permissionProfile}'. Valid values: default|restricted|unrestricted`
@@ -184,7 +189,12 @@ async function cmdRun(args: string[]): Promise<void> {
     prompt = await readFile(globalPromptPath, 'utf8');
   }
 
-  const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
+  const session = await sessionStore.create(
+    providerKey,
+    command,
+    undefined,
+    permissionProfile
+  );
   const tee = sessionStore.createOutputTee(session.id);
   let hasOutput = false;
   let runError: unknown;
@@ -298,6 +308,7 @@ async function cmdCancel(args: string[]): Promise<void> {
     try {
       process.kill(record.pid, 'SIGTERM');
     } catch {
+      // The process may have already exited.
     }
   }
 
