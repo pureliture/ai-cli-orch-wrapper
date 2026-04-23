@@ -1,8 +1,8 @@
 # ai-cli-orch-wrapper
 
-Gemini CLI용 Claude Code command pack을 설치하고 실행하는 `aco` CLI 패키지입니다.
+Claude Code 하네스를 외부 AI CLI와 연결하기 위한 `aco` CLI와 관련 자산을 함께 관리하는 저장소입니다.
 
-상단은 빠른 설치와 운영 흐름을 안내하고, 하단은 이 저장소의 런타임 구조와 하네스 구성을 빠르게 파악할 수 있도록 핵심 설계 요약을 제공합니다.
+상단은 빠른 설치와 운영 흐름을 안내하고, 아래로 갈수록 런타임 구조와 하네스 구성, context sync 방식이 드러나도록 문서를 구성했습니다.
 
 ## 설치
 
