@@ -37,4 +37,5 @@
 ## 7. Validation Follow-up
 
 - [x] 7.1 Distinguish source implementation sync commands from currently published npm CLI behavior after `npx ... sync --check` validation failed
-- [x] 7.2 Add a narrow local `js-yaml` module declaration and `.gitignore` exception so source build is not blocked by missing declaration resolution
+- [x] 7.2 Configure TypeScript to use official `@types/js-yaml` instead of a custom local declaration
+- [x] 7.3 Apply review feedback to keep README sync command guidance on the concrete source-build command path

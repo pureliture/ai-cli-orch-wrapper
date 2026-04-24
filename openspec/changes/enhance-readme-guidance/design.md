@@ -96,7 +96,7 @@ Why not chosen: README guidance is not strong enough to steer Codex during commi
 - [New top-level section creep] → Require a concrete unresolved gap before adding any new top-level heading.
 - [Troubleshooting duplicates runbook] → Cover durable first-response steps only and link to `docs/guides/runbook.md`.
 - [README overclaims public npm behavior] → Separate source implementation commands from public release commands when validation shows package lag.
-- [Source build can fail before sync validation] → Add a narrow local module declaration when dependency types are unavailable to the compiler in the current workspace, and allow source-owned `src/types/**/*.d.ts` declarations through `.gitignore`.
+- [Source build can fail before sync validation] → Use the official `@types/js-yaml` package already declared in package metadata and make TypeScript include that type package explicitly.
 - [AI contributor trailers may not map to GitHub accounts] → Require `Co-authored-by` when a GitHub-recognized identity exists and always include explicit `AI-CLI` and `AI-Model` trailers as a fallback record.
 
 ## Migration Plan
@@ -106,7 +106,7 @@ Why not chosen: README guidance is not strong enough to steer Codex during commi
 3. Add one compact architecture diagram in `Architecture at a Glance`.
 4. Expand troubleshooting and documentation navigation without duplicating deep docs.
 5. Add commit template and AI commit prompt, then reference them from README and repo instruction surfaces.
-6. Fix narrow validation blockers that prevent source-build sync verification.
+6. Fix narrow validation blockers that prevent source-build sync verification without adding custom library type declarations.
 7. Review rendered Markdown quality as part of implementation.
 
 Rollback is clean: revert the README edit and this OpenSpec change directory.

@@ -115,4 +115,4 @@ The change SHALL keep the local source-build validation path usable when README 
 
 #### Scenario: Source-build sync path is documented
 - **WHEN** the README points readers to `node packages/wrapper/dist/cli.js sync --check`
-- **THEN** the wrapper package TypeScript build succeeds without missing declaration errors for `js-yaml`
+- **THEN** the wrapper package TypeScript build uses the official `@types/js-yaml` package instead of a custom local `js-yaml` declaration
