@@ -7,6 +7,7 @@ dist/
 # Compiled artifacts that may appear in src/ if outDir is not honoured
 packages/*/src/**/*.js
 packages/*/src/**/*.d.ts
+!packages/*/src/types/**/*.d.ts
 packages/*/src/**/*.js.map
 packages/*/src/**/*.d.ts.map
 

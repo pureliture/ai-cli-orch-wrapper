@@ -51,6 +51,17 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 - Shared skills live in `.agents/skills/<skill>/`; do not hand-maintain `.codex/skills/` or `.gemini/skills/` copies unless the runtime requirement is proven.
 - Use `aco sync --check` to detect stale generated targets and `aco sync --force` only when overwriting managed drift is intentional.
 
+## Commit Message Policy
+
+Use the repository commit template at `.gitmessage` and the Korean commit-writing prompt at `docs/guides/commit-message-prompt.md` whenever an AI assistant drafts or creates commits.
+
+- Commit messages must use a title plus body format.
+- The title must follow conventional commit style such as `fix(tests): replace echo pipeline with herestrings`.
+- The body must explain the why, what changed, and affected files or areas in Korean by default.
+- When Codex creates a commit, it must follow `docs/guides/commit-message-prompt.md`.
+- Commit messages must include contributor trailers for every AI CLI and model used in development so GitHub Contributors can show the CLI/model identities where GitHub recognizes them.
+- If a CLI or model has no GitHub-recognized identity, still include explicit `AI-CLI:` and `AI-Model:` trailers in addition to any available `Co-authored-by:` trailers.
+
 ## Validation
 
 Common checks:
