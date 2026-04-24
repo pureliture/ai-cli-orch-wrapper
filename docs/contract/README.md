@@ -8,8 +8,8 @@
 
 | 문서 | 범위 | 상태 |
 |------|------|------|
-| [process-execution-contract.md](process-execution-contract.md) | `aco run`/`aco delegate`의 프로세스 생성, 스트리밍, 취소, 종료 | Normative |
-| [go-node-boundary.md](go-node-boundary.md) | Go 바이너리와 Node.js 래퍼 간 책임 경계 | Normative |
+| [process-execution-contract.md](process-execution-contract.md) | `aco run`/`aco delegate`의 프로세스 생성, 스트리밍, 취소, 종료 | 규범 |
+| [go-node-boundary.md](go-node-boundary.md) | Go 바이너리와 Node.js 래퍼 간 책임 경계 | 규범 |
 
 ## 아카이브
 

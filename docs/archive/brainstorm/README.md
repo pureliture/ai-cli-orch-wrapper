@@ -23,7 +23,7 @@
 - CC Agent tool로 invoke하면 → peer agent response로 도달 → native 느낌
 - binary 변경이 아니라 **invocation layer** 변경이 핵심
 
-### 2. Blocking = Substitutability Guarantee
+### 2. Blocking = 대체 가능성 보장
 
 > async 상태 삭제가 단순화가 아니라 CC와의 **substitutability guarantee**임
 
@@ -102,7 +102,7 @@ CC orchestrator
 ```
 research  → gemini  (long-context synthesis, broad analysis)
 execute   → codex   (repo-aware editing, shell actions)
-review    → gemini  (broad critique) or codex (patch-level)
+review    → gemini  (broad critique) 또는 codex (patch-level)
 ```
 
 - `aco run`은 user-facing surface가 아닌 implementation detail
@@ -151,14 +151,14 @@ aco run --role research --input "..."    // aco가 provider 선택
 // 내부 routing
 research  → gemini
 execute   → codex
-review    → gemini (기본) or codex (--patch-level)
+review    → gemini (기본) 또는 codex (--patch-level)
 ```
 
 - role → provider mapping이 aco 내부에 캡슐화
 - provider 교체 = aco 바이너리 변경만 필요, agent 파일/template 불변
 - `Scorecard{ CodeEditDepth, NeedLongContext, ... }`로 동적 결정 (향후 확장)
 
-### F. json-envelope Output
+### F. json-envelope 출력
 
 **출처**: Session 2, Claude
 

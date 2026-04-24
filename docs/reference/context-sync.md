@@ -1,91 +1,91 @@
-# Context Sync
+# Context 동기화
 
-`aco sync` synchronizes Claude Code project configuration into Codex and Gemini project-level configuration.
+`aco sync`는 Claude Code 프로젝트 설정을 Codex와 Gemini의 프로젝트 단위 설정으로 동기화한다.
 
-## Supported CLI Surfaces (as of 2026-04-22)
+## 지원되는 CLI 표면 (2026-04-22 기준)
 
-| Surface | Codex CLI 0.122.0 | Gemini CLI 0.38.2 |
+| 표면 | Codex CLI 0.122.0 | Gemini CLI 0.38.2 |
 |---------|-------------------|-------------------|
-| Project guidance | `AGENTS.md` | `GEMINI.md` |
+| 프로젝트 지침 | `AGENTS.md` | `GEMINI.md` |
 | Skills | `.agents/skills/<skill>/SKILL.md` | `.agents/skills/<skill>/SKILL.md` |
 | Custom agents | `.codex/agents/*.toml` | `.gemini/agents/*.md` |
 | Hooks | `.codex/hooks.json` + `codex_hooks` feature flag | `.gemini/settings.json` hooks |
-| Non-interactive prompt | `codex exec [PROMPT]` | `gemini --prompt <prompt>` |
-| Reasoning effort CLI flag | **not supported** | **not supported** |
+| 비대화형 prompt | `codex exec [PROMPT]` | `gemini --prompt <prompt>` |
+| Reasoning effort CLI flag | **지원 안 함** | **지원 안 함** |
 
-Both Codex and Gemini use `.agents/skills/<skill>/` as the shared skill directory. `aco sync` copies `.claude/skills/<skill>/` to `.agents/skills/<skill>/` recursively. Do not use `.codex/skills` or `.gemini/skills` directly — they are not the shared surface.
+Codex와 Gemini는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사용한다. `aco sync`는 `.claude/skills/<skill>/`을 `.agents/skills/<skill>/`로 재귀 복사한다. `.codex/skills` 또는 `.gemini/skills`를 직접 사용하지 않는다. 이 경로들은 공유 표면이 아니다.
 
-## Source Discovery Order
+## Source 탐색 순서
 
-`aco sync` reads source files in this order:
+`aco sync`는 source 파일을 다음 순서로 읽는다:
 
 1. `CLAUDE.md` at repository root
 2. `.claude/CLAUDE.md` (optional)
-3. `.claude/rules/*.md` sorted lexicographically (optional)
+3. `.claude/rules/*.md` 사전순 정렬 (선택)
 4. `.claude/skills/*/SKILL.md` skill directories
 5. `.claude/agents/*.md` agent files
-6. `.claude/settings.json` hooks (`.claude/hooks.json` is accepted as legacy fallback only)
+6. `.claude/settings.json` hooks (`.claude/hooks.json`는 legacy fallback으로만 허용)
 
-## Lossy Conversion Warnings
+## 손실 변환 경고
 
-Not all Claude Code configuration can be represented in Codex or Gemini. The following fields are dropped or converted with semantic loss. Warnings are recorded in `.aco/sync-manifest.json`.
+모든 Claude Code 설정을 Codex 또는 Gemini에 그대로 표현할 수 있는 것은 아니다. 다음 필드는 삭제되거나 의미 손실이 있는 형태로 변환된다. 경고는 `.aco/sync-manifest.json`에 기록된다.
 
 ### Reasoning Effort
 
-`reasoningEffort` in `.claude/agents/*.md` is a vendor-neutral expression of intent. Neither Codex CLI nor Gemini CLI supports a `--reasoning-effort` runtime flag.
+`.claude/agents/*.md`의 `reasoningEffort`는 provider 중립적인 의도 표현이다. Codex CLI와 Gemini CLI 모두 `--reasoning-effort` 런타임 flag를 지원하지 않는다.
 
-- **Codex**: `model_reasoning_effort` is written to `.codex/agents/*.toml` only when the field is present in the agent spec. This is a config-level field, not a runtime CLI flag.
-- **Gemini**: `reasoningEffort` is omitted entirely. A manifest warning is recorded.
-- **Runtime**: `aco delegate` never passes `--reasoning-effort` to either provider CLI.
+- **Codex**: agent spec에 필드가 있을 때만 `model_reasoning_effort`를 `.codex/agents/*.toml`에 기록한다. 이는 설정 수준 필드이며 런타임 CLI flag가 아니다.
+- **Gemini**: `reasoningEffort`는 완전히 생략한다. manifest 경고를 기록한다.
+- **Runtime**: `aco delegate`는 어떤 provider CLI에도 `--reasoning-effort`를 전달하지 않는다.
 
-### Gemini Read-Only Enforcement
+### Gemini Read-Only 강제
 
-`workspaceMode: read-only` and `permissionProfile: restricted` can be expressed in Codex as `sandbox_mode = "read-only"`. In Gemini, only best-effort tool restrictions are available. A manifest warning is recorded indicating that read-only enforcement is not fully equivalent.
+`workspaceMode: read-only`와 `permissionProfile: restricted`는 Codex에서 `sandbox_mode = "read-only"`로 표현할 수 있다. Gemini에서는 best-effort 수준의 tool restriction만 가능하다. read-only 강제가 완전히 동등하지 않다는 manifest 경고를 기록한다.
 
-### Hook Semantics
+### Hook 시맨틱
 
-Claude Code supports `async: true` for hooks that fire without blocking the agent. Codex and Gemini hooks run synchronously inside the agent loop. When a Claude hook has `async: true`, a warning is recorded and the generated target hook does not claim fire-and-forget semantics.
+Claude Code는 agent를 차단하지 않고 실행되는 hook에 `async: true`를 지원한다. Codex와 Gemini hook은 agent loop 안에서 동기적으로 실행된다. Claude hook에 `async: true`가 있으면 경고를 기록하고, 생성된 대상 hook은 fire-and-forget 시맨틱을 주장하지 않는다.
 
-Unsupported hook events (events not present in the target CLI surface) are skipped and recorded as warnings.
+지원하지 않는 hook event, 즉 대상 CLI 표면에 없는 event는 건너뛰고 경고로 기록한다.
 
-Timeout units differ: Claude Code hooks use seconds; Gemini hooks use milliseconds. `aco sync` converts automatically.
+타임아웃 단위는 서로 다르다. Claude Code hook은 초를 사용하고 Gemini hook은 밀리초를 사용한다. `aco sync`가 자동으로 변환한다.
 
-## Usage
+## 사용법
 
 ```bash
-# Sync Claude context to Codex and Gemini targets
+# Claude context를 Codex와 Gemini 대상으로 동기화
 aco sync
 
-# Check if sync is current (exits 1 if stale)
+# 동기화가 최신인지 확인 (stale이면 1로 종료)
 aco sync --check
 
-# Preview changes without writing
+# 파일에 쓰지 않고 변경 내용 미리보기
 aco sync --dry-run
 
-# Overwrite manifest-owned generated targets that have drifted
+# drift가 있는 manifest 소유 생성 대상을 덮어쓰기
 aco sync --force
 ```
 
-## Generated Files
+## 생성 파일
 
-`aco sync` manages the following outputs:
+`aco sync`는 다음 산출물을 관리한다:
 
-| Output | Type | Description |
+| 산출물 | 유형 | 설명 |
 |--------|------|-------------|
-| `AGENTS.md` | Managed block | Codex project guidance from Claude context |
-| `GEMINI.md` | Managed block | Gemini project guidance from Claude context |
-| `.agents/skills/<skill>/` | Directory | Skill directories copied from `.claude/skills/` |
-| `.codex/agents/*.toml` | File | Codex custom agent definitions |
-| `.codex/hooks.json` | File | Codex hook configuration |
-| `.codex/config.toml` | Managed block | Codex feature flags (`codex_hooks = true`) |
-| `.gemini/agents/*.md` | File | Gemini custom agent definitions |
-| `.gemini/settings.json` | File | Gemini settings with hook entries |
-| `.aco/sync-manifest.json` | File | Sync ownership manifest with hashes and warnings |
+| `AGENTS.md` | 관리 block | Claude context에서 생성한 Codex 프로젝트 지침 |
+| `GEMINI.md` | 관리 block | Claude context에서 생성한 Gemini 프로젝트 지침 |
+| `.agents/skills/<skill>/` | 디렉터리 | `.claude/skills/`에서 복사한 skill 디렉터리 |
+| `.codex/agents/*.toml` | 파일 | Codex custom agent 정의 |
+| `.codex/hooks.json` | 파일 | Codex hook 설정 |
+| `.codex/config.toml` | 관리 block | Codex feature flag (`codex_hooks = true`) |
+| `.gemini/agents/*.md` | 파일 | Gemini custom agent 정의 |
+| `.gemini/settings.json` | 파일 | hook entry가 포함된 Gemini 설정 |
+| `.aco/sync-manifest.json` | 파일 | 해시와 경고를 담은 sync 소유권 manifest |
 
-## Manifest Conflict Detection
+## Manifest 충돌 감지
 
-`aco sync` tracks generated file hashes in `.aco/sync-manifest.json`. If a manifest-owned target has been manually modified since the last sync, `aco sync` refuses to overwrite it without `--force`. Run `aco sync --check` to inspect stale or drifted targets.
+`aco sync`는 생성 파일 해시를 `.aco/sync-manifest.json`에 추적한다. 마지막 sync 이후 manifest 소유 대상이 수동으로 수정되었다면, `aco sync`는 `--force` 없이 덮어쓰지 않는다. stale 또는 drift가 있는 대상을 확인하려면 `aco sync --check`를 실행한다.
 
-## Pack Setup Integration
+## Pack Setup 통합
 
-`aco pack setup` automatically runs `aco sync` after installing command and prompt templates. Sync warnings are surfaced in setup output. Fatal sync conflicts (unowned target drift) cause setup to fail before writing, with instructions to resolve using `aco sync --check` or `aco sync --force`.
+`aco pack setup`은 command와 prompt 템플릿을 설치한 뒤 자동으로 `aco sync`를 실행한다. sync 경고는 setup 출력에 표시된다. 치명적인 sync 충돌, 즉 소유권이 없는 대상 drift가 있으면 파일 쓰기 전에 setup이 실패하며, `aco sync --check` 또는 `aco sync --force`로 해결하라는 안내를 출력한다.

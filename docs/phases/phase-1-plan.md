@@ -1,4 +1,4 @@
-# Phase 1 Plan — 문서 품질 개선 (기준선 확보)
+# Phase 1 계획 — 문서 품질 개선 (기준선 확보)
 
 **생성 이슈:** #62
 
@@ -54,7 +54,7 @@ Phase 1은 이 기준선을 먼저 확보하는 것이 목표.
 **개선 방향 (ccg-workflow-restore `index.md` 스타일):**
 
 ````markdown
-## Quick Start
+## 빠른 시작
 
 ```bash
 # 설치
@@ -99,7 +99,7 @@ aco sync
 **개선 방향 (Mermaid block diagram):**
 
 ```markdown
-## Architecture Overview
+## 아키텍처 개요
 
 ```mermaid
 block-beta
@@ -129,7 +129,7 @@ block-beta
 - `provider: gemini` → 前端 태스크 → Gemini CLI
 - `provider: claudeaude` → 오케스트레이션/코드 작성 → Claude Code
 
-## Session Lifecycle
+## 세션 생명주기
 
 ```mermaid
 sequenceDiagram
@@ -149,7 +149,7 @@ sequenceDiagram
   CLI-->>User: display result
 ```
 
-## Repository Layout
+## 저장소 구조
 
 ```mermaid
 block-beta
@@ -169,8 +169,8 @@ block-beta
 
 | 디렉터리              | 용도                                                |
 | --------------------- | --------------------------------------------------- |
-| `packages/wrapper/`   | public package (`@pureliture/ai-cli-orch-wrapper`)  |
-| `packages/installer/` | 내부 이전용 (not public)                            |
+| `packages/wrapper/`   | 공개 패키지 (`@pureliture/ai-cli-orch-wrapper`)     |
+| `packages/installer/` | 내부 이전용 (공개 대상 아님)                        |
 | `templates/commands/` | `.claude/commands/`로 복사 (슬래시 커맨드)          |
 | `templates/prompts/`  | `.claude/aco/prompts/`로 복사 (provider별 프롬프트) |
 
@@ -276,17 +276,17 @@ model: codex-sonnet
 
 ---
 
-## Scope (체크리스트)
+## 범위 (체크리스트)
 
 - [x] `docs/README.md`
-  - Quick Start 섹션 추가
+  - 빠른 시작 섹션 추가
   - 사용자/운영자 통합 진입점 제공 (기여자 내용 제외)
   - Phase 2·3 잔여 명시
 
 - [x] `docs/architecture.md`
   - Mermaid block diagram (아키텍처 전체 구조)
-  - Mermaid sequence diagram (Session lifecycle)
-  - Mermaid block diagram (Repository layout)
+  - Mermaid sequence diagram (세션 생명주기)
+  - Mermaid block diagram (저장소 구조)
 
 - [x] `docs/guides/github-workflow.md`
   - Claude Code 하네스 디렉터리 구조
@@ -294,12 +294,12 @@ model: codex-sonnet
   - CI/CD 워크플로우 다이어그램
   - 에이전트 설정 예시
 
-## Out of Scope
+## 제외 범위
 
 - 기여자 가이드 · CONTRIBUTING.md 개선
 - VitePress 도입 (Phase 3)
 
-## Acceptance Criteria
+## 인수 기준
 
 - [x] `docs/architecture.md`에 Mermaid 다이어그램 1개 이상 포함
 - [x] `docs/guides/github-workflow.md`에 슬래시 커맨드 인벤토리 포함
