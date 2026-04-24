@@ -8,9 +8,9 @@
 
 ## 1. 개요
 
-이 문서는 `cmd/aco` Go runtime의 프로세스 실행 계층이 외부 프로바이더 바이너리를 어떻게
-생성하고, 제어하고, 종료하는지를 규정한다. 계약의 목적은 외부 기여자가 Go runtime의 런타임
-동작을 코드 읽기 없이 이해할 수 있도록 하는 것이다.
+이 문서는 `cmd/aco`에 구현된 Go runtime의 프로세스 실행 계층이 외부 프로바이더 바이너리를
+어떻게 생성하고, 제어하고, 종료하는지를 규정한다. 계약의 목적은 외부 기여자가 Go runtime의
+런타임 동작을 코드 읽기 없이 이해할 수 있도록 하는 것이다.
 
 이 계약은 `packages/wrapper`의 public npm `aco run`, `aco status`, `aco result`, `aco cancel`
 경로에는 그대로 적용되지 않는다. public npm CLI의 session-aware 실행은 Node wrapper 계약과
@@ -28,7 +28,7 @@ Go runtime의 `aco run`과 `aco delegate`는 동기(synchronous)이고 차단(bl
 호출자 (Bash tool, Claude Code Agent tool)
   │
   ▼
-cmd/aco run <provider> <command>   ← 프로세스 종료까지 차단
+aco run <provider> <command>   ← 프로세스 종료까지 차단
   │
   ▼
 외부 프로바이더 바이너리 (gemini, codex, 등)
