@@ -28,6 +28,7 @@ The remaining design problem is not topic discovery. It is presentation and oper
 - Reflect the current README's new evaluator-facing docs links and planned-work framing.
 - Make the README explicit that this repository uses OpenSpec proposal/design/spec/task artifacts as the default change workflow.
 - Add a durable commit message template and Korean commit prompt that Codex can follow when creating commits.
+- Add a shared Korean code review guideline section to AI connector instruction surfaces so reviews focus on correctness, security, runtime behavior, compatibility, CI breakage, and actionable validation.
 - Keep README as a gateway to deeper docs, not a replacement for them.
 
 **Non-Goals:**
@@ -87,6 +88,13 @@ The repository will include `.gitmessage` as the concrete Git template and `docs
 
 Alternative considered: document commit style only in README.
 Why not chosen: README guidance is not strong enough to steer Codex during commit creation, and Git itself needs a template file that users can configure with `git config commit.template .gitmessage`.
+
+### Decision: Put review guidelines in connector instruction surfaces
+
+`AGENTS.md` and `GEMINI.md` will include the review severity rubric, focus areas, and output expectations so Codex and Gemini can use the same review bar when producing GitHub review comments.
+
+Alternative considered: keep review rules only in a docs guide.
+Why not chosen: review behavior must be visible to the AI connector at review time, not only discoverable in reference documentation.
 
 ## Risks / Trade-offs
 

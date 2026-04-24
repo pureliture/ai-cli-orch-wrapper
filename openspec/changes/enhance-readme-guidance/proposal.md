@@ -16,6 +16,7 @@ This change makes the README more operational and easier to scan in rendered Mar
 - State that the project is developed through the OpenSpec change workflow.
 - Add a repository commit message template and Korean commit-writing prompt for AI-assisted commits.
 - Instruct Codex to follow the commit prompt and include AI CLI/model contributor trailers when drafting or creating commits.
+- Add Korean code review guidelines to AI connector instruction surfaces so Codex and Gemini prioritize P0/P1 findings and include impact, rationale, fix direction, and validation guidance.
 - Treat Markdown rendering quality as part of the work: heading hierarchy, tables, fenced code blocks, diagrams, link text, and scan order should render cleanly on GitHub and local Markdown viewers.
 - Avoid adding dedicated top-level sections for OpenSpec workflow, provider model, or ccg-workflow compatibility.
 
@@ -28,7 +29,7 @@ This change makes the README more operational and easier to scan in rendered Mar
 
 ## Impact
 
-- Affected files for implementation: `README.md`, `CLAUDE.md`, `AGENTS.md`, `.gitmessage`, `docs/guides/commit-message-prompt.md`
+- Affected files for implementation: `README.md`, `CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.gitmessage`, `docs/guides/commit-message-prompt.md`
 - Affected planning artifacts: `openspec/changes/enhance-readme-guidance/`
 - Relevant documentation links: `docs/case-study.md`, `docs/roadmap.md`, `docs/pr-implementation-plan.md`, `docs/architecture.md`, `docs/reference/context-sync.md`, `docs/guides/github-workflow.md`, `docs/guides/contributing.md`, `docs/guides/runbook.md`
 - No runtime APIs, package exports, dependencies, generated harness outputs, or CLI behavior change.

@@ -39,3 +39,9 @@
 - [x] 7.1 Distinguish source implementation sync commands from currently published npm CLI behavior after `npx ... sync --check` validation failed
 - [x] 7.2 Configure TypeScript to use official `@types/js-yaml` instead of a custom local declaration
 - [x] 7.3 Apply review feedback to keep README sync command guidance on the concrete source-build command path
+
+## 8. Review Guidelines
+
+- [x] 8.1 Add Korean code review guidelines to `AGENTS.md` for Codex review behavior
+- [x] 8.2 Add `GEMINI.md` with matching Korean code review guidelines for Gemini review behavior
+- [x] 8.3 Update OpenSpec artifacts to include the AI connector review guideline requirement

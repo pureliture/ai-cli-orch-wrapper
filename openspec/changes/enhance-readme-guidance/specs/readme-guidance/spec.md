@@ -99,6 +99,17 @@ The repository SHALL provide a Git commit message template and a Korean AI commi
 - **WHEN** an AI CLI or model was used to develop the change
 - **THEN** the commit prompt requires contributor trailers for the AI CLI and model, including `AI-CLI` and `AI-Model` fallback trailers when GitHub-recognized identities are unavailable
 
+### Requirement: Provide AI code review guidelines
+The repository SHALL provide Korean code review guidelines in AI connector instruction surfaces.
+
+#### Scenario: Codex performs code review
+- **WHEN** Codex reviews code in this repository
+- **THEN** `AGENTS.md` instructs it to write review comments in Korean by default, prioritize P0/P1 correctness, security, runtime behavior, compatibility, and CI breakage findings, and include location, impact, rationale, fix direction, and validation method
+
+#### Scenario: Gemini performs code review
+- **WHEN** Gemini reviews code in this repository
+- **THEN** `GEMINI.md` instructs it to use the same severity rubric, review focus, and output expectations
+
 ### Requirement: Treat Markdown rendering as acceptance criteria
 The README enhancement SHALL account for rendered Markdown quality, not only raw text content.
 
