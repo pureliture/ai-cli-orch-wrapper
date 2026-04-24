@@ -36,26 +36,28 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. Derive the PR 
    - Keep the title under 72 characters when practical.
 
 5. Construct a substantive PR body and write it to a temporary file:
+   - Write PR body prose and checklist item descriptions in Korean by default.
+   - Keep `Closes #N`, conventional commit title text, labels, file paths, command names, and established Markdown headings such as `What`, `Why`, `Changes`, and `Checklist` in English.
    ```markdown
    Closes #<N>
 
    ## What
 
-   <2-4 concrete sentences naming changed files, commands, or behavior.>
+   <변경된 파일, 명령, 동작을 구체적으로 언급하는 한국어 2-4문장.>
 
    ## Why
 
-   <1-3 sentences explaining the motivation from the issue and repository context.>
+   <issue와 저장소 맥락에서 변경 동기를 설명하는 한국어 1-3문장.>
 
    ## Changes
 
-   - <Verb> <concrete logical change>
+   - <구체적인 논리 단위 변경 사항>
 
    ## Checklist
 
-   - [ ] Relevant tests or smoke checks pass
-   - [ ] Docs updated if behavior changed
-   - [ ] Project status and labels verified
+   - [ ] 관련 테스트 또는 smoke check 통과
+   - [ ] 동작 변경 시 문서 업데이트 완료
+   - [ ] Project 상태와 label 확인 완료
    ```
    If a parent epic was provided, append `> Note: check parent epic #<epic-N> child checklist after merge`.
 

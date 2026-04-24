@@ -171,7 +171,7 @@ When creating a PR for tracked work:
 3. Resolve Project configuration env-first, then from `docs/reference/project-board.md`.
 4. Fetch the linked issue title, body, labels, URL, and actual local changes with git diff/log.
 5. Derive a conventional PR title from the actual change: `feat(scope):`, `fix(scope):`, `chore(scope):`, or `docs(scope):`.
-6. Write a substantive PR body with `Closes #N`, `What`, `Why`, `Changes`, and `Checklist`; do not create a PR from placeholder text.
+6. Write a substantive PR body with `Closes #N`, `What`, `Why`, `Changes`, and `Checklist`; do not create a PR from placeholder text. Write PR body prose and checklist item descriptions in Korean by default, while keeping `Closes #N`, labels, file paths, command names, and established Markdown headings in English.
 7. Create the PR with `gh pr create --body-file` or the available GitHub connector.
 8. Add the PR to the active Project and set PR `Status=In Review`.
 9. Move every linked issue item to `Status=In Review`, retrying Project item lookup up to 5 times.

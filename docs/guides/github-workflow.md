@@ -192,6 +192,7 @@ PR 제목 규칙:
 
 - conventional commit style인 `type(scope): description`을 사용한다. 72자 이내로 유지한다.
 - `[Sprint]`, `[Task]`, `[Epic]` prefix를 붙이지 않는다.
+- PR 본문 prose와 checklist item 설명은 기본적으로 한국어로 작성한다. `Closes #N`, conventional title text, label, file path, command name, 확립된 Markdown heading은 원문을 유지한다.
 - PR은 현재 GitHub Project에 추가하고 PR `Status`를 `In Review`로 설정한다.
 - `Priority`와 `Size`는 issue Project field에 유지한다.
 - 연결된 issue에 `type:*`, `area:*`, `origin:review` label이 있으면 PR에 상속한다.
