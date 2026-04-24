@@ -43,92 +43,63 @@ def parent_text(args: argparse.Namespace) -> str:
 
 
 def build_epic(args: argparse.Namespace) -> str:
-    children = args.children or ["[ ] Child issue 1", "[ ] Child issue 2"]
     parts = [
-        section("Summary", args.summary or "Describe the multi-issue outcome."),
-        section("Outcome", args.outcome or "Describe the target result."),
-        section("Scope", args.scope or "Included:\n- Included item\n\nExcluded:\n- Out-of-scope item"),
-        section("Child Issues", "\n".join(f"- {item}" for item in children)),
+        section("Summary", args.summary),
+        section("Outcome", args.outcome),
+        section("Scope", args.scope),
+        section("Child Issues", "\n".join(f"- {item}" for item in args.children)),
         section(
             "Exit Criteria",
-            bullet_list(
-                args.acceptance
-                or [
-                    "[ ] Required child issues are complete.",
-                    "[ ] Related PRs are merged or explicitly carried over.",
-                    "[ ] Test plan or validation notes are captured.",
-                    "[ ] Remaining follow-ups are split into separate issues.",
-                ]
-            ),
+            bullet_list(args.acceptance),
         ),
-        section("Notes", args.notes or "Add related PRs, docs, or decisions."),
+        section("Notes", args.notes or "No additional notes."),
     ]
     return join_sections(*parts)
 
 
 def build_task(args: argparse.Namespace) -> str:
     parts = [
-        section("Summary", args.summary or "Describe the task."),
-        section("Outcome", args.outcome or "Describe the expected user or system result."),
+        section("Summary", args.summary),
+        section("Outcome", args.outcome),
         section("Parent", parent_text(args)),
-        section("Scope", args.scope or "- Work item 1\n- Work item 2"),
+        section("Scope", args.scope),
         section(
             "Acceptance Criteria",
-            bullet_list(
-                args.acceptance
-                or [
-                    "[ ] Criterion 1",
-                    "[ ] Criterion 2",
-                    "[ ] Validation method is documented.",
-                ]
-            ),
+            bullet_list(args.acceptance),
         ),
-        section("Notes", args.notes or "Add implementation notes, constraints, or links."),
+        section("Notes", args.notes or "No additional notes."),
     ]
     return join_sections(*parts)
 
 
 def build_bug(args: argparse.Namespace) -> str:
-    reproduction = args.reproduction or ["Step 1", "Step 2", "Observed failure"]
     parts = [
-        section("Summary", args.summary or "Describe the defect."),
-        section("Actual Behavior", args.actual or "What is happening now?"),
-        section("Expected Behavior", args.expected or "What should happen instead?"),
-        section("Reproduction", bullet_list(reproduction)),
-        section("Impact", args.impact or "Describe severity, scope, and affected users."),
+        section("Summary", args.summary),
+        section("Actual Behavior", args.actual),
+        section("Expected Behavior", args.expected),
+        section("Reproduction", bullet_list(args.reproduction)),
+        section("Impact", args.impact),
         section("Parent", parent_text(args)),
         section(
             "Acceptance Criteria",
-            bullet_list(
-                args.acceptance
-                or [
-                    "[ ] Bug no longer reproduces.",
-                    "[ ] Relevant regression coverage or validation exists.",
-                ]
-            ),
+            bullet_list(args.acceptance),
         ),
-        section("Notes", args.notes or "Add logs, PR review links, or affected files."),
+        section("Notes", args.notes or "No additional notes."),
     ]
     return join_sections(*parts)
 
 
 def build_chore(args: argparse.Namespace) -> str:
     parts = [
-        section("Summary", args.summary or "Describe the maintenance work."),
-        section("Operational Goal", args.outcome or "Describe the operational improvement."),
-        section("Constraints", args.scope or "List limits, dependencies, or windows."),
+        section("Summary", args.summary),
+        section("Operational Goal", args.outcome),
+        section("Constraints", args.scope),
         section("Parent", parent_text(args)),
         section(
             "Definition of Done",
-            bullet_list(
-                args.acceptance
-                or [
-                    "[ ] Operational work is complete.",
-                    "[ ] Follow-up actions are captured if needed.",
-                ]
-            ),
+            bullet_list(args.acceptance),
         ),
-        section("Notes", args.notes or "Add operational context or links."),
+        section("Notes", args.notes or "No additional notes."),
     ]
     return join_sections(*parts)
 
@@ -144,6 +115,50 @@ def build_issue(args: argparse.Namespace) -> str:
     if issue_type == "chore":
         return build_chore(args)
     raise ValueError(f"Unsupported type: {issue_type}")
+
+
+def validate_args(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None:
+    missing: list[str] = []
+
+    if args.format in {"title", "all"} and not (args.title or args.summary):
+        missing.append("--title or --summary")
+
+    if args.format in {"body", "all"}:
+        if not args.summary:
+            missing.append("--summary")
+
+        if args.type in {"epic", "task", "chore"}:
+            for attr, flag in [
+                ("outcome", "--outcome"),
+                ("scope", "--scope"),
+            ]:
+                if not getattr(args, attr):
+                    missing.append(flag)
+            if not args.acceptance:
+                missing.append("--acceptance")
+
+        if args.type == "epic" and not args.children:
+            missing.append("--children")
+
+        if args.type == "bug":
+            for attr, flag in [
+                ("actual", "--actual"),
+                ("expected", "--expected"),
+                ("impact", "--impact"),
+            ]:
+                if not getattr(args, attr):
+                    missing.append(flag)
+            if not args.reproduction:
+                missing.append("--reproduction")
+            if not args.acceptance:
+                missing.append("--acceptance")
+
+    if missing:
+        unique_missing = list(dict.fromkeys(missing))
+        parser.error(
+            "missing required arguments for placeholder-free output: "
+            + ", ".join(unique_missing)
+        )
 
 
 def parse_args() -> argparse.Namespace:
@@ -177,7 +192,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--reproduction", action="append")
     parser.add_argument("--children", action="append")
     parser.add_argument("--format", choices=["body", "title", "all"], default="body")
-    return parser.parse_args()
+    args = parser.parse_args()
+    validate_args(parser, args)
+    return args
 
 
 def main() -> None:

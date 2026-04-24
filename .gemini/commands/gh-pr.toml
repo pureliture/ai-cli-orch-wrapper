@@ -19,9 +19,11 @@ Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. Derive the PR 
 3. Fetch context for the linked issue and actual branch changes:
    ```bash
    gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json title,body,labels,url
-   git diff main...HEAD --stat
-   git diff main...HEAD --name-only
-   git log main...HEAD --oneline
+   git fetch origin main
+   BASE_REF="${BASE_REF:-origin/main}"
+   git diff "$BASE_REF"...HEAD --stat
+   git diff "$BASE_REF"...HEAD --name-only
+   git log "$BASE_REF"...HEAD --oneline
    ```
 
 4. Derive the PR title from the actual change, not mechanically from the issue type:
