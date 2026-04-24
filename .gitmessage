@@ -1,0 +1,11 @@
+<type>(<scope>): <summary>
+
+<본문: 변경 이유, 문제 원인, 해결 방식, 사용자/운영 영향 설명>
+
+Affected:
+- <file-or-area>
+
+Co-authored-by: <AI CLI name> <<github-recognized-cli-email>>
+Co-authored-by: <AI model name> <<github-recognized-model-email>>
+AI-CLI: <AI CLI name and version if known>
+AI-Model: <AI model name>
