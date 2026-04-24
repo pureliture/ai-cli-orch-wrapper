@@ -20,13 +20,20 @@ export class GeminiProvider implements IProvider {
   }
 
   async checkAuth(): Promise<AuthResult> {
-    if (!this.isAvailable()) {
-      return { ok: false, hint: this.installHint };
+    const available = this.isAvailable();
+    const binaryPath = which('gemini');
+
+    if (!available || !binaryPath) {
+      return { ok: false, method: 'missing', hint: this.installHint };
     }
+
+    const versionHint = {
+      binaryPath,
+    };
 
     // 1. Fast path: Environment variables
     if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
-      return { ok: true };
+      return { ok: true, method: 'api-key', ...versionHint };
     }
 
     // 2. Fast path: Local OAuth credentials file
@@ -38,7 +45,7 @@ export class GeminiProvider implements IProvider {
       const raw = await readFile(credsPath, 'utf8');
       try {
         JSON.parse(raw);
-        return { ok: true };
+        return { ok: true, method: 'oauth', ...versionHint };
       } catch (e) {
         console.warn(
           'Failed to parse Gemini auth file:',
@@ -52,11 +59,13 @@ export class GeminiProvider implements IProvider {
 
     // 3. Fallback: CLI execution
     try {
-      await execFileAsync('gemini', ['--version'], { timeout: AUTH_CHECK_TIMEOUT_MS });
-      return { ok: true };
+      const version = await readVersion('gemini');
+      return { ok: true, method: 'cli-fallback', version, ...versionHint };
     } catch {
       return {
         ok: false,
+        method: 'missing',
+        ...versionHint,
         hint: 'gemini auth login OR export GEMINI_API_KEY="..."',
       };
     }
@@ -82,5 +91,18 @@ export class GeminiProvider implements IProvider {
 
     const args = [...this.buildArgs(command, options), `${prompt}\n\n${content}`];
     yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe' }, options);
+  }
+}
+
+async function readVersion(binary: string): Promise<string | undefined> {
+  try {
+    const { stdout } = await execFileAsync(binary, ['--version'], {
+      timeout: AUTH_CHECK_TIMEOUT_MS,
+    });
+    const output = typeof stdout === 'string' ? stdout.trim() : '';
+    if (!output) return undefined;
+    return output.split('\n')[0].trim();
+  } catch {
+    return undefined;
   }
 }

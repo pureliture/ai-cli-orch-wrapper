@@ -6,6 +6,8 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { providerRegistry } from '../providers/registry.js';
 import { runSync } from '../sync/sync-engine.js';
+import { formatAuthStatus } from '../runtime/auth-display.js';
+import { getCachedProviderAuth } from '../providers/auth-cache.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -158,12 +160,11 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
   for (const key of providerRegistry.keys()) {
     const provider = providerRegistry.get(key)!;
     const available = provider.isAvailable();
-    const auth = available ? await provider.checkAuth() : { ok: false, hint: provider.installHint };
+    const auth = available
+      ? await getCachedProviderAuth(provider)
+      : { ok: false, hint: provider.installHint };
     const avIcon = available ? '✓' : '✗';
-    const authIcon = auth.ok ? '✓' : '✗';
-    console.log(
-      `  ${key}: installed ${avIcon}  auth ${authIcon}${auth.ok ? '' : `  → ${auth.hint}`}`
-    );
+    console.log(`  ${key}: installed ${avIcon}  auth ${formatAuthStatus(auth)}`);
   }
 }
 

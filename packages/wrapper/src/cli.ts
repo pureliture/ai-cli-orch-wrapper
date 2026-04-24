@@ -17,6 +17,10 @@ import {
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile } from './providers/interface.js';
+import { getCachedProviderAuth } from './providers/auth-cache.js';
+import { collectRuntimeContext } from './runtime/context.js';
+import { renderRuntimeDashboard } from './runtime/dashboard.js';
+import { formatAuthStatus } from './runtime/auth-display.js';
 import { runSync } from './sync/sync-engine.js';
 
 const execFileAsync = promisify(execFile);
@@ -186,8 +190,25 @@ async function cmdRun(args: string[]): Promise<void> {
   } else if (existsSync(globalPromptPath)) {
     prompt = await readFile(globalPromptPath, 'utf8');
   }
+  const promptTemplatePath = existsSync(cwdPromptPath)
+    ? cwdPromptPath
+    : existsSync(globalPromptPath)
+      ? globalPromptPath
+      : undefined;
 
   const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
+  const auth = await getCachedProviderAuth(provider);
+  const runtimeContext = await collectRuntimeContext({
+    provider: providerKey,
+    command,
+    sessionId: session.id,
+    permissionProfile,
+    promptTemplatePath,
+    auth,
+  });
+  await sessionStore.update(session.id, { runtimeContext });
+  process.stderr.write(renderRuntimeDashboard(runtimeContext) + '\n');
+
   const tee = sessionStore.createOutputTee(session.id);
   let hasOutput = false;
   let runError: unknown;
@@ -267,6 +288,32 @@ async function cmdStatus(args: string[]): Promise<void> {
     console.log(`Started:    ${record.startedAt}`);
     if (record.endedAt) console.log(`Ended:      ${record.endedAt}`);
     if (record.permissionProfile) console.log(`Permission: ${record.permissionProfile}`);
+    if (record.runtimeContext) {
+      const active = record.runtimeContext.active;
+      const exposed = record.runtimeContext.exposed;
+      console.log('Runtime:');
+      console.log(`  Branch:    ${active.branch ?? '(none)'}`);
+      console.log(`  Prompt:    ${active.promptTemplatePath ?? '(default)'}`);
+      console.log(`  Auth:      ${formatAuthStatus(active.auth)}`);
+      console.log(
+        `  Agents:    ${
+          exposed.providerAgents.length > 0 ? exposed.providerAgents.join(', ') : '(none)'
+        }`
+      );
+      console.log(
+        `  Hooks:     ${
+          exposed.providerHooks.length > 0 ? exposed.providerHooks.join(', ') : '(none)'
+        }`
+      );
+      if (exposed.providerConfigFiles.length > 0) {
+        console.log(`  Config:    ${exposed.providerConfigFiles.join(', ')}`);
+      }
+      console.log(
+        `  Skills:    ${
+          exposed.sharedSkills.length > 0 ? exposed.sharedSkills.join(', ') : '(none)'
+        }`
+      );
+    }
   } catch {
     console.error(`Session not found: ${sessionId}`);
     process.exit(EXIT_ERROR);

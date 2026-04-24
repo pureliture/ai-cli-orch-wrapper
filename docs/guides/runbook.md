@@ -48,6 +48,8 @@ npm install -g @pureliture/ai-cli-orch-wrapper
 ```bash
 aco provider setup gemini
 aco provider setup codex
+aco run gemini review
+aco status --session <id>
 ```
 
 Gemini CLI: `npm install -g @google/gemini-cli`
@@ -64,6 +66,14 @@ Codex CLI: `npm install -g @openai/codex`
 
 Codex OAuth 파일에 만료 시간이 있고 만료된 경우에는 `codex login`을 실행한다. headless 또는
 CI 환경에서는 Gemini에 `GEMINI_API_KEY`, Codex에 `OPENAI_API_KEY`를 우선 사용한다.
+
+`aco run <provider> <command>`는 provider 실행 전에 runtime dashboard를 stderr에 출력한다. TTY에서 실행하면 ANSI 색/이모지가 붙으며, CI 또는 `NO_COLOR` 설정 시에는 순수 텍스트로 출력되어 로그/스크립트 파이프에서 안정적이다.
+
+대시보드에는 다음 정보가 포함된다.
+
+- Active: provider, command, session id, permission profile, branch, prompt template
+- Exposed: provider agents, shared skills, hook/settings files
+- Auth: `ready`/`not ready`와 method (`api-key`, `oauth`, `cli-fallback`, `missing`)
 
 ### 설치 후 slash command가 보이지 않는 경우
 
