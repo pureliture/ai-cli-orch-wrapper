@@ -38,15 +38,33 @@ GEMINI.md
 생성된 Codex/Gemini context를 사용하기 전에 `aco sync --check`를 실행한다. 관리 대상 파일을 갱신하려면
 `aco sync`를 실행하고, manifest 소유 drift를 의도적으로 덮어써도 되는 경우에만 `aco sync --force`를 사용한다.
 
-## 명령 구조 (V3+)
+## 명령 구조
 
-PM workflow 자동화는 세 축의 명령으로 구성된다:
+PM workflow 자동화는 두 축의 명령으로 구성된다:
 
 | 축        | 명령                                              | 목적                       |
 | --------- | ------------------------------------------------- | -------------------------- |
 | `/opsx:*` | `opsx:propose`, `opsx:apply`, `opsx:archive`      | OpenSpec change 생명주기   |
 | `/gh-*`   | `gh-issue`, `gh-start`, `gh-pr`, `gh-pr-followup` | GitHub issue/PR 운영       |
-| `/octo:*` | `octo:multi`, `octo:review`, `octo:tdd`, …        | Multi-AI orchestration     |
+
+Claude Code에서는 repo-local `.claude/commands/`의 slash command를 계속 사용한다.
+Codex에서는 Claude slash command를 직접 복제하지 않고 `.agents/skills/github-kanban-ops/`의
+`github-kanban-ops` skill workflow를 canonical source로 사용한다. `.codex/skills/github-kanban-ops`
+복사본은 runtime 요구가 확인될 때만 생성한다.
+
+### Codex invocation mapping
+
+| Claude command | Codex prompt pattern |
+|----------------|----------------------|
+| `/gh-issue ...` | `Use github-kanban-ops to create a <epic/task/bug/chore> issue for ...` |
+| `/gh-start #N` | `Use github-kanban-ops to start issue #N and create the worktree.` |
+| `/gh-pr #N` | `Use github-kanban-ops to create a PR closing #N.` |
+| `/gh-pr-followup #PR` | `Use github-kanban-ops to triage unresolved review threads on PR #PR.` |
+
+Codex의 `Start Issue` workflow는 `.aco-worktrees` root를 유지하되 새 worktree leaf를
+`.aco-worktrees/<prefix>-<N>`로 만든다. `<prefix>`는 branch prefix와 동일하게
+`type:bug` → `fix`, `type:task`/`type:epic` → `feat`, `type:chore` → `chore`로 정한다.
+Claude compatibility command의 기존 worktree 경로는 별도 migration 전까지 그대로 둘 수 있다.
 
 ## Slash Command 목록
 
@@ -54,14 +72,10 @@ PM workflow 자동화는 세 축의 명령으로 구성된다:
 
 | 명령                    | 동작                                                                                                                                                                 |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `/gh-issue`             | issue 생성 + `type:*` + priority + 선택한 `sprint:v*` label + Project #3 Backlog 등록                                                                                |
-| `/gh-start #N`          | In Progress 전환 + `status:in-progress` label + branch 생성                                                                                                          |
-| `/gh-pr`                | PR 생성 + `Closes #N` + 추적 label 상속 (`type:*`, `area:*`, `origin:review`, `p*`) + PR/issue Project status → In Review + CI checklist + Epic reminder             |
+| `/gh-issue`             | issue 생성 + `type:*`/`area:*` label + Project Backlog 등록 + Project Priority 설정                                                                                   |
+| `/gh-start #N`          | Project Status를 In Progress로 전환 + branch 생성                                                                                                                    |
+| `/gh-pr`                | PR 생성 + `Closes #N` + durable label 상속 (`type:*`, `area:*`, `origin:review`) + PR/issue Project Status를 In Review로 전환 + CI checklist + Epic reminder          |
 | `/gh-pr-followup`       | PR review thread triage (즉시 수정 + 답변/resolve 또는 새 issue로 이연)                                                                                              |
-| `/gh-issue:multi`       | multi-AI scope 검증이 포함된 `/gh-issue`                                                                                                                             |
-| `/gh-start:multi`       | multi-AI readiness check가 포함된 `/gh-start`                                                                                                                        |
-| `/gh-pr:multi`          | multi-AI PR readiness 검증이 포함된 `/gh-pr`                                                                                                                         |
-| `/gh-pr-followup:multi` | multi-AI content 검증이 포함된 `/gh-pr-followup`                                                                                                                     |
 
 ### OpenSpec 명령
 
@@ -91,50 +105,69 @@ repo-local `.claude/commands/`에는 maintainer가 사용하는 추가 명령이
 
 ## Issue 작성 규칙
 
-sprint planning에는 sprint epic 하나와 child issue들을 사용한다.
+GitHub PM workflow의 Codex canonical 기준은 `.agents/skills/github-kanban-ops/`의
+`github-kanban-ops`다. Claude slash command 호환성은 `.claude/skills/github-kanban-ops/`와
+`.claude/commands/gh-*.md`가 유지한다.
 
-### 제목 규칙 (V3+)
+### 제목 규칙
 
-**V3부터** issue 제목은 conventional commit 형식을 사용한다. `[Sprint V*][Type]` prefix는 deprecated 상태다.
+Issue 제목은 conventional prefix 형식을 사용한다. `[Sprint V*][Type]` prefix는 사용하지 않는다.
 
 ```text
-feat: add gh-pm-workflow-commands
-fix: handle null session in wrapper
-chore: update typescript deps
+epic: migrate Claude PM harness to Codex
+task: add gh-pm-workflow-commands
 bug: codex auth failure classification unreachable
-spike: investigate gemini streaming API
+chore: update typescript deps
 ```
 
 규칙:
 
-- `type: description` 형식을 사용한다. 제목에는 sprint 또는 type prefix를 넣지 않는다.
-- Type은 제목이 아니라 `type:*` label로 표현한다.
-- Sprint는 제목이 아니라 `sprint:v*` label로 표현한다.
-- Priority와 area는 제목에 넣지 않는다. `p0`/`p1`/`p2`와 `area:*` label을 사용한다.
+- `<type>: <description>` 형식을 사용한다.
+- 허용 type은 `epic`, `task`, `bug`, `chore`다.
+- 제목 prefix와 `type:*` label은 일치해야 한다.
+- Priority와 status는 GitHub Project field에 둔다.
+- Area는 제목에 넣지 않고 `area:*` label을 사용한다.
+- `sprint`, `spike`, `story`는 canonical workflow에서 사용하지 않는다.
 - **Epic 관계**:
   - Child issue는 GitHub native `Parent issue` 필드로 parent issue에 연결해야 한다.
-  - 본문 첫 줄의 `Parent epic: #N`은 portable fallback으로 유지한다.
-  - Sprint epic은 가시성을 위해 본문에 `Child Issues` 체크리스트를 유지하는 것이 좋다.
+  - 본문의 `Parent` 섹션은 portable fallback으로 유지한다.
+  - Epic은 가시성을 위해 본문에 `Child Issues` 체크리스트를 유지하는 것이 좋다.
 - **Project 필드**:
-  - 모든 issue는 Project #3에 추가해야 한다.
+  - 모든 issue는 현재 GitHub Project에 추가해야 한다.
   - 초기 `Status`는 `Backlog`로 설정해야 한다.
-  - `Priority` (`P0`/`P1`/`P2`)는 label에서 Project field로 mirror해야 한다.
+  - `Priority` (`P0`/`P1`/`P2`)는 판단 가능한 경우 Project field에 설정한다. 판단 근거가 부족하면 unset으로 두고 triage 필요를 보고한다.
+  - `status:*`, `sprint:*`, `p0`/`p1`/`p2`, `size:*`, `type:feature`, `type:story`, `type:spike` label은 사용하지 않는다.
 
 ### Issue 본문 템플릿
 
-`/gh-issue`는 빈 placeholder가 아니라 실행 가능한 issue 본문을 만들어야 한다. 모든 issue 본문은 다음 내용을 포함해야 한다:
+`/gh-issue` 또는 Codex `Create Issue` workflow는 빈 placeholder가 아니라 실행 가능한 issue 본문을 만들어야 한다. Codex 표준 생성기는 `.agents/skills/github-kanban-ops/scripts/make_issue_body.py`이며 issue type별 canonical section을 만든다. Claude compatibility command는 `.claude/skills/github-kanban-ops/scripts/make_issue_body.py`를 사용할 수 있다.
+
+| Type | Canonical sections |
+|------|--------------------|
+| `epic` | `Summary`, `Outcome`, `Scope`, `Child Issues`, `Exit Criteria`, `Notes` |
+| `task` | `Summary`, `Outcome`, `Parent`, `Scope`, `Acceptance Criteria`, `Notes` |
+| `bug` | `Summary`, `Actual Behavior`, `Expected Behavior`, `Reproduction`, `Impact`, `Parent`, `Acceptance Criteria`, `Notes` |
+| `chore` | `Summary`, `Operational Goal`, `Constraints`, `Parent`, `Definition of Done`, `Notes` |
+
+Task형 issue 본문은 다음 구조를 따른다:
 
 ```md
-[Parent epic: #N]
+## Summary
 
-## Purpose
+<작업 요약>
 
-<문제 또는 목표를 설명하는 1-3문장>
+## Outcome
 
-## Scope & Requirements
+<기대 결과>
 
-- [ ] <구체적인 요구사항 또는 task>
-- [ ] <구체적인 요구사항 또는 task>
+## Parent
+
+Parent epic: #N
+
+## Scope
+
+- <구체적인 범위>
+- <구체적인 범위>
 
 ## Acceptance Criteria
 
@@ -143,18 +176,11 @@ spike: investigate gemini streaming API
 
 규칙:
 
-- parent epic이 있으면 `Parent epic: #N`을 템플릿 섹션보다 앞선 첫 줄에 둔다.
+- parent epic이 있으면 `## Parent` 섹션에 `Parent epic: #N`을 둔다.
 - issue 본문 prose와 checklist item 설명은 기본적으로 한국어로 작성한다. conventional title prefix, label, file path, command name, 확립된 Markdown heading은 원문을 유지한다.
 - 필요한 섹션을 채우기에 맥락이 너무 모호하면 생성 전에 간결한 follow-up 질문을 최대 두 개만 한다.
 - 여러 줄 Markdown issue 본문에는 `--body-file`을 사용해 heading, checkbox, code span이 보존되도록 한다.
 - `<...>`, `TBD`, `TODO` 같은 placeholder text가 포함된 issue 본문은 만들지 않는다.
-
-**Legacy format** (V3 이전, 참고용):
-
-```text
-[Sprint V3][Epic] PM 하네스 구축 — GitHub Projects + Actions + Claude Code
-[Sprint V3][Task] GitHub Actions CI 파이프라인 구현
-```
 
 PR 제목 형식:
 
@@ -166,10 +192,10 @@ PR 제목 규칙:
 
 - conventional commit style인 `type(scope): description`을 사용한다. 72자 이내로 유지한다.
 - `[Sprint]`, `[Task]`, `[Epic]` prefix를 붙이지 않는다.
-- sprint 범위 PR은 PM project에 추가하고 PR `Status`를 `In Review`로 설정한다.
-- `Size`와 `Sprint`는 issue에만 유지한다. 이 planning field를 PR item으로 mirror하지 않는다.
-- 연결된 issue에 `type:*`, `area:*`, `origin:review`, priority `p*` label이 있으면 PR에 상속한다.
-- `status:*` 또는 `sprint:*` label은 PR에 복사하지 않는다.
+- PR은 현재 GitHub Project에 추가하고 PR `Status`를 `In Review`로 설정한다.
+- `Priority`와 `Size`는 issue Project field에 유지한다.
+- 연결된 issue에 `type:*`, `area:*`, `origin:review` label이 있으면 PR에 상속한다.
+- durable classification이 아닌 label은 PR에 복사하지 않는다.
 
 ### PR 본문 가이드
 
@@ -208,17 +234,15 @@ issue의 문제 또는 제약을 참조한다. 1-3문장.
 - "Why"가 추가 맥락 없이 "see issue"라고만 말한다.
 - "Changes"가 "updated files" 같은 모호한 bullet 하나뿐이다.
 
-제출 전에 `/gh-pr:multi`로 본문에 대한 multi-AI 검증을 받는다.
-
 ### `origin:review` Label 사용법
 
 PR review feedback에서 만들어진 issue를 추적하려면 `origin:review` label을 사용한다:
 
-- review에서 드러난 개선 또는 feature에는 `origin:review` + `type:task`를 적용한다.
+- review에서 드러난 개선 또는 후속 구현에는 `origin:review` + `type:task`를 적용한다.
 - review에서 드러난 refactoring task에는 `origin:review` + `type:chore`를 적용한다.
 - review에서 발견된 결함에는 `origin:review` + `type:bug`를 적용한다.
-- 평가와 생성을 위해 항상 `/gh-pr-followup` 명령을 사용한다. 이 명령은 본문 형식과 label 할당을 자동 처리한다.
-- issue 본문은 `From: #<PR> review comment`로 시작하고 `See also: #<PR>`로 끝나야 한다.
+- 평가와 생성을 위해 Claude에서는 `/gh-pr-followup`, Codex에서는 `github-kanban-ops`의 `Handle Review Follow-up` workflow를 사용한다. 이 workflow는 본문 형식과 label 할당을 자동 처리한다.
+- Codex issue 본문은 `.agents/skills/github-kanban-ops/scripts/make_issue_body.py`의 canonical section을 사용하고, PR review 출처는 `Notes` 등 적절한 section에 포함한다.
 
 자동화 규칙:
 
@@ -230,14 +254,16 @@ gh pr create → PR item Status = In Review
 표준화된 제목과 본문은 다음 명령으로 생성한다:
 
 ```bash
-python3 .claude/skills/github-jira-ops/scripts/make_issue_body.py \
+python3 .agents/skills/github-kanban-ops/scripts/make_issue_body.py \
   --type task \
-  --sprint V3 \
   --title "GitHub Actions CI 파이프라인 구현" \
   --summary "PM harness CI workflow 구현" \
+  --outcome "PR마다 lint, typecheck, test, smoke 검증이 자동 실행된다." \
+  --scope "GitHub Actions workflow와 관련 npm/go 검증 명령을 정리한다." \
   --parent "#22" \
   --acceptance "[ ] lint/typecheck/test/smoke job 분리" \
   --acceptance "[ ] go test ./... 통과" \
+  --notes "CI 실패 시 reviewer가 실패 job 이름과 재현 명령을 확인할 수 있어야 한다." \
   --format all
 ```
 
