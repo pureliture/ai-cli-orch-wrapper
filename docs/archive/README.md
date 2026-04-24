@@ -5,14 +5,17 @@
 
 ## 목록
 
-| 문서 | 날짜 | 요지 |
-|------|------|------|
-| [brainstorm/](brainstorm/) | 2026-04-06 | aco v2 아키텍처 방향 정립 브레인스토밍 세션 (3건) |
-| [2026-04-07-pm-board-action-plan.md](2026-04-07-pm-board-action-plan.md) | 2026-04-07 | Multi-Provider 리뷰 기반 GitHub Kanban 행동 계획 |
+| 문서                                                                       | 날짜       | 요지                                              |
+| -------------------------------------------------------------------------- | ---------- | ------------------------------------------------- |
+| [brainstorm/](brainstorm/)                                                 | 2026-04-06 | aco v2 아키텍처 방향 정립 브레인스토밍 세션 (3건) |
+| [2026-04-07-pm-board-action-plan.md](2026-04-07-pm-board-action-plan.md)   | 2026-04-07 | Multi-Provider 리뷰 기반 GitHub Kanban 행동 계획  |
+| [2026-04-24-gpt-pro-direction-raw.md](2026-04-24-gpt-pro-direction-raw.md) | 2026-04-24 | GPT Pro 방향성 제안과 실행계획 평가 원문          |
 
 ## 정책
 
 - 이 디렉터리의 문서는 **역사 기록**이다. 수정하지 않는다.
+- archive 문서 안의 issue 후보, PR 순서, 명령 예시는 현재 실행 기준이 아니다. 현재 기준은
+  상위 `docs/`의 active 문서에서 확인한다.
 - 정보가 여전히 유효하다면 `guides/`·`reference/`·`contract/` 등 상위 카테고리의
   정식 문서로 승격해 링크를 갱신한다. 이후 archive 문서에는 "승격됨 → <경로>"
   주석을 단 줄만 남겨 역사 추적을 돕는다.
