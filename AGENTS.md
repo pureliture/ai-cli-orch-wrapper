@@ -1,7 +1,7 @@
 # ai-cli-orch-wrapper
 
-Claude Code project instructions for this repository. Codex receives the matching
-repo-level instructions from `AGENTS.md`.
+Codex project instructions for this repository. Claude Code receives the matching
+repo-level instructions from `CLAUDE.md`.
 
 ## Repo Structure
 
@@ -40,6 +40,34 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 - Codex entrypoints: `$gh-issue`, `$gh-start`, `$gh-pr`, `$gh-pr-followup`.
 - `$github-kanban-ops` is for direct policy/workflow reference, not the normal command-like UX.
 - PR body prose and checklist item descriptions are Korean by default; keep `Closes #N`, headings, labels, file paths, and command names in English.
+
+## Codex-Specific Guidance
+
+- Use the local `.agents/skills/*/SKILL.md` files when a task names a skill or clearly matches one.
+- For GitHub PM tasks, prefer `$gh-*` wrapper skills for command-like UX and `github-kanban-ops` for policy details.
+- Do not create `.codex/skills/` copies unless Codex runtime or packaging proves they are required.
+- Treat `AGENTS.md` as the root instruction surface for Codex, but keep durable workflow policy in skills and docs.
+
+## Worktree Policy
+
+All write tasks must be performed in a dedicated Git worktree and task branch.
+
+This is a mandatory rule. If the current directory is the main/local checkout, do not modify files. First create or switch to a dedicated task worktree.
+
+Rules:
+
+- Do not modify the main/local checkout for implementation work.
+- Use a dedicated branch per task: `codex/{ticket-id}-{short-title}`.
+- Keep each task isolated to its own worktree.
+- Do not reuse the same branch across multiple worktrees.
+- Read-only investigation may run in the local checkout.
+- Dependency or lockfile changes require explicit review before merge.
+- When finished, report:
+  - worktree path
+  - branch name
+  - changed files
+  - test commands and results
+  - PR URL if created
 
 ## Context Sync
 
