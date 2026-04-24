@@ -267,6 +267,7 @@ Gemini/Codex 인증이 없으면 평가자가 직접 실행하기 어렵다. moc
 - session 생성 및 `aco result` 조회 가능
 - provider registry 테스트
 - run/result lifecycle 테스트
+- 테스트용 session store isolation 또는 session root override 경로 명시
 - CI smoke에 mock flow 추가
 - README에 no-auth demo path 추가
 
@@ -321,9 +322,9 @@ node packages/wrapper/dist/cli.js result
 ```
 
 demo verification은 global `~/.aco/sessions`에 의존하지 않는다. `HOME="$(mktemp -d)"` 같은
-isolated home을 사용하거나, PR3에서 session store override를 추가한 뒤 `aco result --session <id>`로
-생성된 session을 명시 조회한다. published npm package path와 repo-checkout path 중 어느 경로를
-fresh clone 보장 대상으로 삼는지도 PR3에서 명시한다.
+isolated home을 사용하거나, PR3 scope에 포함한 session store override 경로를 사용한 뒤
+`aco result --session <id>`로 생성된 session을 명시 조회한다. published npm package path와
+repo-checkout path 중 어느 경로를 fresh clone 보장 대상으로 삼는지도 PR3에서 명시한다.
 
 ### Review checklist
 
