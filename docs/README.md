@@ -1,9 +1,9 @@
-# Documentation
+# 문서
 
 이 디렉터리는 `ai-cli-orch-wrapper` 저장소의 문서를 **누가 왜 읽는가**에 따라
 분류해 관리한다. 문서를 추가할 때는 아래 기준에 따라 적절한 위치를 선택한다.
 
-## Quick Start
+## 빠른 시작
 
 패키지를 설치해서 Claude Code command pack과 provider prompt를 배치한다.
 
@@ -32,7 +32,7 @@ aco status
 aco result
 ```
 
-## Navigation by Reader
+## 독자별 탐색 경로
 
 ### 패키지를 설치·운영하는 사용자
 
@@ -49,7 +49,7 @@ aco result
 > 기여자 가이드는 Phase 1 범위에서 제외한다. 기여자 온보딩과 개발 흐름 정리는
 > Phase 2에서 별도로 다룬다.
 
-## Classification
+## 문서 분류
 
 | 카테고리                             | 답해야 하는 질문                | 주 독자               |
 | ------------------------------------ | ------------------------------- | --------------------- |
@@ -59,23 +59,23 @@ aco result
 | [`reference/`](reference/)           | 이 필드/설정/명령의 정의는      | 운영자, 툴 사용자     |
 | [`archive/`](archive/)               | 과거에 어떻게 결정됐나          | 컨텍스트 추적자       |
 
-## Engineering Reference
+## 엔지니어링 참조
 
 1. [architecture.md](architecture.md) — 전체 그림
 2. [contract/README.md](contract/README.md) — 규범 계약 문서 인덱스
 3. [contract/go-node-boundary.md](contract/go-node-boundary.md) — Go/Node.js 책임 경계
 4. [contract/process-execution-contract.md](contract/process-execution-contract.md) — 프로세스 실행 계약
 
-## Archive
+## 아카이브
 
 - [archive/](archive/) — 브레인스토밍 세션 기록, 완료된 계획 문서
 
-## Remaining Documentation Phases
+## 남은 문서화 단계
 
 - **Phase 2**: 기여자 가이드 개선, `reference/context-sync.md` 심화, 문서 간 일관성 점검
 - **Phase 3**: VitePress 도입, 검색·사이드바·배포 구조화
 
-## Conventions
+## 작성 규칙
 
 - 파일·디렉터리명은 **kebab-case 소문자** 사용 (`contributing.md`, `github-workflow.md`)
 - `archive/` 하위 항목은 **`YYYY-MM-DD-<slug>.md`** 접두어로 시점을 파일명에 명시

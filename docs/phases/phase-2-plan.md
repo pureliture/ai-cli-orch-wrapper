@@ -1,4 +1,4 @@
-# Phase 2 Plan — 문서 품질 개선 (잔여)
+# Phase 2 계획 — 문서 품질 개선 (잔여)
 
 **선행 조건:** Phase 1 (#62) 완료 후 진행
 
@@ -11,7 +11,7 @@
 ### 1. `docs/guides/runbook.md`
 
 **현재 상태:**
-- Publishing / Installation / Common Issues 3개 섹션
+- 배포 / 설치 / 일반적인 문제 3개 섹션
 - 단순 텍스트 설명 + 코드 블록
 
 **목표 스타일 (ccg-workflow-restore `configuration.md` 참조):**
@@ -81,7 +81,7 @@ npx @pureliture/ai-cli-orch-wrapper pack setup
 | 증상 | 원인 | 해결책 |
 |------|------|--------|
 | `aco: command not found` | PATH 미설정 | `npm install -g @pureliture/ai-cli-orch-wrapper` |
-| Provider not found | 인증 미실시 | `aco provider setup <name>` |
+| Provider를 찾을 수 없음 | 인증 미실시 | `aco provider setup <name>` |
 ```
 
 ---
@@ -89,7 +89,7 @@ npx @pureliture/ai-cli-orch-wrapper pack setup
 ### 2. `docs/reference/context-sync.md`
 
 **현재 상태:**
-- Supported CLI Surfaces / Source Discovery Order / Lossy Conversion Warnings
+- 지원되는 CLI 표면 / Source 탐색 순서 / 손실 변환 경고
 - 테이블 + 텍스트 설명
 
 **목표 스타일:**
@@ -99,7 +99,7 @@ npx @pureliture/ai-cli-orch-wrapper pack setup
 | 필드 정의 테이블 | 있음 | ✅ 타입/기본값/설명 보강 |
 | 시퀀스 다이어그램 | 없음 | ✅ `aco sync` 실행 흐름 Mermaid |
 | 사용 예시 | CLI Usageのみ | ✅ 시나리오별 예시 추가 |
-| Generated Files 테이블 | 있음 | ✅ Managed Block vs Raw File 구분 강화 |
+| 생성 파일 테이블 | 있음 | ✅ 관리 block과 raw file 구분 강화 |
 
 **구체적 개선:**
 
@@ -127,7 +127,7 @@ sequenceDiagram
 
 | Claude Code 필드 | Codex 변환 | Gemini 변환 | 손실 여부 |
 |-----------------|-----------|------------|----------|
-| `reasoningEffort` | `model_reasoning_effort` (config only) | **생략** | ⚠️ 손실 (runtime flag 없음) |
+| `reasoningEffort` | `model_reasoning_effort` (설정 전용) | **생략** | ⚠️ 손실 (runtime flag 없음) |
 | `workspaceMode: read-only` | `sandbox_mode = "read-only"` | best-effort only | ⚠️ 부분 손실 |
 | `hooks[].async: true` | 동기 변환 | 동기 변환 | ⚠️ 손실 (fire-and-forget 불가) |
 
@@ -169,7 +169,7 @@ aco sync --dry-run
 ### 3. `docs/reference/project-board.md`
 
 **현재 상태:**
-- Setup Instructions / Fields / Views / IDs / Branch Protection
+- 설정 안내 / 필드 / View / ID / Branch Protection
 - 설정 참조 위주
 
 **목표 스타일:**
@@ -204,9 +204,9 @@ flowchart LR
 | 필드 | 설정 방법 | 주의사항 |
 |------|----------|----------|
 | Status | 자동으로 Backlog | 최초값 변경 금지 |
-| Priority | P0/P1/P2から選択 |緊急でない 한 P2 유지 |
-| Size | S/M/Lから選択 | 실제 예상 시간이 아닌 복잡도 기준 |
-| Sprint | 해당.Iterationを選択 | 아직 설정되지 않으면 skip |
+| Priority | P0/P1/P2에서 선택 | 긴급하지 않으면 P2 유지 |
+| Size | S/M/L에서 선택 | 실제 예상 시간이 아닌 복잡도 기준 |
+| Sprint | 해당 Iteration 선택 | 아직 설정되지 않으면 skip |
 ```
 
 ---
@@ -223,20 +223,20 @@ Phase 1에서確立된 스타일을 따름:
 
 ---
 
-## Scope (체크리스트)
+## 범위 (체크리스트)
 
 - [ ] `docs/guides/runbook.md` — 환경변수 테이블, OS별 설치 코드그룹, 디렉터리 구조 도식화, 트러블슈팅 테이블
 - [ ] `docs/reference/context-sync.md` — `aco sync` 시퀀스 다이어그램, 필드 변환 표, 시나리오별 사용법
 - [ ] `docs/reference/project-board.md` — 이슈→PR 흐름 플로우차트, 필드 사용 맥락 설명
 - [ ] Phase 3 잔여 명시 (VitePress 도입)
 
-## Out of Scope
+## 제외 범위
 
 - CONTRIBUTING.md / 새 기여자 온보딩 가이드 (Phase 2에서 제외, Phase 3 또는 별도 이슈로)
 - VitePress 도입 (Phase 3)
 - Phase 1 파일 재작성
 
-## Acceptance Criteria
+## 인수 기준
 
 - [ ] `docs/reference/context-sync.md`에 Mermaid 시퀀스 다이어그램 1개 이상
 - [ ] 3개 파일 모두에 코드그룹 또는 테이블 활용

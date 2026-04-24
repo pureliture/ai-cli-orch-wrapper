@@ -11,7 +11,19 @@ aco pack install
 aco pack setup
 aco pack status
 aco provider setup gemini
+aco provider setup codex
 ```
+
+## Provider Auth
+
+`aco provider setup <provider>` checks the provider binary first, then uses fast local auth checks before spawning the CLI:
+
+| Provider | Fast-path auth sources | Fallback |
+| --- | --- | --- |
+| Gemini | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `~/.gemini/oauth_creds.json` | `gemini --version` |
+| Codex | `OPENAI_API_KEY`, `~/.codex/auth.json` | `codex --version` |
+
+Expired Codex OAuth tokens report `codex login` as the fix.
 
 ## Development
 

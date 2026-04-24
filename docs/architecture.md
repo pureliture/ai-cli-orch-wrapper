@@ -1,16 +1,16 @@
-# Architecture
+# 아키텍처
 
 `ai-cli-orch-wrapper`는 Claude Code에서 외부 AI CLI를 쓰기 쉽게 만드는 command
 pack과 `aco` CLI 런타임을 함께 관리한다. 현재 저장소에는 두 실행면이 있다.
 
-- **Public npm package**: `@pureliture/ai-cli-orch-wrapper`가 배포하는 Node.js
+- **공개 npm 패키지**: `@pureliture/ai-cli-orch-wrapper`가 배포하는 Node.js
   wrapper CLI. 설치, command pack 배치, `aco sync`, provider 실행, 세션 로그를 담당한다.
-- **Go runtime**: `cmd/aco/`의 blocking runtime. `aco delegate`와 `aco run`을 통해
+- **Go 런타임**: `cmd/aco/`의 blocking runtime. `aco delegate`와 `aco run`을 통해
   agent frontmatter 기반 provider 실행을 담당한다.
 
 문서 기준 주요 provider는 **gemini**와 **codex**다.
 
-## Architecture Overview
+## 아키텍처 개요
 
 ```mermaid
 flowchart TB
@@ -28,16 +28,16 @@ flowchart TB
     formatter --> goProviders[Providers<br/>codex / gemini / gemini_cli]
 ```
 
-## Public Package CLI
+## 공개 패키지 CLI
 
-The repository now targets one public npm package and one public CLI:
+이 저장소는 하나의 공개 npm 패키지와 하나의 공개 CLI를 대상으로 한다:
 
 ```text
 npm package: @pureliture/ai-cli-orch-wrapper
 CLI: aco
 ```
 
-`aco` owns both runtime commands and setup commands:
+`aco`는 런타임 명령과 설정 명령을 모두 담당한다:
 
 ```text
 aco run ...
@@ -46,7 +46,7 @@ aco pack setup
 aco provider setup <name>
 ```
 
-The Node.js wrapper supports gemini and codex provider flows. It also owns session commands:
+Node.js 래퍼는 gemini와 codex provider 흐름을 지원한다. 세션 명령도 담당한다:
 
 ```text
 aco result [--session <id>]
@@ -54,29 +54,28 @@ aco status [--session <id>]
 aco cancel [--session <id>]
 ```
 
-## Go Delegate Runtime
+## Go Delegate 런타임
 
-The Go runtime is blocking and process-oriented. It does not use the Node session store.
+Go 런타임은 blocking 방식이며 프로세스 중심으로 동작한다. Node 세션 저장소는 사용하지 않는다.
 
 ```text
 aco delegate <agent-id> [--input <text>] [--formatter <path>] [--timeout <secs>]
 aco run <provider> <command> [options]
 ```
 
-Provider/model selection for `aco delegate` comes from the agent spec plus formatter:
+`aco delegate`의 provider/model 선택은 agent spec과 formatter를 함께 사용해 결정한다:
 
-1. Load `.claude/agents/<agent-id>.md`
-2. Read `modelAlias` and `roleHint` from frontmatter
-3. Resolve provider/model through `.aco/formatter.yaml`
-4. Fall back to the default formatter route when no explicit route matches
+1. `.claude/agents/<agent-id>.md`를 로드한다.
+2. frontmatter에서 `modelAlias`와 `roleHint`를 읽는다.
+3. `.aco/formatter.yaml`을 통해 provider/model을 해석한다.
+4. 명시적으로 일치하는 route가 없으면 기본 formatter route로 폴백한다.
 
-The Go provider registry currently registers `codex`, `gemini`, and `gemini_cli`.
+Go provider registry에는 현재 `codex`, `gemini`, `gemini_cli`가 등록되어 있다.
 
-## Session Lifecycle
+## 세션 생명주기
 
-Node wrapper sessions are created only for `aco run <provider> <command>` in
-`packages/wrapper`. The session store writes task metadata and provider output under
-`~/.aco/sessions/<uuid>/`.
+Node 래퍼 세션은 `packages/wrapper`의 `aco run <provider> <command>`에서만 생성된다.
+세션 저장소는 태스크 메타데이터와 provider 출력을 `~/.aco/sessions/<uuid>/` 아래에 기록한다.
 
 ```mermaid
 sequenceDiagram
@@ -96,11 +95,10 @@ sequenceDiagram
     CLI-->>User: provider output / error
 ```
 
-## Context Sync
+## Context 동기화
 
-`aco sync` turns Claude Code project configuration into Codex and Gemini project-level
-targets. It reads canonical Claude files from the repository and writes managed outputs
-with hash tracking in `.aco/sync-manifest.json`.
+`aco sync`는 Claude Code 프로젝트 설정을 Codex와 Gemini의 프로젝트 단위 대상 파일로 변환한다.
+저장소의 canonical Claude 파일을 읽고, `.aco/sync-manifest.json`에 해시를 추적하는 관리 산출물을 쓴다.
 
 ```mermaid
 flowchart LR
@@ -116,10 +114,9 @@ flowchart LR
     sync --> manifest
 ```
 
-Use [reference/context-sync.md](reference/context-sync.md) for field conversion rules,
-warnings, and conflict handling.
+필드 변환 규칙, 경고, 충돌 처리 방식은 [reference/context-sync.md](reference/context-sync.md)를 참고한다.
 
-## Repository Layout
+## 저장소 구조
 
 ```text
 packages/
@@ -147,47 +144,46 @@ flowchart TB
     templates --> prompts[templates/prompts<br/>provider prompt templates]
 ```
 
-| Path                  | Purpose                                                       |
+| 경로                  | 목적                                                          |
 | --------------------- | ------------------------------------------------------------- |
-| `packages/wrapper/`   | Public npm package implementation for the Node.js `aco` CLI   |
-| `packages/installer/` | Internal transitional workspace, not a public package surface |
-| `cmd/aco/`            | Go CLI entrypoint for blocking `aco run` and `aco delegate`   |
-| `internal/provider/`  | Go provider implementations and provider registry             |
-| `internal/runner/`    | Go process execution and signal/timeout handling              |
-| `templates/commands/` | Slash command templates copied to `.claude/commands/`         |
-| `templates/prompts/`  | Provider prompt templates copied to `.claude/aco/prompts/`    |
-| `.github/workflows/`  | CI, release, and project synchronization workflows            |
+| `packages/wrapper/`   | Node.js `aco` CLI를 구현하는 공개 npm 패키지                  |
+| `packages/installer/` | 공개 패키지 표면이 아닌 내부 전환용 workspace                 |
+| `cmd/aco/`            | blocking `aco run`과 `aco delegate`를 위한 Go CLI 진입점      |
+| `internal/provider/`  | Go provider 구현체와 provider registry                        |
+| `internal/runner/`    | Go 프로세스 실행과 signal/timeout 처리                        |
+| `templates/commands/` | `.claude/commands/`로 복사되는 slash command 템플릿           |
+| `templates/prompts/`  | `.claude/aco/prompts/`로 복사되는 provider prompt 템플릿      |
+| `.github/workflows/`  | CI, release, project 동기화 workflow                          |
 
-## Key Decisions
+## 주요 결정
 
-### D1: Single public package
+### D1: 단일 공개 패키지
 
-Only `@pureliture/ai-cli-orch-wrapper` is intended to be published. Internal workspaces may remain during migration, but they are not part of the public API.
+배포 대상은 `@pureliture/ai-cli-orch-wrapper` 하나뿐이다. 마이그레이션 중 내부 workspace가 남을 수 있지만, 공개 API에는 포함하지 않는다.
 
-### D2: Single public CLI
+### D2: 단일 공개 CLI
 
-`aco` is the only public command. Historical installer functionality is routed through:
+`aco`만 공개 명령으로 둔다. 기존 installer 기능은 다음 명령으로 라우팅한다:
 
 - `aco pack install`
 - `aco pack setup`
 - `aco pack status`
 - `aco provider setup <name>`
 
-### D3: Runtime lifecycle remains in wrapper
+### D3: 런타임 생명주기는 wrapper가 유지
 
-The `aco` CLI still owns:
+`aco` CLI는 계속 다음 책임을 가진다:
 
 - provider dispatch
-- session/task lifecycle
-- output/error log handling
-- cancellation/status commands
+- session/task 생명주기
+- output/error 로그 처리
+- cancellation/status 명령
 
-### D4: Pack installation is file copy
+### D4: Pack 설치는 파일 복사
 
-`aco pack install` copies templates from `templates/commands/` into `.claude/commands/`. Symlinks are still avoided because they are fragile across Node version manager changes.
+`aco pack install`은 `templates/commands/`의 템플릿을 `.claude/commands/`로 복사한다. Node version manager 변경에 취약하므로 symlink는 계속 피한다.
 
-### D5: Context sync uses managed outputs
+### D5: Context sync는 관리 산출물을 사용
 
-`aco sync` owns generated Codex/Gemini target blocks and records hashes in
-`.aco/sync-manifest.json`. Drifted manifest-owned targets are not overwritten unless the
-operator chooses `aco sync --force`.
+`aco sync`는 생성된 Codex/Gemini 대상 block을 소유하고 `.aco/sync-manifest.json`에 해시를 기록한다.
+manifest가 소유한 대상에 drift가 있으면 운영자가 `aco sync --force`를 선택하기 전까지 덮어쓰지 않는다.

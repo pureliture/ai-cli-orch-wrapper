@@ -1,7 +1,7 @@
-# Brainstorm Session 2 — aco 아키텍처 재정립
-**Date**: 2026-04-06
-**Mode**: Team (Gemini + Claude, Codex timeout)
-**Topic**: ccg-workflow 분석 포함, aco 방향성 재브레인스토밍
+# 브레인스토밍 세션 2 — aco 아키텍처 재정립
+**날짜**: 2026-04-06
+**모드**: Team (Gemini + Claude, Codex timeout)
+**주제**: ccg-workflow 분석 포함, aco 방향성 재브레인스토밍
 
 ---
 
@@ -21,7 +21,7 @@ ccg-workflow 분석 결과를 포함해서 aco 방향성 재검토:
 
 ## Provider별 아이디어
 
-### 🟡 Gemini — Lateral Thinking
+### 🟡 Gemini — 수평적 사고
 
 **핵심 통찰: Tool vs Protocol Gap**
 `aco run`은 fire-and-forget Bash execution.
@@ -47,14 +47,14 @@ CC Agent tool은 lifecycle monitoring이 있는 interactive session.
 - LSP pre-fetch 개념의 agent 버전
 
 **Context 전파 시 전달하지 말아야 할 것:**
-- Full terminal scrollback
-- CC의 internal tool-use logs (context poisoning 원인)
-- Large binary assets
+- 전체 terminal scrollback
+- CC의 internal tool-use log (context poisoning 원인)
+- 대용량 binary asset
 - 전달할 것: Goal + 관련 파일 (`git ls-files` 필터) + Architectural constraints
 
 ---
 
-### 🔵 Claude — Pattern Spotting (codebase 직접 분석)
+### 🔵 Claude — 패턴 포착 (codebase 직접 분석)
 
 **패턴 1: "Native feeling"의 진짜 정의**
 
@@ -109,7 +109,7 @@ Binary 역할:
   - provider binary 해석
   - signal forwarding
   - stdout streaming
-  - exit code classification
+  - exit code 분류
   - prompt 내용에 대해 아무것도 모름
 ```
 
@@ -154,7 +154,7 @@ ccg의 `SESSION-ID: xxx` sentinel 패턴의 output 버전.
 
 ---
 
-## Cross-Perspective Synthesis
+## 관점 종합
 
 ### 수렴
 - "Native feeling" = invocation mechanism의 문제 (Gemini + Claude 동의)

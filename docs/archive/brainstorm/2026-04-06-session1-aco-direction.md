@@ -1,7 +1,7 @@
-# Brainstorm Session 1 — aco 방향성 초기 탐색
-**Date**: 2026-04-06
-**Mode**: Team (Codex + Gemini + Claude)
-**Topic**: CCG-workflow UX와 결합하지 않고, CC sub-agent처럼 자연스럽게 녹이는 aco 아키텍처
+# 브레인스토밍 세션 1 — aco 방향성 초기 탐색
+**날짜**: 2026-04-06
+**모드**: Team (Codex + Gemini + Claude)
+**주제**: CCG-workflow UX와 결합하지 않고, CC sub-agent처럼 자연스럽게 녹이는 aco 아키텍처
 
 ---
 
@@ -16,7 +16,7 @@
 
 ## Provider별 아이디어
 
-### 🔴 Codex — Technical Feasibility
+### 🔴 Codex — 기술적 실현 가능성
 
 **통합 SpawnRequest 인터페이스**
 ```go
@@ -39,11 +39,11 @@ type SpawnRequest struct {
 ├── repo_map.txt     ← 디렉터리 구조
 ├── git.diff         ← 현재 uncommitted diff
 ├── snippets/        ← 관련 파일 excerpts
-└── constraints.md   ← 작업 역할, output format
+└── constraints.md   ← 작업 역할, 출력 형식
 ```
 
 **역할 기반 라우팅 + Scorecard**
-- `execute → codex`, `research → gemini`, `review → gemini (broad) or codex (patch-level)`
+- `execute → codex`, `research → gemini`, `review → gemini (broad) 또는 codex (patch-level)`
 - `Scorecard{ CodeEditDepth, NeedShellActions, NeedLongContext, ... }`
 - Gemini 실패 시 Codex fallback은 review/설명 목적으로만
 
@@ -53,7 +53,7 @@ type SpawnRequest struct {
 
 ---
 
-### 🟡 Gemini — Lateral Thinking
+### 🟡 Gemini — 수평적 사고
 
 **Binary Imposter / PATH Hijacking**
 Go wrapper가 CC 내부 sub-process 호출 signature를 감지, argv + env 기반으로 투명하게 중개. CPU Instruction Set Emulation 패턴.
@@ -66,12 +66,12 @@ CLI 부팅 오버헤드 제거를 위해 background에서 Gemini/Codex 프로세
 
 ---
 
-### 🔵 Claude — Pattern Spotting & Paradoxes
+### 🔵 Claude — 패턴 포착과 역설
 
 **핵심 패턴:**
 
 1. **Blocking contract = Substitutability guarantee**
-   async 상태 삭제가 단순화가 아니라 CC와의 substitutability guarantee.
+   async 상태 삭제가 단순화가 아니라 CC와의 대체 가능성 보장.
    CC가 `aco run gemini review`를 blocking wait하면 외부 AI는 in-process 함수 호출과 구조적으로 동일.
    비동기+session state 도입 시 provider identity가 새어나오는 seam 생성.
 
@@ -81,7 +81,7 @@ CLI 부팅 오버헤드 제거를 위해 background에서 Gemini/Codex 프로세
 
 3. **Transparent Execution Substitution** (미명명)
    Plugin(기능 추가)도 아니고 Integration(프로토콜 경계)도 아님.
-   Caller가 metadata 없이 substitute를 original과 구분 못하는 상태.
+   호출자가 metadata 없이 substitute를 original과 구분하지 못하는 상태.
    프로세스 경계의 Liskov Substitution.
 
 **핵심 역설:**
@@ -92,10 +92,10 @@ CLI 부팅 오버헤드 제거를 위해 background에서 Gemini/Codex 프로세
 
 ---
 
-## Cross-Perspective Synthesis
+## 관점 종합
 
 ### 수렴
-- Go wrapper가 단일 execution interface 담당
+- Go wrapper가 단일 실행 인터페이스 담당
 - Role/capability 기반 라우팅 필요
 - Non-interactive stdout 스트리밍이 핵심
 - 프롬프트 파일이 sub-agent identity의 핵심
@@ -107,7 +107,7 @@ CLI 부팅 오버헤드 제거를 위해 background에서 Gemini/Codex 프로세
 
 ### 가장 강력한 아이디어
 
-1. **Blocking = Substitution Guarantee** — async 유혹 거부가 아키텍처적으로 옳음
+1. **Blocking = 대체 가능성 보장** — async 유혹 거부가 아키텍처적으로 옳음
 2. **Constitution-as-File** — slash command 다각화 대신 `(role, provider)` 조합 프롬프트 파일 정의
 3. **Gemini Warm Pool** — Gemini/Codex CLI가 Node.js 기반이라 cold start 있음. Background warm 프로세스로 native 응답성
 

@@ -4,7 +4,8 @@ import { parseSentinel, stripRid, isPotentialSentinel } from '../src/util/sentin
 
 describe('parseSentinel', () => {
   it('parses valid sentinel with 16 hex rid', () => {
-    const line = 'ACO_META_a3f2b1c4d5e6f789: {"agent":"reviewer","provider":"gemini_cli","model":"gemini-2.5-pro","exit_code":0,"duration_ms":3812}';
+    const line =
+      'ACO_META_a3f2b1c4d5e6f789: {"agent":"reviewer","provider":"gemini_cli","model":"gemini-2.5-pro","exit_code":0,"duration_ms":3812}';
     const result = parseSentinel(line);
 
     assert.notEqual(result, null);
@@ -17,7 +18,8 @@ describe('parseSentinel', () => {
   });
 
   it('parses sentinel with leading/trailing whitespace', () => {
-    const line = '  ACO_META_0123456789abcdef: {"agent":"test","provider":"codex","model":"gpt-4","exit_code":1,"duration_ms":100}  ';
+    const line =
+      '  ACO_META_0123456789abcdef: {"agent":"test","provider":"codex","model":"gpt-4","exit_code":1,"duration_ms":100}  ';
     const result = parseSentinel(line);
 
     assert.notEqual(result, null);
@@ -50,7 +52,8 @@ describe('parseSentinel', () => {
   });
 
   it('parses old format ACO_META: for backward compatibility', () => {
-    const line = 'ACO_META: {"agent":"old","provider":"codex","model":"gpt-4","exit_code":0,"duration_ms":500}';
+    const line =
+      'ACO_META: {"agent":"old","provider":"codex","model":"gpt-4","exit_code":0,"duration_ms":500}';
     const result = parseSentinel(line);
 
     assert.notEqual(result, null);

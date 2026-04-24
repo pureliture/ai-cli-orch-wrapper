@@ -1,62 +1,62 @@
-# GitHub Projects V2 — Project Board Reference
+# GitHub Projects V2 — Project Board 참조
 
-## Setup Status
+## 설정 상태
 
-- [x] Project created: #3 "AI-Harness-Construct"
-- [x] Status field: Backlog / Ready / In Progress / In Review / Done
-- [x] Priority field: P0 / P1 / P2
-- [x] Size field: S / M / L
-- [x] Target date field
-- [x] Sprint (Iteration) field
-- [x] Views (Active Sprint, Triage, Roadmap) configured in GitHub UI
+- [x] Project 생성: #3 "AI-Harness-Construct"
+- [x] Status 필드: Backlog / Ready / In Progress / In Review / Done
+- [x] Priority 필드: P0 / P1 / P2
+- [x] Size 필드: S / M / L
+- [x] Target date 필드
+- [x] Sprint (Iteration) 필드
+- [x] GitHub UI에서 View (Active Sprint, Triage, Roadmap) 설정 완료
 
-## Setup Instructions (remaining)
+## 설정 안내 (남은 작업)
 
-## Fields
+## 필드
 
-| Field | Type | Options |
+| 필드 | 유형 | 옵션 |
 |-------|------|---------|
 | Status | Single select | Backlog, Ready, In Progress, In Review, Done |
 | Priority | Single select | P0, P1, P2 |
 | Size | Single select | S, M, L |
-| Sprint | Iteration | 2-week cycles |
+| Sprint | Iteration | 2주 주기 |
 | Target date | Date | — |
-| Parent issue | ProjectV2Field | (GitHub Native) Source of truth for Epic |
-| epic | ProjectV2Field | **DEPRECATED** — use Parent issue instead |
+| Parent issue | ProjectV2Field | Epic의 source of truth (GitHub Native) |
+| epic | ProjectV2Field | **DEPRECATED** — 대신 Parent issue 사용 |
 
-## Views
+## View
 
-| View | Type | Filter | Group by |
+| View | 유형 | Filter | Group by |
 |------|------|--------|----------|
 | Active Sprint | Board | `sprint:@current` | Status |
 | Triage | Table | `No:label` | (none) |
 | Roadmap | Table | (none) | (none) |
 
-## IDs (fill in after setup)
+## ID (설정 후 채우기)
 
-Run the following after Projects V2 is configured:
+Projects V2 설정 후 다음 명령을 실행한다:
 
 ```bash
 bash scripts/setup-project-ids.sh
 ```
 
-Or manually:
+또는 수동으로 확인한다:
 
 ```bash
-# Get project number and node ID
+# project number와 node ID 조회
 gh project list --owner pureliture
 
-# Get field IDs
+# field ID 조회
 gh project field-list <PROJECT_NUMBER> --owner pureliture --format json
 
-# Copy the values below:
-PM_PROJECT_NUMBER=""   # e.g., 1
-PM_PROJECT_ID=""       # node ID (GUID) — from gh project view N --json id -q .id
+# 아래 값 복사:
+PM_PROJECT_NUMBER=""   # 예: 1
+PM_PROJECT_ID=""       # node ID (GUID) — gh project view N --json id -q .id에서 확인
 PM_STATUS_FIELD_ID=""  # Status field node ID
 PM_IN_REVIEW_OPTION_ID=""  # "In Review" option node ID
 ```
 
-Set these in your shell rc (`.zshrc` / `.bashrc`):
+shell rc (`.zshrc` / `.bashrc`)에 다음 값을 설정한다:
 
 ```bash
 export PM_PROJECT_NUMBER="3"
@@ -71,11 +71,11 @@ export PM_P1_OPTION_ID="ed47fdcf"
 export PM_P2_OPTION_ID="6eb1a525"
 ```
 
-## Branch Protection Rules (after CI runs once on main)
+## Branch Protection 규칙 (main에서 CI를 한 번 실행한 뒤)
 
 GitHub UI → Settings → Branches → Add rule → `main`:
 
-- [x] Require status checks to pass: `lint`, `typecheck`, `test`, `smoke`
-- [x] Require branches to be up to date before merging
-- [x] Require a pull request before merging
-- [x] Require squash merge (Allowed merge methods: Squash only)
+- [x] status check 통과 필수: `lint`, `typecheck`, `test`, `smoke`
+- [x] merge 전 branch 최신화 필수
+- [x] merge 전 pull request 필수
+- [x] squash merge 필수 (허용 merge 방식: Squash only)

@@ -1,8 +1,8 @@
-# Process Execution Contract
+# 프로세스 실행 계약
 
-**Status:** Normative
-**Scope:** `aco run` and `aco delegate` subcommands
-**Reference:** `internal/runner/process.go`, `cmd/aco/cmd_run.go`, `cmd/aco/cmd_delegate.go`
+**상태:** 규범
+**범위:** `aco run`과 `aco delegate` 하위 명령
+**참조:** `internal/runner/process.go`, `cmd/aco/cmd_run.go`, `cmd/aco/cmd_delegate.go`
 
 ---
 
@@ -134,8 +134,8 @@ ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 | 상황 | ExitCode | 에러 타입 |
 |------|---------|----------|
 | 정상 종료 | 0 | — |
-| 비정상 종료 (인증 아님) | provider-specific | `*ExitError` |
-| 인증 실패 (프로바이더 휴리스틱) | provider-specific | `*AuthError` |
+| 비정상 종료 (인증 아님) | provider별 값 | `*ExitError` |
+| 인증 실패 (프로바이더 휴리스틱) | provider별 값 | `*AuthError` |
 | 타임아웃 | 1 | `*TimeoutError` |
 | 시그널 종료 | 1 | `*SignalError` |
 | 바이너리 없음 | 1 | `*NotFoundError` |
@@ -191,7 +191,7 @@ ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 
 3. 프로바이더/모델 결정
    delegate.Resolve(spec, formatter)
-   → ModelAlias → RoleHint → Fallback 순서로 결정
+   → ModelAlias → RoleHint → fallback 순서로 결정
 
 4. 프롬프트 구성
    delegate.BuildPrompt(spec, input)
@@ -251,8 +251,8 @@ ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 
 ## 13. 알려진 한계 및 향후 방향
 
-- **runner.go의 StubRunner**: 현재 `internal/runner/runner.go`에는 `StubRunner`만 있고, 실제 구현은 `process.go`의 `ProcessRunner`에 있다. Phase B에서 인터페이스 정리 필요.
-- **prompt 로딩**: 현재 `embed.FS` 대신 맵 기반 내장값 사용. Phase 4에서 `.md` 파일 기반으로 전환 예정.
+- **runner.go의 StubRunner**: 현재 `internal/runner/runner.go`에는 `StubRunner`만 있고, 실제 구현은 `process.go`의 `ProcessRunner`에 있다. Phase B에서 인터페이스 정리가 필요하다.
+- **prompt 로딩**: 현재 `embed.FS` 대신 맵 기반 내장값을 사용한다. Phase 4에서 `.md` 파일 기반으로 전환할 예정이다.
 - **delegate 모드에서의 에러 분류**: `classifyDelegateError`는 항상 exit code 1을 반환. 향후 세분화 필요.
 - **프로바이더 추가**: 현재 gemini와 codex만 지원. 새 프로바이더 추가 시 `Provider` 인터페이스 준수 필수.
 

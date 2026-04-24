@@ -57,7 +57,7 @@ workspaceMode: edit
 
 You are an implementation specialist. Write and modify code to complete tasks.`;
 
-const claudeAgentFrontmatter = `---
+  const claudeAgentFrontmatter = `---
 name: typescript-reviewer
 description: "Expert TypeScript/JavaScript code reviewer"
 tools: ["Read", "Grep", "Glob", "Bash"]
@@ -494,9 +494,9 @@ describe('Skill Sync', () => {
 
       const result = await runSync(tmpDir, { dryRun: true });
       const outputs = result.outputs;
-      
+
       // Filter for skill outputs
-      const skillOutputs = outputs.filter(o => o.targetPath.includes('.agents/skills/dry-skill'));
+      const skillOutputs = outputs.filter((o) => o.targetPath.includes('.agents/skills/dry-skill'));
       assert.equal(skillOutputs.length, 1);
       assert.equal(skillOutputs[0].action, 'created');
 
