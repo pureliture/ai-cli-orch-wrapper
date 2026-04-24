@@ -51,13 +51,22 @@ Go 바이너리가 전적으로 담당하는 레이어:
 Node.js 래퍼가 전적으로 담당하는 레이어:
 
 ### 1. Provider Runtime (`IProvider`)
-각 프로바이더 구현체 (`GeminiProvider`)는 `IProvider` 인터페이스를 구현한다:
-- `key`: 프로바이더 키 ("gemini")
+각 프로바이더 구현체 (`GeminiProvider`, `CodexProvider`)는 `IProvider` 인터페이스를 구현한다:
+- `key`: 프로바이더 키 ("gemini", "codex")
 - `installHint`: 설치 안내 메시지
 - `isAvailable()`: 바이너리 가용성 체크
 - `checkAuth()`: 인증 상태 검사
 - `buildArgs()`: 인자 구성
 - `invoke()`: 프로바이더 프로세스 실행 및 스트리밍 출력
+
+`checkAuth()`는 provider setup UX를 빠르게 만들기 위한 Node.js 래퍼 책임이다. 바이너리 가용성을 먼저 확인한 뒤, 로컬 환경과 인증 파일을 검사하고, 마지막에 provider CLI 실행으로 폴백한다.
+
+| Provider | Fast-path auth sources | Fallback |
+|----------|------------------------|----------|
+| Gemini | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `~/.gemini/oauth_creds.json` | `gemini --version` |
+| Codex | `OPENAI_API_KEY`, `~/.codex/auth.json` | `codex --version` |
+
+Codex의 `~/.codex/auth.json`에 `expires_at` 숫자 값이 있으면 현재 시각과 비교해 만료 여부를 판정한다.
 
 ### 2. Session Store
 `SessionStore`가 `~/.aco/sessions/<uuid>/` 디렉토리에:

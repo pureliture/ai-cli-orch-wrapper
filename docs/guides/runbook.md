@@ -47,9 +47,20 @@ npm install -g @pureliture/ai-cli-orch-wrapper
 
 ```bash
 aco provider setup gemini
+aco provider setup codex
 ```
 
 Gemini CLI: `npm install -g @google/gemini-cli`
+Codex CLI: `npm install -g @openai/codex`
+
+`aco provider setup` checks for a provider binary before checking auth. Auth is considered ready when any matching fast-path source is available:
+
+| Provider | Auth sources |
+| --- | --- |
+| Gemini | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, or `~/.gemini/oauth_creds.json` |
+| Codex | `OPENAI_API_KEY` or `~/.codex/auth.json` |
+
+If Codex reports an expired OAuth token, run `codex login`. In headless or CI environments, prefer `GEMINI_API_KEY` for Gemini and `OPENAI_API_KEY` for Codex.
 
 ### Slash commands missing after install
 
