@@ -16,12 +16,14 @@ aco provider setup codex
 
 ## Provider Auth
 
-`aco provider setup <provider>` checks the provider binary first, then uses fast local auth checks before spawning the CLI:
+`aco provider setup <provider>` checks the provider binary first, then uses local
+credential-readiness heuristics before spawning the CLI. The `--version` fallback verifies binary
+availability; it is not a remote authentication check.
 
-| Provider | Fast-path auth sources | Fallback |
-| --- | --- | --- |
-| Gemini | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `~/.gemini/oauth_creds.json` | `gemini --version` |
-| Codex | `OPENAI_API_KEY`, `~/.codex/auth.json` | `codex --version` |
+| Provider | Fast-path auth sources                                           | Fallback           |
+| -------- | ---------------------------------------------------------------- | ------------------ |
+| Gemini   | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `~/.gemini/oauth_creds.json` | `gemini --version` |
+| Codex    | `OPENAI_API_KEY`, `~/.codex/auth.json`                           | `codex --version`  |
 
 Expired Codex OAuth tokens report `codex login` as the fix.
 
