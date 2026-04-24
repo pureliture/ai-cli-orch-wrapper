@@ -88,7 +88,7 @@ describe('runSync Conflict Detection & Resolution', () => {
 
       // Run with force
       const result = await runSync(tmpDir, { force: true });
-      
+
       assert.equal(result.conflicts, 1);
 
       // Verify the file WAS overwritten
@@ -130,13 +130,16 @@ describe('runSync Conflict Detection & Resolution', () => {
       await writeFile(join(manifestPath, 'sync-manifest.json'), JSON.stringify(manifest));
 
       // Note: we do NOT create the target file on disk, so it's missing.
-      
+
       const result = await runSync(tmpDir, { dryRun: false });
-      
+
       // Should not conflict, should create or update it
       assert.equal(result.conflicts, 0);
-      assert.equal(result.outputs.some(o => o.action === 'created' || o.action === 'updated'), true);
-      
+      assert.equal(
+        result.outputs.some((o) => o.action === 'created' || o.action === 'updated'),
+        true
+      );
+
       // Verify it was recreated
       const finalContent = await readFile(targetPath, 'utf-8');
       assert.ok(finalContent.includes('name = "test-agent"'));

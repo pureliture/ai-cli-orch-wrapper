@@ -44,6 +44,15 @@ node packages/wrapper/dist/cli.js provider setup codex
 - Gemini CLI: `npm install -g @google/gemini-cli`
 - Codex CLI: `npm install -g @openai/codex`
 
+`provider setup`은 외부 CLI가 설치되어 있는지 확인한 뒤, 다음 순서로 인증 상태를 빠르게 판정합니다.
+
+| Provider | Fast-path auth sources | Fallback |
+| --- | --- | --- |
+| Gemini | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `~/.gemini/oauth_creds.json` | `gemini --version` |
+| Codex | `OPENAI_API_KEY`, `~/.codex/auth.json` | `codex --version` |
+
+Codex OAuth 토큰에 `expires_at` 값이 있고 만료된 경우에는 `codex login`을 다시 실행해야 합니다.
+
 ## CLI 개요
 
 ```bash
@@ -155,6 +164,8 @@ npm install -g @pureliture/ai-cli-orch-wrapper
 npx @pureliture/ai-cli-orch-wrapper provider setup gemini
 npx @pureliture/ai-cli-orch-wrapper provider setup codex
 ```
+
+Headless/CI 환경에서는 Gemini에 `GEMINI_API_KEY`, Codex에 `OPENAI_API_KEY`를 설정할 수 있습니다.
 
 ### slash command가 보이지 않는 경우
 

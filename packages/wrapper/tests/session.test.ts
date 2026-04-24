@@ -70,7 +70,7 @@ describe('SessionStore', () => {
   it('latestId() returns the most recent session', async () => {
     const { store } = await makeStore();
     await store.create('gemini', 'review');
-    await new Promise(r => setTimeout(r, 5));
+    await new Promise((r) => setTimeout(r, 5));
     const second = await store.create('gemini', 'rescue');
     const latest = store.latestId();
     assert.equal(latest, second.id);
