@@ -39,7 +39,7 @@ case "$PRIORITY_INPUT" in
 esac
 
 if [[ -n "${PRIORITY_OPTION_ID:-}" ]]; then
-gh project item-edit \
+  gh project item-edit \
   --project-id "$PM_PROJECT_ID" \
   --id "<item-id>" \
   --field-id "$PM_PRIORITY_FIELD_ID" \
