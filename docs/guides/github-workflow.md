@@ -48,18 +48,23 @@ PM workflow 자동화는 두 축의 명령으로 구성된다:
 | `/gh-*`   | `gh-issue`, `gh-start`, `gh-pr`, `gh-pr-followup` | GitHub issue/PR 운영       |
 
 Claude Code에서는 repo-local `.claude/commands/`의 slash command를 계속 사용한다.
-Codex에서는 Claude slash command를 직접 복제하지 않고 `.agents/skills/github-kanban-ops/`의
-`github-kanban-ops` skill workflow를 canonical source로 사용한다. `.codex/skills/github-kanban-ops`
-복사본은 runtime 요구가 확인될 때만 생성한다.
+Codex에서는 Claude slash command syntax를 그대로 복제하지 않고 `.agents/skills/gh-*`의
+skill wrapper를 사용한다. 사용 경험은 `$gh-issue`, `$gh-start`, `$gh-pr`,
+`$gh-pr-followup`으로 맞추고, 실제 정책은 `.agents/skills/github-kanban-ops/`를
+canonical source로 둔다. `.codex/skills/github-kanban-ops` 복사본은 runtime 요구가
+확인될 때만 생성한다.
 
 ### Codex invocation mapping
 
-| Claude command | Codex prompt pattern |
-|----------------|----------------------|
-| `/gh-issue ...` | `Use github-kanban-ops to create a <epic/task/bug/chore> issue for ...` |
-| `/gh-start #N` | `Use github-kanban-ops to start issue #N and create the worktree.` |
-| `/gh-pr #N` | `Use github-kanban-ops to create a PR closing #N.` |
-| `/gh-pr-followup #PR` | `Use github-kanban-ops to triage unresolved review threads on PR #PR.` |
+| Claude command | Codex skill wrapper |
+|----------------|---------------------|
+| `/gh-issue ...` | `$gh-issue ...` |
+| `/gh-start #N` | `$gh-start #N` |
+| `/gh-pr #N` | `$gh-pr #N` |
+| `/gh-pr-followup #PR` | `$gh-pr-followup #PR` |
+
+`$github-kanban-ops`는 정책과 상세 workflow를 직접 지정해야 할 때만 사용한다. 일반
+issue/PR 운영은 `$gh-*` wrapper를 기본 진입점으로 쓴다.
 
 Codex의 `Start Issue` workflow는 `.aco-worktrees` root를 유지하되 새 worktree leaf를
 `.aco-worktrees/<prefix>-<N>`로 만든다. `<prefix>`는 branch prefix와 동일하게
@@ -106,7 +111,8 @@ repo-local `.claude/commands/`에는 maintainer가 사용하는 추가 명령이
 ## Issue 작성 규칙
 
 GitHub PM workflow의 Codex canonical 기준은 `.agents/skills/github-kanban-ops/`의
-`github-kanban-ops`다. Claude slash command 호환성은 `.claude/skills/github-kanban-ops/`와
+`github-kanban-ops`다. Codex 사용자는 `$gh-*` wrapper를 통해 같은 workflow를 호출한다.
+Claude slash command 호환성은 `.claude/skills/github-kanban-ops/`와
 `.claude/commands/gh-*.md`가 유지한다.
 
 ### 제목 규칙
@@ -242,7 +248,7 @@ PR review feedback에서 만들어진 issue를 추적하려면 `origin:review` l
 - review에서 드러난 개선 또는 후속 구현에는 `origin:review` + `type:task`를 적용한다.
 - review에서 드러난 refactoring task에는 `origin:review` + `type:chore`를 적용한다.
 - review에서 발견된 결함에는 `origin:review` + `type:bug`를 적용한다.
-- 평가와 생성을 위해 Claude에서는 `/gh-pr-followup`, Codex에서는 `github-kanban-ops`의 `Handle Review Follow-up` workflow를 사용한다. 이 workflow는 본문 형식과 label 할당을 자동 처리한다.
+- 평가와 생성을 위해 Claude에서는 `/gh-pr-followup`, Codex에서는 `$gh-pr-followup` wrapper를 사용한다. 이 workflow는 본문 형식과 label 할당을 자동 처리한다.
 - Codex issue 본문은 `.agents/skills/github-kanban-ops/scripts/make_issue_body.py`의 canonical section을 사용하고, PR review 출처는 `Notes` 등 적절한 section에 포함한다.
 
 자동화 규칙:

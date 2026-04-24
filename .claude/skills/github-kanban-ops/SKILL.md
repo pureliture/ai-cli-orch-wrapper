@@ -5,7 +5,7 @@ description: Manage this repository with GitHub Projects, Issues, and Pull Reque
 
 # GitHub Kanban Ops
 
-Treat GitHub Projects as the board, GitHub Issues as work items, and GitHub Pull Requests as delivery records. This skill is the canonical Codex interface for the repository's GitHub Kanban workflows. Claude `/gh-*` slash commands remain compatibility wrappers; Codex should use the workflows below directly.
+Treat GitHub Projects as the board, GitHub Issues as work items, and GitHub Pull Requests as delivery records. This skill is the canonical policy source for the repository's GitHub Kanban workflows. Claude `/gh-*` slash commands and Codex `$gh-*` skill wrappers remain thin compatibility interfaces that delegate to the workflows below.
 
 ## Quick Start
 

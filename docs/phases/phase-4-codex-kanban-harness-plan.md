@@ -62,6 +62,7 @@ Current repository inspection shows:
 | Target | Recommendation | Reason |
 |--------|----------------|--------|
 | `.agents/skills/github-kanban-ops/` | Make this the canonical Codex GitHub Kanban skill | It is already repo-local, discoverable, and holds `SKILL.md`, references, scripts, and `agents/openai.yaml` |
+| `.agents/skills/gh-{issue,start,pr,pr-followup}/` | Add thin Codex command-alias skills | Preserves Claude `/gh-*` muscle memory as Codex `$gh-*` without duplicating workflow policy |
 | `.codex/skills/github-kanban-ops/` | Do not add initially | Avoid duplicate canonical skill copies unless Codex runtime or packaging proves `.codex/skills` is required |
 | `.codex/agents/github-kanban-ops.toml` | Defer unless routing needs a dedicated agent | The skill trigger is enough for normal use; a TOML agent adds another surface to keep synchronized |
 | `docs/guides/github-workflow.md` | Update during implementation | Users need non-Claude invocation examples and a mapping from old `/gh-*` commands |
@@ -80,27 +81,35 @@ Codex may not support Claude slash commands directly, so Phase 4 needs a native 
 | Option | Pros | Cons |
 |--------|------|------|
 | Command docs only | Lowest risk; no new runtime surface | Users must manually translate docs into prompts; less reliable than skills |
-| Skill workflows in `SKILL.md` | Native to the current Codex skill system; discoverable; keeps policy close to scripts and references | Longer `SKILL.md`; needs careful sectioning to avoid command-like ambiguity |
+| Single canonical skill workflows in `SKILL.md` | Native to the current Codex skill system; discoverable; keeps policy close to scripts and references | Usage differs too much from Claude `/gh-*`; users must remember workflow names |
+| Thin `$gh-*` wrapper skills delegating to canonical skill | Preserves command-like UX while keeping policy in one place | Adds small wrapper files that must stay intentionally policy-light |
 | Executable scripts | Deterministic Project operations; easier smoke tests; reusable across agents | More implementation work; shell/API edge cases; scripts still need LLM-authored titles and bodies |
 | Dedicated Codex agent | Stronger routing for Kanban tasks; useful for subagent delegation | Adds another sync surface; unnecessary unless skill routing is insufficient |
 
 ### Recommended path
 
-Use `.agents/skills/github-kanban-ops/SKILL.md` as the primary Codex interface and add four explicit workflow sections:
+Use `.agents/skills/github-kanban-ops/SKILL.md` as the canonical policy source and add four explicit workflow sections:
 
 - `Create Issue` — Codex equivalent of `/gh-issue`.
 - `Start Issue` — Codex equivalent of `/gh-start`.
 - `Create Pull Request` — Codex equivalent of `/gh-pr`.
 - `Handle Review Follow-up` — Codex equivalent of `/gh-pr-followup`.
 
+Expose the Claude-like Codex UX through four thin skill wrappers:
+
+- `$gh-issue` — delegates to `Create Issue`.
+- `$gh-start` — delegates to `Start Issue`.
+- `$gh-pr` — delegates to `Create Pull Request`.
+- `$gh-pr-followup` — delegates to `Handle Review Follow-up`.
+
 Then update user-facing docs with a mapping table:
 
-| Claude command | Codex prompt pattern |
-|----------------|----------------------|
-| `/gh-issue ...` | `Use github-kanban-ops to create a <type> issue for ...` |
-| `/gh-start #N` | `Use github-kanban-ops to start issue #N and create the worktree.` |
-| `/gh-pr #N` | `Use github-kanban-ops to create a PR closing #N.` |
-| `/gh-pr-followup #PR` | `Use github-kanban-ops to triage unresolved review threads on PR #PR.` |
+| Claude command | Codex skill wrapper |
+|----------------|---------------------|
+| `/gh-issue ...` | `$gh-issue ...` |
+| `/gh-start #N` | `$gh-start #N` |
+| `/gh-pr #N` | `$gh-pr #N` |
+| `/gh-pr-followup #PR` | `$gh-pr-followup #PR` |
 
 Do not initially build four standalone scripts that fully replace the LLM workflow. Keep `scripts/make_issue_body.py` as the deterministic body generator, and consider small helper scripts later only for repeated Project item lookup/update operations.
 
@@ -167,11 +176,12 @@ Compatibility note: the Claude `/gh-start` wrapper can keep `.aco-worktrees/fix-
 ## Deliverables
 
 1. Update `.agents/skills/github-kanban-ops/SKILL.md` with Codex-native workflow sections for the four `gh-*` operations.
-2. Keep `.agents/skills/github-kanban-ops/references/github-kanban-model.md` as the workflow policy reference; update only if migration reveals missing Codex-specific constraints.
-3. Reuse `.agents/skills/github-kanban-ops/scripts/make_issue_body.py` from all Codex issue-creation workflows.
-4. Update `docs/guides/github-workflow.md` to explain Codex invocation patterns and distinguish Claude slash commands from Codex skill workflows.
-5. Optionally add `.codex/agents/github-kanban-ops.toml` only if implementation testing shows Codex routing does not reliably select the skill.
-6. Leave `.claude/commands/gh-*` and `templates/commands/gh-*` intact unless the implementation explicitly chooses a compatibility sync step.
+2. Add `.agents/skills/gh-*` thin wrappers so Codex users can invoke `$gh-issue`, `$gh-start`, `$gh-pr`, and `$gh-pr-followup`.
+3. Keep `.agents/skills/github-kanban-ops/references/github-kanban-model.md` as the workflow policy reference; update only if migration reveals missing Codex-specific constraints.
+4. Reuse `.agents/skills/github-kanban-ops/scripts/make_issue_body.py` from all Codex issue-creation workflows.
+5. Update `docs/guides/github-workflow.md` to explain Codex invocation patterns and distinguish Claude slash commands from Codex skill workflows.
+6. Optionally add `.codex/agents/github-kanban-ops.toml` only if implementation testing shows Codex routing does not reliably select the skill.
+7. Leave `.claude/commands/gh-*` and `templates/commands/gh-*` intact unless the implementation explicitly chooses a compatibility sync step.
 
 ---
 

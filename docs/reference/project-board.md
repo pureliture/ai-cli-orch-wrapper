@@ -77,7 +77,7 @@ PM_P1_OPTION_ID=""          # "P1" option node ID
 PM_P2_OPTION_ID=""          # "P2" option node ID
 ```
 
-`github-kanban-ops` workflows와 `/gh-*` compatibility commands는 환경변수 값을 우선 사용하고, 없으면 아래 repository fallback 값을 사용한다.
+`github-kanban-ops` workflows, Codex `$gh-*` skill wrappers, Claude `/gh-*` compatibility commands는 환경변수 값을 우선 사용하고, 없으면 아래 repository fallback 값을 사용한다.
 
 shell rc (`.zshrc` / `.bashrc`)에 다음 값을 설정한다:
 
