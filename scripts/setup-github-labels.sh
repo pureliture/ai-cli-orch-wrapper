@@ -45,6 +45,10 @@ echo "── Origin labels ─────────────────�
 create_or_update_label "origin:review" "BFDBFE" "Originated from PR review comment"
 
 echo ""
+echo "── Workflow-state labels ────────────────────"
+create_or_update_label "status:blocked" "E99695" "Issue is blocked by dependency or environment constraint"
+
+echo ""
 if [[ "$LABEL_FAILURES" -gt 0 ]]; then
   echo "ERROR: $LABEL_FAILURES label(s) failed to upsert. Run 'gh label list' to check." >&2
   exit 1

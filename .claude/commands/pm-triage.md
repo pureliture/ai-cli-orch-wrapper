@@ -11,9 +11,9 @@ description: "미분류 이슈를 조회하고 canonical label 및 Project Prior
 1. label 또는 Project 분류가 부족한 이슈 조회:
 ```bash
 gh issue list --repo pureliture/ai-cli-orch-wrapper \
-  --json number,title,body,labels \
+  --json number,title,body,labels,projectItems \
   --limit 100 \
-  --jq '[.[] | select(.labels | length == 0)]'
+  --jq '[.[] | select((.labels | length == 0) or (.projectItems | length == 0))]'
 ```
 
 2. 각 이슈의 제목과 본문을 분석해 다음 값을 제안:
@@ -30,11 +30,21 @@ gh issue edit <number> --repo pureliture/ai-cli-orch-wrapper \
 
 4. Project item이 있으면 `Priority` field만 업데이트:
 ```bash
+PRIORITY_INPUT="P1"  # 예: triage 과정에서 operator가 결정
+case "$PRIORITY_INPUT" in
+  P0) PRIORITY_OPTION_ID="$PM_P0_OPTION_ID" ;;
+  P1) PRIORITY_OPTION_ID="$PM_P1_OPTION_ID" ;;
+  P2) PRIORITY_OPTION_ID="$PM_P2_OPTION_ID" ;;
+  *) PRIORITY_OPTION_ID="" ;;
+esac
+
+if [[ -n "${PRIORITY_OPTION_ID:-}" ]]; then
 gh project item-edit \
   --project-id "$PM_PROJECT_ID" \
   --id "<item-id>" \
   --field-id "$PM_PRIORITY_FIELD_ID" \
-  --single-select-option-id "$PM_P1_OPTION_ID"
+  --single-select-option-id "$PRIORITY_OPTION_ID"
+fi
 ```
 
 ## 사용 예시

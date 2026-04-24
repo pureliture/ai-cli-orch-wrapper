@@ -57,14 +57,22 @@ echo ""
 
 # ── Priority field ──────────────────────────────────────────────────────────
 echo "── Creating Priority field ──"
-PRIORITY_JSON=$(gh project field-create "$PROJECT_NUMBER" \
+PRIORITY_FIELD_ID=$(gh project field-list "$PROJECT_NUMBER" \
   --owner "$OWNER" \
-  --name "Priority" \
-  --data-type SINGLE_SELECT \
-  --single-select-options "P0,P1,P2" \
-  --format json 2>&1)
+  --format json \
+  --jq '.fields[] | select(.name == "Priority") | .id' \
+  2>/dev/null | head -n 1)
 
-PRIORITY_FIELD_ID=$(echo "$PRIORITY_JSON" | jq -r '.id')
+if [[ -z "$PRIORITY_FIELD_ID" ]]; then
+  PRIORITY_JSON=$(gh project field-create "$PROJECT_NUMBER" \
+    --owner "$OWNER" \
+    --name "Priority" \
+    --data-type SINGLE_SELECT \
+    --single-select-options "P0,P1,P2" \
+    --format json)
+
+  PRIORITY_FIELD_ID=$(echo "$PRIORITY_JSON" | jq -r '.id')
+fi
 echo "  Priority field ID: ${PRIORITY_FIELD_ID}"
 
 PRIORITY_OPTIONS=$(gh project field-list "$PROJECT_NUMBER" \
