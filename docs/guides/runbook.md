@@ -53,14 +53,17 @@ aco provider setup codex
 Gemini CLI: `npm install -g @google/gemini-cli`
 Codex CLI: `npm install -g @openai/codex`
 
-`aco provider setup`은 인증을 확인하기 전에 provider 바이너리부터 확인한다. 다음 fast-path source 중 하나가 있으면 인증 준비 완료로 판단한다:
+`aco provider setup`은 provider 바이너리부터 확인한 뒤 local credential readiness를 휴리스틱으로
+확인한다. 다음 fast-path source 중 하나가 있으면 로컬 credential이 준비된 것으로 본다. 이
+검사는 remote 인증 검증이 아니다.
 
-| Provider | 인증 source |
-| --- | --- |
-| Gemini | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, 또는 `~/.gemini/oauth_creds.json` |
-| Codex | `OPENAI_API_KEY` 또는 `~/.codex/auth.json` |
+| Provider | 인증 source                                                           |
+| -------- | --------------------------------------------------------------------- |
+| Gemini   | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, 또는 `~/.gemini/oauth_creds.json` |
+| Codex    | `OPENAI_API_KEY` 또는 `~/.codex/auth.json`                            |
 
-Codex가 만료된 OAuth 토큰을 보고하면 `codex login`을 실행한다. headless 또는 CI 환경에서는 Gemini에 `GEMINI_API_KEY`, Codex에 `OPENAI_API_KEY`를 우선 사용한다.
+Codex OAuth 파일에 만료 시간이 있고 만료된 경우에는 `codex login`을 실행한다. headless 또는
+CI 환경에서는 Gemini에 `GEMINI_API_KEY`, Codex에 `OPENAI_API_KEY`를 우선 사용한다.
 
 ### 설치 후 slash command가 보이지 않는 경우
 

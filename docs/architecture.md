@@ -4,9 +4,10 @@
 pack과 `aco` CLI 런타임을 함께 관리한다. 현재 저장소에는 두 실행면이 있다.
 
 - **공개 npm 패키지**: `@pureliture/ai-cli-orch-wrapper`가 배포하는 Node.js
-  wrapper CLI. 설치, command pack 배치, `aco sync`, provider 실행, 세션 로그를 담당한다.
+  wrapper CLI. 설치, command pack 배치, `aco sync`, `aco run`, provider 실행, 세션 로그를 담당한다.
 - **Go 런타임**: `cmd/aco/`의 blocking runtime. `aco delegate`와 `aco run`을 통해
-  agent frontmatter 기반 provider 실행을 담당한다.
+  agent frontmatter 기반 provider 실행을 실험한다. Go runtime의 process/env 보안 계약은 이
+  경로에 적용되며, public npm wrapper의 Node provider 실행 경로와는 분리된다.
 
 문서 기준 주요 provider는 **gemini**와 **codex**다.
 
@@ -57,6 +58,8 @@ aco cancel [--session <id>]
 ## Go Delegate 런타임
 
 Go 런타임은 blocking 방식이며 프로세스 중심으로 동작한다. Node 세션 저장소는 사용하지 않는다.
+현재 공개 npm package의 session-aware `aco run/result/status/cancel` 표면은 Node wrapper가
+담당한다. 아래 Go `aco run`은 `cmd/aco/` runtime 경로를 직접 사용할 때의 표면이다.
 
 ```text
 aco delegate <agent-id> [--input <text>] [--formatter <path>] [--timeout <secs>]
@@ -144,16 +147,16 @@ flowchart TB
     templates --> prompts[templates/prompts<br/>provider prompt templates]
 ```
 
-| 경로                  | 목적                                                          |
-| --------------------- | ------------------------------------------------------------- |
-| `packages/wrapper/`   | Node.js `aco` CLI를 구현하는 공개 npm 패키지                  |
-| `packages/installer/` | 공개 패키지 표면이 아닌 내부 전환용 workspace                 |
-| `cmd/aco/`            | blocking `aco run`과 `aco delegate`를 위한 Go CLI 진입점      |
-| `internal/provider/`  | Go provider 구현체와 provider registry                        |
-| `internal/runner/`    | Go 프로세스 실행과 signal/timeout 처리                        |
-| `templates/commands/` | `.claude/commands/`로 복사되는 slash command 템플릿           |
-| `templates/prompts/`  | `.claude/aco/prompts/`로 복사되는 provider prompt 템플릿      |
-| `.github/workflows/`  | CI, release, project 동기화 workflow                          |
+| 경로                  | 목적                                                     |
+| --------------------- | -------------------------------------------------------- |
+| `packages/wrapper/`   | Node.js `aco` CLI를 구현하는 공개 npm 패키지             |
+| `packages/installer/` | 공개 패키지 표면이 아닌 내부 전환용 workspace            |
+| `cmd/aco/`            | blocking `aco run`과 `aco delegate`를 위한 Go CLI 진입점 |
+| `internal/provider/`  | Go provider 구현체와 provider registry                   |
+| `internal/runner/`    | Go 프로세스 실행과 signal/timeout 처리                   |
+| `templates/commands/` | `.claude/commands/`로 복사되는 slash command 템플릿      |
+| `templates/prompts/`  | `.claude/aco/prompts/`로 복사되는 provider prompt 템플릿 |
+| `.github/workflows/`  | CI, release, project 동기화 workflow                     |
 
 ## 주요 결정
 
