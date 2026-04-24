@@ -9,7 +9,9 @@
 #     * to guarantee convergence regardless of how a PR was created
 #
 # Detects 'gh pr create' and moves the created PR plus linked issue to "In Review"
-# in GitHub Projects V2. Also inherits priority label from linked issue (default: p1).
+# in GitHub Projects V2. Also syncs durable classification labels from linked
+# issues to the PR. Project fields remain the source of truth for workflow state
+# and priority.
 #
 # Payload (stdin JSON):
 #   { "tool_name": "Bash", "tool_input": { "command": "..." }, ... }
@@ -133,7 +135,9 @@ fi
 [[ -z "$ISSUE_NUMS" ]] && exit 0
 
 # ── Process every linked issue ─────────────────────────────────────────────
-PRIORITY_LABEL=""
+TYPE_LABEL=""
+AREA_LABEL=""
+ORIGIN_REVIEW=false
 
 while read -r ISSUE_NUM; do
   [[ -z "$ISSUE_NUM" ]] && continue
@@ -156,32 +160,47 @@ while read -r ISSUE_NUM; do
     echo "[pm-hook] Could not get/add project item for issue #${ISSUE_NUM}" >&2
   fi
 
-  # 2. Collect priority labels for PR inheritance
+  # 2. Collect durable labels for PR inheritance
   ISSUE_LABELS=$(gh issue view "$ISSUE_NUM" --repo "$REPO" --json labels \
     --jq '.labels[].name' 2>/dev/null || echo "")
 
   while IFS= read -r lbl; do
     case "$lbl" in
-      p0) PRIORITY_LABEL="p0" ;; # Highest, can't be beaten
-      p1) [[ "$PRIORITY_LABEL" != "p0" ]] && PRIORITY_LABEL="p1" ;;
-      p2) [[ -z "$PRIORITY_LABEL" ]] && PRIORITY_LABEL="p2" ;;
+      type:epic|type:task|type:bug|type:chore)
+        [[ -z "$TYPE_LABEL" ]] && TYPE_LABEL="$lbl"
+        ;;
+      area:*)
+        [[ -z "$AREA_LABEL" ]] && AREA_LABEL="$lbl"
+        ;;
+      origin:review)
+        ORIGIN_REVIEW=true
+        ;;
     esac
   done <<< "$ISSUE_LABELS"
 done <<< "$ISSUE_NUMS"
 
-# ── Apply inherited priority label to PR ──────────────────────────────────
-# Default to p1 if no priority label found on any linked issue.
-[[ -z "$PRIORITY_LABEL" ]] && PRIORITY_LABEL="p1"
-
+# ── Apply inherited durable labels to PR ──────────────────────────────────
 if [[ -n "$PR_NUM" ]]; then
   PR_LABELS=$(gh pr view "$PR_NUM" --repo "$REPO" --json labels \
     --jq '.labels[].name' 2>/dev/null || echo "")
 
-  if ! grep -qwE 'p0|p1|p2' <<< "$PR_LABELS"; then
-    if gh pr edit "$PR_NUM" --repo "$REPO" --add-label "$PRIORITY_LABEL" 2>/dev/null; then
-      echo "[pm-hook] PR #${PR_NUM} ← priority ${PRIORITY_LABEL} (resolved across linked issues)" >&2
+  LABELS_TO_ADD=()
+  if [[ -n "$TYPE_LABEL" ]] && ! grep -q '^type:' <<< "$PR_LABELS"; then
+    LABELS_TO_ADD+=("$TYPE_LABEL")
+  fi
+  if [[ -n "$AREA_LABEL" ]] && ! grep -q '^area:' <<< "$PR_LABELS"; then
+    LABELS_TO_ADD+=("$AREA_LABEL")
+  fi
+  if [[ "$ORIGIN_REVIEW" == true ]] && ! grep -qx 'origin:review' <<< "$PR_LABELS"; then
+    LABELS_TO_ADD+=("origin:review")
+  fi
+
+  if [[ "${#LABELS_TO_ADD[@]}" -gt 0 ]]; then
+    LABELS_CSV=$(IFS=,; echo "${LABELS_TO_ADD[*]}")
+    if gh pr edit "$PR_NUM" --repo "$REPO" --add-label "$LABELS_CSV" 2>/dev/null; then
+      echo "[pm-hook] PR #${PR_NUM} ← durable labels ${LABELS_CSV}" >&2
     else
-      echo "[pm-hook] WARN: Failed to apply priority label to PR #${PR_NUM}" >&2
+      echo "[pm-hook] WARN: Failed to sync durable labels to PR #${PR_NUM}" >&2
     fi
   fi
 fi

@@ -1,149 +1,128 @@
 ---
 name: gh-pr
-description: "Create a GitHub Pull Request with substantive body, Project status management, and tracking label inheritance"
+description: "Create a substantive GitHub PR, set Project review state, and sync durable labels"
 allowed-tools: [Bash]
 ---
 
-Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. The PR body must be substantive — not boilerplate. Derive content from the linked issue and the actual changes made.
+Create a GitHub Pull Request in `pureliture/ai-cli-orch-wrapper`. Derive the PR body from the linked issue and actual changes. Project `Status` tracks review state; PR labels only mirror durable classification.
 
 ## Steps
 
-1. Ask the user for the following if not already provided:
-   - **Issue number** (N): The issue this PR closes
-   - **Parent epic number** (optional): If this issue has a parent epic
+1. Gather inputs if not already provided:
+   - **Issue number** (`N`): The issue this PR closes.
+   - **Parent epic number** (optional): Used only for relationship checks and user reminders.
 
-2. Fetch context to write the body:
+2. Resolve Project configuration using the env-first, repository-fallback contract from `docs/reference/project-board.md`:
    ```bash
-   gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json title,body,labels
+   PM_PROJECT_NUMBER="${PM_PROJECT_NUMBER:-3}"
+   PM_PROJECT_ID="${PM_PROJECT_ID:-PVT_kwHOA6302M4BT5fA}"
+   PM_STATUS_FIELD_ID="${PM_STATUS_FIELD_ID:-PVTSSF_lAHOA6302M4BT5fAzhBFN48}"
+   PM_IN_REVIEW_OPTION_ID="${PM_IN_REVIEW_OPTION_ID:-961ca78f}"
    ```
-   Also look at the actual changes: `git diff main...HEAD --stat` and `git log main...HEAD --oneline`.
 
-3. Derive the PR title from the issue title:
-   - Issue title format: `type: description` (e.g., `feat: add gh-pm-workflow-commands`)
-   - PR title format: `type(scope): description` where scope is the affected area (e.g., `feat(pm-harness): add /gh-* pm workflow commands`)
-   - Keep it under 72 characters.
-
-4. Construct the PR body using the template below. Fill every section — do NOT leave placeholder text.
-
+3. Fetch context for the linked issue and actual branch changes:
+   ```bash
+   gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json title,body,labels,url
+   git fetch origin main
+   BASE_REF="${BASE_REF:-origin/main}"
+   git diff "$BASE_REF"...HEAD --stat
+   git diff "$BASE_REF"...HEAD --name-only
+   git log "$BASE_REF"...HEAD --oneline
    ```
+
+4. Derive the PR title from the actual change, not mechanically from the issue type:
+   - Linked issue titles use `epic: <summary>`, `task: <summary>`, `bug: <summary>`, or `chore: <summary>`.
+   - PR title format is conventional commit style: `feat(scope): <summary>`, `fix(scope): <summary>`, `chore(scope): <summary>`, or `docs(scope): <summary>`.
+   - Use `fix` for bug fixes, `docs` for docs-only changes, `chore` for maintenance-only changes, and `feat` for user-visible or workflow capability changes.
+   - Scope should come from the changed area, such as `commands`, `docs`, `wrapper`, `infra`, or a package name.
+   - Keep the title under 72 characters when practical.
+
+5. Construct a substantive PR body and write it to a temporary file:
+   - Write PR body prose and checklist item descriptions in Korean by default.
+   - Keep `Closes #N`, conventional commit title text, labels, file paths, command names, and established Markdown headings such as `What`, `Why`, `Changes`, and `Checklist` in English.
+   ```markdown
    Closes #<N>
 
    ## What
 
-   <2–4 sentences describing what changed. Be specific: name the files, commands,
-   or behaviors that are new or different. A reviewer who hasn't read the issue
-   should understand the change from this paragraph alone.>
+   <변경된 파일, 명령, 동작을 구체적으로 언급하는 한국어 2-4문장.>
 
    ## Why
 
-   <1–3 sentences explaining the motivation. Reference the issue context or the
-   problem it solves. Avoid restating the title — add the "because" that isn't
-   obvious from the title.>
+   <issue와 저장소 맥락에서 변경 동기를 설명하는 한국어 1-3문장.>
 
    ## Changes
 
-   <Bullet list of the concrete changes included in this PR. One line per logical
-   change. Start each bullet with a verb (Add, Fix, Update, Remove, Refactor).
-   Example:
-   - Add `templates/commands/gh-issue.md` slash command
-   - Fix `setup-github-labels.sh` to propagate upsert failures via exit code
-   - Update `docs/pm-board.md` with V3 title convention and 3-axis command structure>
+   - <구체적인 논리 단위 변경 사항>
 
    ## Checklist
-   - [ ] npm test passes
-   - [ ] manual smoke test
-   - [ ] docs updated if needed
+
+   - [ ] 관련 테스트 또는 smoke check 통과
+   - [ ] 동작 변경 시 문서 업데이트 완료
+   - [ ] Project 상태와 label 확인 완료
    ```
+   If a parent epic was provided, append `> Note: check parent epic #<epic-N> child checklist after merge`.
 
-   If a parent epic number was provided, append:
-   ```
+6. Quality bar before creating the PR:
+   - `What` names specific artifacts and has at least 2 sentences.
+   - `Why` explains motivation beyond restating the title.
+   - `Changes` includes one bullet per logical unit of work.
+   - No section contains placeholder text or unfilled template prose.
 
-   > Note: manually check parent epic #<epic-N> checkbox after merge
-   ```
-
-5. Quality bar — before calling `gh pr create`, verify:
-   - "What" section has at least 2 sentences and names specific artifacts
-   - "Why" section explains motivation beyond restating the title
-   - "Changes" has at least one bullet per logical unit of work
-   - No section contains placeholder text like `<...>` or `TODO`
-
-6. Create the PR:
+7. Create the PR with `--body-file`:
    ```bash
-   gh pr create \
+   BODY_FILE=$(mktemp)
+   trap 'rm -f "$BODY_FILE"' EXIT
+   cat > "$BODY_FILE" <<'_GH_PR_BODY_'
+   <completed PR body>
+   _GH_PR_BODY_
+
+   PR_URL=$(gh pr create \
      --repo pureliture/ai-cli-orch-wrapper \
-     --title "<title>" \
-     --body "<body>"
+     --title "<conventional PR title>" \
+     --body-file "$BODY_FILE")
+   PR_NUMBER=$(gh pr view "$PR_URL" --repo pureliture/ai-cli-orch-wrapper --json number -q .number)
    ```
-   Capture the PR URL from the output (e.g., `https://github.com/pureliture/ai-cli-orch-wrapper/pull/<PR_NUM>`).
 
-7. Add PR to Project #3 and set status to "In Review":
-   Resolve the PR number first:
+8. Add the PR to the Project and set PR `Status=In Review`. Warn and continue if Project item add or update fails:
    ```bash
-   gh pr view <pr_url> --repo pureliture/ai-cli-orch-wrapper --json number -q .number
-   ```
-   Add the PR to Project #3:
-   ```bash
-   gh project item-add 3 --owner pureliture --url <pr_url>
-   ```
-   Then find the PR's Project item ID by PR number, retrying up to 5 times with a short sleep because Projects indexing can lag immediately after `item-add`:
-   ```bash
-   gh project item-list 3 --owner pureliture --format json --limit 500 \
-     --jq ".items[] | select(.content.number == <pr_number> and .content.type == \"PullRequest\") | .id"
-   ```
-   If the project may contain more than 500 items, retry with a higher `--limit` before assuming the item is absent. Once an ID is found, set status:
-   ```bash
-   gh project item-edit \
-     --project-id PVT_kwHOA6302M4BT5fA \
-     --id <pr_item_id> \
-     --field-id PVTSSF_lAHOA6302M4BT5fAzhBFN48 \
-     --single-select-option-id 961ca78f
-   ```
-   If no ID is found after retries, or any step fails, print `⚠ PR Project status update failed — update manually` and continue.
+   gh project item-add "$PM_PROJECT_NUMBER" --owner pureliture --url "$PR_URL" >/dev/null || echo "⚠ PR Project add failed — update manually"
 
-8. Set linked issue status to "In Review":
-   Parse the PR body for ALL occurrences of `Closes #N`, `Fixes #N`, or `Resolves #N` (case-insensitive). Collect all unique issue numbers in order of appearance. For each unique linked issue N:
-   - Verify the issue exists: `gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json number`
-   - Find the issue's Project item ID:
-     ```bash
-     gh project item-list 3 --owner pureliture --format json --limit 500 \
-       --jq ".items[] | select(.content.number == <N> and .content.type == \"Issue\") | .id"
-     ```
-   - If the item is not in the Project yet, add it first: `gh project item-add 3 --owner pureliture --url https://github.com/pureliture/ai-cli-orch-wrapper/issues/<N>`
-   - After adding, retry the lookup up to 5 times with a short sleep before assuming the item is absent.
-   - Set status to "In Review":
-     ```bash
-     gh project item-edit \
-       --project-id PVT_kwHOA6302M4BT5fA \
-       --id <issue_item_id> \
-       --field-id PVTSSF_lAHOA6302M4BT5fAzhBFN48 \
-       --single-select-option-id 961ca78f
-     ```
-   - If any step fails for an issue, print `⚠ Issue Project status update failed for #<N> — update manually` and continue to the next linked issue.
+   PR_ITEM_ID=""
+   for attempt in 1 2 3 4 5; do
+     PR_ITEM_ID=$(gh project item-list "$PM_PROJECT_NUMBER" --owner pureliture --format json --limit 500 \
+       --jq ".items[] | select(.content.number == $PR_NUMBER and .content.type == \"PullRequest\") | .id")
+     [ -n "$PR_ITEM_ID" ] && break
+     sleep 2
+   done
 
-9. Apply tracking labels to PR (inherit from linked issues; default priority `p1`):
-   If any linked issue numbers were found in step 8:
-   - For EACH linked issue, fetch labels: `gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json labels -q '.labels[].name'`
-   - Collect all labels from all linked issues.
-   - Determine the highest priority label among all discovered labels (`p0` > `p1` > `p2`). If no priority label is found on any issue, use `p1`.
-   - Take the first `type:*` label found across the issues (prioritizing the first issue's type).
-   - Take the first `area:*` label found across the issues (prioritizing the first issue's area).
-   - Include `origin:review` if it exists on ANY of the linked issues.
-   Do NOT copy `status:*` or `sprint:*` labels onto the PR.
-   Inspect the PR's current labels first:
-   ```bash
-   gh pr view <pr_url> --repo pureliture/ai-cli-orch-wrapper --json labels -q '.labels[].name'
+   if [ -n "$PR_ITEM_ID" ]; then
+     gh project item-edit --project-id "$PM_PROJECT_ID" --id "$PR_ITEM_ID" \
+       --field-id "$PM_STATUS_FIELD_ID" \
+       --single-select-option-id "$PM_IN_REVIEW_OPTION_ID" \
+       || echo "⚠ PR Project status update failed — update manually"
+   else
+     echo "⚠ PR Project item lookup failed — update manually"
+   fi
    ```
-   Only add missing namespaces so the PR never ends up with multiple `p*`, `type:*`, or `area:*` labels. Apply each missing label with:
-   ```bash
-   gh pr edit <pr_url> --repo pureliture/ai-cli-orch-wrapper --add-label <label>
-   ```
-   If no linked issue keyword is found, skip `type:*`, `area:*`, and `origin:review`, but still apply default priority `p1`.
-   If any label step fails, print `⚠ PR label sync failed — update manually` and continue.
 
-10. Epic Relationship Check:
-    If a parent epic number was provided in step 1:
-    - Verify native linkage: `gh issue view <N> --repo pureliture/ai-cli-orch-wrapper --json parent -q .parent.number`
-    - If native linkage is missing, recommend setting it: `gh api graphql -f query='mutation($parent: ID!, $child: ID!) { addSubIssue(input: {issueId: $parent, subIssueId: $child}) }' ...`
-    - Remind the user about the epic's child issues checklist if applicable.
+9. Move every linked issue item to `Status=In Review`:
+   - Parse the PR body for all `Closes #N`, `Fixes #N`, and `Resolves #N` references, case-insensitive.
+   - Deduplicate issue numbers in order of appearance.
+   - For each linked issue, ensure it is in the Project, retry item lookup up to 5 times, then set `Status=In Review`.
+   - If any linked issue update fails, print `⚠ Issue Project status update failed for #<N> — update manually` and continue.
 
-11. Report the created PR URL to the user.
+10. Sync PR labels from linked issues using only durable classification:
+    - Fetch labels from every linked issue.
+    - Copy `type:*`, `area:*`, and `origin:review` only.
+    - Do not copy non-durable classification from linked issues.
+    - Do not mirror the issue Project `Priority` field to the PR.
+    - Inspect existing PR labels first and add only missing labels, avoiding duplicate `type:*` or `area:*` namespaces.
+    - If no linked issue keyword is found, skip label sync.
+
+11. If a parent epic number was provided:
+    - Verify native parent/sub-issue linkage for the linked issue when supported.
+    - If native linkage is missing, recommend adding it with the canonical GraphQL mutation.
+    - Remind the user to check the parent epic child checklist after merge.
+
+12. Report the PR URL, linked issues moved to `In Review`, labels synced, and any manual Project or parent follow-up warnings.

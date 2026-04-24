@@ -1,37 +1,86 @@
 # ai-cli-orch-wrapper
 
+Claude Code project instructions for this repository. Codex receives the matching
+repo-level instructions from `AGENTS.md`.
+
 ## Repo Structure
 
 This repo is an npm workspace with the following layout:
 
-- **`packages/wrapper/`** — `@pureliture/ai-cli-orch-wrapper`: Node.js wrapper runtime. Owns the `aco` CLI binary, provider interface (`IProvider`), provider implementations (`GeminiProvider`), provider registry, and session/task/output lifecycle (`SessionStore`). Exposes `aco pack install/setup`, `aco provider setup <name>`, and `aco run ...`.
-- **`packages/installer/`** — Installer package for setup flows and install-time entrypoints used by `aco-install`, including `pack setup` and `provider setup <name>`.
-- **`templates/commands/`** — Source for Claude Code slash command markdown files. Installed to `.claude/commands/` by `aco pack install`. Thin wrappers that delegate all logic to `aco run <provider> <command>`.
-- **`templates/prompts/`** — Provider-specific prompt text. Installed to `.claude/aco/prompts/` by `aco pack install`.
-- **`.claude/agents/`** — Agent definition files with frontmatter. Used by `aco delegate` for provider routing.
-- **`openspec/`** — Architecture change proposals, specs, design docs, and task lists.
+- `packages/wrapper/` — `@pureliture/ai-cli-orch-wrapper` runtime. Owns the `aco` CLI, provider interface, provider implementations, provider registry, sync engine, and session/task/output lifecycle.
+- `packages/installer/` — installer package for setup flows and install-time entrypoints used by `aco-install`.
+- `templates/commands/` — packaged Claude slash command sources. Keep each file in parity with the matching `.claude/commands/` file when behavior changes.
+- `.claude/commands/` — repo-local Claude slash commands used by maintainers.
+- `.claude/skills/` — Claude-local skill sources and compatibility copies.
+- `.agents/skills/` — shared Codex/Gemini skill surface. `github-kanban-ops` is the canonical GitHub PM policy source; `gh-*` skills are thin Codex command aliases.
+- `.codex/agents/` — Codex custom agent definitions generated or maintained for local workflows.
+- `.gemini/commands/` and `.gemini/agents/` — Gemini command and agent surfaces that should stay aligned with the active workflow where supported.
+- `docs/` — architecture, contracts, guides, reference docs, phase plans, and archived planning material.
+- `openspec/` — OpenSpec proposals, specs, design docs, and task lists.
 
 ## Maintenance Rules
 
-- Add shared provider logic only in `packages/wrapper/src/providers/`.
-- Keep command template markdown files thin — no bash logic beyond arg parsing and `aco run` dispatch.
-- Keep prompt text under `templates/prompts/`.
-- New providers: implement `IProvider` in `packages/wrapper/src/providers/<name>.ts`, register in `registry.ts`.
-- Run `npm test` (wrapper unit tests) before and after behavior changes.
+- Preserve provider-neutral behavior in `packages/wrapper/src/`; add provider-specific code only behind the provider abstraction.
+- New providers implement `IProvider` in `packages/wrapper/src/providers/<name>.ts` and register in `registry.ts`.
+- Keep `.claude/commands/gh-*.md` and `templates/commands/gh-*.md` byte-for-byte aligned unless an intentional compatibility exception is documented.
+- Keep `.agents/skills/github-kanban-ops/` and `.claude/skills/github-kanban-ops/` aligned when changing shared GitHub PM policy or scripts.
+- Keep Codex `$gh-*` wrapper skills intentionally thin; workflow policy belongs in `github-kanban-ops`.
+- Do not reintroduce sprint, story, or spike concepts into the GitHub PM harness.
+- Do not encode workflow state or priority in labels. GitHub Project `Status` and `Priority` fields are the source of truth.
+- Before finishing behavior changes, run the most specific validation available, then broader tests if practical.
 
-## Key Design Decisions
+## GitHub Kanban Workflow
 
-- Provider spawning goes through `aco delegate` — the Go binary reads `.claude/agents/<id>.md` frontmatter to determine provider, no explicit provider argument needed.
-- Session state lives in `~/.aco/sessions/<uuid>/` with `task.json` + `output.log`.
-- Pack install copies files (not symlinks) to avoid path fragility across node version managers.
-- `aco-install pack setup` and `aco-install provider setup <name>` are independent and composable.
+Use `github-kanban-ops` as the canonical model for repository PM automation.
 
-## Go/Node.js Contract Boundary
+- Allowed issue types: `epic`, `task`, `bug`, `chore`.
+- Durable labels only: `type:*`, `area:*`, `origin:review`.
+- Forbidden labels/concepts: `status:*`, `sprint:*`, `p0`/`p1`/`p2`, `size:*`, `type:feature`, `type:story`, `type:spike`.
+- Claude entrypoints: `/gh-issue`, `/gh-start`, `/gh-pr`, `/gh-pr-followup`.
+- Codex entrypoints: `$gh-issue`, `$gh-start`, `$gh-pr`, `$gh-pr-followup`.
+- `$github-kanban-ops` is for direct policy/workflow reference, not the normal command-like UX.
+- PR body prose and checklist item descriptions are Korean by default; keep `Closes #N`, headings, labels, file paths, and command names in English.
 
-Go 바이너리와 Node.js 래퍼 간의 책임 경계와 계약 관계는 [docs/contract/go-node-boundary.md](docs/contract/go-node-boundary.md)를 참고한다.
+## Context Sync
+
+`aco sync` converts Claude project context into Codex/Gemini target surfaces.
+
+- Source order starts with root `CLAUDE.md`, then optional `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, and hooks.
+- Codex project instructions live in root `AGENTS.md`.
+- Gemini project instructions live in root `GEMINI.md`.
+- Shared skills live in `.agents/skills/<skill>/`; do not hand-maintain `.codex/skills/` or `.gemini/skills/` copies unless the runtime requirement is proven.
+- Use `aco sync --check` to detect stale generated targets and `aco sync --force` only when overwriting managed drift is intentional.
+
+## Validation
+
+Common checks:
+
+```bash
+npm test
+npm run typecheck
+npm run test:fixtures
+npm run test:smoke
+git diff --check
+```
+
+Targeted harness checks:
+
+```bash
+cmp .claude/commands/gh-pr.md templates/commands/gh-pr.md
+cmp .agents/skills/github-kanban-ops/scripts/make_issue_body.py .claude/skills/github-kanban-ops/scripts/make_issue_body.py
+bash -n scripts/pm-hook.sh scripts/setup-github-labels.sh scripts/setup-github-project.sh scripts/setup-project-ids.sh
+```
+
+## Key References
+
+- `docs/architecture.md` — system architecture and context sync overview.
+- `docs/contract/go-node-boundary.md` — Go/Node.js responsibility boundary.
+- `docs/reference/context-sync.md` — sync target surfaces and managed block behavior.
+- `docs/reference/project-board.md` — GitHub Project field and option contract.
+- `docs/guides/github-workflow.md` — issue/PR authoring and Kanban workflow guide.
 
 ## Excluded on Purpose
 
-- GSD/OMX workflows
-- Codex/Gemini/GitHub mirror surfaces
-- Planning and roadmap artifacts outside `openspec/`
+- GSD/OMX workflows.
+- New sprint-based planning surfaces.
+- Extra GitHub label taxonomies that duplicate Project fields.

@@ -1,0 +1,4 @@
+interface:
+  display_name: "GitHub Kanban Ops"
+  short_description: "Run GitHub Projects as a minimal Kanban board"
+  default_prompt: "Use $github-kanban-ops to manage this repository with GitHub Projects and Issues in a minimal Kanban workflow."
