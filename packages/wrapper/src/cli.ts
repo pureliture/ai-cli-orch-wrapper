@@ -196,7 +196,7 @@ async function cmdRun(args: string[]): Promise<void> {
   }
 
   const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
-  const auth = await getCachedProviderAuth(provider);
+  const auth = await getCachedProviderAuth(provider, { skipCache: true });
   const runtimeContext = await collectRuntimeContext({
     provider: providerKey,
     command,

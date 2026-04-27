@@ -161,7 +161,7 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
     const provider = providerRegistry.get(key)!;
     const available = provider.isAvailable();
     const auth = available
-      ? await getCachedProviderAuth(provider)
+      ? await getCachedProviderAuth(provider, { skipCache: true })
       : { ok: false, hint: provider.installHint };
     const avIcon = available ? '✓' : '✗';
     console.log(`  ${key}: installed ${avIcon}  auth ${formatAuthStatus(auth)}`);

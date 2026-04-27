@@ -1,3 +1,4 @@
+import { providerRegistry } from '../providers/registry.js';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readdir, readFile, stat } from 'node:fs/promises';
@@ -191,7 +192,7 @@ async function getBranch(workspace: string): Promise<string | undefined> {
 export async function collectRuntimeContext(input: RuntimeContextInput): Promise<RuntimeContext> {
   const workspace = input.cwd ?? process.cwd();
   const [sharedSkills, providerExposed, branch] = await Promise.all([
-    listSharedSkills(workspace),
+    providerRegistry.get(input.provider) ? listSharedSkills(workspace) : Promise.resolve([]),
     pickProviderExposed(input.provider, workspace),
     getBranch(workspace),
   ]);

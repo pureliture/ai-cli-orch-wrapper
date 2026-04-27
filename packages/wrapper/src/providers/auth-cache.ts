@@ -36,20 +36,21 @@ function isFresh(entry: AuthCacheRecord | undefined, now: number, ttlMs: number)
 
 export interface GetCachedAuthOptions {
   ttlMs?: number;
+  skipCache?: boolean;
 }
 
 export async function getCachedProviderAuth(
   provider: IProvider,
   options: GetCachedAuthOptions = {}
 ): Promise<AuthResult> {
-  const { ttlMs = AUTH_CACHE_TTL_MS } = options;
+  const { ttlMs = AUTH_CACHE_TTL_MS, skipCache = false } = options;
   const now = Date.now();
 
   const cache = await readCache();
   const key = provider.key;
   const entry = cache[key];
 
-  if (isFresh(entry, now, ttlMs) && entry.provider === provider.key) {
+  if (!skipCache && isFresh(entry, now, ttlMs) && entry.provider === provider.key) {
     return entry.auth;
   }
 
