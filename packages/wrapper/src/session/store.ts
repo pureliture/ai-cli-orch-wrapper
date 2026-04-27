@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { Transform, type Writable } from 'node:stream';
+import type { RuntimeContext } from '../runtime/types.js';
 
 export type SessionStatus = 'running' | 'done' | 'failed' | 'cancelled';
 
@@ -24,6 +25,7 @@ export interface TaskRecord {
   exitCode?: number;
   /** Execution duration in milliseconds from sentinel metadata. */
   durationMs?: number;
+  runtimeContext?: RuntimeContext;
 }
 
 export class SessionStore {

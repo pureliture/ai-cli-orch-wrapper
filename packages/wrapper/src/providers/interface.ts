@@ -1,7 +1,12 @@
 export type PermissionProfile = 'default' | 'restricted' | 'unrestricted';
 
+export type AuthMethod = 'api-key' | 'oauth' | 'cli-fallback' | 'missing';
+
 export interface AuthResult {
   ok: boolean;
+  method?: AuthMethod;
+  version?: string;
+  binaryPath?: string;
   hint?: string;
 }
 

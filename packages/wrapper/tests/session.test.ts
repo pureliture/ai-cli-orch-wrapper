@@ -1,9 +1,10 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { SessionStore } from '../src/session/store';
+import type { RuntimeContext } from '../src/runtime/types.js';
 
 async function makeStore() {
   const dir = await mkdtemp(join(tmpdir(), 'aco-test-'));
@@ -65,6 +66,56 @@ describe('SessionStore', () => {
     const updated = await store.read(record.id);
     assert.equal(updated.pid, 5678);
     assert.equal(updated.status, 'running');
+  });
+
+  it('update() stores runtimeContext metadata', async () => {
+    const { store } = await makeStore();
+    const record = await store.create('gemini', 'review');
+
+    const runtimeContext: RuntimeContext = {
+      active: {
+        provider: 'gemini',
+        command: 'review',
+        sessionId: record.id,
+        permissionProfile: 'default',
+        cwd: '/tmp/project',
+        branch: 'main',
+        auth: { ok: true, method: 'api-key' },
+      },
+      exposed: {
+        sharedSkills: ['planner', 'review'],
+        providerAgents: ['planner'],
+        providerHooks: ['PostToolUse'],
+        providerConfigFiles: ['settings.json'],
+        provider: 'gemini',
+      },
+    };
+
+    await store.update(record.id, { runtimeContext });
+    const read = await store.read(record.id);
+
+    assert.deepEqual(read.runtimeContext, runtimeContext);
+  });
+
+  it('read() is backward compatible when runtimeContext is missing', async () => {
+    const { store, dir } = await makeStore();
+    const id = 'legacy-session-id';
+
+    const legacyRecord = {
+      id,
+      provider: 'codex',
+      command: 'review',
+      status: 'done',
+      startedAt: new Date('2026-01-01T00:00:00.000Z').toISOString(),
+    };
+
+    const sessionDir = join(dir, id);
+    await mkdir(sessionDir, { recursive: true });
+    await writeFile(join(sessionDir, 'task.json'), JSON.stringify(legacyRecord, null, 2));
+
+    const read = await store.read(id);
+    assert.equal(read.runtimeContext, undefined);
+    assert.equal(read.id, id);
   });
 
   it('latestId() returns the most recent session', async () => {

@@ -3,27 +3,46 @@ import assert from 'node:assert/strict';
 import { GeminiProvider } from '../src/providers/gemini';
 import { CodexProvider } from '../src/providers/codex';
 import { ProviderRegistry } from '../src/providers/registry';
+import { getCachedProviderAuth } from '../src/providers/auth-cache';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
+
+async function makeFakeBinary(binDir: string, name: string, output: string): Promise<string> {
+  const full = path.join(binDir, name);
+  await fs.writeFile(
+    full,
+    `#!/usr/bin/env sh\nprintf "%s\\n" "${output}"\n`,
+    { mode: 0o755 }
+  );
+  return full;
+}
 
 describe('GeminiProvider', () => {
   let tmpHome: string;
   let originalHome: string | undefined;
   let originalUserProfile: string | undefined;
+  let tmpBin: string;
+  let originalPath: string | undefined;
 
   before(async () => {
     originalHome = process.env.HOME;
     originalUserProfile = process.env.USERPROFILE;
     tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-home-'));
+    tmpBin = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-bin-gemini-'));
+    await makeFakeBinary(tmpBin, 'gemini', 'gemini-cli 3.0.0');
+    originalPath = process.env.PATH;
+    process.env.PATH = `${tmpBin}${path.delimiter}${originalPath ?? ''}`;
     process.env.HOME = tmpHome;
     process.env.USERPROFILE = tmpHome;
   });
 
   after(async () => {
+    process.env.PATH = originalPath;
     process.env.HOME = originalHome;
     process.env.USERPROFILE = originalUserProfile;
     await fs.rm(tmpHome, { recursive: true, force: true });
+    await fs.rm(tmpBin, { recursive: true, force: true });
   });
 
   it('isAvailable() returns true when gemini binary is in PATH', () => {
@@ -58,6 +77,7 @@ describe('GeminiProvider', () => {
     const result = await new TestGemini().checkAuth();
     assert.equal(result.ok, false);
     assert.ok(typeof result.hint === 'string');
+    assert.equal(result.method, 'missing');
   });
 
   it('checkAuth() fast-path: returns ok when GEMINI_API_KEY is set', async () => {
@@ -72,6 +92,10 @@ describe('GeminiProvider', () => {
     try {
       const result = await provider.checkAuth();
       assert.strictEqual(result.ok, true);
+      assert.equal(result.method, 'api-key');
+      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
+      assert.equal(result.hint, undefined);
+      assert.equal(JSON.stringify(result).includes('test-key'), false);
     } finally {
       if (originalEnv === undefined) {
         delete process.env.GEMINI_API_KEY;
@@ -93,6 +117,9 @@ describe('GeminiProvider', () => {
     try {
       const result = await provider.checkAuth();
       assert.strictEqual(result.ok, true);
+      assert.equal(result.method, 'api-key');
+      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
+      assert.equal(JSON.stringify(result).includes('test-key'), false);
     } finally {
       if (originalEnv === undefined) {
         delete process.env.GOOGLE_API_KEY;
@@ -116,9 +143,27 @@ describe('GeminiProvider', () => {
     try {
       const result = await provider.checkAuth();
       assert.strictEqual(result.ok, true);
+      assert.equal(result.method, 'oauth');
+      assert.equal(result.hint, undefined);
+      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
     } finally {
       await fs.rm(credsPath, { force: true });
     }
+  });
+
+  it('checkAuth() fallback: reports cli-fallback via binary version output', async () => {
+    class MockGemini extends GeminiProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
+    const provider = new MockGemini();
+    const result = await provider.checkAuth();
+    assert.strictEqual(result.ok, true);
+    assert.equal(result.method, 'cli-fallback');
+    assert.equal(result.version, 'gemini-cli 3.0.0');
+    assert.equal(result.binaryPath, `${tmpBin}/gemini`);
+    assert.equal(result.hint, undefined);
   });
 
   it('checkAuth() fast-path: returns error when oauth_creds.json is a directory', async () => {
@@ -172,19 +217,27 @@ describe('CodexProvider', () => {
   let tmpHome: string;
   let originalHome: string | undefined;
   let originalUserProfile: string | undefined;
+  let tmpBin: string;
+  let originalPath: string | undefined;
 
   before(async () => {
     originalHome = process.env.HOME;
     originalUserProfile = process.env.USERPROFILE;
     tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-home-codex-'));
+    tmpBin = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-bin-codex-'));
+    await makeFakeBinary(tmpBin, 'codex', 'codex-cli 1.0.0');
+    originalPath = process.env.PATH;
+    process.env.PATH = `${tmpBin}${path.delimiter}${originalPath ?? ''}`;
     process.env.HOME = tmpHome;
     process.env.USERPROFILE = tmpHome;
   });
 
   after(async () => {
+    process.env.PATH = originalPath;
     process.env.HOME = originalHome;
     process.env.USERPROFILE = originalUserProfile;
     await fs.rm(tmpHome, { recursive: true, force: true });
+    await fs.rm(tmpBin, { recursive: true, force: true });
   });
 
   it('isAvailable() returns true when codex binary is in PATH', () => {
@@ -219,6 +272,7 @@ describe('CodexProvider', () => {
     const result = await new TestCodex().checkAuth();
     assert.equal(result.ok, false);
     assert.ok(typeof result.hint === 'string');
+    assert.equal(result.method, 'missing');
   });
 
   it('checkAuth() fast-path: returns ok when OPENAI_API_KEY is set', async () => {
@@ -233,6 +287,8 @@ describe('CodexProvider', () => {
     try {
       const result = await provider.checkAuth();
       assert.strictEqual(result.ok, true);
+      assert.equal(result.method, 'api-key');
+      assert.equal(result.binaryPath, `${tmpBin}/codex`);
     } finally {
       if (originalEnv === undefined) {
         delete process.env.OPENAI_API_KEY;
@@ -258,6 +314,7 @@ describe('CodexProvider', () => {
     try {
       const result = await provider.checkAuth();
       assert.strictEqual(result.ok, true);
+      assert.equal(result.method, 'oauth');
     } finally {
       await fs.rm(authPath, { force: true });
     }
@@ -278,6 +335,7 @@ describe('CodexProvider', () => {
     try {
       const result = await provider.checkAuth();
       assert.strictEqual(result.ok, false);
+      assert.equal(result.method, 'missing');
       assert.ok(result.hint?.includes('expired'));
     } finally {
       await fs.rm(authPath, { force: true });
@@ -301,6 +359,7 @@ describe('CodexProvider', () => {
     try {
       const result = await provider.checkAuth();
       assert.strictEqual(result.ok, false);
+      assert.equal(result.method, 'missing');
     } finally {
       process.env.PATH = originalPath;
       await fs.rm(authPath, { force: true });
@@ -395,5 +454,61 @@ describe('ProviderRegistry', () => {
     assert.ok(keys.includes('gemini'));
     assert.ok(keys.includes('codex'));
     assert.equal(keys.length, 2);
+  });
+});
+
+describe('Auth cache', () => {
+  let originalHome: string | undefined;
+  let originalUserProfile: string | undefined;
+  let tmpHome: string;
+
+  before(async () => {
+    originalHome = process.env.HOME;
+    originalUserProfile = process.env.USERPROFILE;
+    tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-auth-cache-'));
+    process.env.HOME = tmpHome;
+    process.env.USERPROFILE = tmpHome;
+  });
+
+  after(async () => {
+    process.env.HOME = originalHome;
+    process.env.USERPROFILE = originalUserProfile;
+    await fs.rm(tmpHome, { recursive: true, force: true });
+  });
+
+  it('reuses provider auth result within TTL', async () => {
+    let calls = 0;
+    class CachedGemini extends GeminiProvider {
+      override async checkAuth() {
+        calls++;
+        return { ok: true, method: 'api-key' };
+      }
+    }
+
+    const provider = new CachedGemini();
+    const first = await getCachedProviderAuth(provider, { ttlMs: 5000 });
+    const second = await getCachedProviderAuth(provider, { ttlMs: 5000 });
+
+    assert.equal(first.ok, true);
+    assert.equal(second.ok, true);
+    assert.equal(calls, 1);
+  });
+
+  it('refreshes provider auth result after TTL', async () => {
+    let calls = 0;
+    class CachedGemini extends GeminiProvider {
+      override async checkAuth() {
+        calls++;
+        return { ok: true, method: 'api-key' };
+      }
+    }
+
+    const provider = new CachedGemini();
+    const first = await getCachedProviderAuth(provider, { ttlMs: 0 });
+    const second = await getCachedProviderAuth(provider, { ttlMs: 0 });
+
+    assert.equal(first.ok, true);
+    assert.equal(second.ok, true);
+    assert.equal(calls, 2);
   });
 });

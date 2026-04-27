@@ -12,6 +12,31 @@ aco pack setup
 aco pack status
 aco provider setup gemini
 aco provider setup codex
+aco result
+aco status
+```
+
+Provider run starts with a compact runtime dashboard on stderr so you can see the active session and exposed context.
+
+```text
+🛰️  aco Runtime Session
+
+✨ Active
+  Provider: gemini
+  Command: review
+  Session ID: f3f2d9...b1
+  Permission: default
+  Working Dir: /path/to/repo
+  Branch: main
+  Prompt Template: /path/to/repo/.claude/aco/prompts/gemini/review.md
+  Auth: ready (cli-fallback, vgemini-cli 1.2.3, bin gemini)
+
+🧩 Exposed
+  Providers: gemini
+  Agents: reviewer
+  Hooks: PostToolUse
+  Config: settings.json
+  Shared Skills: review-skill
 ```
 
 ## Provider Auth
