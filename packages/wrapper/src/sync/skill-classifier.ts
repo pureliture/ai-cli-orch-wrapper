@@ -17,60 +17,6 @@ const COMMAND_ALIAS_PREFIXES = ['gh-'];
 const ACO_OWNED_SKILLS = new Set(['github-kanban-ops']);
 
 /**
- * Parsed frontmatter from a skill file.
- */
-interface SkillFrontmatter {
-  'x-aco-owned'?: boolean;
-  'x-aco-kind'?: AssetKind;
-  'x-aco-targets'?: string[];
-}
-
-/**
- * Extract frontmatter key-value pairs from markdown YAML frontmatter.
- */
-function parseFrontmatter(content: string): SkillFrontmatter {
-  const result: SkillFrontmatter = {};
-  if (!content.startsWith('---')) return result;
-
-  const end = content.indexOf('---', 3);
-  if (end === -1) return result;
-
-  const frontmatter = content.slice(3, end).trim();
-  for (const line of frontmatter.split('\n')) {
-    const trimmed = line.trim();
-    if (trimmed === '' || trimmed.startsWith('#')) continue;
-
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex === -1) continue;
-
-    const key = trimmed.slice(0, colonIndex).trim();
-    const value = trimmed.slice(colonIndex + 1).trim();
-
-    if (key === 'x-aco-owned') {
-      result['x-aco-owned'] = value === 'true' || value === 'yes';
-    } else if (key === 'x-aco-kind') {
-      const v = value.replace(/['"]/g, '');
-      if (
-        v === 'shared-skill' ||
-        v === 'command-alias-skill' ||
-        v === 'external-skill' ||
-        v === 'provider-command'
-      ) {
-        result['x-aco-kind'] = v;
-      }
-    } else if (key === 'x-aco-targets') {
-      // Simple comma-separated or YAML list format
-      result['x-aco-targets'] = value
-        .split(/,\s*/)
-        .map((s) => s.trim().replace(/['"\[\]]/g, ''))
-        .filter(Boolean);
-    }
-  }
-
-  return result;
-}
-
-/**
  * Classify a discovered skill source into owner and kind.
  *
  * Ownership policy precedence (highest to lowest):
@@ -93,8 +39,6 @@ export function classifySkill(
     .filter(Boolean)
     .slice(-2, -1)[0] ?? '';
 
-  const frontmatter = parseFrontmatter(source.content);
-
   // 1. .aco/sync.yaml exclude (highest precedence)
   if (isExcluded(skillName, config)) {
     if (EXTERNAL_PREFIXES.some((p) => skillName.startsWith(p))) {
@@ -113,8 +57,8 @@ export function classifySkill(
   if (isIncluded(skillName, config)) {
     return {
       owner: 'aco',
-      kind: frontmatter['x-aco-kind'] ?? 'shared-skill',
-      targets: frontmatter['x-aco-targets'],
+      kind: source.assetKind ?? 'shared-skill',
+      targets: source.targets,
     };
   }
 
@@ -123,16 +67,16 @@ export function classifySkill(
     return {
       owner: 'aco',
       kind: 'shared-skill',
-      targets: frontmatter['x-aco-targets'],
+      targets: source.targets,
     };
   }
 
   // 4. Advisory frontmatter (lowest precedence among eligibility checks)
-  if (frontmatter['x-aco-owned']) {
+  if (source.owner === 'aco') {
     return {
       owner: 'aco',
-      kind: frontmatter['x-aco-kind'] ?? 'shared-skill',
-      targets: frontmatter['x-aco-targets'],
+      kind: source.assetKind ?? 'shared-skill',
+      targets: source.targets,
     };
   }
 

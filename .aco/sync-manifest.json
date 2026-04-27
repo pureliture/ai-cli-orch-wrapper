@@ -1,6 +1,6 @@
 {
   "version": "2",
-  "generatedAt": "2026-04-27T04:02:21.673Z",
+  "generatedAt": "2026-04-27T04:31:36.625Z",
   "sourceHashes": {
     "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/CLAUDE.md": "0a1513b1494aa8d2502be3e0c27a480ac046f97596d9e48db4c40a970cf06c4f",
     "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/gh-issue/SKILL.md": "16eab5668a5520c3cf20864dd635b85a418e957f90c803f75cde1ee3006261ca",
@@ -39,7 +39,7 @@
   "targetHashes": {
     "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/AGENTS.md": "d0214df8b12aa813e4c065570dfddfd95e7b9a47038bc898c113e41d4700a695",
     "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/GEMINI.md": "c0438d16b8c7cba50bf0e3c290d2e5c0c3b920de5aedc887a5e4ae5b9c6f6cee",
-    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops": "e865d5f29969060d8c0dee98568e57e0cdd6292690320ebeec70423c8db0ab0d",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops": "ae07c9540387266b341cd8a06f9effbffaf919b0949f58eae54f75bd3b1b93bf",
     "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/architect.toml": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
     "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/chief-of-staff.toml": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
     "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/code-reviewer.toml": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
@@ -85,7 +85,7 @@
       "kind": "config"
     },
     "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops": {
-      "hash": "e865d5f29969060d8c0dee98568e57e0cdd6292690320ebeec70423c8db0ab0d",
+      "hash": "ae07c9540387266b341cd8a06f9effbffaf919b0949f58eae54f75bd3b1b93bf",
       "owner": "aco",
       "kind": "shared-skill",
       "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/github-kanban-ops"
@@ -426,6 +426,11 @@
     {
       "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/typescript-reviewer.md",
       "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops/SKILL.md",
+      "message": "Duplicate provider exposure: provider gemini exposes 'github-kanban-ops' from multiple surfaces (/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops/SKILL.md, /Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops). Recommendation: consolidate into a single surface.",
       "severity": "warning"
     }
   ]

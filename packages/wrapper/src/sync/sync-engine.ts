@@ -10,9 +10,10 @@ import { readManifest, writeManifest, calculateDrift } from './manifest.js';
 import { computeHash } from './hash.js';
 import { loadSyncConfig } from './sync-config.js';
 import { detectDuplicates } from './duplicate-detector.js';
-import { readFile, mkdir, writeFile, cp, rm, readdir } from 'node:fs/promises';
+import { readFile, mkdir, writeFile, cp, rm } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type {
+  SyncSource,
   SyncOptions,
   SyncResult,
   SyncOutput,
@@ -52,13 +53,14 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   const plan = await computeTransformPlan(sources, repoRoot, existingManifest, config);
 
   // 5. Detect duplicates
-  const duplicateWarnings = await detectDuplicates(repoRoot, plan.outputs, config);
+  const duplicateWarnings = await detectDuplicates(repoRoot, plan.outputs);
   plan.warnings.push(...duplicateWarnings);
 
   // 6. Detect conflicts for planned outputs against existing manifest
   if (existingManifest) {
     for (const output of plan.outputs) {
-      const existingHash = existingManifest.targetHashes[output.targetPath];
+      const existingRecord = existingManifest.targets[output.targetPath];
+      const existingHash = existingRecord?.hash ?? existingManifest.targetHashes[output.targetPath];
       if (existingHash && (output.kind === 'file' || output.kind === 'managed-block')) {
         try {
           const diskContent = await readFile(output.targetPath, 'utf8');
@@ -80,7 +82,8 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     if (output.action === 'conflict') continue;
     if (output.action === 'removed') continue;
 
-    const existingHash = existingManifest?.targetHashes[output.targetPath];
+    const existingRecord = existingManifest?.targets[output.targetPath];
+    const existingHash = existingRecord?.hash ?? existingManifest?.targetHashes[output.targetPath];
     if (!existingHash) {
       output.action = 'created';
     } else if (existingHash === output.hash) {
@@ -166,17 +169,10 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
       if (output.action === 'skipped') continue;
 
       if (output.action === 'removed') {
-        if (output.kind === 'directory') {
-          try {
-            const entries = await readdir(output.targetPath);
-            if (entries.length === 0) {
-              await rm(output.targetPath, { recursive: true, force: true });
-            }
-          } catch {
-            /* Ignore */
-          }
-        } else {
-          await rm(output.targetPath, { force: true });
+        try {
+          await rm(output.targetPath, { recursive: true, force: true });
+        } catch {
+          /* Ignore */
         }
         continue;
       }
@@ -208,7 +204,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
 }
 
 async function computeTransformPlan(
-  sources: ReturnType<typeof discoverSources> extends Promise<infer T> ? T : never,
+  sources: SyncSource[],
   repoRoot: string,
   existingManifest: SyncManifest | null,
   config: Awaited<ReturnType<typeof loadSyncConfig>>

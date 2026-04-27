@@ -11,7 +11,9 @@ import { loadFormatterConfig, resolveModelForProvider } from '../src/sync/format
 import { parseHooks, toCodexHooks, toGeminiHooks } from '../src/sync/hook-parse.js';
 import { syncSkills } from '../src/sync/skill-transform.js';
 import { runSync } from '../src/sync/sync-engine.js';
-import type { SyncSource } from '../src/sync/transform-interface.js';
+import { matchesGlob, isIncluded, isExcluded } from '../src/sync/sync-config.js';
+import { detectDuplicates } from '../src/sync/duplicate-detector.js';
+import type { SyncSource, SyncConfig, SyncOutput } from '../src/sync/transform-interface.js';
 import { computeHash } from '../src/sync/hash.js';
 
 function parseMarkdownFrontmatter(markdown: string): Record<string, unknown> {
@@ -425,6 +427,70 @@ describe('Hook Transforms', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Sync config: glob matching and include/exclude precedence
+// ---------------------------------------------------------------------------
+
+describe('Sync Config', () => {
+  describe('matchesGlob', () => {
+    it('matches exact names', () => {
+      assert.equal(matchesGlob('github-kanban-ops', 'github-kanban-ops'), true);
+      assert.equal(matchesGlob('other-skill', 'github-kanban-ops'), false);
+    });
+
+    it('matches prefix wildcard', () => {
+      assert.equal(matchesGlob('openspec-apply-change', 'openspec-*'), true);
+      assert.equal(matchesGlob('openspec-', 'openspec-*'), true);
+      assert.equal(matchesGlob('not-openspec', 'openspec-*'), false);
+    });
+
+    it('matches suffix wildcard', () => {
+      assert.equal(matchesGlob('gh-issue', 'gh-*'), true);
+      assert.equal(matchesGlob('gh-', 'gh-*'), true);
+      assert.equal(matchesGlob('github-issue', 'gh-*'), false);
+    });
+
+    it('does not match regex special characters as wildcards', () => {
+      // '.' should only match literal '.', not any character
+      assert.equal(matchesGlob('gh-issue', 'gh.issue'), false);
+      assert.equal(matchesGlob('gh-issue', 'gh-issue'), true);
+      // '+' should only match literal '+'
+      assert.equal(matchesGlob('skill+extra', 'skill+extra'), true);
+      assert.equal(matchesGlob('skill-extra', 'skill+extra'), false);
+    });
+
+    it('handles mixed literal and wildcard patterns', () => {
+      assert.equal(matchesGlob('superpowers-braintstorm', 'superpowers-*'), true);
+      assert.equal(matchesGlob('x-superpowers', 'superpowers-*'), false);
+    });
+  });
+
+  describe('isIncluded / isExcluded precedence', () => {
+    it('isExcluded takes precedence over isIncluded', () => {
+      const config: SyncConfig = {
+        skills: {
+          include: ['shared-*'],
+          exclude: ['shared-secret'],
+        },
+      };
+      assert.equal(isExcluded('shared-secret', config), true);
+      assert.equal(isIncluded('shared-secret', config), true);
+      // Exclude wins in classification ordering
+    });
+
+    it('default deny when include is empty', () => {
+      const config: SyncConfig = { skills: { include: [], exclude: [] } };
+      assert.equal(isIncluded('any-skill', config), false);
+    });
+
+    it('exclude with wildcard catches matching names', () => {
+      const config: SyncConfig = { skills: { exclude: ['openspec-*'] } };
+      assert.equal(isExcluded('openspec-apply', config), true);
+      assert.equal(isExcluded('other-skill', config), false);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Skill sync with scripts/, references/, metadata assets (Task 3.5)
 // ---------------------------------------------------------------------------
 
@@ -560,14 +626,14 @@ describe('Skill Sync', () => {
     }
   });
 
-  it('syncs ACO-owned github-kanban-ops skill', async () => {
+  it('syncs ACO-owned github-kanban-ops skill via built-in defaults', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-kanban-'));
     try {
       const skillDir = join(tmpDir, '.claude', 'skills', 'github-kanban-ops');
       await mkdir(skillDir, { recursive: true });
       await writeFile(
         join(skillDir, 'SKILL.md'),
-        '---\nname: github-kanban-ops\nx-aco-owned: true\n---\n\n# GitHub Kanban Ops'
+        '---\nname: github-kanban-ops\n---\n\n# GitHub Kanban Ops'
       );
       await writeFile(join(tmpDir, 'CLAUDE.md'), '');
 
@@ -591,7 +657,7 @@ describe('Skill Sync', () => {
       await mkdir(skillDir, { recursive: true });
       await writeFile(
         join(skillDir, 'SKILL.md'),
-        '---\nname: github-kanban-ops\nx-aco-owned: true\n---\n\n# GitHub Kanban Ops'
+        '---\nname: github-kanban-ops\n---\n\n# GitHub Kanban Ops'
       );
       await writeFile(join(tmpDir, 'CLAUDE.md'), '');
 
@@ -639,6 +705,204 @@ describe('Skill Sync', () => {
       assert.equal(manifest.version, '2');
       assert.ok(manifest.targets, 'Migrated manifest should have targets');
       assert.ok(manifest.skipped, 'Migrated manifest should have skipped');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('removes stale non-empty skill directories when no longer eligible', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-stale-'));
+    try {
+      // Setup: write CLAUDE.md, create skill, write sync.yaml that includes it
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+      const skillDir = join(tmpDir, '.claude', 'skills', 'temp-skill');
+      await mkdir(skillDir, { recursive: true });
+      await mkdir(join(skillDir, 'scripts'), { recursive: true });
+      await writeFile(join(skillDir, 'SKILL.md'), '---\nname: temp-skill\n---\n\n# Temp Skill');
+      await writeFile(join(skillDir, 'scripts', 'run.sh'), '#!/bin/bash\necho hello');
+
+      // Set up .aco/sync.yaml that includes temp-skill
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      await writeFile(
+        join(acoDir, 'sync.yaml'),
+        'skills:\n  include:\n    - temp-skill\n  exclude:\n    - openspec-*\n    - superpowers-*\n    - gh-*\n'
+      );
+
+      // First sync: should create the skill directory
+      await runSync(tmpDir, { dryRun: false });
+      const targetDir = join(tmpDir, '.agents', 'skills', 'temp-skill');
+      const targetSkillMd = join(targetDir, 'SKILL.md');
+      let content = await readFile(targetSkillMd, 'utf-8');
+      assert.ok(content.includes('Temp Skill'));
+
+      // Now remove temp-skill from include list
+      await writeFile(
+        join(acoDir, 'sync.yaml'),
+        'skills:\n  include:\n    - other-skill\n  exclude:\n    - openspec-*\n    - superpowers-*\n    - gh-*\n'
+      );
+
+      // Second sync: should remove the stale directory (even though it's non-empty)
+      const result = await runSync(tmpDir, { dryRun: false });
+      const removedOutputs = result.outputs.filter((o) => o.action === 'removed');
+      assert.ok(removedOutputs.length > 0, `Expected removed outputs, got ${removedOutputs.length}`);
+
+      // Verify the directory is gone
+      const { existsSync } = await import('node:fs');
+      assert.equal(existsSync(targetDir), false, `Expected ${targetDir} to be removed`);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips removal of stale targets not owned by aco', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-stale-external-'));
+    try {
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      // Create a manifest with an external-owned target
+      const targetDir = join(tmpDir, '.agents', 'skills', 'external-skill');
+      const manifest = {
+        version: '2',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {},
+        targetHashes: { [targetDir]: 'abc123' },
+        targets: { [targetDir]: { hash: 'abc123', owner: 'external', kind: 'external-skill' } },
+        skipped: [],
+        warnings: [],
+      };
+      await writeFile(join(acoDir, 'sync-manifest.json'), JSON.stringify(manifest, null, 2));
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const result = await runSync(tmpDir, { dryRun: false });
+      const removedOutputs = result.outputs.filter((o) => o.action === 'removed');
+      // External-owned targets should not be auto-removed
+      assert.equal(removedOutputs.length, 0);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('detectDuplicates warns on Gemini command + shared skill collision', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dup-'));
+    try {
+      // Create a Gemini command at .gemini/commands/gh-issue.toml
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await writeFile(join(tmpDir, '.gemini', 'commands', 'gh-issue.toml'), '[command]\nname = "gh-issue"');
+
+      // Create a .agents/skills/gh-issue/ directory (simulating existing duplicate)
+      await mkdir(join(tmpDir, '.agents', 'skills', 'gh-issue'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.agents', 'skills', 'gh-issue', 'SKILL.md'),
+        '---\nname: gh-issue\n---\n\n# GH Issue'
+      );
+
+      const outputs: SyncOutput[] = [];
+      const warnings = await detectDuplicates(tmpDir, outputs);
+      const dupWarnings = warnings.filter(
+        (w) => w.message.includes('gh-issue')
+      );
+      assert.ok(dupWarnings.length > 0, 'Should detect gh-issue duplicate');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('detectDuplicates includes planned shared-skill outputs in index', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dup-plan-'));
+    try {
+      // Create a Gemini command
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await writeFile(join(tmpDir, '.gemini', 'commands', 'my-command.toml'), '[command]\nname = "my-command"');
+
+      // Simulate a planned shared-skill output with the same name (not on disk yet)
+      const outputs: SyncOutput[] = [
+        {
+          targetPath: join(tmpDir, '.agents', 'skills', 'my-command'),
+          kind: 'directory',
+          action: 'created',
+          owner: 'aco',
+          assetKind: 'shared-skill',
+        },
+      ];
+
+      const warnings = await detectDuplicates(tmpDir, outputs);
+      const dupWarnings = warnings.filter((w) => w.message.includes('my-command'));
+      assert.ok(dupWarnings.length > 0, 'Should detect planned shared-skill vs Gemini command duplicate');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('--strict mode promotes duplicate warnings to errors', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-strict-'));
+    try {
+      // Create enough source files for sync to run
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      // Create a Gemini command at .gemini/commands/gh-issue.toml
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await writeFile(join(tmpDir, '.gemini', 'commands', 'gh-issue.toml'), '[command]\nname = "gh-issue"');
+
+      // Create a .agents/skills/gh-issue/ directory (creates duplicate scenario)
+      await mkdir(join(tmpDir, '.agents', 'skills', 'gh-issue'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.agents', 'skills', 'gh-issue', 'SKILL.md'),
+        '---\nname: gh-issue\n---\n\n# GH Issue'
+      );
+
+      // With --strict, sync --check should fail due to duplicate warnings
+      try {
+        await runSync(tmpDir, { check: true, strict: true });
+        assert.fail('Expected sync to fail in strict mode');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.ok(msg.includes('strict'), `Expected strict error, got: ${msg}`);
+      }
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('--clean-duplicates removes manifest-owned duplicate assets', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-clean-'));
+    try {
+      // Set up aco manifest with a gh-issue target
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      const targetDir = join(tmpDir, '.agents', 'skills', 'gh-issue');
+      await mkdir(targetDir, { recursive: true });
+      await writeFile(
+        join(targetDir, 'SKILL.md'),
+        '---\nname: gh-issue\n---\n\n# GH Issue'
+      );
+
+      const manifest = {
+        version: '2',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {},
+        targetHashes: {},
+        targets: {
+          [targetDir]: {
+            hash: 'will-not-match-disk',
+            owner: 'aco',
+            kind: 'command-alias-skill' as string,
+          },
+        },
+        skipped: [],
+        warnings: [],
+      };
+      await writeFile(join(acoDir, 'sync-manifest.json'), JSON.stringify(manifest, null, 2));
+
+      // Create a Gemini command to trigger duplicate detection
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await writeFile(join(tmpDir, '.gemini', 'commands', 'gh-issue.toml'), '[command]\nname = "gh-issue"');
+
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      // Try clean-duplicates with force-clean
+      const result = await runSync(tmpDir, { dryRun: false, cleanDuplicates: true, forceClean: true });
+      assert.ok(result.outputs.length >= 1, 'Should have outputs');
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }

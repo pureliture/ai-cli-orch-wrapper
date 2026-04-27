@@ -113,11 +113,13 @@ export async function syncSkills(
 
     const action = existsSync(targetDir) ? 'updated' : 'created';
 
+    const dirHash = await computeDirHash(sourceDir);
+
     outputs.push({
       targetPath: targetDir,
       kind: 'directory',
       action,
-      hash: source.hash,
+      hash: dirHash,
       sourcePath: sourceDir,
       owner: 'aco',
       assetKind: kind,
@@ -127,20 +129,24 @@ export async function syncSkills(
   return { outputs, warnings, skipped };
 }
 
+async function computeDirHash(dirPath: string): Promise<string> {
+  const entries = await readdir(dirPath, { recursive: true });
+  let combined = '';
+  for (const entry of entries.sort()) {
+    const fullPath = join(dirPath, entry.toString());
+    try {
+      const content = await readFile(fullPath, 'utf8');
+      combined += content;
+    } catch {
+      // Skip non-files
+    }
+  }
+  return computeHash(combined);
+}
+
 async function hashMatches(targetPath: string, expectedHash: string): Promise<boolean> {
   try {
-    const entries = await readdir(targetPath, { recursive: true });
-    let combined = '';
-    for (const entry of entries.sort()) {
-      const fullPath = join(targetPath, entry.toString());
-      try {
-        const content = await readFile(fullPath, 'utf8');
-        combined += content;
-      } catch {
-        // Skip non-files
-      }
-    }
-    return computeHash(combined) === expectedHash;
+    return (await computeDirHash(targetPath)) === expectedHash;
   } catch {
     return false;
   }

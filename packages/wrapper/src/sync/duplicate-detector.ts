@@ -1,6 +1,6 @@
 import { readdir, stat } from 'node:fs/promises';
 import { join, basename, extname } from 'node:path';
-import type { SyncWarning, SyncOutput, SyncConfig } from './transform-interface.js';
+import type { SyncWarning, SyncOutput } from './transform-interface.js';
 
 interface ExposureEntry {
   provider: string;
@@ -15,8 +15,7 @@ interface ExposureEntry {
  */
 export async function detectDuplicates(
   repoRoot: string,
-  outputs: SyncOutput[],
-  _config: SyncConfig
+  outputs: SyncOutput[]
 ): Promise<SyncWarning[]> {
   const warnings: SyncWarning[] = [];
   const index: ExposureEntry[] = [];
@@ -115,7 +114,7 @@ export async function detectDuplicates(
   // 5. Index planned outputs
   for (const output of outputs) {
     if (output.action === 'removed') continue;
-    if (output.assetKind === 'command-alias-skill') {
+    if (output.assetKind === 'command-alias-skill' || output.assetKind === 'shared-skill') {
       const name = basename(output.targetPath);
       index.push({
         provider: 'gemini',
@@ -156,6 +155,7 @@ export async function detectDuplicates(
         `Recommendation: keep upstream-managed source; remove ACO-generated copies.`;
     } else if (isCommandAlias) {
       message = `Command alias duplicate: provider ${provider} exposes '${name}' from both command and skill surfaces (${paths}). ` +
+        `Cleanup target: ${entries.filter((e) => e.kind === 'skill').map((e) => e.path).join(', ') || 'none'}. ` +
         `Recommendation: keep provider-native command; remove shared command-alias skill copy.`;
     } else {
       message = `Duplicate provider exposure: provider ${provider} exposes '${name}' from multiple surfaces (${paths}). ` +
