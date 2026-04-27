@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { load as loadYaml } from 'js-yaml';
 import type { SyncConfig } from './transform-interface.js';
 
 /**
@@ -31,41 +32,18 @@ function getDefaultSyncConfig(): SyncConfig {
 }
 
 function parseSyncConfig(content: string): SyncConfig {
-  // Very small YAML subset parser for sync.yaml.
-  // Only supports top-level `skills:` with `include:` and `exclude:` string lists.
+  const raw = loadYaml(content) as Record<string, unknown>;
   const config: SyncConfig = {};
-  const lines = content.split('\n');
-  let currentSection: 'include' | 'exclude' | null = null;
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const trimmed = line.trim();
+  if (raw.skills && typeof raw.skills === 'object') {
+    const skills = raw.skills as Record<string, unknown>;
+    config.skills = {};
 
-    if (trimmed.startsWith('#') || trimmed === '') continue;
-
-    if (trimmed === 'skills:' || trimmed.startsWith('skills:')) {
-      config.skills ??= {};
-      currentSection = null;
-      continue;
+    if (Array.isArray(skills.include)) {
+      config.skills.include = skills.include.map((v) => String(v));
     }
-
-    if (trimmed === 'include:' || trimmed.startsWith('include:')) {
-      currentSection = 'include';
-      config.skills ??= {};
-      continue;
-    }
-
-    if (trimmed === 'exclude:' || trimmed.startsWith('exclude:')) {
-      currentSection = 'exclude';
-      config.skills ??= {};
-      continue;
-    }
-
-    if (trimmed.startsWith('- ') && currentSection) {
-      const value = trimmed.slice(2).trim().replace(/['"]/g, '');
-      config.skills ??= {};
-      config.skills[currentSection] ??= [];
-      config.skills[currentSection]!.push(value);
+    if (Array.isArray(skills.exclude)) {
+      config.skills.exclude = skills.exclude.map((v) => String(v));
     }
   }
 

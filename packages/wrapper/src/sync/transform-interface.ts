@@ -74,6 +74,8 @@ export interface SyncWarning {
   source: string;
   message: string;
   severity: 'warning' | 'error';
+  /** Structured cleanup targets, populated by duplicate-detector for use by sync-engine. */
+  cleanupTargets?: string[];
 }
 
 /**

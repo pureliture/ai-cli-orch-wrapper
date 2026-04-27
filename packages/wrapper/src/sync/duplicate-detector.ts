@@ -9,6 +9,22 @@ interface ExposureEntry {
   kind: 'command' | 'skill';
 }
 
+function canonicalExternalName(name: string): string {
+  if (name.startsWith('opsx/')) {
+    return `openspec-${name.slice(5)}`;
+  }
+  if (name.startsWith('openspec-')) {
+    if (name.endsWith('-change')) {
+      return name.slice(0, -7);
+    }
+    return name;
+  }
+  if (name.startsWith('superpowers-')) {
+    return name;
+  }
+  return name;
+}
+
 /**
  * Build a provider exposure index from provider-specific commands and shared skills,
  * then detect duplicate provider-surface exposures.
@@ -50,8 +66,15 @@ export async function detectDuplicates(
         });
       }
     }
-  } catch {
-    // Directory may not exist
+  } catch (err: unknown) {
+    const e = err as Error & { code?: string };
+    if (e.code !== 'ENOENT') {
+      warnings.push({
+        source: geminiCommandsDir,
+        message: `Failed to scan Gemini commands: ${e.message}`,
+        severity: 'warning',
+      });
+    }
   }
 
   // 2. Index shared skills (.agents/skills/*/)
@@ -69,8 +92,15 @@ export async function detectDuplicates(
         });
       }
     }
-  } catch {
-    // Directory may not exist
+  } catch (err: unknown) {
+    const e = err as Error & { code?: string };
+    if (e.code !== 'ENOENT') {
+      warnings.push({
+        source: agentsSkillsDir,
+        message: `Failed to scan shared skills: ${e.message}`,
+        severity: 'warning',
+      });
+    }
   }
 
   // 3. Index Codex skills (.codex/skills/*/)
@@ -88,8 +118,15 @@ export async function detectDuplicates(
         });
       }
     }
-  } catch {
-    // Directory may not exist
+  } catch (err: unknown) {
+    const e = err as Error & { code?: string };
+    if (e.code !== 'ENOENT') {
+      warnings.push({
+        source: codexSkillsDir,
+        message: `Failed to scan Codex skills: ${e.message}`,
+        severity: 'warning',
+      });
+    }
   }
 
   // 4. Index Claude commands (.claude/commands/*.md)
@@ -107,8 +144,15 @@ export async function detectDuplicates(
         });
       }
     }
-  } catch {
-    // Directory may not exist
+  } catch (err: unknown) {
+    const e = err as Error & { code?: string };
+    if (e.code !== 'ENOENT') {
+      warnings.push({
+        source: claudeCommandsDir,
+        message: `Failed to scan Claude commands: ${e.message}`,
+        severity: 'warning',
+      });
+    }
   }
 
   // 5. Index planned outputs
@@ -127,6 +171,7 @@ export async function detectDuplicates(
 
   // 6. Detect duplicates: same provider + same name from multiple surfaces
   const byProviderName = new Map<string, ExposureEntry[]>();
+  const warnedCanonicals = new Set<string>();
   for (const entry of index) {
     const key = `${entry.provider}:${entry.name}`;
     const list = byProviderName.get(key) ?? [];
@@ -148,17 +193,26 @@ export async function detectDuplicates(
 
     let message: string;
     let severity: 'warning' | 'error' = 'warning';
+    let cleanupTargets: string[] | undefined;
 
     if (isExternal) {
-      message = `External asset duplicate: provider ${provider} exposes '${name}' from multiple surfaces (${paths}). ` +
-        `Cleanup target: ${entries.filter((e) => e.path.includes('.agents/skills/')).map((e) => e.path).join(', ') || 'none'}. ` +
+      warnedCanonicals.add(`${provider}:${canonicalExternalName(name)}`);
+      cleanupTargets = entries.filter((e) => e.path.includes('.agents/skills/')).map((e) => e.path);
+      const cleanupText = cleanupTargets.join(', ') || 'none';
+      message =
+        `External asset duplicate: provider ${provider} exposes '${name}' from multiple surfaces (${paths}). ` +
+        `Cleanup target: ${cleanupText}. ` +
         `Recommendation: keep upstream-managed source; remove ACO-generated copies.`;
     } else if (isCommandAlias) {
-      message = `Command alias duplicate: provider ${provider} exposes '${name}' from both command and skill surfaces (${paths}). ` +
-        `Cleanup target: ${entries.filter((e) => e.kind === 'skill').map((e) => e.path).join(', ') || 'none'}. ` +
+      cleanupTargets = entries.filter((e) => e.kind === 'skill').map((e) => e.path);
+      const cleanupText = cleanupTargets.join(', ') || 'none';
+      message =
+        `Command alias duplicate: provider ${provider} exposes '${name}' from both command and skill surfaces (${paths}). ` +
+        `Cleanup target: ${cleanupText}. ` +
         `Recommendation: keep provider-native command; remove shared command-alias skill copy.`;
     } else {
-      message = `Duplicate provider exposure: provider ${provider} exposes '${name}' from multiple surfaces (${paths}). ` +
+      message =
+        `Duplicate provider exposure: provider ${provider} exposes '${name}' from multiple surfaces (${paths}). ` +
         `Recommendation: consolidate into a single surface.`;
     }
 
@@ -166,6 +220,45 @@ export async function detectDuplicates(
       source: entries[0].path,
       message,
       severity,
+      cleanupTargets,
+    });
+  }
+
+  // 7. Cross-name canonical duplicate detection for OpenSpec
+  const openSpecEntries = index.filter(
+    (e) => e.name.startsWith('openspec-') || e.name.startsWith('opsx/')
+  );
+  const byProviderCanonical = new Map<string, ExposureEntry[]>();
+  for (const entry of openSpecEntries) {
+    const key = `${entry.provider}:${canonicalExternalName(entry.name)}`;
+    const list = byProviderCanonical.get(key) ?? [];
+    list.push(entry);
+    byProviderCanonical.set(key, list);
+  }
+
+  for (const [key, entries] of byProviderCanonical) {
+    if (entries.length < 2) continue;
+    if (warnedCanonicals.has(key)) continue;
+    warnedCanonicals.add(key);
+
+    const [provider, canonical] = key.split(':', 2);
+    const names = entries.map((e) => `'${e.name}'`).join(', ');
+    const paths = entries.map((e) => e.path).join(', ');
+
+    const cleanupTargets = entries
+      .filter((e) => e.path.includes('.agents/skills/'))
+      .map((e) => e.path);
+    const cleanupText = cleanupTargets.join(', ') || 'none';
+    const message =
+      `External asset duplicate: provider ${provider} exposes ${names} from multiple surfaces (${paths}). ` +
+      `Cleanup target: ${cleanupText}. ` +
+      `Recommendation: keep upstream-managed source; remove ACO-generated copies.`;
+
+    warnings.push({
+      source: entries[0].path,
+      message,
+      severity: 'warning',
+      cleanupTargets,
     });
   }
 

@@ -21,6 +21,7 @@ import type {
   SyncManifest,
   TransformPlan,
   ManifestTargetRecord,
+  SyncConfig,
 } from './transform-interface.js';
 
 interface ErrorWithCode extends Error {
@@ -32,7 +33,14 @@ function isErrorWithCode(err: unknown): err is ErrorWithCode {
 }
 
 export async function runSync(repoRoot: string, options: SyncOptions = {}): Promise<SyncResult> {
-  const { dryRun = false, check = false, force = false, strict = false, cleanDuplicates = false, forceClean = false } = options;
+  const {
+    dryRun = false,
+    check = false,
+    force = false,
+    strict = false,
+    cleanDuplicates = false,
+    forceClean = false,
+  } = options;
 
   // 1. Load sync config
   const config = await loadSyncConfig(repoRoot);
@@ -114,7 +122,9 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
         }
       }
       if (strict && hasDuplicates) {
-        throw new Error(`Sync check failed (strict mode promoted duplicates to errors).\n${messages.join('\n')}\nRun 'aco sync' to refresh, or review duplicate warnings above.`);
+        throw new Error(
+          `Sync check failed (strict mode promoted duplicates to errors).\n${messages.join('\n')}\nRun 'aco sync' to refresh, or review duplicate warnings above.`
+        );
       }
       throw new Error(`Sync check failed.\n${messages.join('\n')}\nRun 'aco sync' to refresh.`);
     }
@@ -142,22 +152,23 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   if (cleanDuplicates) {
     const cleanable = duplicateWarnings.filter((w) => w.severity === 'warning');
     for (const warning of cleanable) {
-      const match = warning.message.match(/Cleanup target: (.+?)\. Recommendation:/);
-      if (match) {
-        const targetPath = match[1].trim();
-        const isOwned = existingManifest?.targets?.[targetPath]?.owner === 'aco';
-        if (!dryRun && (isOwned || forceClean)) {
-          try {
-            await rm(targetPath, { recursive: true, force: true });
-          } catch {
-            /* Ignore */
+      const targets = warning.cleanupTargets;
+      if (targets && targets.length > 0) {
+        for (const targetPath of targets) {
+          const isOwned = existingManifest?.targets?.[targetPath]?.owner === 'aco';
+          if (!dryRun && (isOwned || forceClean)) {
+            try {
+              await rm(targetPath, { recursive: true, force: true });
+            } catch {
+              /* Ignore */
+            }
+          } else if (!dryRun && !isOwned && !forceClean) {
+            plan.warnings.push({
+              source: targetPath,
+              message: `Refused to clean duplicate ${targetPath}: not manifest-owned. Pass --force-clean to override.`,
+              severity: 'warning',
+            });
           }
-        } else if (!dryRun && !isOwned && !forceClean) {
-          plan.warnings.push({
-            source: targetPath,
-            message: `Refused to clean duplicate ${targetPath}: not manifest-owned. Pass --force-clean to override.`,
-            severity: 'warning',
-          });
         }
       }
     }
@@ -207,7 +218,7 @@ async function computeTransformPlan(
   sources: SyncSource[],
   repoRoot: string,
   existingManifest: SyncManifest | null,
-  config: Awaited<ReturnType<typeof loadSyncConfig>>
+  config: SyncConfig
 ): Promise<TransformPlan> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];

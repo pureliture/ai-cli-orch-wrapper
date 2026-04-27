@@ -1,6 +1,14 @@
 import { existsSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';
-import type { SyncSource, SyncOutput, SyncWarning, SyncManifest, AssetOwner, AssetKind, SyncConfig } from './transform-interface.js';
+import type {
+  SyncSource,
+  SyncOutput,
+  SyncWarning,
+  SyncManifest,
+  AssetOwner,
+  AssetKind,
+  SyncConfig,
+} from './transform-interface.js';
 import { classifySkill, isSyncEligible } from './skill-classifier.js';
 import { computeHash } from './hash.js';
 import { readFile, readdir } from 'node:fs/promises';
@@ -10,7 +18,11 @@ export async function syncSkills(
   repoRoot: string,
   manifest: SyncManifest | null,
   config: SyncConfig
-): Promise<{ outputs: SyncOutput[]; warnings: SyncWarning[]; skipped: { path: string; owner: AssetOwner; kind: AssetKind; reason: string }[] }> {
+): Promise<{
+  outputs: SyncOutput[];
+  warnings: SyncWarning[];
+  skipped: { path: string; owner: AssetOwner; kind: AssetKind; reason: string }[];
+}> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
   const skipped: { path: string; owner: AssetOwner; kind: AssetKind; reason: string }[] = [];
@@ -130,18 +142,22 @@ export async function syncSkills(
 }
 
 async function computeDirHash(dirPath: string): Promise<string> {
-  const entries = await readdir(dirPath, { recursive: true });
-  let combined = '';
-  for (const entry of entries.sort()) {
-    const fullPath = join(dirPath, entry.toString());
+  const entries = await readdir(dirPath, { recursive: true, withFileTypes: true });
+  const fileHashes: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const fullPath = join(entry.parentPath ?? join(dirPath, entry.name), entry.name);
     try {
       const content = await readFile(fullPath, 'utf8');
-      combined += content;
-    } catch {
-      // Skip non-files
+      fileHashes.push(computeHash(content));
+    } catch (err: unknown) {
+      const e = err as Error & { code?: string };
+      if (e.code === 'ENOENT') continue; // race condition: file removed during read
+      throw err; // EACCES, EPERM etc. should surface
     }
   }
-  return computeHash(combined);
+  fileHashes.sort();
+  return computeHash(fileHashes.join('\n'));
 }
 
 async function hashMatches(targetPath: string, expectedHash: string): Promise<boolean> {
