@@ -149,6 +149,48 @@ node packages/wrapper/dist/cli.js sync --check
 aco cancel --session <id>
 ```
 
+`aco run`은 provider 실행 전에 실행 콘텍스트 대시보드를 stderr에 출력합니다.
+
+```text
+🛰️  aco Runtime Session
+
+✨ Active
+  Provider: gemini
+  Command: review
+  Session ID: f3f2d9...b1
+  Permission: default
+  Working Dir: /path/to/repo
+  Branch: main
+  Prompt Template: /path/to/repo/.claude/aco/prompts/gemini/review.md
+  Auth: ready (oauth)
+
+🧩 Exposed
+  Providers: gemini
+  Agents: reviewer,planner
+  Hooks: PostToolUse
+  Config: settings.json
+  Shared Skills: review-skill
+```
+
+CI/`NO_COLOR`에서는 ANSI 없이 평문 출력됩니다.
+
+`aco status`는 저장된 세션 메타데이터를 이용해 같은 runtime 요약도 보여줍니다.
+
+```text
+Session:    f3f2d9...b1
+Provider:   gemini
+Command:    review
+Status:     done
+Started:    2026-04-24T00:00:00.000Z
+Runtime:
+  Branch:    main
+  Prompt:    /path/to/repo/.claude/aco/prompts/gemini/review.md
+  Auth:      ready (oauth)
+  Agents:    reviewer,planner
+  Hooks:     PostToolUse
+  Skills:    review-skill
+```
+
 ## 이 저장소가 다루는 범위
 
 Claude Code 하네스를 repo-local 자산으로 관리하면서도, 실제 실행은 외부 AI CLI와 연결하려면 다음 관심사를 함께 다뤄야 합니다.

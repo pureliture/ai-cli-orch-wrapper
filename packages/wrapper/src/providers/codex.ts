@@ -1,15 +1,10 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
-
-const execFileAsync = promisify(execFile);
-
-const AUTH_CHECK_TIMEOUT_MS = 5_000;
+import { readVersion } from '../util/read-version.js';
 
 export class CodexProvider implements IProvider {
   readonly key = 'codex';
@@ -20,13 +15,20 @@ export class CodexProvider implements IProvider {
   }
 
   async checkAuth(): Promise<AuthResult> {
-    if (!this.isAvailable()) {
-      return { ok: false, hint: this.installHint };
+    const available = this.isAvailable();
+    const binaryPath = which('codex');
+
+    if (!available || !binaryPath) {
+      return { ok: false, method: 'missing', hint: this.installHint };
     }
+
+    const versionHint = {
+      binaryPath,
+    };
 
     // 1. Fast path: Environment variables
     if (process.env.OPENAI_API_KEY) {
-      return { ok: true };
+      return { ok: true, method: 'api-key', ...versionHint };
     }
 
     // 2. Fast path: Local OAuth token file with expiration check
@@ -44,11 +46,13 @@ export class CodexProvider implements IProvider {
           if (expiresAt < now) {
             return {
               ok: false,
+              method: 'missing',
               hint: 'Codex OAuth token expired. Run: codex login',
+              ...versionHint,
             };
           }
         }
-        return { ok: true };
+        return { ok: true, method: 'oauth', ...versionHint };
       } catch (e) {
         console.warn(
           'Failed to parse Codex auth file:',
@@ -62,11 +66,14 @@ export class CodexProvider implements IProvider {
 
     // 3. Fallback: CLI execution
     try {
-      await execFileAsync('codex', ['--version'], { timeout: AUTH_CHECK_TIMEOUT_MS });
-      return { ok: true };
+      const version = await readVersion('codex');
+      if (version === undefined) throw new Error('probe failed');
+      return { ok: true, method: 'cli-fallback', version, ...versionHint };
     } catch {
       return {
         ok: false,
+        method: 'missing',
+        ...versionHint,
         hint: 'codex login OR export OPENAI_API_KEY="..."',
       };
     }
