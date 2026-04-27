@@ -12,7 +12,7 @@
 - [x] 2.2 Preserve recursive copy behavior for allowed skills such as `github-kanban-ops`, including bundled scripts and references
 - [x] 2.3 Ensure `openspec-*`, `superpowers-*`, Superpowers named skills, and `gh-*` are skipped without creating `.agents/skills/<name>/`
 - [x] 2.4 Update stale target removal so only manifest-owned ACO outputs with matching hashes are auto-removed
-- [ ] 2.5 Add fixture tests covering `github-kanban-ops`, `openspec-apply-change`, `gh-issue`, and Superpowers skill names
+- [x] 2.5 Add fixture tests covering `github-kanban-ops`, `openspec-apply-change`, `gh-issue`, and Superpowers skill names
 
 ## 3. Manifest and Diagnostics
 
@@ -20,7 +20,7 @@
 - [x] 3.2 Preserve read compatibility for existing hash-only manifests and migrate records on the next successful sync
 - [x] 3.3 Record skipped and external assets in the manifest without treating them as generated outputs
 - [x] 3.4 Ensure `aco sync --force` cannot overwrite or adopt external assets
-- [ ] 3.5 Add manifest tests for ACO-owned generated assets, skipped external assets, and legacy manifest migration
+- [x] 3.5 Add manifest tests for ACO-owned generated assets, skipped external assets, and legacy manifest migration
 
 ## 4. Duplicate Detection and Cleanup
 
@@ -42,8 +42,8 @@
 ## 6. Repository Cleanup and Documentation
 
 - [x] 6.1 Remove or mark for cleanup tracked `.agents/skills/gh-*` command-alias skill copies
-- [ ] 6.2 Remove or document cleanup for tracked `.gemini/commands/opsx/` OpenSpec command copies
-- [ ] 6.3 Remove or document cleanup for tracked `.codex/skills/openspec-*` OpenSpec skill copies
+- [x] 6.2 Remove or document cleanup for tracked `.gemini/commands/opsx/` OpenSpec command copies
+- [x] 6.3 Remove or document cleanup for tracked `.codex/skills/openspec-*` OpenSpec skill copies
 - [x] 6.4 Update `docs/reference/context-sync.md` to state that `.agents/skills` is not a mirror of `.claude/skills`
 - [x] 6.5 Update `docs/architecture.md`, `CLAUDE.md`, and `AGENTS.md` with ACO-owned versus external asset ownership rules
 - [x] 6.6 Update `openspec/changes/aco-v2-context-sync-layer/design.md` and `specs/context-sync/spec.md` so the older mirror-all skill sync proposal no longer conflicts with this change
@@ -51,8 +51,8 @@
 ## 7. Verification
 
 - [x] 7.1 Add unit tests for `syncSkills()` allowlist behavior, external skips, command-alias skips, and manifest skipped records
-- [ ] 7.2 Add integration fixture with `github-kanban-ops`, `openspec-apply-change`, `gh-issue`, `.gemini/commands/gh-issue.toml`, `.gemini/commands/opsx/apply.toml`, and `.codex/skills/openspec-apply-change/SKILL.md`
-- [ ] 7.3 Verify the fixture creates only `.agents/skills/github-kanban-ops/` and emits duplicate/external warnings
-- [ ] 7.4 Run `openspec validate prevent-external-skill-command-duplication --type change --strict`
+- [x] 7.2 Add integration fixture with `github-kanban-ops`, `openspec-apply-change`, `gh-issue`, `.gemini/commands/gh-issue.toml`, `.gemini/commands/opsx/apply.toml`, and `.codex/skills/openspec-apply-change/SKILL.md`
+- [x] 7.3 Verify the fixture creates only `.agents/skills/github-kanban-ops/` and emits duplicate/external warnings
+- [x] 7.4 Run `openspec validate prevent-external-skill-command-duplication --type change --strict`
 - [x] 7.5 Run targeted sync tests, then `npm run typecheck`, `npm test`, `npm run test:fixtures`, and `git diff --check`
 - [x] 7.6 Run `aco sync --check --strict` against this repository and confirm duplicate diagnostics match the migration plan
