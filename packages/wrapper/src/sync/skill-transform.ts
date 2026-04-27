@@ -1,4 +1,5 @@
-import { existsSync } from 'node:fs';
+import { existsSync, createReadStream } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join, basename, dirname } from 'node:path';
 import type {
   SyncSource,
@@ -11,7 +12,7 @@ import type {
 } from './transform-interface.js';
 import { classifySkill, isSyncEligible } from './skill-classifier.js';
 import { computeHash } from './hash.js';
-import { readFile, readdir } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 
 export async function syncSkills(
   sources: SyncSource[],
@@ -148,8 +149,8 @@ async function computeDirHash(dirPath: string): Promise<string> {
     if (!entry.isFile()) continue;
     const fullPath = join(entry.parentPath ?? join(dirPath, entry.name), entry.name);
     try {
-      const content = await readFile(fullPath, 'utf8');
-      fileHashes.push(computeHash(content));
+      const hash = await streamFileHash(fullPath);
+      fileHashes.push(hash);
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       if (e.code === 'ENOENT') continue; // race condition: file removed during read
@@ -158,6 +159,16 @@ async function computeDirHash(dirPath: string): Promise<string> {
   }
   fileHashes.sort();
   return computeHash(fileHashes.join('\n'));
+}
+
+function streamFileHash(filePath: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const hash = createHash('sha256');
+    const stream = createReadStream(filePath);
+    stream.on('error', reject);
+    stream.on('data', (chunk) => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+  });
 }
 
 async function hashMatches(targetPath: string, expectedHash: string): Promise<boolean> {
