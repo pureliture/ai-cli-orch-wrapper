@@ -25,6 +25,17 @@ function canonicalExternalName(name: string): string {
   return name;
 }
 
+function pushScanError(err: unknown, source: string, label: string, warnings: SyncWarning[]): void {
+  const e = err as Error & { code?: string };
+  if (e.code !== 'ENOENT') {
+    warnings.push({
+      source,
+      message: `Failed to scan ${label}: ${e.message}`,
+      severity: 'warning',
+    });
+  }
+}
+
 /**
  * Build a provider exposure index from provider-specific commands and shared skills,
  * then detect duplicate provider-surface exposures.
@@ -67,14 +78,7 @@ export async function detectDuplicates(
       }
     }
   } catch (err: unknown) {
-    const e = err as Error & { code?: string };
-    if (e.code !== 'ENOENT') {
-      warnings.push({
-        source: geminiCommandsDir,
-        message: `Failed to scan Gemini commands: ${e.message}`,
-        severity: 'warning',
-      });
-    }
+    pushScanError(err, geminiCommandsDir, 'Gemini commands', warnings);
   }
 
   // 2. Index shared skills (.agents/skills/*/)
@@ -93,14 +97,7 @@ export async function detectDuplicates(
       }
     }
   } catch (err: unknown) {
-    const e = err as Error & { code?: string };
-    if (e.code !== 'ENOENT') {
-      warnings.push({
-        source: agentsSkillsDir,
-        message: `Failed to scan shared skills: ${e.message}`,
-        severity: 'warning',
-      });
-    }
+    pushScanError(err, agentsSkillsDir, 'shared skills', warnings);
   }
 
   // 3. Index Codex skills (.codex/skills/*/)
@@ -119,14 +116,7 @@ export async function detectDuplicates(
       }
     }
   } catch (err: unknown) {
-    const e = err as Error & { code?: string };
-    if (e.code !== 'ENOENT') {
-      warnings.push({
-        source: codexSkillsDir,
-        message: `Failed to scan Codex skills: ${e.message}`,
-        severity: 'warning',
-      });
-    }
+    pushScanError(err, codexSkillsDir, 'Codex skills', warnings);
   }
 
   // 4. Index Claude commands (.claude/commands/*.md)
@@ -145,14 +135,7 @@ export async function detectDuplicates(
       }
     }
   } catch (err: unknown) {
-    const e = err as Error & { code?: string };
-    if (e.code !== 'ENOENT') {
-      warnings.push({
-        source: claudeCommandsDir,
-        message: `Failed to scan Claude commands: ${e.message}`,
-        severity: 'warning',
-      });
-    }
+    pushScanError(err, claudeCommandsDir, 'Claude commands', warnings);
   }
 
   // 5. Index planned outputs
