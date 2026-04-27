@@ -435,7 +435,10 @@ describe('Skill Sync', () => {
       const skillDir = join(tmpDir, '.claude', 'skills', 'my-skill');
       await mkdir(join(skillDir, 'scripts'), { recursive: true });
       await mkdir(join(skillDir, 'references'), { recursive: true });
-      await writeFile(join(skillDir, 'SKILL.md'), '# My Skill\n\nThis is my skill.');
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: my-skill\nx-aco-owned: true\n---\n\n# My Skill\n\nThis is my skill.'
+      );
       await writeFile(join(skillDir, 'scripts', 'run.sh'), '#!/bin/bash\necho hello');
       await writeFile(join(skillDir, 'references', 'api.md'), '# API\n\nReference docs.');
       await writeFile(join(skillDir, 'metadata.json'), '{"version":"1.0"}');
@@ -444,8 +447,8 @@ describe('Skill Sync', () => {
         {
           path: join(skillDir, 'SKILL.md'),
           kind: 'skill',
-          content: '# My Skill\n\nThis is my skill.',
-          hash: computeHash('# My Skill\n\nThis is my skill.'),
+          content: '---\nname: my-skill\nx-aco-owned: true\n---\n\n# My Skill\n\nThis is my skill.',
+          hash: computeHash('---\nname: my-skill\nx-aco-owned: true\n---\n\n# My Skill\n\nThis is my skill.'),
         },
       ];
 
@@ -488,7 +491,10 @@ describe('Skill Sync', () => {
     try {
       const skillDir = join(tmpDir, '.claude', 'skills', 'dry-skill');
       await mkdir(skillDir, { recursive: true });
-      await writeFile(join(skillDir, 'SKILL.md'), '# Dry Skill');
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: dry-skill\nx-aco-owned: true\n---\n\n# Dry Skill'
+      );
       // Need CLAUDE.md for runSync to find sources
       await writeFile(join(tmpDir, 'CLAUDE.md'), '');
 
@@ -509,6 +515,130 @@ describe('Skill Sync', () => {
         exists = false;
       }
       assert.equal(exists, false);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips external OpenSpec skills', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-openspec-'));
+    try {
+      const skillDir = join(tmpDir, '.claude', 'skills', 'openspec-test');
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(join(skillDir, 'SKILL.md'), '---\nname: openspec-test\n---\n\n# OpenSpec Test');
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const result = await runSync(tmpDir, { dryRun: true });
+      const skillOutputs = result.outputs.filter((o) =>
+        o.targetPath.includes('.agents/skills/openspec-test')
+      );
+      assert.equal(skillOutputs.length, 0);
+
+      // Skipped skills don't appear as outputs at all
+      const allSkillOutputs = result.outputs.filter((o) => o.targetPath.includes('.agents/skills/'));
+      assert.equal(allSkillOutputs.length, 0);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips command-alias gh-* skills', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-gh-'));
+    try {
+      const skillDir = join(tmpDir, '.claude', 'skills', 'gh-test');
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(join(skillDir, 'SKILL.md'), '---\nname: gh-test\n---\n\n# GH Test');
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const result = await runSync(tmpDir, { dryRun: true });
+      const skillOutputs = result.outputs.filter((o) =>
+        o.targetPath.includes('.agents/skills/gh-test')
+      );
+      assert.equal(skillOutputs.length, 0);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('syncs ACO-owned github-kanban-ops skill', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-kanban-'));
+    try {
+      const skillDir = join(tmpDir, '.claude', 'skills', 'github-kanban-ops');
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: github-kanban-ops\nx-aco-owned: true\n---\n\n# GitHub Kanban Ops'
+      );
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const result = await runSync(tmpDir, { dryRun: false });
+      const skillOutputs = result.outputs.filter((o) =>
+        o.targetPath.includes('.agents/skills/github-kanban-ops')
+      );
+      assert.equal(skillOutputs.length, 1);
+      assert.equal(skillOutputs[0].action, 'created');
+      assert.equal(skillOutputs[0].owner, 'aco');
+      assert.equal(skillOutputs[0].assetKind, 'shared-skill');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('records manifest ownership for ACO-owned targets', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-manifest-'));
+    try {
+      const skillDir = join(tmpDir, '.claude', 'skills', 'github-kanban-ops');
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: github-kanban-ops\nx-aco-owned: true\n---\n\n# GitHub Kanban Ops'
+      );
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      await runSync(tmpDir, { dryRun: false });
+      const manifest = JSON.parse(
+        await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
+      );
+
+      assert.equal(manifest.version, '2');
+      const targetPath = join(tmpDir, '.agents', 'skills', 'github-kanban-ops');
+      const record = manifest.targets[targetPath];
+      assert.ok(record, 'Manifest should record the target');
+      assert.equal(record.owner, 'aco');
+      assert.equal(record.kind, 'shared-skill');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('migrates legacy manifest on next sync', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-legacy-'));
+    try {
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      const legacyManifest = {
+        version: '1',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {},
+        targetHashes: {
+          [join(tmpDir, 'AGENTS.md')]: 'abc123',
+        },
+        warnings: [],
+      };
+      await writeFile(
+        join(acoDir, 'sync-manifest.json'),
+        JSON.stringify(legacyManifest, null, 2)
+      );
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      await runSync(tmpDir, { dryRun: false });
+      const manifest = JSON.parse(
+        await readFile(join(acoDir, 'sync-manifest.json'), 'utf-8')
+      );
+
+      assert.equal(manifest.version, '2');
+      assert.ok(manifest.targets, 'Migrated manifest should have targets');
+      assert.ok(manifest.skipped, 'Migrated manifest should have skipped');
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }

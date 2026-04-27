@@ -8,6 +8,8 @@ import { syncCodexHooks } from './hook-codex-transform.js';
 import { syncGeminiHooks } from './hook-gemini-transform.js';
 import { readManifest, writeManifest, calculateDrift } from './manifest.js';
 import { computeHash } from './hash.js';
+import { loadSyncConfig } from './sync-config.js';
+import { detectDuplicates } from './duplicate-detector.js';
 import { readFile, mkdir, writeFile, cp, rm, readdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import type {
@@ -17,6 +19,7 @@ import type {
   SyncWarning,
   SyncManifest,
   TransformPlan,
+  ManifestTargetRecord,
 } from './transform-interface.js';
 
 interface ErrorWithCode extends Error {
@@ -28,9 +31,12 @@ function isErrorWithCode(err: unknown): err is ErrorWithCode {
 }
 
 export async function runSync(repoRoot: string, options: SyncOptions = {}): Promise<SyncResult> {
-  const { dryRun = false, check = false, force = false } = options;
+  const { dryRun = false, check = false, force = false, strict = false, cleanDuplicates = false, forceClean = false } = options;
 
-  // 1. Discover sources
+  // 1. Load sync config
+  const config = await loadSyncConfig(repoRoot);
+
+  // 2. Discover sources
   const sources = await discoverSources(repoRoot);
 
   if (sources.length === 0) {
@@ -39,13 +45,17 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     );
   }
 
-  // 2. Read existing manifest
+  // 3. Read existing manifest
   const existingManifest = await readManifest(repoRoot);
 
-  // 3. Compute transform plan (pure planning pass)
-  const plan = await computeTransformPlan(sources, repoRoot, existingManifest);
+  // 4. Compute transform plan (pure planning pass)
+  const plan = await computeTransformPlan(sources, repoRoot, existingManifest, config);
 
-  // 4. Detect conflicts for planned outputs against existing manifest
+  // 5. Detect duplicates
+  const duplicateWarnings = await detectDuplicates(repoRoot, plan.outputs, config);
+  plan.warnings.push(...duplicateWarnings);
+
+  // 6. Detect conflicts for planned outputs against existing manifest
   if (existingManifest) {
     for (const output of plan.outputs) {
       const existingHash = existingManifest.targetHashes[output.targetPath];
@@ -80,11 +90,12 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     }
   }
 
-  // 5. Check mode: verify without writing
+  // 7. Check mode: verify without writing
   const conflicts = plan.outputs.filter((o) => o.action === 'conflict');
   if (check) {
     const isDrift = calculateDrift(existingManifest, plan.manifest);
-    if (isDrift || conflicts.length > 0) {
+    const hasDuplicates = duplicateWarnings.length > 0;
+    if (isDrift || conflicts.length > 0 || (strict && hasDuplicates)) {
       const staleOutputs = plan.outputs.filter((o) => o.action === 'updated');
       const messages: string[] = [];
       if (staleOutputs.length > 0) {
@@ -92,6 +103,15 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
       }
       if (conflicts.length > 0) {
         messages.push(`Conflicts: ${conflicts.map((o) => o.targetPath).join(', ')}`);
+      }
+      if (hasDuplicates) {
+        messages.push(`Duplicate warnings: ${duplicateWarnings.length}`);
+        for (const w of duplicateWarnings) {
+          messages.push(`  [${w.severity}] ${w.source}: ${w.message}`);
+        }
+      }
+      if (strict && hasDuplicates) {
+        throw new Error(`Sync check failed (strict mode promoted duplicates to errors).\n${messages.join('\n')}\nRun 'aco sync' to refresh, or review duplicate warnings above.`);
       }
       throw new Error(`Sync check failed.\n${messages.join('\n')}\nRun 'aco sync' to refresh.`);
     }
@@ -106,7 +126,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     };
   }
 
-  // 6. Handle conflicts unless --force
+  // 8. Handle conflicts unless --force
   if (conflicts.length > 0 && !force) {
     const conflictPaths = conflicts.map((c) => c.targetPath).join(', ');
     throw new Error(
@@ -115,7 +135,32 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     );
   }
 
-  // 7. Write outputs (execution pass)
+  // 9. Handle duplicate cleanup if requested
+  if (cleanDuplicates) {
+    const cleanable = duplicateWarnings.filter((w) => w.severity === 'warning');
+    for (const warning of cleanable) {
+      const match = warning.message.match(/Cleanup target: (.+)/);
+      if (match) {
+        const targetPath = match[1].trim();
+        const isOwned = existingManifest?.targets?.[targetPath]?.owner === 'aco';
+        if (isOwned || forceClean) {
+          try {
+            await rm(targetPath, { recursive: true, force: true });
+          } catch {
+            /* Ignore */
+          }
+        } else if (!forceClean) {
+          plan.warnings.push({
+            source: targetPath,
+            message: `Refused to clean duplicate ${targetPath}: not manifest-owned. Pass --force-clean to override.`,
+            severity: 'warning',
+          });
+        }
+      }
+    }
+  }
+
+  // 10. Write outputs (execution pass)
   if (!dryRun) {
     for (const output of plan.outputs) {
       if (output.action === 'skipped') continue;
@@ -150,7 +195,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     await writeManifest(repoRoot, plan.manifest);
   }
 
-  // 8. Compute result
+  // 11. Compute result
   return {
     created: plan.outputs.filter((o) => o.action === 'created').length,
     updated: plan.outputs.filter((o) => o.action === 'updated').length,
@@ -165,12 +210,15 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
 async function computeTransformPlan(
   sources: ReturnType<typeof discoverSources> extends Promise<infer T> ? T : never,
   repoRoot: string,
-  existingManifest: SyncManifest | null
+  existingManifest: SyncManifest | null,
+  config: Awaited<ReturnType<typeof loadSyncConfig>>
 ): Promise<TransformPlan> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
   const sourceHashes: Record<string, string> = {};
   const targetHashes: Record<string, string> = {};
+  const targets: Record<string, ManifestTargetRecord> = {};
+  const skipped: SyncManifest['skipped'] = [];
 
   // Record source hashes
   for (const source of sources) {
@@ -184,32 +232,49 @@ async function computeTransformPlan(
     const geminiMdPath = `${repoRoot}/GEMINI.md`;
 
     const updatedAgents = await getManagedBlockUpdate(agentsMdPath, contextContent);
+    const agentsHash = computeHash(updatedAgents);
     outputs.push({
       targetPath: agentsMdPath,
       kind: 'managed-block',
       action: 'updated',
       content: updatedAgents,
-      hash: computeHash(updatedAgents),
+      hash: agentsHash,
+      owner: 'aco',
+      assetKind: 'config',
     });
-    targetHashes[agentsMdPath] = computeHash(updatedAgents);
+    targetHashes[agentsMdPath] = agentsHash;
+    targets[agentsMdPath] = { hash: agentsHash, owner: 'aco', kind: 'config' };
 
     const updatedGemini = await getManagedBlockUpdate(geminiMdPath, contextContent);
+    const geminiHash = computeHash(updatedGemini);
     outputs.push({
       targetPath: geminiMdPath,
       kind: 'managed-block',
       action: 'updated',
       content: updatedGemini,
-      hash: computeHash(updatedGemini),
+      hash: geminiHash,
+      owner: 'aco',
+      assetKind: 'config',
     });
-    targetHashes[geminiMdPath] = computeHash(updatedGemini);
+    targetHashes[geminiMdPath] = geminiHash;
+    targets[geminiMdPath] = { hash: geminiHash, owner: 'aco', kind: 'config' };
   }
 
   // 2. Skills
-  const skillResult = await syncSkills(sources, repoRoot, existingManifest);
+  const skillResult = await syncSkills(sources, repoRoot, existingManifest, config);
   outputs.push(...skillResult.outputs);
   warnings.push(...skillResult.warnings);
+  skipped.push(...skillResult.skipped);
   for (const o of skillResult.outputs) {
-    if (o.hash) targetHashes[o.targetPath] = o.hash;
+    if (o.hash) {
+      targetHashes[o.targetPath] = o.hash;
+      targets[o.targetPath] = {
+        hash: o.hash,
+        owner: o.owner ?? 'aco',
+        kind: o.assetKind ?? 'shared-skill',
+        source: o.sourcePath,
+      };
+    }
   }
 
   // 3. Codex agents
@@ -217,7 +282,14 @@ async function computeTransformPlan(
   outputs.push(...codexAgentResult.outputs);
   warnings.push(...codexAgentResult.warnings);
   for (const o of codexAgentResult.outputs) {
-    if (o.hash) targetHashes[o.targetPath] = o.hash;
+    if (o.hash) {
+      targetHashes[o.targetPath] = o.hash;
+      targets[o.targetPath] = {
+        hash: o.hash,
+        owner: 'aco',
+        kind: o.assetKind ?? 'agent',
+      };
+    }
   }
 
   // 4. Gemini agents
@@ -225,7 +297,14 @@ async function computeTransformPlan(
   outputs.push(...geminiAgentResult.outputs);
   warnings.push(...geminiAgentResult.warnings);
   for (const o of geminiAgentResult.outputs) {
-    if (o.hash) targetHashes[o.targetPath] = o.hash;
+    if (o.hash) {
+      targetHashes[o.targetPath] = o.hash;
+      targets[o.targetPath] = {
+        hash: o.hash,
+        owner: 'aco',
+        kind: o.assetKind ?? 'agent',
+      };
+    }
   }
 
   // 5. Codex hooks
@@ -233,7 +312,14 @@ async function computeTransformPlan(
   outputs.push(...codexHookResult.outputs);
   warnings.push(...codexHookResult.warnings);
   for (const o of codexHookResult.outputs) {
-    if (o.hash) targetHashes[o.targetPath] = o.hash;
+    if (o.hash) {
+      targetHashes[o.targetPath] = o.hash;
+      targets[o.targetPath] = {
+        hash: o.hash,
+        owner: 'aco',
+        kind: o.assetKind ?? 'provider-command',
+      };
+    }
   }
 
   // 6. Gemini hooks
@@ -241,14 +327,23 @@ async function computeTransformPlan(
   outputs.push(...geminiHookResult.outputs);
   warnings.push(...geminiHookResult.warnings);
   for (const o of geminiHookResult.outputs) {
-    if (o.hash) targetHashes[o.targetPath] = o.hash;
+    if (o.hash) {
+      targetHashes[o.targetPath] = o.hash;
+      targets[o.targetPath] = {
+        hash: o.hash,
+        owner: 'aco',
+        kind: o.assetKind ?? 'provider-command',
+      };
+    }
   }
 
   const manifest: SyncManifest = {
-    version: '1',
+    version: '2',
     generatedAt: new Date().toISOString(),
     sourceHashes,
     targetHashes,
+    targets,
+    skipped,
     warnings,
   };
 

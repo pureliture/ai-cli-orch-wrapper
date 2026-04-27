@@ -1,31 +1,78 @@
 import { existsSync } from 'node:fs';
 import { join, basename, dirname } from 'node:path';
-import type { SyncSource, SyncOutput, SyncWarning, SyncManifest } from './transform-interface.js';
+import type { SyncSource, SyncOutput, SyncWarning, SyncManifest, AssetOwner, AssetKind, SyncConfig } from './transform-interface.js';
+import { classifySkill, isSyncEligible } from './skill-classifier.js';
+import { computeHash } from './hash.js';
+import { readFile, readdir } from 'node:fs/promises';
 
 export async function syncSkills(
   sources: SyncSource[],
   repoRoot: string,
-  manifest: SyncManifest | null
-): Promise<{ outputs: SyncOutput[]; warnings: SyncWarning[] }> {
+  manifest: SyncManifest | null,
+  config: SyncConfig
+): Promise<{ outputs: SyncOutput[]; warnings: SyncWarning[]; skipped: { path: string; owner: AssetOwner; kind: AssetKind; reason: string }[] }> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
+  const skipped: { path: string; owner: AssetOwner; kind: AssetKind; reason: string }[] = [];
   const skillSources = sources.filter((s) => s.kind === 'skill');
   const targetBase = join(repoRoot, '.agents', 'skills');
 
-  // Determine which skills to remove: previously synced but source no longer exists
+  // Classify all skills first
+  const classifiedSkills = skillSources.map((source) => {
+    const skillName = basename(dirname(source.path));
+    const classification = classifySkill(source, config);
+    return { source, skillName, ...classification };
+  });
+
+  // Determine which skills to remove: previously synced but source no longer exists or is no longer eligible
   const staleTargets: string[] = [];
 
   if (manifest) {
+    for (const [targetPath, record] of Object.entries(manifest.targets ?? {})) {
+      if (!targetPath.startsWith(targetBase)) continue;
+      // Find if this target corresponds to a skill that still exists and is still eligible
+      const skillName = basename(targetPath);
+      const stillExistsAndEligible = classifiedSkills.some(
+        (c) => c.skillName === skillName && c.owner === 'aco'
+      );
+      if (!stillExistsAndEligible) {
+        // Only auto-remove if manifest records it as ACO-owned and hash matches
+        if (record.owner === 'aco') {
+          const match = await hashMatches(targetPath, record.hash);
+          if (match) {
+            staleTargets.push(targetPath);
+          } else {
+            warnings.push({
+              source: targetPath,
+              message: `Stale target ${targetPath} hash does not match manifest; skipping auto-removal. Run with --force-clean to remove.`,
+              severity: 'warning',
+            });
+          }
+        }
+      }
+    }
+
+    // Also check legacy targetHashes
     for (const [targetPath] of Object.entries(manifest.targetHashes)) {
       if (!targetPath.startsWith(targetBase)) continue;
-      // Find if this target corresponds to a skill that still exists
-      const stillExists = skillSources.some((s) => {
-        const skillName = basename(dirname(s.path));
-        const expectedTarget = join(targetBase, skillName);
-        return targetPath.startsWith(expectedTarget);
-      });
-      if (!stillExists) {
-        staleTargets.push(targetPath);
+      if (manifest.targets?.[targetPath]) continue; // already handled above
+      const skillName = basename(targetPath);
+      const stillExistsAndEligible = classifiedSkills.some(
+        (c) => c.skillName === skillName && c.owner === 'aco'
+      );
+      if (!stillExistsAndEligible) {
+        // Legacy: assume it was ACO-owned; check hash
+        const legacyHash = manifest.targetHashes[targetPath];
+        const match = await hashMatches(targetPath, legacyHash);
+        if (match) {
+          staleTargets.push(targetPath);
+        } else {
+          warnings.push({
+            source: targetPath,
+            message: `Stale legacy target ${targetPath} hash does not match; skipping auto-removal.`,
+            severity: 'warning',
+          });
+        }
       }
     }
   }
@@ -37,14 +84,32 @@ export async function syncSkills(
       kind: 'directory',
       action: 'removed',
       hash: '',
+      owner: 'aco',
+      assetKind: 'shared-skill',
     });
   }
 
   // Sync current skills (deferred to sync-engine)
-  for (const skillSource of skillSources) {
-    const skillName = basename(dirname(skillSource.path));
-    const sourceDir = dirname(skillSource.path);
+  for (const classified of classifiedSkills) {
+    const { source, skillName, owner, kind } = classified;
+    const sourceDir = dirname(source.path);
     const targetDir = join(targetBase, skillName);
+
+    if (!isSyncEligible(source, config)) {
+      const reason =
+        owner === 'external'
+          ? `External skill ${skillName} is not ACO-owned; skipped.`
+          : owner === 'provider-specific'
+            ? `Provider-specific command-alias skill ${skillName} is not a shared policy skill; skipped.`
+            : `Skill ${skillName} is not explicitly allowed by .aco/sync.yaml or frontmatter; skipped.`;
+      skipped.push({
+        path: source.path,
+        owner,
+        kind,
+        reason,
+      });
+      continue;
+    }
 
     const action = existsSync(targetDir) ? 'updated' : 'created';
 
@@ -52,10 +117,31 @@ export async function syncSkills(
       targetPath: targetDir,
       kind: 'directory',
       action,
-      hash: skillSource.hash,
+      hash: source.hash,
       sourcePath: sourceDir,
+      owner: 'aco',
+      assetKind: kind,
     });
   }
 
-  return { outputs, warnings };
+  return { outputs, warnings, skipped };
+}
+
+async function hashMatches(targetPath: string, expectedHash: string): Promise<boolean> {
+  try {
+    const entries = await readdir(targetPath, { recursive: true });
+    let combined = '';
+    for (const entry of entries.sort()) {
+      const fullPath = join(targetPath, entry.toString());
+      try {
+        const content = await readFile(fullPath, 'utf8');
+        combined += content;
+      } catch {
+        // Skip non-files
+      }
+    }
+    return computeHash(combined) === expectedHash;
+  } catch {
+    return false;
+  }
 }
