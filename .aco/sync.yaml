@@ -1,0 +1,7 @@
+skills:
+  include:
+    - github-kanban-ops
+  exclude:
+    - openspec-*
+    - superpowers-*
+    - gh-*
