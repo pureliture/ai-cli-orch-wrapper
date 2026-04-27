@@ -142,17 +142,17 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   if (cleanDuplicates) {
     const cleanable = duplicateWarnings.filter((w) => w.severity === 'warning');
     for (const warning of cleanable) {
-      const match = warning.message.match(/Cleanup target: (.+)/);
+      const match = warning.message.match(/Cleanup target: (.+?)\. Recommendation:/);
       if (match) {
         const targetPath = match[1].trim();
         const isOwned = existingManifest?.targets?.[targetPath]?.owner === 'aco';
-        if (isOwned || forceClean) {
+        if (!dryRun && (isOwned || forceClean)) {
           try {
             await rm(targetPath, { recursive: true, force: true });
           } catch {
             /* Ignore */
           }
-        } else if (!forceClean) {
+        } else if (!dryRun && !isOwned && !forceClean) {
           plan.warnings.push({
             source: targetPath,
             message: `Refused to clean duplicate ${targetPath}: not manifest-owned. Pass --force-clean to override.`,

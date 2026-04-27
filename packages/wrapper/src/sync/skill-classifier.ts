@@ -1,5 +1,6 @@
 import type { SyncSource, AssetOwner, AssetKind, SyncConfig } from './transform-interface.js';
 import { isExcluded, isIncluded } from './sync-config.js';
+import { basename, dirname } from 'node:path';
 
 // Hardcoded external skill prefixes
 const EXTERNAL_PREFIXES = ['openspec-', 'superpowers-'];
@@ -34,10 +35,7 @@ export function classifySkill(
   source: SyncSource,
   config: SyncConfig
 ): { owner: AssetOwner; kind: AssetKind; targets?: string[] } {
-  const skillName = source.path
-    .split('/')
-    .filter(Boolean)
-    .slice(-2, -1)[0] ?? '';
+  const skillName = basename(dirname(source.path));
 
   // 1. .aco/sync.yaml exclude (highest precedence)
   if (isExcluded(skillName, config)) {
