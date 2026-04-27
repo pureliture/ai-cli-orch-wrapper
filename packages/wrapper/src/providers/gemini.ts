@@ -60,6 +60,7 @@ export class GeminiProvider implements IProvider {
     // 3. Fallback: CLI execution
     try {
       const version = await readVersion('gemini');
+      if (version === undefined) throw new Error('probe failed');
       return { ok: true, method: 'cli-fallback', version, ...versionHint };
     } catch {
       return {

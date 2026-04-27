@@ -185,16 +185,15 @@ async function cmdRun(args: string[]): Promise<void> {
     `${command}.md`
   );
   let prompt = `You are a code reviewer. Perform a ${command} for the following content.`;
+  let promptTemplatePath: string | undefined;
+
   if (existsSync(cwdPromptPath)) {
     prompt = await readFile(cwdPromptPath, 'utf8');
+    promptTemplatePath = cwdPromptPath;
   } else if (existsSync(globalPromptPath)) {
     prompt = await readFile(globalPromptPath, 'utf8');
+    promptTemplatePath = globalPromptPath;
   }
-  const promptTemplatePath = existsSync(cwdPromptPath)
-    ? cwdPromptPath
-    : existsSync(globalPromptPath)
-      ? globalPromptPath
-      : undefined;
 
   const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
   const auth = await getCachedProviderAuth(provider);

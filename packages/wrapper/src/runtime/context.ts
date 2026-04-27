@@ -163,7 +163,7 @@ function pickProviderExposed(
     (async () => {
       const configFiles: string[] = [];
       if (await hasFile(providers.configPath)) {
-        configFiles.push(basename(resolve(providers.configPath)));
+        configFiles.push(basename(providers.configPath));
       }
       return configFiles;
     })(),
