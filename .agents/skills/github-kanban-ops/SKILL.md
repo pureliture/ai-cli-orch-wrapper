@@ -1,9 +1,6 @@
 ---
 name: github-kanban-ops
 description: Manage this repository with GitHub Projects, Issues, and Pull Requests in a minimal Kanban operating model. Use when Codex needs to create or triage epics, tasks, bugs, chores, PRs, review follow-ups, or project board hygiene.
-x-aco-owned: true
-x-aco-kind: shared-skill
-x-aco-targets: [codex, gemini]
 ---
 
 # GitHub Kanban Ops

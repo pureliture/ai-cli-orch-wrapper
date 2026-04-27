@@ -72,6 +72,17 @@ function parseFrontmatter(content: string): SkillFrontmatter {
 
 /**
  * Classify a discovered skill source into owner and kind.
+ *
+ * Ownership policy precedence (highest to lowest):
+ *  1. .aco/sync.yaml skills.exclude
+ *  2. .aco/sync.yaml skills.include
+ *  3. Built-in classifier defaults (hardcoded ACO-owned skills)
+ *  4. SKILL.md x-aco-* frontmatter (advisory metadata only)
+ *  5. Naming convention heuristics
+ *  6. Default deny (owner = unknown)
+ *
+ * NOTE: x-aco-* frontmatter is advisory. It does NOT override .aco/sync.yaml.
+ * The primary policy mechanism is .aco/sync.yaml.
  */
 export function classifySkill(
   source: SyncSource,
@@ -84,9 +95,8 @@ export function classifySkill(
 
   const frontmatter = parseFrontmatter(source.content);
 
-  // 1. Check explicit exclude (highest precedence)
+  // 1. .aco/sync.yaml exclude (highest precedence)
   if (isExcluded(skillName, config)) {
-    // Determine why it was excluded for better classification
     if (EXTERNAL_PREFIXES.some((p) => skillName.startsWith(p))) {
       return { owner: 'external', kind: 'external-skill' };
     }
@@ -99,17 +109,8 @@ export function classifySkill(
     return { owner: 'unknown', kind: 'external-skill' };
   }
 
-  // 2. Check explicit include (overrides default deny)
+  // 2. .aco/sync.yaml include (overrides default deny)
   if (isIncluded(skillName, config)) {
-    return {
-      owner: frontmatter['x-aco-owned'] ? 'aco' : 'aco',
-      kind: frontmatter['x-aco-kind'] ?? 'shared-skill',
-      targets: frontmatter['x-aco-targets'],
-    };
-  }
-
-  // 3. Check frontmatter x-aco-owned
-  if (frontmatter['x-aco-owned']) {
     return {
       owner: 'aco',
       kind: frontmatter['x-aco-kind'] ?? 'shared-skill',
@@ -117,7 +118,7 @@ export function classifySkill(
     };
   }
 
-  // 4. Check hardcoded ACO-owned skills
+  // 3. Built-in ACO-owned defaults
   if (ACO_OWNED_SKILLS.has(skillName)) {
     return {
       owner: 'aco',
@@ -126,20 +127,27 @@ export function classifySkill(
     };
   }
 
-  // 5. Check external by naming convention
+  // 4. Advisory frontmatter (lowest precedence among eligibility checks)
+  if (frontmatter['x-aco-owned']) {
+    return {
+      owner: 'aco',
+      kind: frontmatter['x-aco-kind'] ?? 'shared-skill',
+      targets: frontmatter['x-aco-targets'],
+    };
+  }
+
+  // 5. Naming convention heuristics
   if (EXTERNAL_PREFIXES.some((p) => skillName.startsWith(p))) {
     return { owner: 'external', kind: 'external-skill' };
   }
   if (EXTERNAL_NAMES.has(skillName)) {
     return { owner: 'external', kind: 'external-skill' };
   }
-
-  // 6. Check command-alias by naming convention
   if (COMMAND_ALIAS_PREFIXES.some((p) => skillName.startsWith(p))) {
     return { owner: 'provider-specific', kind: 'command-alias-skill' };
   }
 
-  // 7. Default deny
+  // 6. Default deny
   return { owner: 'unknown', kind: 'external-skill' };
 }
 
