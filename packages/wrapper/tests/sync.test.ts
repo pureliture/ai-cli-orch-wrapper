@@ -11,7 +11,9 @@ import { loadFormatterConfig, resolveModelForProvider } from '../src/sync/format
 import { parseHooks, toCodexHooks, toGeminiHooks } from '../src/sync/hook-parse.js';
 import { syncSkills } from '../src/sync/skill-transform.js';
 import { runSync } from '../src/sync/sync-engine.js';
-import type { SyncSource } from '../src/sync/transform-interface.js';
+import { matchesGlob, isIncluded, isExcluded, loadSyncConfig } from '../src/sync/sync-config.js';
+import { detectDuplicates } from '../src/sync/duplicate-detector.js';
+import type { SyncSource, SyncConfig, SyncOutput } from '../src/sync/transform-interface.js';
 import { computeHash } from '../src/sync/hash.js';
 
 function parseMarkdownFrontmatter(markdown: string): Record<string, unknown> {
@@ -425,6 +427,125 @@ describe('Hook Transforms', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Sync config: glob matching and include/exclude precedence
+// ---------------------------------------------------------------------------
+
+describe('Sync Config', () => {
+  describe('matchesGlob', () => {
+    it('matches exact names', () => {
+      assert.equal(matchesGlob('github-kanban-ops', 'github-kanban-ops'), true);
+      assert.equal(matchesGlob('other-skill', 'github-kanban-ops'), false);
+    });
+
+    it('matches prefix wildcard', () => {
+      assert.equal(matchesGlob('openspec-apply-change', 'openspec-*'), true);
+      assert.equal(matchesGlob('openspec-', 'openspec-*'), true);
+      assert.equal(matchesGlob('not-openspec', 'openspec-*'), false);
+    });
+
+    it('matches suffix wildcard', () => {
+      assert.equal(matchesGlob('gh-issue', 'gh-*'), true);
+      assert.equal(matchesGlob('gh-', 'gh-*'), true);
+      assert.equal(matchesGlob('github-issue', 'gh-*'), false);
+    });
+
+    it('does not match regex special characters as wildcards', () => {
+      // '.' should only match literal '.', not any character
+      assert.equal(matchesGlob('gh-issue', 'gh.issue'), false);
+      assert.equal(matchesGlob('gh-issue', 'gh-issue'), true);
+      // '+' should only match literal '+'
+      assert.equal(matchesGlob('skill+extra', 'skill+extra'), true);
+      assert.equal(matchesGlob('skill-extra', 'skill+extra'), false);
+    });
+
+    it('handles mixed literal and wildcard patterns', () => {
+      assert.equal(matchesGlob('superpowers-braintstorm', 'superpowers-*'), true);
+      assert.equal(matchesGlob('x-superpowers', 'superpowers-*'), false);
+    });
+  });
+
+  describe('isIncluded / isExcluded precedence', () => {
+    it('isExcluded takes precedence over isIncluded', () => {
+      const config: SyncConfig = {
+        skills: {
+          include: ['shared-*'],
+          exclude: ['shared-secret'],
+        },
+      };
+      assert.equal(isExcluded('shared-secret', config), true);
+      assert.equal(isIncluded('shared-secret', config), true);
+      // Exclude wins in classification ordering
+    });
+
+    it('default deny when include is empty', () => {
+      const config: SyncConfig = { skills: { include: [], exclude: [] } };
+      assert.equal(isIncluded('any-skill', config), false);
+    });
+
+    it('exclude with wildcard catches matching names', () => {
+      const config: SyncConfig = { skills: { exclude: ['openspec-*'] } };
+      assert.equal(isExcluded('openspec-apply', config), true);
+      assert.equal(isExcluded('other-skill', config), false);
+    });
+
+    it('parses inline array YAML syntax', async () => {
+      const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-yaml-inline-'));
+      try {
+        await mkdir(join(tmpDir, '.aco'), { recursive: true });
+        await writeFile(
+          join(tmpDir, '.aco', 'sync.yaml'),
+          'skills:\n  exclude: [gh-*, openspec-*, superpowers-*]\n'
+        );
+        const config = await loadSyncConfig(tmpDir);
+        assert.ok(isExcluded('gh-issue', config), 'gh-* should be excluded via inline array');
+        assert.ok(
+          isExcluded('openspec-apply', config),
+          'openspec-* should be excluded via inline array'
+        );
+        assert.ok(
+          isExcluded('superpowers-b', config),
+          'superpowers-* should be excluded via inline array'
+        );
+      } finally {
+        await rm(tmpDir, { recursive: true, force: true });
+      }
+    });
+
+    it('parses YAML with inline comments', async () => {
+      const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-yaml-comment-'));
+      try {
+        await mkdir(join(tmpDir, '.aco'), { recursive: true });
+        await writeFile(
+          join(tmpDir, '.aco', 'sync.yaml'),
+          'skills:\n  include:\n    - github-kanban-ops # ACO-owned\n  exclude:\n    - gh-* # command aliases\n'
+        );
+        const config = await loadSyncConfig(tmpDir);
+        assert.ok(isExcluded('gh-pr', config), 'gh-* should be excluded');
+        assert.ok(isIncluded('github-kanban-ops', config), 'github-kanban-ops should be included');
+      } finally {
+        await rm(tmpDir, { recursive: true, force: true });
+      }
+    });
+
+    it('parses YAML with quoted values', async () => {
+      const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-yaml-quote-'));
+      try {
+        await mkdir(join(tmpDir, '.aco'), { recursive: true });
+        await writeFile(
+          join(tmpDir, '.aco', 'sync.yaml'),
+          'skills:\n  exclude:\n    - "gh-*"\n    - \'openspec-*\'\n'
+        );
+        const config = await loadSyncConfig(tmpDir);
+        assert.ok(isExcluded('gh-issue', config), 'Quoted gh-* should be excluded');
+        assert.ok(isExcluded('openspec-apply', config), 'Quoted openspec-* should be excluded');
+      } finally {
+        await rm(tmpDir, { recursive: true, force: true });
+      }
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Skill sync with scripts/, references/, metadata assets (Task 3.5)
 // ---------------------------------------------------------------------------
 
@@ -435,7 +556,10 @@ describe('Skill Sync', () => {
       const skillDir = join(tmpDir, '.claude', 'skills', 'my-skill');
       await mkdir(join(skillDir, 'scripts'), { recursive: true });
       await mkdir(join(skillDir, 'references'), { recursive: true });
-      await writeFile(join(skillDir, 'SKILL.md'), '# My Skill\n\nThis is my skill.');
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: my-skill\nx-aco-owned: true\n---\n\n# My Skill\n\nThis is my skill.'
+      );
       await writeFile(join(skillDir, 'scripts', 'run.sh'), '#!/bin/bash\necho hello');
       await writeFile(join(skillDir, 'references', 'api.md'), '# API\n\nReference docs.');
       await writeFile(join(skillDir, 'metadata.json'), '{"version":"1.0"}');
@@ -444,8 +568,10 @@ describe('Skill Sync', () => {
         {
           path: join(skillDir, 'SKILL.md'),
           kind: 'skill',
-          content: '# My Skill\n\nThis is my skill.',
-          hash: computeHash('# My Skill\n\nThis is my skill.'),
+          content: '---\nname: my-skill\nx-aco-owned: true\n---\n\n# My Skill\n\nThis is my skill.',
+          hash: computeHash(
+            '---\nname: my-skill\nx-aco-owned: true\n---\n\n# My Skill\n\nThis is my skill.'
+          ),
         },
       ];
 
@@ -488,7 +614,10 @@ describe('Skill Sync', () => {
     try {
       const skillDir = join(tmpDir, '.claude', 'skills', 'dry-skill');
       await mkdir(skillDir, { recursive: true });
-      await writeFile(join(skillDir, 'SKILL.md'), '# Dry Skill');
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: dry-skill\nx-aco-owned: true\n---\n\n# Dry Skill'
+      );
       // Need CLAUDE.md for runSync to find sources
       await writeFile(join(tmpDir, 'CLAUDE.md'), '');
 
@@ -509,6 +638,458 @@ describe('Skill Sync', () => {
         exists = false;
       }
       assert.equal(exists, false);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips external OpenSpec skills', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-openspec-'));
+    try {
+      const skillDir = join(tmpDir, '.claude', 'skills', 'openspec-test');
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: openspec-test\n---\n\n# OpenSpec Test'
+      );
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const result = await runSync(tmpDir, { dryRun: true });
+      const skillOutputs = result.outputs.filter((o) =>
+        o.targetPath.includes('.agents/skills/openspec-test')
+      );
+      assert.equal(skillOutputs.length, 0);
+
+      // Skipped skills don't appear as outputs at all
+      const allSkillOutputs = result.outputs.filter((o) =>
+        o.targetPath.includes('.agents/skills/')
+      );
+      assert.equal(allSkillOutputs.length, 0);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips command-alias gh-* skills', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-gh-'));
+    try {
+      const skillDir = join(tmpDir, '.claude', 'skills', 'gh-test');
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(join(skillDir, 'SKILL.md'), '---\nname: gh-test\n---\n\n# GH Test');
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const result = await runSync(tmpDir, { dryRun: true });
+      const skillOutputs = result.outputs.filter((o) =>
+        o.targetPath.includes('.agents/skills/gh-test')
+      );
+      assert.equal(skillOutputs.length, 0);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('syncs ACO-owned github-kanban-ops skill via built-in defaults', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-kanban-'));
+    try {
+      const skillDir = join(tmpDir, '.claude', 'skills', 'github-kanban-ops');
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: github-kanban-ops\n---\n\n# GitHub Kanban Ops'
+      );
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const result = await runSync(tmpDir, { dryRun: false });
+      const skillOutputs = result.outputs.filter((o) =>
+        o.targetPath.includes('.agents/skills/github-kanban-ops')
+      );
+      assert.equal(skillOutputs.length, 1);
+      assert.equal(skillOutputs[0].action, 'created');
+      assert.equal(skillOutputs[0].owner, 'aco');
+      assert.equal(skillOutputs[0].assetKind, 'shared-skill');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('records manifest ownership for ACO-owned targets', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-manifest-'));
+    try {
+      const skillDir = join(tmpDir, '.claude', 'skills', 'github-kanban-ops');
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: github-kanban-ops\n---\n\n# GitHub Kanban Ops'
+      );
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      await runSync(tmpDir, { dryRun: false });
+      const manifest = JSON.parse(
+        await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
+      );
+
+      assert.equal(manifest.version, '2');
+      const targetPath = join(tmpDir, '.agents', 'skills', 'github-kanban-ops');
+      const record = manifest.targets[targetPath];
+      assert.ok(record, 'Manifest should record the target');
+      assert.equal(record.owner, 'aco');
+      assert.equal(record.kind, 'shared-skill');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('migrates legacy manifest on next sync', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-legacy-'));
+    try {
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      const legacyManifest = {
+        version: '1',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {},
+        targetHashes: {
+          [join(tmpDir, 'AGENTS.md')]: 'abc123',
+        },
+        warnings: [],
+      };
+      await writeFile(join(acoDir, 'sync-manifest.json'), JSON.stringify(legacyManifest, null, 2));
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      await runSync(tmpDir, { dryRun: false });
+      const manifest = JSON.parse(await readFile(join(acoDir, 'sync-manifest.json'), 'utf-8'));
+
+      assert.equal(manifest.version, '2');
+      assert.ok(manifest.targets, 'Migrated manifest should have targets');
+      assert.ok(manifest.skipped, 'Migrated manifest should have skipped');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('removes stale non-empty skill directories when no longer eligible', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-stale-'));
+    try {
+      // Setup: write CLAUDE.md, create skill, write sync.yaml that includes it
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+      const skillDir = join(tmpDir, '.claude', 'skills', 'temp-skill');
+      await mkdir(skillDir, { recursive: true });
+      await mkdir(join(skillDir, 'scripts'), { recursive: true });
+      await writeFile(join(skillDir, 'SKILL.md'), '---\nname: temp-skill\n---\n\n# Temp Skill');
+      await writeFile(join(skillDir, 'scripts', 'run.sh'), '#!/bin/bash\necho hello');
+
+      // Set up .aco/sync.yaml that includes temp-skill
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      await writeFile(
+        join(acoDir, 'sync.yaml'),
+        'skills:\n  include:\n    - temp-skill\n  exclude:\n    - openspec-*\n    - superpowers-*\n    - gh-*\n'
+      );
+
+      // First sync: should create the skill directory
+      await runSync(tmpDir, { dryRun: false });
+      const targetDir = join(tmpDir, '.agents', 'skills', 'temp-skill');
+      const targetSkillMd = join(targetDir, 'SKILL.md');
+      let content = await readFile(targetSkillMd, 'utf-8');
+      assert.ok(content.includes('Temp Skill'));
+
+      // Now remove temp-skill from include list
+      await writeFile(
+        join(acoDir, 'sync.yaml'),
+        'skills:\n  include:\n    - other-skill\n  exclude:\n    - openspec-*\n    - superpowers-*\n    - gh-*\n'
+      );
+
+      // Second sync: should remove the stale directory (even though it's non-empty)
+      const result = await runSync(tmpDir, { dryRun: false });
+      const removedOutputs = result.outputs.filter((o) => o.action === 'removed');
+      assert.ok(
+        removedOutputs.length > 0,
+        `Expected removed outputs, got ${removedOutputs.length}`
+      );
+
+      // Verify the directory is gone
+      const { existsSync } = await import('node:fs');
+      assert.equal(existsSync(targetDir), false, `Expected ${targetDir} to be removed`);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('computes correct hash based only on files, ignoring directories', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dirhash-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+      const skillDir = join(tmpDir, '.claude', 'skills', 'dirhash-skill');
+      await mkdir(join(skillDir, 'subdir'), { recursive: true });
+      await mkdir(join(skillDir, 'empty-dir'), { recursive: true });
+      await writeFile(join(skillDir, 'SKILL.md'), '---\nname: dirhash-skill\n---\n\n# Test');
+
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      await writeFile(
+        join(acoDir, 'sync.yaml'),
+        'skills:\n  include:\n    - dirhash-skill\n  exclude:\n    - openspec-*\n    - superpowers-*\n    - gh-*\n'
+      );
+
+      // First sync
+      const result1 = await runSync(tmpDir, { dryRun: false });
+      const skillOutput1 = result1.outputs.find((o) =>
+        o.targetPath.includes('.agents/skills/dirhash-skill')
+      );
+      assert.ok(skillOutput1, 'Should have skill output');
+      const hash1 = skillOutput1.hash;
+
+      // Second sync without changes: hash should be same -> skipped
+      const result2 = await runSync(tmpDir, { dryRun: false });
+      const skillOutput2 = result2.outputs.find((o) =>
+        o.targetPath.includes('.agents/skills/dirhash-skill')
+      );
+      assert.equal(skillOutput2?.action, 'skipped', 'Unchanged skill should be skipped');
+
+      // Add a file to subdir: hash should change
+      await mkdir(join(skillDir, 'subdir'), { recursive: true });
+      await writeFile(join(skillDir, 'subdir', 'helper.md'), '# Helper');
+      const result3 = await runSync(tmpDir, { dryRun: false });
+      const skillOutput3 = result3.outputs.find((o) =>
+        o.targetPath.includes('.agents/skills/dirhash-skill')
+      );
+      assert.equal(skillOutput3?.action, 'updated', 'Modified skill should be updated');
+      assert.notEqual(skillOutput3?.hash, hash1, 'Hash should change when file added');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('skips removal of stale targets not owned by aco', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-stale-external-'));
+    try {
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      // Create a manifest with an external-owned target
+      const targetDir = join(tmpDir, '.agents', 'skills', 'external-skill');
+      const manifest = {
+        version: '2',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {},
+        targetHashes: { [targetDir]: 'abc123' },
+        targets: { [targetDir]: { hash: 'abc123', owner: 'external', kind: 'external-skill' } },
+        skipped: [],
+        warnings: [],
+      };
+      await writeFile(join(acoDir, 'sync-manifest.json'), JSON.stringify(manifest, null, 2));
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const result = await runSync(tmpDir, { dryRun: false });
+      const removedOutputs = result.outputs.filter((o) => o.action === 'removed');
+      // External-owned targets should not be auto-removed
+      assert.equal(removedOutputs.length, 0);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('detectDuplicates warns on Gemini command + shared skill collision', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dup-'));
+    try {
+      // Create a Gemini command at .gemini/commands/gh-issue.toml
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.gemini', 'commands', 'gh-issue.toml'),
+        '[command]\nname = "gh-issue"'
+      );
+
+      // Create a .agents/skills/gh-issue/ directory (simulating existing duplicate)
+      await mkdir(join(tmpDir, '.agents', 'skills', 'gh-issue'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.agents', 'skills', 'gh-issue', 'SKILL.md'),
+        '---\nname: gh-issue\n---\n\n# GH Issue'
+      );
+
+      const outputs: SyncOutput[] = [];
+      const warnings = await detectDuplicates(tmpDir, outputs);
+      const dupWarnings = warnings.filter((w) => w.message.includes('gh-issue'));
+      assert.ok(dupWarnings.length > 0, 'Should detect gh-issue duplicate');
+
+      // Verify structured cleanupTargets populated
+      const dup = dupWarnings[0];
+      assert.ok(
+        dup.cleanupTargets && dup.cleanupTargets.length > 0,
+        'Should have cleanupTargets array'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('detectDuplicates returns structured cleanupTargets for external duplicates', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dup-ext-'));
+    try {
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await mkdir(join(tmpDir, '.agents', 'skills', 'openspec-test'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.gemini', 'commands', 'openspec-test.toml'),
+        '[command]\nname = "openspec-test"'
+      );
+      await writeFile(
+        join(tmpDir, '.agents', 'skills', 'openspec-test', 'SKILL.md'),
+        '---\nname: openspec-test\n---\n\n# Test'
+      );
+
+      const outputs: SyncOutput[] = [];
+      const warnings = await detectDuplicates(tmpDir, outputs);
+      const dupWarnings = warnings.filter((w) => w.message.includes('openspec-test'));
+      assert.ok(dupWarnings.length > 0, 'Should detect openspec duplicate');
+
+      const dup = dupWarnings[0];
+      assert.ok(
+        dup.cleanupTargets && dup.cleanupTargets.length > 0,
+        'External duplicate should have structured cleanupTargets'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('detectDuplicates detects OpenSpec cross-name duplicates', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-opsx-dup-'));
+    try {
+      // Create a Gemini command at .gemini/commands/opsx/apply.toml
+      await mkdir(join(tmpDir, '.gemini', 'commands', 'opsx'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.gemini', 'commands', 'opsx', 'apply.toml'),
+        '[command]\nname = "apply"'
+      );
+
+      // Create .agents/skills/openspec-apply-change/ (different name, same tool)
+      await mkdir(join(tmpDir, '.agents', 'skills', 'openspec-apply-change'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.agents', 'skills', 'openspec-apply-change', 'SKILL.md'),
+        '---\nname: openspec-apply-change\n---\n\n# OpenSpec Apply'
+      );
+
+      const outputs: SyncOutput[] = [];
+      const warnings = await detectDuplicates(tmpDir, outputs);
+      const externalWarnings = warnings.filter(
+        (w) =>
+          w.message.includes('External asset duplicate') || w.message.includes('external asset')
+      );
+      const openSpecWarnings = externalWarnings.filter(
+        (w) => w.message.includes('openspec') || w.message.toLowerCase().includes('open spec')
+      );
+      assert.ok(openSpecWarnings.length > 0, 'Should detect OpenSpec cross-name duplicate');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('detectDuplicates includes planned shared-skill outputs in index', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dup-plan-'));
+    try {
+      // Create a Gemini command
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.gemini', 'commands', 'my-command.toml'),
+        '[command]\nname = "my-command"'
+      );
+
+      // Simulate a planned shared-skill output with the same name (not on disk yet)
+      const outputs: SyncOutput[] = [
+        {
+          targetPath: join(tmpDir, '.agents', 'skills', 'my-command'),
+          kind: 'directory',
+          action: 'created',
+          owner: 'aco',
+          assetKind: 'shared-skill',
+        },
+      ];
+
+      const warnings = await detectDuplicates(tmpDir, outputs);
+      const dupWarnings = warnings.filter((w) => w.message.includes('my-command'));
+      assert.ok(
+        dupWarnings.length > 0,
+        'Should detect planned shared-skill vs Gemini command duplicate'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('--strict mode promotes duplicate warnings to errors', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-strict-'));
+    try {
+      // Create enough source files for sync to run
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      // Create a Gemini command at .gemini/commands/gh-issue.toml
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.gemini', 'commands', 'gh-issue.toml'),
+        '[command]\nname = "gh-issue"'
+      );
+
+      // Create a .agents/skills/gh-issue/ directory (creates duplicate scenario)
+      await mkdir(join(tmpDir, '.agents', 'skills', 'gh-issue'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.agents', 'skills', 'gh-issue', 'SKILL.md'),
+        '---\nname: gh-issue\n---\n\n# GH Issue'
+      );
+
+      // With --strict, sync --check should fail due to duplicate warnings
+      try {
+        await runSync(tmpDir, { check: true, strict: true });
+        assert.fail('Expected sync to fail in strict mode');
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        assert.ok(msg.includes('strict'), `Expected strict error, got: ${msg}`);
+      }
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('--clean-duplicates removes manifest-owned duplicate assets', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-clean-'));
+    try {
+      // Set up aco manifest with a gh-issue target
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      const targetDir = join(tmpDir, '.agents', 'skills', 'gh-issue');
+      await mkdir(targetDir, { recursive: true });
+      await writeFile(join(targetDir, 'SKILL.md'), '---\nname: gh-issue\n---\n\n# GH Issue');
+
+      const manifest = {
+        version: '2',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {},
+        targetHashes: {},
+        targets: {
+          [targetDir]: {
+            hash: 'will-not-match-disk',
+            owner: 'aco',
+            kind: 'command-alias-skill' as string,
+          },
+        },
+        skipped: [],
+        warnings: [],
+      };
+      await writeFile(join(acoDir, 'sync-manifest.json'), JSON.stringify(manifest, null, 2));
+
+      // Create a Gemini command to trigger duplicate detection
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.gemini', 'commands', 'gh-issue.toml'),
+        '[command]\nname = "gh-issue"'
+      );
+
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      // Try clean-duplicates with force-clean
+      const result = await runSync(tmpDir, {
+        dryRun: false,
+        cleanDuplicates: true,
+        forceClean: true,
+      });
+      assert.ok(result.outputs.length >= 1, 'Should have outputs');
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }

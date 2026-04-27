@@ -359,11 +359,14 @@ async function cmdCancel(args: string[]): Promise<void> {
 async function cmdSync(args: string[]): Promise<void> {
   if (args.includes('--help') || args.includes('-h')) {
     console.error(
-      'Usage: aco sync [--check] [--dry-run] [--force]\n' +
+      'Usage: aco sync [--check] [--dry-run] [--force] [--strict] [--clean-duplicates] [--force-clean]\n' +
         '\n' +
-        '  --check    Verify sync is current without writing files (exits 1 if stale)\n' +
-        '  --dry-run  Show planned changes without writing files\n' +
-        '  --force    Overwrite manifest-owned generated targets that have drifted'
+        '  --check             Verify sync is current without writing files (exits 1 if stale)\n' +
+        '  --dry-run           Show planned changes without writing files\n' +
+        '  --force             Overwrite manifest-owned generated targets that have drifted\n' +
+        '  --strict            Promote duplicate warnings to errors in check mode\n' +
+        '  --clean-duplicates  Remove manifest-owned duplicate assets\n' +
+        '  --force-clean       Allow cleaning ambiguous duplicate assets'
     );
     process.exit(0);
   }
@@ -371,6 +374,9 @@ async function cmdSync(args: string[]): Promise<void> {
   const check = args.includes('--check');
   const dryRun = args.includes('--dry-run');
   const force = args.includes('--force');
+  const strict = args.includes('--strict');
+  const cleanDuplicates = args.includes('--clean-duplicates');
+  const forceClean = args.includes('--force-clean');
 
   const repoRoot = await findRepoRoot(process.cwd());
   if (!repoRoot) {
@@ -380,7 +386,7 @@ async function cmdSync(args: string[]): Promise<void> {
 
   let result;
   try {
-    result = await runSync(repoRoot, { check, dryRun, force });
+    result = await runSync(repoRoot, { check, dryRun, force, strict, cleanDuplicates, forceClean });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`aco sync: ${msg}`);

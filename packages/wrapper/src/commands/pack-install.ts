@@ -137,6 +137,7 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
 export async function packStatus(options: { global?: boolean } = {}): Promise<void> {
   const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
   const commandsDest = join(targetBase, 'commands');
+  const repoRoot = process.cwd();
 
   console.log('aco pack status\n');
   console.log(`Target: ${targetBase}`);
@@ -165,6 +166,54 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
       : { ok: false, hint: provider.installHint };
     const avIcon = available ? '✓' : '✗';
     console.log(`  ${key}: installed ${avIcon}  auth ${formatAuthStatus(auth)}`);
+  }
+
+  // Report external integration observations separately
+  const externalObservations: string[] = [];
+  const geminiOpsxDir = join(repoRoot, '.gemini', 'commands', 'opsx');
+  if (existsSync(geminiOpsxDir)) {
+    externalObservations.push(`Gemini opsx commands at ${geminiOpsxDir}`);
+  }
+  const codexOpenspecDir = join(repoRoot, '.codex', 'skills');
+  if (existsSync(codexOpenspecDir)) {
+    try {
+      const entries = await readdir(codexOpenspecDir, { withFileTypes: true });
+      const openspecSkills = entries
+        .filter((e) => e.isDirectory() && e.name.startsWith('openspec-'))
+        .map((e) => e.name);
+      if (openspecSkills.length > 0) {
+        externalObservations.push(`Codex OpenSpec skills: ${openspecSkills.join(', ')}`);
+      }
+    } catch {
+      // ignore
+    }
+  }
+  const agentsOpenspecDir = join(repoRoot, '.agents', 'skills');
+  if (existsSync(agentsOpenspecDir)) {
+    try {
+      const entries = await readdir(agentsOpenspecDir, { withFileTypes: true });
+      const externalSkills = entries
+        .filter(
+          (e) =>
+            e.isDirectory() &&
+            (e.name.startsWith('openspec-') ||
+              e.name.startsWith('superpowers-') ||
+              e.name.startsWith('gh-'))
+        )
+        .map((e) => e.name);
+      if (externalSkills.length > 0) {
+        externalObservations.push(`Shared external skills: ${externalSkills.join(', ')}`);
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (externalObservations.length > 0) {
+    console.log('\nExternal integrations (not ACO-owned):');
+    for (const obs of externalObservations) {
+      console.log(`  ${obs}`);
+    }
   }
 }
 

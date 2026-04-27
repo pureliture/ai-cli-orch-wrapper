@@ -12,7 +12,7 @@ This repo is an npm workspace with the following layout:
 - `templates/commands/` — packaged Claude slash command sources. Keep each file in parity with the matching `.claude/commands/` file when behavior changes.
 - `.claude/commands/` — repo-local Claude slash commands used by maintainers.
 - `.claude/skills/` — Claude-local skill sources and compatibility copies.
-- `.agents/skills/` — shared Codex/Gemini skill surface. `github-kanban-ops` is the canonical GitHub PM policy source; `gh-*` skills are thin Codex command aliases.
+- `.agents/skills/` — shared Codex/Gemini skill surface for explicitly allowed ACO-owned shared policy/reference skills only. `github-kanban-ops` is the canonical GitHub PM policy source. `gh-*` command-alias skills, OpenSpec skills, and Superpowers skills are not mirrored here.
 - `.codex/agents/` — Codex custom agent definitions generated or maintained for local workflows.
 - `.gemini/commands/` and `.gemini/agents/` — Gemini command and agent surfaces that should stay aligned with the active workflow where supported.
 - `docs/` — architecture, contracts, guides, reference docs, phase plans, and archived planning material.
@@ -48,8 +48,10 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 - Source order starts with root `CLAUDE.md`, then optional `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, and hooks.
 - Codex project instructions live in root `AGENTS.md`.
 - Gemini project instructions live in root `GEMINI.md`.
-- Shared skills live in `.agents/skills/<skill>/`; do not hand-maintain `.codex/skills/` or `.gemini/skills/` copies unless the runtime requirement is proven.
+- Shared skills live in `.agents/skills/<skill>/`, but only explicitly allowed ACO-owned skills are synced. `.agents/skills/` is not a mirror of `.claude/skills/`.
+- Do not hand-maintain `.codex/skills/` or `.gemini/skills/` copies unless the runtime requirement is proven.
 - Use `aco sync --check` to detect stale generated targets and `aco sync --force` only when overwriting managed drift is intentional.
+- Use `aco sync --check --strict` to fail on duplicate provider-surface warnings in CI.
 
 ## Commit Message Policy
 

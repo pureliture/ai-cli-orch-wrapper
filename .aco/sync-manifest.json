@@ -1,0 +1,437 @@
+{
+  "version": "2",
+  "generatedAt": "2026-04-27T04:31:36.625Z",
+  "sourceHashes": {
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/CLAUDE.md": "0a1513b1494aa8d2502be3e0c27a480ac046f97596d9e48db4c40a970cf06c4f",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/gh-issue/SKILL.md": "16eab5668a5520c3cf20864dd635b85a418e957f90c803f75cde1ee3006261ca",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/gh-pr/SKILL.md": "cff001a7c0735dcb6572ed12e3b5738878fbb3279418064c07f6165e56544e3f",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/gh-pr-followup/SKILL.md": "d7cdc4509550a6c73411e306c92e5e76b76e768be895a62014a2beb6b178541f",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/gh-start/SKILL.md": "5b1bbb6dbae9ec49fae6f868020348bfc59f7ba710e494a075716e12e8a42b37",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/github-kanban-ops/SKILL.md": "e865d5f29969060d8c0dee98568e57e0cdd6292690320ebeec70423c8db0ab0d",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-apply-change/SKILL.md": "c30999a1477d6a8377d7aaa02a82ad322206ffa0cca1ddf7d95618c4577ba10f",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-archive-change/SKILL.md": "dd8783f590c0488b2026bee9aae2adbc3cda1d7152ab04e9b9cf2ff3924fce50",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-bulk-archive-change/SKILL.md": "f1636af350b977d465a2361dec5104d487883e8ca6dbaefdf438f59e4b65051d",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-continue-change/SKILL.md": "383848c3fa732a8545b4e5aeb3bd8e83179410c48e47abd1db4afd8b7ddfb6cd",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-explore/SKILL.md": "4f534b22c2e04839f965186a9dd49129dcef318752260f5d67468d0a8d649826",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-ff-change/SKILL.md": "107161f1948f4b2dff754a614d52adb000506568e88559246fd0d5ef2ecf55fc",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-new-change/SKILL.md": "5daea20179a3f93c7ef7ead465d77f3471e827b7640959dabccea6ddfb62f6b2",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-propose/SKILL.md": "a41d8fda28db18ff9afd548fdc4076c89e492460ac3b8ee0fa4cb33b7034a3e0",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-sync-specs/SKILL.md": "eb8e97b97a50a2d7b72252b2c702b07b714b3f6101ae031dcfa086ba9f92eadb",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-verify-change/SKILL.md": "f53dc5d31725d88c1895b5a950a65635276ba321458ae2711ec97c4e82531e0b",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/architect.md": "e4c02d466d90f1b70d77a0ad9c23b048d852a1d4e040d33e55ba1a859801a1f0",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/chief-of-staff.md": "1a1f971e158824a89b7986f6688fe16d7708b88b0a00631b28bd53956c68e9d2",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/code-reviewer.md": "e112e5e0bbc501788e8a3bfd2771d34e31a8564bbd87391bff7401af1509782c",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/doc-updater.md": "a0b96a358534fc9cefc33355b73d8b232132754283c3f335907468cb98ee021d",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/docs-lookup.md": "2e6cb9b0168e83c66b201bc155506d7aa0050108684ec844f79803d9aba4f4fb",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/executor.md": "99b9d9737d56cf07900fb3d392b178ca586bcec9e916af60961753c5ac4323ae",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/go-build-resolver.md": "f331c2a89232b8d24712b4ceb6a63f4180eab6e81cbe75dc13390947ac3fd4a9",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/go-reviewer.md": "979f7047acaad318ccb9bfa2d0704932a8de2b5e98d99a236181214d56ab6b1b",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/harness-optimizer.md": "a0f42e525781a1fc4a2305ef4b5d055f296a04b9814ff81b7d1d99be93c48b58",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/planner.md": "b4ab1263bcd0257cfd7f99075f1cae6ea17cb32f37235fbb76fdf71bc3b21c4e",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/python-reviewer.md": "e2cf129892998841b01817e03736a9b5f9598681a096e28afbc12577d3ed9adf",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/pytorch-build-resolver.md": "7ac671d451e70433514c6f52aa2d0291ec9d40c840488048d6507aaef1cb4533",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/researcher.md": "6c8b1ec034e574b546396503a843261418722f8f83dc84e817d28f35ec29fba3",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/reviewer.md": "e96f310278c514207ae5b1af363fdbfe2550cc4c901983ec395542c3e473db0a",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/tdd-guide.md": "de339a6158d7708000ef796f8bd5e6d7ed45fe744f443d2d84739470ba4c5f2c",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/typescript-reviewer.md": "fd60a12dc5b804ebac6849942e4f08f7063e869ac9fde8576ebda188deefa061",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/settings.json": "42db338ea119564b19ced4ffe9c647201d5197c638e485c059ef80953b335aef"
+  },
+  "targetHashes": {
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/AGENTS.md": "d0214df8b12aa813e4c065570dfddfd95e7b9a47038bc898c113e41d4700a695",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/GEMINI.md": "c0438d16b8c7cba50bf0e3c290d2e5c0c3b920de5aedc887a5e4ae5b9c6f6cee",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops": "ae07c9540387266b341cd8a06f9effbffaf919b0949f58eae54f75bd3b1b93bf",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/architect.toml": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/chief-of-staff.toml": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/code-reviewer.toml": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/doc-updater.toml": "9777056bfb4c9554d5a9179a8e6ac20f8b9dd2b051191b32bed4d4e4e3f4c849",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/docs-lookup.toml": "b453bc451481376e497cf503c823bc2d70fee9f5c0c4b7a109f971267b6d4e88",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/executor.toml": "8a52944e0bb23bb0a7a3f1f7d569950a03400a54acd780ff9eab4dba953bd788",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/go-build-resolver.toml": "923ccc942758f496a792f7f64a21b5fa05d18d778f45b6949679196c14a71432",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/go-reviewer.toml": "dd3a916e0f3ebeee6ffee235314a8b88d651d08c0670bf0f8051c75e11c84b98",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/harness-optimizer.toml": "bfcd41d46634782588a69d188f8ebde881c852a52f4488a6498ca47dd47c123b",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/planner.toml": "93dd1db5cb2e3037cb5088553ebede1af33388fdbc6ce94d660dba67a859e428",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/python-reviewer.toml": "3fcaee94269d55e386e8e9f9df414de3ad6bce922f8c26cd15879c8da68a8d34",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/pytorch-build-resolver.toml": "c8bf2ca9dad8e5815c74131fa2588a42e42a9337201911cdaf5c436ed309b648",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/researcher.toml": "fe0bc4cc5a5b3792d1e875998c91a3d4d1b1a9a1441ead35210c3fefed9f4521",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/reviewer.toml": "0a321de5a768646d1710fde4c91c33e9c30057a41780386605d39528d8023b9d",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/tdd-guide.toml": "f7a0b7a5be0bb90baf445e52a1bd558aa9787fb43d0e434b700ce5d0cae9fc2e",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/typescript-reviewer.toml": "77a6debda380ce64745047f6215865614064c849169087475487acb24b0155ee",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/architect.md": "a717fb721175cf3f43257a267920b90d7ce4e3ea02b15f2f156fc382ef218190",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/chief-of-staff.md": "f8c86abd50041cfd86f8bd79fca3bc679e90ce2f8712b63eb5cca3bf8f01f37b",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/code-reviewer.md": "84f7197044e3e305b3b3a77f032029ddded80ee2d7aaa53d9bc458720131de0a",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/doc-updater.md": "507c850ef719d5d6e720f3ea660bbe8c3791c76fc199f6d90598a6b85524a6d0",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/docs-lookup.md": "261cbb5c373a62bd95bb2631cdf60a0cf4b90cfbda422623fe7d4756558344f9",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/executor.md": "e8263c7c0152bda69ae0f093ad980bdeeca0fa5cb3333a324c2712345192f4ff",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/go-build-resolver.md": "bab4d0d36ab0cc515d6f6d5223084f6ba09530717db5402969f3dbc0d7922a1b",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/go-reviewer.md": "fd11ce3ca3148ad14919b44980a6fd435cb6ff90eeaf3ba36cee5f6237ddeed4",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/harness-optimizer.md": "b881c0593d897eb800c01513ba494b0f92fa121fef42a98f547fb8090f23c6f3",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/planner.md": "315ccfc559f67c655a17108bd01a51cd37aa0ee05fc87b3c2bc4d188abee166d",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/python-reviewer.md": "2465e88f464251d103ac32e6c17634cf175ae1d315abf52e6b4a692547a89be5",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/pytorch-build-resolver.md": "13711587b74364269767a9d8e9d8fef57f5cd0e79a5e837b5ea257e04a18719f",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/researcher.md": "4e9be519fea7308c65f330bf6ff6275689bde18babc40c3957877fcf6718bfca",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/reviewer.md": "4600aab909eac6cf7da40e80de8a089922f3f98bbe83e2cf2d1140a8b65655e8",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/tdd-guide.md": "f00dd6a09e5b68fc2a79e3528354ba7d30b9f779d88d11f9f4ed6fb7eaec10fb",
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/typescript-reviewer.md": "3dd4c43280a7de2264e9c4e517dc7e857a58014f2c3efdb98b990bb978a5dfaf"
+  },
+  "targets": {
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/AGENTS.md": {
+      "hash": "d0214df8b12aa813e4c065570dfddfd95e7b9a47038bc898c113e41d4700a695",
+      "owner": "aco",
+      "kind": "config"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/GEMINI.md": {
+      "hash": "c0438d16b8c7cba50bf0e3c290d2e5c0c3b920de5aedc887a5e4ae5b9c6f6cee",
+      "owner": "aco",
+      "kind": "config"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops": {
+      "hash": "ae07c9540387266b341cd8a06f9effbffaf919b0949f58eae54f75bd3b1b93bf",
+      "owner": "aco",
+      "kind": "shared-skill",
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/github-kanban-ops"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/architect.toml": {
+      "hash": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/chief-of-staff.toml": {
+      "hash": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/code-reviewer.toml": {
+      "hash": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/doc-updater.toml": {
+      "hash": "9777056bfb4c9554d5a9179a8e6ac20f8b9dd2b051191b32bed4d4e4e3f4c849",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/docs-lookup.toml": {
+      "hash": "b453bc451481376e497cf503c823bc2d70fee9f5c0c4b7a109f971267b6d4e88",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/executor.toml": {
+      "hash": "8a52944e0bb23bb0a7a3f1f7d569950a03400a54acd780ff9eab4dba953bd788",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/go-build-resolver.toml": {
+      "hash": "923ccc942758f496a792f7f64a21b5fa05d18d778f45b6949679196c14a71432",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/go-reviewer.toml": {
+      "hash": "dd3a916e0f3ebeee6ffee235314a8b88d651d08c0670bf0f8051c75e11c84b98",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/harness-optimizer.toml": {
+      "hash": "bfcd41d46634782588a69d188f8ebde881c852a52f4488a6498ca47dd47c123b",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/planner.toml": {
+      "hash": "93dd1db5cb2e3037cb5088553ebede1af33388fdbc6ce94d660dba67a859e428",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/python-reviewer.toml": {
+      "hash": "3fcaee94269d55e386e8e9f9df414de3ad6bce922f8c26cd15879c8da68a8d34",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/pytorch-build-resolver.toml": {
+      "hash": "c8bf2ca9dad8e5815c74131fa2588a42e42a9337201911cdaf5c436ed309b648",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/researcher.toml": {
+      "hash": "fe0bc4cc5a5b3792d1e875998c91a3d4d1b1a9a1441ead35210c3fefed9f4521",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/reviewer.toml": {
+      "hash": "0a321de5a768646d1710fde4c91c33e9c30057a41780386605d39528d8023b9d",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/tdd-guide.toml": {
+      "hash": "f7a0b7a5be0bb90baf445e52a1bd558aa9787fb43d0e434b700ce5d0cae9fc2e",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.codex/agents/typescript-reviewer.toml": {
+      "hash": "77a6debda380ce64745047f6215865614064c849169087475487acb24b0155ee",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/architect.md": {
+      "hash": "a717fb721175cf3f43257a267920b90d7ce4e3ea02b15f2f156fc382ef218190",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/chief-of-staff.md": {
+      "hash": "f8c86abd50041cfd86f8bd79fca3bc679e90ce2f8712b63eb5cca3bf8f01f37b",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/code-reviewer.md": {
+      "hash": "84f7197044e3e305b3b3a77f032029ddded80ee2d7aaa53d9bc458720131de0a",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/doc-updater.md": {
+      "hash": "507c850ef719d5d6e720f3ea660bbe8c3791c76fc199f6d90598a6b85524a6d0",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/docs-lookup.md": {
+      "hash": "261cbb5c373a62bd95bb2631cdf60a0cf4b90cfbda422623fe7d4756558344f9",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/executor.md": {
+      "hash": "e8263c7c0152bda69ae0f093ad980bdeeca0fa5cb3333a324c2712345192f4ff",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/go-build-resolver.md": {
+      "hash": "bab4d0d36ab0cc515d6f6d5223084f6ba09530717db5402969f3dbc0d7922a1b",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/go-reviewer.md": {
+      "hash": "fd11ce3ca3148ad14919b44980a6fd435cb6ff90eeaf3ba36cee5f6237ddeed4",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/harness-optimizer.md": {
+      "hash": "b881c0593d897eb800c01513ba494b0f92fa121fef42a98f547fb8090f23c6f3",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/planner.md": {
+      "hash": "315ccfc559f67c655a17108bd01a51cd37aa0ee05fc87b3c2bc4d188abee166d",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/python-reviewer.md": {
+      "hash": "2465e88f464251d103ac32e6c17634cf175ae1d315abf52e6b4a692547a89be5",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/pytorch-build-resolver.md": {
+      "hash": "13711587b74364269767a9d8e9d8fef57f5cd0e79a5e837b5ea257e04a18719f",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/researcher.md": {
+      "hash": "4e9be519fea7308c65f330bf6ff6275689bde18babc40c3957877fcf6718bfca",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/reviewer.md": {
+      "hash": "4600aab909eac6cf7da40e80de8a089922f3f98bbe83e2cf2d1140a8b65655e8",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/tdd-guide.md": {
+      "hash": "f00dd6a09e5b68fc2a79e3528354ba7d30b9f779d88d11f9f4ed6fb7eaec10fb",
+      "owner": "aco",
+      "kind": "agent"
+    },
+    "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.gemini/agents/typescript-reviewer.md": {
+      "hash": "3dd4c43280a7de2264e9c4e517dc7e857a58014f2c3efdb98b990bb978a5dfaf",
+      "owner": "aco",
+      "kind": "agent"
+    }
+  },
+  "skipped": [
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/gh-issue/SKILL.md",
+      "owner": "provider-specific",
+      "kind": "command-alias-skill",
+      "reason": "Provider-specific command-alias skill gh-issue is not a shared policy skill; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/gh-pr/SKILL.md",
+      "owner": "provider-specific",
+      "kind": "command-alias-skill",
+      "reason": "Provider-specific command-alias skill gh-pr is not a shared policy skill; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/gh-pr-followup/SKILL.md",
+      "owner": "provider-specific",
+      "kind": "command-alias-skill",
+      "reason": "Provider-specific command-alias skill gh-pr-followup is not a shared policy skill; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/gh-start/SKILL.md",
+      "owner": "provider-specific",
+      "kind": "command-alias-skill",
+      "reason": "Provider-specific command-alias skill gh-start is not a shared policy skill; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-apply-change/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-apply-change is not ACO-owned; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-archive-change/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-archive-change is not ACO-owned; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-bulk-archive-change/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-bulk-archive-change is not ACO-owned; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-continue-change/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-continue-change is not ACO-owned; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-explore/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-explore is not ACO-owned; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-ff-change/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-ff-change is not ACO-owned; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-new-change/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-new-change is not ACO-owned; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-propose/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-propose is not ACO-owned; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-sync-specs/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-sync-specs is not ACO-owned; skipped."
+    },
+    {
+      "path": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/skills/openspec-verify-change/SKILL.md",
+      "owner": "external",
+      "kind": "external-skill",
+      "reason": "External skill openspec-verify-change is not ACO-owned; skipped."
+    }
+  ],
+  "warnings": [
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/architect.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/chief-of-staff.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/code-reviewer.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/doc-updater.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/docs-lookup.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/executor.md",
+      "message": "reasoningEffort \"medium\" is not supported by Gemini CLI and was omitted",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/go-build-resolver.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/go-reviewer.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/harness-optimizer.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/planner.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/python-reviewer.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/pytorch-build-resolver.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/researcher.md",
+      "message": "reasoningEffort \"high\" is not supported by Gemini CLI and was omitted",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/researcher.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/reviewer.md",
+      "message": "reasoningEffort \"high\" is not supported by Gemini CLI and was omitted",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/reviewer.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/tdd-guide.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.claude/agents/typescript-reviewer.md",
+      "message": "Gemini read-only enforcement is best-effort; tool restrictions may not be fully equivalent",
+      "severity": "warning"
+    },
+    {
+      "source": "/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops/SKILL.md",
+      "message": "Duplicate provider exposure: provider gemini exposes 'github-kanban-ops' from multiple surfaces (/Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops/SKILL.md, /Users/pureliture/ai-cli-orch-wrapper/.aco-worktrees/prevent-external-skill-command-duplication/.agents/skills/github-kanban-ops). Recommendation: consolidate into a single surface.",
+      "severity": "warning"
+    }
+  ]
+}

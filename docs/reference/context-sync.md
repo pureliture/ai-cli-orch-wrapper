@@ -2,6 +2,20 @@
 
 `aco sync`는 Claude Code 프로젝트 설정을 Codex와 Gemini의 프로젝트 단위 설정으로 동기화한다.
 
+## 중요: `.agents/skills`는 `.claude/skills`의 미러가 아님
+
+`aco sync`는 더 이상 모든 `.claude/skills/<skill>/`을 `.agents/skills/<skill>/`로 재귀 복사하지 않는다. 기본 정책은 **default-deny**이며, 명시적으로 허용된 ACO-owned 공유 정책/reference skill만 `.agents/skills/`에 동기화된다.
+
+- OpenSpec, Superpowers 등 upstream-managed 외부 skill은 `.agents/skills/`에 복사되지 않는다.
+- `gh-*` command-alias skill은 provider-specific 표면으로 분류되어 공유 skill 출력에서 제외된다.
+- `github-kanban-ops`와 같이 ACO가 직접 유지보수하는 공유 정책 skill만 `.agents/skills/`에 남는다.
+
+허용 여부는 다음 순서로 결정된다 (exclude가 include보다 우선):
+1. `.aco/sync.yaml`의 `skills.exclude`
+2. `.aco/sync.yaml`의 `skills.include`
+3. skill frontmatter의 `x-aco-owned: true`
+4. skill 이름 기반 기본 분류 (예: `github-kanban-ops`는 ACO-owned로 하드코딩)
+
 ## 지원되는 CLI 표면 (2026-04-22 기준)
 
 | 표면 | Codex CLI 0.122.0 | Gemini CLI 0.38.2 |
@@ -13,7 +27,7 @@
 | 비대화형 prompt | `codex exec [PROMPT]` | `gemini --prompt <prompt>` |
 | Reasoning effort CLI flag | **지원 안 함** | **지원 안 함** |
 
-Codex와 Gemini는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사용한다. `aco sync`는 `.claude/skills/<skill>/`을 `.agents/skills/<skill>/`로 재귀 복사한다. `.codex/skills` 또는 `.gemini/skills`를 직접 사용하지 않는다. 이 경로들은 공유 표면이 아니다.
+Codex와 Gemini는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사용한다. `.codex/skills` 또는 `.gemini/skills`를 직접 사용하지 않는다. 이 경로들은 공유 표면이 아니다.
 
 ## Source 탐색 순서
 
@@ -25,6 +39,8 @@ Codex와 Gemini는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사
 4. `.claude/skills/*/SKILL.md` skill directories
 5. `.claude/agents/*.md` agent files
 6. `.claude/settings.json` hooks (`.claude/hooks.json`는 legacy fallback으로만 허용)
+
+Skill source는 frontmatter에서 `x-aco-owned`, `x-aco-kind`, `x-aco-targets`를 파싱하여 동기화 자격을 판단한다.
 
 ## 손실 변환 경고
 
@@ -64,6 +80,9 @@ aco sync --dry-run
 
 # drift가 있는 manifest 소유 생성 대상을 덮어쓰기
 aco sync --force
+
+# 중복 provider 표면 경고를 오류로 승격 (CI 모드)
+aco sync --check --strict
 ```
 
 ## 생성 파일
@@ -74,18 +93,42 @@ aco sync --force
 |--------|------|-------------|
 | `AGENTS.md` | 관리 block | Claude context에서 생성한 Codex 프로젝트 지침 |
 | `GEMINI.md` | 관리 block | Claude context에서 생성한 Gemini 프로젝트 지침 |
-| `.agents/skills/<skill>/` | 디렉터리 | `.claude/skills/`에서 복사한 skill 디렉터리 |
+| `.agents/skills/<skill>/` | 디렉터리 | 명시적으로 허용된 ACO-owned skill만 복사 |
 | `.codex/agents/*.toml` | 파일 | Codex custom agent 정의 |
 | `.codex/hooks.json` | 파일 | Codex hook 설정 |
 | `.codex/config.toml` | 관리 block | Codex feature flag (`codex_hooks = true`) |
 | `.gemini/agents/*.md` | 파일 | Gemini custom agent 정의 |
 | `.gemini/settings.json` | 파일 | hook entry가 포함된 Gemini 설정 |
-| `.aco/sync-manifest.json` | 파일 | 해시와 경고를 담은 sync 소유권 manifest |
+| `.aco/sync-manifest.json` | 파일 | 소유권, 해시, 경고를 담은 sync manifest |
+| `.aco/sync.yaml` | 파일 | skill include/exclude 규칙 (선택) |
+
+## 외부 asset 소유권
+
+OpenSpec, Superpowers 등 upstream-managed tool의 skill이나 command는 ACO가 소유하지 않는다. `aco sync`는 이를 외부 asset으로 분류하고:
+
+- `.agents/skills/`에 복사하지 않는다.
+- `.aco/sync-manifest.json`에 `owner: external`로 기록한다.
+- `aco sync --force`로도 외부 asset을 덮어쓰거나 입양하지 않는다.
+
+provider-specific command (예: `.gemini/commands/gh-issue.toml`, `.claude/commands/gh-issue.md`)는 해당 provider의 표면에 남아야 하며, 공유 skill 표면으로 복사되지 않는다.
 
 ## Manifest 충돌 감지
 
 `aco sync`는 생성 파일 해시를 `.aco/sync-manifest.json`에 추적한다. 마지막 sync 이후 manifest 소유 대상이 수동으로 수정되었다면, `aco sync`는 `--force` 없이 덮어쓰지 않는다. stale 또는 drift가 있는 대상을 확인하려면 `aco sync --check`를 실행한다.
 
+소유권이 `aco`인 대상만 자동 제거된다. 외부 또는 알 수 없는 소유권의 대상은 `aco sync`가 자동으로 삭제하지 않는다.
+
+## 중복 provider 표면 감지
+
+`aco sync --check`는 동일한 provider가 여러 표면에서 동일한 이름의 command나 skill을 노출하는 경우 경고를 출력한다:
+
+- Gemini command와 shared skill이 충돌하는 경우 (예: `.gemini/commands/gh-issue.toml` + `.agents/skills/gh-issue/SKILL.md`)
+- OpenSpec/Superpowers asset이 여러 provider 표면에 중복으로 존재하는 경우
+
+`--strict` 모드에서는 중복 경고가 오류로 승격되어 `aco sync --check`가 non-zero로 종료된다.
+
 ## Pack Setup 통합
 
 `aco pack setup`은 command와 prompt 템플릿을 설치한 뒤 자동으로 `aco sync`를 실행한다. sync 경고는 setup 출력에 표시된다. 치명적인 sync 충돌, 즉 소유권이 없는 대상 drift가 있으면 파일 쓰기 전에 setup이 실패하며, `aco sync --check` 또는 `aco sync --force`로 해결하라는 안내를 출력한다.
+
+`aco pack status`는 ACO command pack 상태와 외부 통합 관찰 결과를 별도로 보고한다.

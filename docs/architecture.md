@@ -103,17 +103,21 @@ sequenceDiagram
 `aco sync`는 Claude Code 프로젝트 설정을 Codex와 Gemini의 프로젝트 단위 대상 파일로 변환한다.
 저장소의 canonical Claude 파일을 읽고, `.aco/sync-manifest.json`에 해시를 추적하는 관리 산출물을 쓴다.
 
+`aco sync`는 **default-deny** 정책으로 skill을 동기화한다. `.claude/skills/`의 모든 skill을 탐지하지만, `.agents/skills/`에 복사하는 대상은 명시적으로 허용된 ACO-owned 공유 정책/reference skill로 제한된다. OpenSpec, Superpowers 등 외부 tool의 skill은 외부 asset으로 분류되어 공유 표면에 복사되지 않는다. `gh-*` command-alias skill은 provider-specific 표면으로 분류된다.
+
 ```mermaid
 flowchart LR
     claude[Claude Sources<br/>CLAUDE.md<br/>.claude/agents<br/>.claude/skills<br/>.claude/settings.json]
     sync[aco sync]
     codex[Codex Targets<br/>AGENTS.md<br/>.codex/agents<br/>.codex/hooks.json]
     gemini[Gemini Targets<br/>GEMINI.md<br/>.gemini/agents<br/>.gemini/settings.json]
+    shared[Shared Skills<br/>.agents/skills/<aco-owned>]
     manifest[.aco/sync-manifest.json]
 
     claude --> sync
     sync --> codex
     sync --> gemini
+    sync --> shared
     sync --> manifest
 ```
 
