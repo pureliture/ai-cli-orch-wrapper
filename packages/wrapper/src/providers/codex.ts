@@ -1,15 +1,10 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
-
-const execFileAsync = promisify(execFile);
-
-const AUTH_CHECK_TIMEOUT_MS = 5_000;
+import { readVersion } from '../util/read-version.js';
 
 export class CodexProvider implements IProvider {
   readonly key = 'codex';
@@ -105,18 +100,5 @@ export class CodexProvider implements IProvider {
     const combined = content ? `${prompt}\n\n${content}` : prompt;
     const args = [...this.buildArgs(command, options), combined];
     yield* spawnStream(binary, args, { processName: 'codex', stdin: 'pipe' }, options);
-  }
-}
-
-async function readVersion(binary: string): Promise<string | undefined> {
-  try {
-    const { stdout } = await execFileAsync(binary, ['--version'], {
-      timeout: AUTH_CHECK_TIMEOUT_MS,
-    });
-    const output = typeof stdout === 'string' ? stdout.trim() : '';
-    if (!output) return undefined;
-    return output.split('\n')[0].trim();
-  } catch {
-    return undefined;
   }
 }
