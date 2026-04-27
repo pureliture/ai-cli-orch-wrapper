@@ -1,15 +1,10 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
 import { stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
-
-const execFileAsync = promisify(execFile);
-
-const AUTH_CHECK_TIMEOUT_MS = 5_000;
+import { readVersion } from '../util/read-version.js';
 
 export class GeminiProvider implements IProvider {
   readonly key = 'gemini';
@@ -92,18 +87,5 @@ export class GeminiProvider implements IProvider {
 
     const args = [...this.buildArgs(command, options), `${prompt}\n\n${content}`];
     yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe' }, options);
-  }
-}
-
-async function readVersion(binary: string): Promise<string | undefined> {
-  try {
-    const { stdout } = await execFileAsync(binary, ['--version'], {
-      timeout: AUTH_CHECK_TIMEOUT_MS,
-    });
-    const output = typeof stdout === 'string' ? stdout.trim() : '';
-    if (!output) return undefined;
-    return output.split('\n')[0].trim();
-  } catch {
-    return undefined;
   }
 }
