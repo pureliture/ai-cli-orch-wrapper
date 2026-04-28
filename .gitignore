@@ -31,6 +31,7 @@ temp/
 .omc/
 .omx/
 *.cao_backup
+reference/
 .claude/worktrees/
 .codex/worktrees/
 .gemini/worktrees/

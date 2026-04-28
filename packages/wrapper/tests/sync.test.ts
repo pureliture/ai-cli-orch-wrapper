@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, rename } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { load as loadYaml } from 'js-yaml';
@@ -15,6 +15,15 @@ import { matchesGlob, isIncluded, isExcluded, loadSyncConfig } from '../src/sync
 import { detectDuplicates } from '../src/sync/duplicate-detector.js';
 import type { SyncSource, SyncConfig, SyncOutput } from '../src/sync/transform-interface.js';
 import { computeHash } from '../src/sync/hash.js';
+
+function computePrePathDirectoryHash(contents: string[]): string {
+  return computeHash(
+    contents
+      .map((content) => computeHash(content))
+      .sort()
+      .join('\n')
+  );
+}
 
 function parseMarkdownFrontmatter(markdown: string): Record<string, unknown> {
   const match = markdown.match(/^---\n([\s\S]*?)\n---\n\n([\s\S]*)$/);
@@ -734,6 +743,7 @@ describe('Skill Sync', () => {
       assert.ok(record, 'Manifest should record the target');
       assert.equal(record.owner, 'aco');
       assert.equal(record.kind, 'shared-skill');
+      assert.equal(record.hashFormat, 'directory');
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -849,6 +859,61 @@ describe('Skill Sync', () => {
     }
   });
 
+  it('removes stale v2 skill targets that still use pre-path directory hashes', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-stale-v2-prepath-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const targetDir = join(tmpDir, '.agents', 'skills', 'prepath-skill');
+      await mkdir(join(targetDir, 'references'), { recursive: true });
+      const skillContent = '---\nname: prepath-skill\n---\n\n# Prepath Skill';
+      const referenceContent = 'same content';
+      await writeFile(join(targetDir, 'SKILL.md'), skillContent);
+      await writeFile(join(targetDir, 'references', 'guide.md'), referenceContent);
+
+      const oldDirHash = computePrePathDirectoryHash([skillContent, referenceContent]);
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      const prePathManifest = {
+        version: '2',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {},
+        targetHashes: {
+          [targetDir]: oldDirHash,
+        },
+        targets: {
+          [targetDir]: {
+            hash: oldDirHash,
+            owner: 'aco',
+            kind: 'shared-skill',
+          },
+        },
+        skipped: [],
+        warnings: [],
+      };
+      await writeFile(join(acoDir, 'sync-manifest.json'), JSON.stringify(prePathManifest, null, 2));
+
+      const result = await runSync(tmpDir, { dryRun: false });
+      const removedOutputs = result.outputs.filter((o) => o.targetPath === targetDir);
+      assert.equal(removedOutputs[0]?.action, 'removed');
+      assert.equal(
+        result.outputs.some((o) => o.action === 'conflict'),
+        false,
+        'pre-path hash compatibility should not turn stale cleanup into a conflict'
+      );
+      assert.equal(
+        result.warnings,
+        0,
+        'pre-path hash compatibility should avoid stale hash mismatch warnings'
+      );
+
+      const { existsSync } = await import('node:fs');
+      assert.equal(existsSync(targetDir), false, `Expected ${targetDir} to be removed`);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('computes correct hash based only on files, ignoring directories', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dirhash-'));
     try {
@@ -889,6 +954,95 @@ describe('Skill Sync', () => {
       );
       assert.equal(skillOutput3?.action, 'updated', 'Modified skill should be updated');
       assert.notEqual(skillOutput3?.hash, hash1, 'Hash should change when file added');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('updates a synced skill when a file is renamed with unchanged content', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dirhash-rename-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+      const skillDir = join(tmpDir, '.claude', 'skills', 'rename-skill');
+      await mkdir(join(skillDir, 'references'), { recursive: true });
+      await writeFile(join(skillDir, 'SKILL.md'), '---\nname: rename-skill\n---\n\n# Rename');
+      await writeFile(join(skillDir, 'references', 'old.md'), 'same content');
+
+      await mkdir(join(tmpDir, '.aco'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.aco', 'sync.yaml'),
+        'skills:\n  include:\n    - rename-skill\n'
+      );
+
+      const first = await runSync(tmpDir, { dryRun: false });
+      const firstOutput = first.outputs.find((o) =>
+        o.targetPath.includes('.agents/skills/rename-skill')
+      );
+      assert.equal(firstOutput?.action, 'created');
+
+      await rename(join(skillDir, 'references', 'old.md'), join(skillDir, 'references', 'new.md'));
+
+      const second = await runSync(tmpDir, { dryRun: false });
+      const secondOutput = second.outputs.find((o) =>
+        o.targetPath.includes('.agents/skills/rename-skill')
+      );
+      assert.equal(
+        secondOutput?.action,
+        'updated',
+        'same-content rename should change the directory hash'
+      );
+      assert.notEqual(secondOutput?.hash, firstOutput?.hash);
+
+      const { existsSync } = await import('node:fs');
+      const targetDir = join(tmpDir, '.agents', 'skills', 'rename-skill');
+      assert.equal(
+        existsSync(join(targetDir, 'references', 'old.md')),
+        false,
+        'directory update should remove files deleted from the source layout'
+      );
+      assert.equal(
+        existsSync(join(targetDir, 'references', 'new.md')),
+        true,
+        'directory update should copy files added by the source layout'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('updates a synced skill when non-UTF-8 raw bytes change', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dirhash-bytes-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+      const skillDir = join(tmpDir, '.claude', 'skills', 'bytes-skill');
+      await mkdir(join(skillDir, 'assets'), { recursive: true });
+      await writeFile(join(skillDir, 'SKILL.md'), '---\nname: bytes-skill\n---\n\n# Bytes');
+      await writeFile(join(skillDir, 'assets', 'payload.bin'), Buffer.from([0xff]));
+
+      await mkdir(join(tmpDir, '.aco'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.aco', 'sync.yaml'),
+        'skills:\n  include:\n    - bytes-skill\n'
+      );
+
+      const first = await runSync(tmpDir, { dryRun: false });
+      const firstOutput = first.outputs.find((o) =>
+        o.targetPath.includes('.agents/skills/bytes-skill')
+      );
+      assert.equal(firstOutput?.action, 'created');
+
+      await writeFile(join(skillDir, 'assets', 'payload.bin'), Buffer.from([0xfe]));
+
+      const second = await runSync(tmpDir, { dryRun: false });
+      const secondOutput = second.outputs.find((o) =>
+        o.targetPath.includes('.agents/skills/bytes-skill')
+      );
+      assert.equal(
+        secondOutput?.action,
+        'updated',
+        'non-UTF-8 byte changes should change the directory hash'
+      );
+      assert.notEqual(secondOutput?.hash, firstOutput?.hash);
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -1151,6 +1305,61 @@ describe('Skill Sync', () => {
           w.message.includes('Cleaned') || w.message.includes('Force-cleaned')
       );
       assert.ok(cleanupWarnings.length > 0, 'Manifest should record cleanup with a warning entry');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('--clean-duplicates does not recreate cleaned planned outputs in the same run', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-clean-plan-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+      await mkdir(join(tmpDir, '.aco'), { recursive: true });
+      await writeFile(join(tmpDir, '.aco', 'sync.yaml'), 'skills:\n  include:\n    - gh-issue\n');
+
+      const sourceSkillDir = join(tmpDir, '.claude', 'skills', 'gh-issue');
+      await mkdir(sourceSkillDir, { recursive: true });
+      await writeFile(
+        join(sourceSkillDir, 'SKILL.md'),
+        '---\nname: gh-issue\n---\n\n# GH Issue Source'
+      );
+
+      const targetDir = join(tmpDir, '.agents', 'skills', 'gh-issue');
+      await mkdir(targetDir, { recursive: true });
+      await writeFile(
+        join(targetDir, 'SKILL.md'),
+        '---\nname: gh-issue\n---\n\n# Existing Duplicate'
+      );
+
+      await mkdir(join(tmpDir, '.gemini', 'commands'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.gemini', 'commands', 'gh-issue.toml'),
+        '[command]\nname = "gh-issue"'
+      );
+
+      const result = await runSync(tmpDir, {
+        dryRun: false,
+        cleanDuplicates: true,
+        forceClean: true,
+      });
+
+      const { existsSync } = await import('node:fs');
+      assert.equal(
+        existsSync(targetDir),
+        false,
+        'cleaned duplicate target should not be recreated by the write loop'
+      );
+      assert.equal(
+        result.outputs.some((o) => o.targetPath === targetDir),
+        false,
+        'cleaned duplicate target should be removed from the current output plan'
+      );
+
+      const manifest = JSON.parse(
+        await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
+      );
+      assert.equal(targetDir in manifest.targets, false);
+      assert.equal(targetDir in manifest.targetHashes, false);
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }

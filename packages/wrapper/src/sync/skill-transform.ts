@@ -1,10 +1,12 @@
 import { existsSync } from 'node:fs';
 import { join, basename, dirname, normalize, relative, isAbsolute } from 'node:path';
+import { createHash } from 'node:crypto';
 import type {
   SyncSource,
   SyncOutput,
   SyncWarning,
   SyncManifest,
+  ManifestTargetRecord,
   AssetOwner,
   AssetKind,
   SyncConfig,
@@ -85,10 +87,7 @@ export async function syncSkills(
       if (!stillExistsAndEligible) {
         // Only auto-remove if manifest records it as ACO-owned and hash matches
         if (record.owner === 'aco') {
-          const match =
-            record.hashFormat === 'legacy-v1'
-              ? await legacySkillHashMatches(targetPath, record.hash)
-              : await hashMatches(targetPath, record.hash);
+          const match = await manifestSkillHashMatches(targetPath, record);
           if (match) {
             const stat = await lstat(targetPath);
             if (stat.isSymbolicLink()) {
@@ -237,8 +236,14 @@ async function computeDirHash(dirPath: string): Promise<string> {
       entry.name
     );
     try {
-      const content = await readFile(fullPath, 'utf8');
-      fileHashes.push(computeHash(content));
+      const content = await readFile(fullPath);
+      const relativePath = relative(dirPath, fullPath).replace(/\\/g, '/');
+      const fileHash = createHash('sha256')
+        .update(relativePath, 'utf8')
+        .update('\0')
+        .update(content)
+        .digest('hex');
+      fileHashes.push(fileHash);
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       if (e.code === 'ENOENT') continue; // race condition: file removed during read
@@ -249,9 +254,59 @@ async function computeDirHash(dirPath: string): Promise<string> {
   return computeHash(fileHashes.join('\n'));
 }
 
+async function computePrePathDirHash(dirPath: string): Promise<string> {
+  const entries = await readdir(dirPath, { recursive: true, withFileTypes: true });
+  const fileHashes: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    if (typeof entry.isSymbolicLink === 'function' && entry.isSymbolicLink()) continue;
+    const fullPath = join(
+      entry.parentPath ?? (entry as { path?: string }).path ?? dirPath,
+      entry.name
+    );
+    try {
+      const content = await readFile(fullPath, 'utf8');
+      fileHashes.push(computeHash(content));
+    } catch (err: unknown) {
+      const e = err as Error & { code?: string };
+      if (e.code === 'ENOENT') continue;
+      throw err;
+    }
+  }
+  fileHashes.sort();
+  return computeHash(fileHashes.join('\n'));
+}
+
+async function manifestSkillHashMatches(
+  targetPath: string,
+  record: ManifestTargetRecord
+): Promise<boolean> {
+  if (record.hashFormat === 'legacy-v1') {
+    return legacySkillHashMatches(targetPath, record.hash);
+  }
+  if (await hashMatches(targetPath, record.hash)) {
+    return true;
+  }
+  if (!record.hashFormat) {
+    return prePathDirectoryHashMatches(targetPath, record.hash);
+  }
+  return false;
+}
+
 async function hashMatches(targetPath: string, expectedHash: string): Promise<boolean> {
   try {
     return (await computeDirHash(targetPath)) === expectedHash;
+  } catch {
+    return false;
+  }
+}
+
+async function prePathDirectoryHashMatches(
+  targetPath: string,
+  expectedHash: string
+): Promise<boolean> {
+  try {
+    return (await computePrePathDirHash(targetPath)) === expectedHash;
   } catch {
     return false;
   }
