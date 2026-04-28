@@ -1,6 +1,5 @@
-import { existsSync, createReadStream } from 'node:fs';
-import { createHash } from 'node:crypto';
-import { join, basename, dirname } from 'node:path';
+import { existsSync } from 'node:fs';
+import { join, basename, dirname, normalize, relative, isAbsolute } from 'node:path';
 import type {
   SyncSource,
   SyncOutput,
@@ -12,7 +11,12 @@ import type {
 } from './transform-interface.js';
 import { classifySkill, isSyncEligible } from './skill-classifier.js';
 import { computeHash } from './hash.js';
-import { readdir } from 'node:fs/promises';
+import { readFile, readdir, lstat } from 'node:fs/promises';
+
+function isPathWithin(child: string, parent: string): boolean {
+  const rel = relative(parent, child);
+  return rel !== '' && !rel.startsWith('..') && !isAbsolute(rel);
+}
 
 export async function syncSkills(
   sources: SyncSource[],
@@ -29,6 +33,36 @@ export async function syncSkills(
   const skipped: { path: string; owner: AssetOwner; kind: AssetKind; reason: string }[] = [];
   const skillSources = sources.filter((s) => s.kind === 'skill');
   const targetBase = join(repoRoot, '.agents', 'skills');
+  const skillsDir = join(repoRoot, '.claude', 'skills');
+
+  // Warn about directories under .claude/skills/ that are not skills (no SKILL.md)
+  try {
+    const skillsEntries = await readdir(skillsDir, { withFileTypes: true });
+    for (const entry of skillsEntries) {
+      if (!entry.isDirectory()) continue;
+      const skPath = join(skillsDir, entry.name, 'SKILL.md');
+      const hasSkillFile = existsSync(skPath);
+      if (!hasSkillFile) {
+        const fullPath = join(skillsDir, entry.name);
+        warnings.push({
+          source: relative(repoRoot, fullPath) || fullPath,
+          message: `Directory ${relative(repoRoot, fullPath) || fullPath} does not contain SKILL.md; skipping as non-skill directory.`,
+          severity: 'warning',
+        });
+      }
+    }
+  } catch (err: unknown) {
+    const e = err as Error & { code?: string };
+    if (e.code === 'ENOENT') {
+      // .claude/skills/ does not exist
+    } else if (e.code === 'EACCES' || e.code === 'EPERM') {
+      warnings.push({
+        source: relative(repoRoot, skillsDir) || skillsDir,
+        message: `Permission denied reading skills directory: ${e.message}`,
+        severity: 'warning',
+      });
+    }
+  }
 
   // Classify all skills first
   const classifiedSkills = skillSources.map((source) => {
@@ -53,11 +87,16 @@ export async function syncSkills(
         if (record.owner === 'aco') {
           const match = await hashMatches(targetPath, record.hash);
           if (match) {
+            const stat = await lstat(targetPath);
+            if (stat.isSymbolicLink()) {
+              warnings.push({ source: relative(repoRoot, targetPath) || targetPath, message: `Skipping symlink in stale target removal: ${relative(repoRoot, targetPath) || targetPath}`, severity: 'warning' });
+              continue;
+            }
             staleTargets.push(targetPath);
           } else {
             warnings.push({
-              source: targetPath,
-              message: `Stale target ${targetPath} hash does not match manifest; skipping auto-removal. Run with --force-clean to remove.`,
+              source: relative(repoRoot, targetPath) || targetPath,
+              message: `Stale target ${relative(repoRoot, targetPath) || targetPath} hash does not match manifest; skipping auto-removal. Run with --force-clean to remove.`,
               severity: 'warning',
             });
           }
@@ -78,11 +117,16 @@ export async function syncSkills(
         const legacyHash = manifest.targetHashes[targetPath];
         const match = await hashMatches(targetPath, legacyHash);
         if (match) {
+          const stat = await lstat(targetPath);
+          if (stat.isSymbolicLink()) {
+            warnings.push({ source: targetPath, message: `Skipping symlink in stale target removal: ${targetPath}`, severity: 'warning' });
+            continue;
+          }
           staleTargets.push(targetPath);
         } else {
           warnings.push({
-            source: targetPath,
-            message: `Stale legacy target ${targetPath} hash does not match; skipping auto-removal.`,
+            source: relative(repoRoot, targetPath) || targetPath,
+            message: `Stale legacy target ${relative(repoRoot, targetPath) || targetPath} hash does not match; skipping auto-removal.`,
             severity: 'warning',
           });
         }
@@ -107,6 +151,21 @@ export async function syncSkills(
     const { source, skillName, owner, kind } = classified;
     const sourceDir = dirname(source.path);
     const targetDir = join(targetBase, skillName);
+
+    // Validate sourcePath is within .claude/skills/
+    const normalizedSkillsDir = normalize(join(repoRoot, '.claude', 'skills'));
+    if (!isPathWithin(sourceDir, normalizedSkillsDir) && normalize(sourceDir) !== normalizedSkillsDir) {
+      warnings.push({ source: sourceDir, message: `Refusing to copy from outside .claude/skills/: ${sourceDir}`, severity: 'error' });
+      skipped.push({ path: source.path, owner, kind, reason: 'path traversal detected' });
+      continue;
+    }
+    // Validate targetPath is within .agents/skills/
+    const normalizedTargetBase = normalize(join(repoRoot, '.agents', 'skills'));
+    if (!isPathWithin(targetDir, normalizedTargetBase) && normalize(targetDir) !== normalizedTargetBase) {
+      warnings.push({ source: targetDir, message: `Refusing to write outside .agents/skills/: ${targetDir}`, severity: 'error' });
+      skipped.push({ path: source.path, owner, kind, reason: 'path traversal detected' });
+      continue;
+    }
 
     if (!isSyncEligible(source, config)) {
       const reason =
@@ -147,10 +206,11 @@ async function computeDirHash(dirPath: string): Promise<string> {
   const fileHashes: string[] = [];
   for (const entry of entries) {
     if (!entry.isFile()) continue;
-    const fullPath = join(entry.parentPath ?? join(dirPath, entry.name), entry.name);
+    if (typeof entry.isSymbolicLink === 'function' && entry.isSymbolicLink()) continue;
+    const fullPath = join(entry.parentPath ?? (entry as { path?: string }).path ?? dirPath, entry.name);
     try {
-      const hash = await streamFileHash(fullPath);
-      fileHashes.push(hash);
+      const content = await readFile(fullPath, 'utf8');
+      fileHashes.push(computeHash(content));
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       if (e.code === 'ENOENT') continue; // race condition: file removed during read
@@ -159,16 +219,6 @@ async function computeDirHash(dirPath: string): Promise<string> {
   }
   fileHashes.sort();
   return computeHash(fileHashes.join('\n'));
-}
-
-function streamFileHash(filePath: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const hash = createHash('sha256');
-    const stream = createReadStream(filePath);
-    stream.on('error', reject);
-    stream.on('data', (chunk) => hash.update(chunk));
-    stream.on('end', () => resolve(hash.digest('hex')));
-  });
 }
 
 async function hashMatches(targetPath: string, expectedHash: string): Promise<boolean> {
