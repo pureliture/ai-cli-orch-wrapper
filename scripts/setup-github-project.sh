@@ -52,7 +52,7 @@ validate_required_project_ids() {
 
     echo "Canonical Status requires: field ID plus Backlog, Ready, In Progress, In Review, Done option IDs." >&2
     echo "Canonical Priority requires: field ID plus P0, P1, P2 option IDs." >&2
-    exit 1
+    return 1
   fi
 }
 
@@ -133,7 +133,7 @@ echo "  P0 option ID: ${P0_ID}"
 echo "  P1 option ID: ${P1_ID}"
 echo "  P2 option ID: ${P2_ID}"
 
-validate_required_project_ids
+validate_required_project_ids || exit $?
 
 # ── Size field ──────────────────────────────────────────────────────────────
 echo "── Creating Size field ──"

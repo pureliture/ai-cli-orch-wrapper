@@ -52,7 +52,7 @@ validate_required_project_ids() {
     echo "Canonical Status requires: field ID plus Backlog, Ready, In Progress, In Review, Done option IDs." >&2
     echo "Canonical Priority requires: field ID plus P0, P1, P2 option IDs." >&2
     echo "Compare the project setup with docs/reference/project-board.md." >&2
-    exit 1
+    return 1
   fi
 }
 
@@ -120,7 +120,7 @@ echo "── Priority field options ──"
 printf '%s' "$FIELDS_JSON" |
   jq -r '.fields[] | select(.name == "Priority") | .options[]? | "  \(.name)  [\(.id)]"'
 
-validate_required_project_ids
+validate_required_project_ids || exit $?
 
 echo ""
 echo "── Add to your shell rc (~/.zshrc or ~/.bashrc) ──"
