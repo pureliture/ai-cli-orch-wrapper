@@ -32,8 +32,12 @@ function getDefaultSyncConfig(): SyncConfig {
 }
 
 function parseSyncConfig(content: string): SyncConfig {
-  const raw = loadYaml(content) as Record<string, unknown>;
+  const raw = loadYaml(content) as Record<string, unknown> | undefined | null;
   const config: SyncConfig = {};
+
+  if (!raw || typeof raw !== 'object') {
+    return getDefaultSyncConfig();
+  }
 
   if (raw.skills && typeof raw.skills === 'object') {
     const skills = raw.skills as Record<string, unknown>;

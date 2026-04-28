@@ -10,11 +10,13 @@
 - `gh-*` command-alias skill은 provider-specific 표면으로 분류되어 공유 skill 출력에서 제외된다.
 - `github-kanban-ops`와 같이 ACO가 직접 유지보수하는 공유 정책 skill만 `.agents/skills/`에 남는다.
 
-허용 여부는 다음 순서로 결정된다 (exclude가 include보다 우선):
+허용 여부는 다음 순서로 결정된다 (exclude가 include보다 우선, 위쪽이 아래쪽보다 우선):
 1. `.aco/sync.yaml`의 `skills.exclude`
 2. `.aco/sync.yaml`의 `skills.include`
-3. skill frontmatter의 `x-aco-owned: true`
-4. skill 이름 기반 기본 분류 (예: `github-kanban-ops`는 ACO-owned로 하드코딩)
+3. Built-in ACO-owned 기본값 (예: `github-kanban-ops`는 ACO-owned로 하드코딩)
+4. Skill frontmatter의 `x-aco-owned: true` (advisory, config보다 우선하지 않음)
+5. Skill 이름 기반 휴리스틱 (`openspec-*` → external, `gh-*` → provider-specific 등)
+6. Default deny (owner `unknown`으로 분류)
 
 ## 지원되는 CLI 표면 (2026-04-22 기준)
 
@@ -83,6 +85,12 @@ aco sync --force
 
 # 중복 provider 표면 경고를 오류로 승격 (CI 모드)
 aco sync --check --strict
+
+# 중복 감지된 asset 정리
+aco sync --clean-duplicates
+
+# 소유권이 불분명한 중복까지 강제 정리
+aco sync --clean-duplicates --force-clean
 ```
 
 ## 생성 파일
