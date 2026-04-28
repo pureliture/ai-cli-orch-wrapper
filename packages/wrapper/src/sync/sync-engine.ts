@@ -37,7 +37,10 @@ function isPathWithinRepo(root: string, target: string, allowed: string[]): bool
   for (const prefix of allowed) {
     const normalizedPrefix = normalize(join(root, prefix));
     const rel = relative(normalizedPrefix, normalized);
-    if ((rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)) || normalized === normalizedPrefix) {
+    if (
+      (rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)) ||
+      normalized === normalizedPrefix
+    ) {
       return true;
     }
   }

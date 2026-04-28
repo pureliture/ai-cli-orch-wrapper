@@ -81,6 +81,7 @@ function migrateManifest(parsed: Partial<SyncManifest>): SyncManifest {
       hash,
       owner: 'aco',
       kind: inferKindFromPath(path),
+      hashFormat: 'legacy-v1',
     };
   }
 

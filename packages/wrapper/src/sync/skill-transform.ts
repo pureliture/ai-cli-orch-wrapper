@@ -85,11 +85,18 @@ export async function syncSkills(
       if (!stillExistsAndEligible) {
         // Only auto-remove if manifest records it as ACO-owned and hash matches
         if (record.owner === 'aco') {
-          const match = await hashMatches(targetPath, record.hash);
+          const match =
+            record.hashFormat === 'legacy-v1'
+              ? await legacySkillHashMatches(targetPath, record.hash)
+              : await hashMatches(targetPath, record.hash);
           if (match) {
             const stat = await lstat(targetPath);
             if (stat.isSymbolicLink()) {
-              warnings.push({ source: relative(repoRoot, targetPath) || targetPath, message: `Skipping symlink in stale target removal: ${relative(repoRoot, targetPath) || targetPath}`, severity: 'warning' });
+              warnings.push({
+                source: relative(repoRoot, targetPath) || targetPath,
+                message: `Skipping symlink in stale target removal: ${relative(repoRoot, targetPath) || targetPath}`,
+                severity: 'warning',
+              });
               continue;
             }
             staleTargets.push(targetPath);
@@ -115,11 +122,15 @@ export async function syncSkills(
       if (!stillExistsAndEligible) {
         // Legacy: assume it was ACO-owned; check hash
         const legacyHash = manifest.targetHashes[targetPath];
-        const match = await hashMatches(targetPath, legacyHash);
+        const match = await legacySkillHashMatches(targetPath, legacyHash);
         if (match) {
           const stat = await lstat(targetPath);
           if (stat.isSymbolicLink()) {
-            warnings.push({ source: targetPath, message: `Skipping symlink in stale target removal: ${targetPath}`, severity: 'warning' });
+            warnings.push({
+              source: targetPath,
+              message: `Skipping symlink in stale target removal: ${targetPath}`,
+              severity: 'warning',
+            });
             continue;
           }
           staleTargets.push(targetPath);
@@ -154,15 +165,29 @@ export async function syncSkills(
 
     // Validate sourcePath is within .claude/skills/
     const normalizedSkillsDir = normalize(join(repoRoot, '.claude', 'skills'));
-    if (!isPathWithin(sourceDir, normalizedSkillsDir) && normalize(sourceDir) !== normalizedSkillsDir) {
-      warnings.push({ source: sourceDir, message: `Refusing to copy from outside .claude/skills/: ${sourceDir}`, severity: 'error' });
+    if (
+      !isPathWithin(sourceDir, normalizedSkillsDir) &&
+      normalize(sourceDir) !== normalizedSkillsDir
+    ) {
+      warnings.push({
+        source: sourceDir,
+        message: `Refusing to copy from outside .claude/skills/: ${sourceDir}`,
+        severity: 'error',
+      });
       skipped.push({ path: source.path, owner, kind, reason: 'path traversal detected' });
       continue;
     }
     // Validate targetPath is within .agents/skills/
     const normalizedTargetBase = normalize(join(repoRoot, '.agents', 'skills'));
-    if (!isPathWithin(targetDir, normalizedTargetBase) && normalize(targetDir) !== normalizedTargetBase) {
-      warnings.push({ source: targetDir, message: `Refusing to write outside .agents/skills/: ${targetDir}`, severity: 'error' });
+    if (
+      !isPathWithin(targetDir, normalizedTargetBase) &&
+      normalize(targetDir) !== normalizedTargetBase
+    ) {
+      warnings.push({
+        source: targetDir,
+        message: `Refusing to write outside .agents/skills/: ${targetDir}`,
+        severity: 'error',
+      });
       skipped.push({ path: source.path, owner, kind, reason: 'path traversal detected' });
       continue;
     }
@@ -207,7 +232,10 @@ async function computeDirHash(dirPath: string): Promise<string> {
   for (const entry of entries) {
     if (!entry.isFile()) continue;
     if (typeof entry.isSymbolicLink === 'function' && entry.isSymbolicLink()) continue;
-    const fullPath = join(entry.parentPath ?? (entry as { path?: string }).path ?? dirPath, entry.name);
+    const fullPath = join(
+      entry.parentPath ?? (entry as { path?: string }).path ?? dirPath,
+      entry.name
+    );
     try {
       const content = await readFile(fullPath, 'utf8');
       fileHashes.push(computeHash(content));
@@ -224,6 +252,18 @@ async function computeDirHash(dirPath: string): Promise<string> {
 async function hashMatches(targetPath: string, expectedHash: string): Promise<boolean> {
   try {
     return (await computeDirHash(targetPath)) === expectedHash;
+  } catch {
+    return false;
+  }
+}
+
+async function legacySkillHashMatches(targetPath: string, expectedHash: string): Promise<boolean> {
+  if (await hashMatches(targetPath, expectedHash)) {
+    return true;
+  }
+  try {
+    const skillContent = await readFile(join(targetPath, 'SKILL.md'), 'utf8');
+    return computeHash(skillContent) === expectedHash;
   } catch {
     return false;
   }

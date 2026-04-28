@@ -105,6 +105,7 @@ export interface ManifestTargetRecord {
   hash: string;
   owner: AssetOwner;
   kind: AssetKind;
+  hashFormat?: 'legacy-v1' | 'directory' | 'content';
   source?: string;
   provider?: string;
   action?: 'created' | 'updated' | 'removed' | 'skipped' | 'ignored';

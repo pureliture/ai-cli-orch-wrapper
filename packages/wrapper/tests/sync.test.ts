@@ -815,6 +815,40 @@ describe('Skill Sync', () => {
     }
   });
 
+  it('removes stale legacy skill targets that still use v1 SKILL.md hashes', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-stale-legacy-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '');
+
+      const targetDir = join(tmpDir, '.agents', 'skills', 'legacy-skill');
+      await mkdir(targetDir, { recursive: true });
+      const skillContent = '---\nname: legacy-skill\n---\n\n# Legacy Skill';
+      await writeFile(join(targetDir, 'SKILL.md'), skillContent);
+
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      const legacyManifest = {
+        version: '1',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {},
+        targetHashes: {
+          [targetDir]: computeHash(skillContent),
+        },
+        warnings: [],
+      };
+      await writeFile(join(acoDir, 'sync-manifest.json'), JSON.stringify(legacyManifest, null, 2));
+
+      const result = await runSync(tmpDir, { dryRun: false });
+      const removedOutputs = result.outputs.filter((o) => o.targetPath === targetDir);
+      assert.equal(removedOutputs[0]?.action, 'removed');
+
+      const { existsSync } = await import('node:fs');
+      assert.equal(existsSync(targetDir), false, `Expected ${targetDir} to be removed`);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('computes correct hash based only on files, ignoring directories', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dirhash-'));
     try {
@@ -1116,10 +1150,7 @@ describe('Skill Sync', () => {
         (w: { message: string }) =>
           w.message.includes('Cleaned') || w.message.includes('Force-cleaned')
       );
-      assert.ok(
-        cleanupWarnings.length > 0,
-        'Manifest should record cleanup with a warning entry'
-      );
+      assert.ok(cleanupWarnings.length > 0, 'Manifest should record cleanup with a warning entry');
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -1176,10 +1207,7 @@ describe('Skill Sync', () => {
       // Modify a source file
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# Updated Repo\n\nNew content.');
 
-      await assert.rejects(
-        async () => runSync(tmpDir, { check: true }),
-        /Sync check failed/
-      );
+      await assert.rejects(async () => runSync(tmpDir, { check: true }), /Sync check failed/);
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -1242,8 +1270,8 @@ describe('Skill Sync', () => {
       );
 
       assert.ok(Array.isArray(manifest.skipped), 'manifest should have skipped array');
-      const openspecSkipped = manifest.skipped.find(
-        (s: { path: string }) => s.path.includes('openspec-test')
+      const openspecSkipped = manifest.skipped.find((s: { path: string }) =>
+        s.path.includes('openspec-test')
       );
       assert.ok(openspecSkipped, 'openspec-test should be in skipped records');
       assert.equal(openspecSkipped.owner, 'external');
@@ -1359,9 +1387,7 @@ describe('Skill Sync', () => {
 
       // All Superpowers skills should be in skipped with owner external
       for (const name of superpowersNames) {
-        const skipped = manifest.skipped.find(
-          (s: { path: string }) => s.path.includes(name)
-        );
+        const skipped = manifest.skipped.find((s: { path: string }) => s.path.includes(name));
         assert.ok(skipped, `${name} should be in skipped records`);
         assert.equal(skipped.owner, 'external');
       }
@@ -1376,7 +1402,11 @@ describe('Skill Sync', () => {
       await mkdir(join(tmpDir, '.aco'), { recursive: true });
       await writeFile(join(tmpDir, '.aco', 'sync.yaml'), '');
       const config = await loadSyncConfig(tmpDir);
-      assert.deepEqual(config, { skills: { include: [], exclude: ['openspec-*', 'superpowers-*', 'gh-*'] } }, 'empty yaml should return default config');
+      assert.deepEqual(
+        config,
+        { skills: { include: [], exclude: ['openspec-*', 'superpowers-*', 'gh-*'] } },
+        'empty yaml should return default config'
+      );
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -1386,9 +1416,16 @@ describe('Skill Sync', () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-comment-yaml-'));
     try {
       await mkdir(join(tmpDir, '.aco'), { recursive: true });
-      await writeFile(join(tmpDir, '.aco', 'sync.yaml'), '# This is a comment\n# Another comment\n');
+      await writeFile(
+        join(tmpDir, '.aco', 'sync.yaml'),
+        '# This is a comment\n# Another comment\n'
+      );
       const config = await loadSyncConfig(tmpDir);
-      assert.deepEqual(config, { skills: { include: [], exclude: ['openspec-*', 'superpowers-*', 'gh-*'] } }, 'comment-only yaml should return default config');
+      assert.deepEqual(
+        config,
+        { skills: { include: [], exclude: ['openspec-*', 'superpowers-*', 'gh-*'] } },
+        'comment-only yaml should return default config'
+      );
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -1509,10 +1546,7 @@ describe('Skill Sync', () => {
       await writeFile(agentsPath, originalContent + '\n<!-- user modification -->');
 
       // Running sync without --force should fail
-      await assert.rejects(
-        async () => runSync(tmpDir, { dryRun: false }),
-        /conflict/i
-      );
+      await assert.rejects(async () => runSync(tmpDir, { dryRun: false }), /conflict/i);
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -1570,7 +1604,11 @@ describe('Skill Sync', () => {
       const warnings = await detectDuplicates(tmpDir, outputs);
       const dupWarnings = warnings.filter((w) => w.message.includes('gh-issue'));
       // Should detect exactly 1 duplicate, not 2 (false positive from same path)
-      assert.equal(dupWarnings.length, 1, 'Same-path entries should be deduplicated; expected 1 warning');
+      assert.equal(
+        dupWarnings.length,
+        1,
+        'Same-path entries should be deduplicated; expected 1 warning'
+      );
 
       const dup = dupWarnings[0];
       assert.ok(dup.cleanupTargets && dup.cleanupTargets.length > 0, 'Should have cleanupTargets');

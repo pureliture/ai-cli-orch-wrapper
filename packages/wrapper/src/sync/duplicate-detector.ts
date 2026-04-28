@@ -229,14 +229,18 @@ export async function detectDuplicates(
       warnedCanonicals.add(`${provider}:${canonicalExternalName(name)}`);
       const agentsSkillsDir = join(repoRoot, '.agents', 'skills');
       const codexSkillsDir = join(repoRoot, '.codex', 'skills');
-      cleanupTargets = entries.filter((e) => isUnderDir(e.path, agentsSkillsDir) || isUnderDir(e.path, codexSkillsDir)).map((e) => e.kind === 'skill' ? dirname(e.path) : e.path);
+      cleanupTargets = entries
+        .filter((e) => isUnderDir(e.path, agentsSkillsDir) || isUnderDir(e.path, codexSkillsDir))
+        .map((e) => (e.kind === 'skill' ? dirname(e.path) : e.path));
       const cleanupText = cleanupTargets.join(', ') || 'none';
       message =
         `External asset duplicate: provider ${provider} exposes '${name}' from multiple surfaces (${paths}). ` +
         `Cleanup target: ${cleanupText}. ` +
         `Recommendation: keep upstream-managed source; remove ACO-generated copies.`;
     } else if (isCommandAlias) {
-      cleanupTargets = entries.filter((e) => e.kind === 'skill').map((e) => e.kind === 'skill' ? dirname(e.path) : e.path);
+      cleanupTargets = entries
+        .filter((e) => e.kind === 'skill')
+        .map((e) => (e.kind === 'skill' ? dirname(e.path) : e.path));
       const cleanupText = cleanupTargets.join(', ') || 'none';
       message =
         `Command alias duplicate: provider ${provider} exposes '${name}' from both command and skill surfaces (${paths}). ` +
@@ -281,7 +285,7 @@ export async function detectDuplicates(
     const codexSkillsDir = join(repoRoot, '.codex', 'skills');
     const cleanupTargets = entries
       .filter((e) => isUnderDir(e.path, agentsSkillsDir) || isUnderDir(e.path, codexSkillsDir))
-      .map((e) => e.kind === 'skill' ? dirname(e.path) : e.path);
+      .map((e) => (e.kind === 'skill' ? dirname(e.path) : e.path));
     const cleanupText = cleanupTargets.join(', ') || 'none';
     const message =
       `External asset duplicate: provider ${provider} exposes ${names} from multiple surfaces (${paths}). ` +
