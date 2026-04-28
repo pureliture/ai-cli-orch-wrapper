@@ -8,6 +8,53 @@ set -euo pipefail
 
 OWNER="pureliture"
 TITLE="ai-cli-orch-wrapper PM"
+missing_required_ids=()
+
+is_missing_id() {
+  local value="${1:-}"
+  [[ -z "$value" || "$value" == "null" ]]
+}
+
+require_id() {
+  local label="$1"
+  local value="${2:-}"
+
+  if is_missing_id "$value"; then
+    missing_required_ids+=("$label")
+  fi
+}
+
+validate_required_project_ids() {
+  missing_required_ids=()
+
+  require_id "Project number (PM_PROJECT_NUMBER)" "${PROJECT_NUMBER:-}"
+  require_id "Project node ID (PM_PROJECT_ID)" "${PROJECT_ID:-}"
+  require_id "Status field (PM_STATUS_FIELD_ID)" "${STATUS_FIELD_ID:-}"
+  require_id "Status option Backlog (PM_BACKLOG_OPTION_ID)" "${BACKLOG_ID:-}"
+  require_id "Status option Ready (PM_READY_OPTION_ID)" "${READY_ID:-}"
+  require_id "Status option In Progress (PM_IN_PROGRESS_OPTION_ID)" "${IN_PROGRESS_ID:-}"
+  require_id "Status option In Review (PM_IN_REVIEW_OPTION_ID)" "${IN_REVIEW_ID:-}"
+  require_id "Status option Done (PM_DONE_OPTION_ID)" "${DONE_ID:-}"
+  require_id "Priority field (PM_PRIORITY_FIELD_ID)" "${PRIORITY_FIELD_ID:-}"
+  require_id "Priority option P0 (PM_P0_OPTION_ID)" "${P0_ID:-}"
+  require_id "Priority option P1 (PM_P1_OPTION_ID)" "${P1_ID:-}"
+  require_id "Priority option P2 (PM_P2_OPTION_ID)" "${P2_ID:-}"
+
+  if ((${#missing_required_ids[@]} > 0)); then
+    echo "" >&2
+    echo "ERROR: Incomplete canonical GitHub Project IDs; refusing to print exports or update docs/reference/project-board.md." >&2
+    echo "Missing required IDs:" >&2
+
+    local missing_id
+    for missing_id in "${missing_required_ids[@]}"; do
+      echo "  - ${missing_id}" >&2
+    done
+
+    echo "Canonical Status requires: field ID plus Backlog, Ready, In Progress, In Review, Done option IDs." >&2
+    echo "Canonical Priority requires: field ID plus P0, P1, P2 option IDs." >&2
+    return 1
+  fi
+}
 
 echo "Setting up GitHub Projects V2 for @${OWNER}..."
 echo ""
@@ -41,7 +88,7 @@ echo "  Status field ID: ${STATUS_FIELD_ID}"
 # Get option IDs
 STATUS_OPTIONS=$(gh project field-list "$PROJECT_NUMBER" \
   --owner "$OWNER" --format json \
-  --jq '.fields[] | select(.name == "Status") | .options[]')
+  --jq '.fields[] | select(.name == "Status") | .options[]?')
 
 BACKLOG_ID=$(echo "$STATUS_OPTIONS" | jq -r 'select(.name == "Backlog") | .id')
 READY_ID=$(echo "$STATUS_OPTIONS" | jq -r 'select(.name == "Ready") | .id')
@@ -77,7 +124,7 @@ echo "  Priority field ID: ${PRIORITY_FIELD_ID}"
 
 PRIORITY_OPTIONS=$(gh project field-list "$PROJECT_NUMBER" \
   --owner "$OWNER" --format json \
-  --jq '.fields[] | select(.name == "Priority") | .options[]')
+  --jq '.fields[] | select(.name == "Priority") | .options[]?')
 
 P0_ID=$(echo "$PRIORITY_OPTIONS" | jq -r 'select(.name == "P0") | .id')
 P1_ID=$(echo "$PRIORITY_OPTIONS" | jq -r 'select(.name == "P1") | .id')
@@ -85,6 +132,8 @@ P2_ID=$(echo "$PRIORITY_OPTIONS" | jq -r 'select(.name == "P2") | .id')
 echo "  P0 option ID: ${P0_ID}"
 echo "  P1 option ID: ${P1_ID}"
 echo "  P2 option ID: ${P2_ID}"
+
+validate_required_project_ids || exit $?
 
 # ── Size field ──────────────────────────────────────────────────────────────
 echo "── Creating Size field ──"

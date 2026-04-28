@@ -78,6 +78,12 @@ Node.js 래퍼가 전적으로 담당하는 레이어:
 | Gemini   | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `~/.gemini/oauth_creds.json` | `gemini --version` |
 | Codex    | `OPENAI_API_KEY`, `~/.codex/auth.json`                           | `codex --version`  |
 
+Gemini의 `GOOGLE_API_KEY`는 Node.js 래퍼의 local readiness fast-path에서만 허용되는
+credential source다. 이 검사는 호출 프로세스의 `process.env`와 로컬 credential 파일을 읽어
+setup UX를 빠르게 만드는 휴리스틱이며, Go delegate runtime이 provider child process에 전달하는
+환경 변수 계약이 아니다. Go delegate runtime의 headless Gemini key는 allowlist에 포함된
+`GEMINI_API_KEY`이고, `GOOGLE_API_KEY`는 의도적으로 전달하지 않는다.
+
 Codex의 `~/.codex/auth.json`에 `expires_at` 숫자 값이 있으면 현재 시각과 비교해 만료 여부를
 판정한다. 그 외 provider별 remote 인증 성공 여부는 이 fast-path 검사만으로 보장하지 않는다.
 
@@ -155,7 +161,7 @@ type Provider interface {
 | 설치 힌트      | `InstallHint()`           | `installHint` field        |
 | 인증 체크      | `CheckAuth(ctx)`          | `checkAuth()`              |
 | 인자 구성      | `BuildArgs(...) []string` | `buildArgs(...) string[]`  |
-| 바이너리명     | `Binary()`                | 각 Provider 내 lookup 호출 |
+| 실행 파일 해석 | `Binary()`                | 각 provider method에서 `which()`로 해석한 경로를 `spawnStream()`/`spawn()`에 전달 (`IProvider` member 아님) |
 | 가용성         | `IsAvailable()`           | `isAvailable()`            |
 | 인증 실패 분류 | `IsAuthFailure()`         | 없음 (Go만)                |
 

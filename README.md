@@ -111,8 +111,10 @@ node packages/wrapper/dist/cli.js provider setup codex
 아닙니다.
 
 Codex OAuth 토큰에 `expires_at` 값이 있고 만료된 경우에는 `codex login`을 다시 실행해야 합니다.
-Headless/CI 환경에서는 Gemini에 `GEMINI_API_KEY` 또는 `GOOGLE_API_KEY`, Codex에
-`OPENAI_API_KEY`를 설정할 수 있습니다.
+Headless/CI 환경에서는 Gemini delegate/runtime 경로에 `GEMINI_API_KEY`, Codex에
+`OPENAI_API_KEY`를 설정합니다. `GOOGLE_API_KEY`는 Node wrapper의 local readiness
+heuristic에서만 Gemini credential로 인식되며, Go delegate runtime allowlist에는 전달되지
+않습니다.
 
 ## CLI 개요
 
@@ -353,7 +355,7 @@ npx @pureliture/ai-cli-orch-wrapper provider setup gemini
 npx @pureliture/ai-cli-orch-wrapper provider setup codex
 ```
 
-Headless/CI 환경에서는 Gemini에 `GEMINI_API_KEY` 또는 `GOOGLE_API_KEY`, Codex에 `OPENAI_API_KEY`를 설정할 수 있습니다. Codex OAuth를 쓰는 로컬 환경에서 토큰이 만료되면 `codex login`을 다시 실행합니다.
+Headless/CI 환경에서는 Gemini delegate/runtime 경로에 `GEMINI_API_KEY`, Codex에 `OPENAI_API_KEY`를 설정합니다. `GOOGLE_API_KEY`는 Node wrapper의 local readiness heuristic에서만 Gemini credential로 인식됩니다. Codex OAuth를 쓰는 로컬 환경에서 토큰이 만료되면 `codex login`을 다시 실행합니다.
 
 ### slash command가 보이지 않는 경우
 
