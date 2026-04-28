@@ -11,7 +11,7 @@ import { computeHash } from './hash.js';
 import { loadSyncConfig } from './sync-config.js';
 import { detectDuplicates } from './duplicate-detector.js';
 import { readFile, mkdir, writeFile, cp, rm } from 'node:fs/promises';
-import { dirname } from 'node:path';
+import { dirname, join, normalize, relative, isAbsolute } from 'node:path';
 import type {
   SyncSource,
   SyncOptions,
@@ -30,6 +30,21 @@ interface ErrorWithCode extends Error {
 
 function isErrorWithCode(err: unknown): err is ErrorWithCode {
   return err instanceof Error && 'code' in err;
+}
+
+function isPathWithinRepo(root: string, target: string, allowed: string[]): boolean {
+  const normalized = normalize(target);
+  for (const prefix of allowed) {
+    const normalizedPrefix = normalize(join(root, prefix));
+    const rel = relative(normalizedPrefix, normalized);
+    if (
+      (rel !== '' && !rel.startsWith('..') && !isAbsolute(rel)) ||
+      normalized === normalizedPrefix
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export async function runSync(repoRoot: string, options: SyncOptions = {}): Promise<SyncResult> {
@@ -151,26 +166,73 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   // 9. Handle duplicate cleanup if requested
   if (cleanDuplicates) {
     const cleanable = duplicateWarnings.filter((w) => w.severity === 'warning');
+    const cleanedOwned: string[] = [];
+    const cleanedForced: string[] = [];
     for (const warning of cleanable) {
       const targets = warning.cleanupTargets;
       if (targets && targets.length > 0) {
         for (const targetPath of targets) {
           const isOwned = existingManifest?.targets?.[targetPath]?.owner === 'aco';
           if (!dryRun && (isOwned || forceClean)) {
+            const allowedDirs = ['.agents/skills', '.codex/skills'];
+            if (!isPathWithinRepo(repoRoot, targetPath, allowedDirs)) {
+              plan.warnings.push({
+                source: relative(repoRoot, targetPath) || targetPath,
+                message: `Refusing to delete outside allowed directories: ${targetPath}`,
+                severity: 'warning',
+              });
+              continue;
+            }
             try {
               await rm(targetPath, { recursive: true, force: true });
-            } catch {
-              /* Ignore */
+              if (isOwned) {
+                cleanedOwned.push(targetPath);
+              } else {
+                cleanedForced.push(targetPath);
+              }
+            } catch (err: unknown) {
+              const e = err as Error & { code?: string };
+              plan.warnings.push({
+                source: relative(repoRoot, targetPath) || targetPath,
+                message: `Failed to remove ${targetPath}: ${e.message}`,
+                severity: 'warning',
+              });
             }
           } else if (!dryRun && !isOwned && !forceClean) {
             plan.warnings.push({
-              source: targetPath,
+              source: relative(repoRoot, targetPath) || targetPath,
               message: `Refused to clean duplicate ${targetPath}: not manifest-owned. Pass --force-clean to override.`,
               severity: 'warning',
             });
           }
         }
       }
+    }
+
+    // Remove cleaned paths from plan.manifest.targets
+    for (const path of cleanedOwned) {
+      delete plan.manifest.targetHashes[path];
+      delete plan.manifest.targets[path];
+    }
+    for (const path of cleanedForced) {
+      delete plan.manifest.targetHashes[path];
+      delete plan.manifest.targets[path];
+    }
+
+    // Record removals in manifest
+    if (cleanedOwned.length > 0) {
+      plan.warnings.push({
+        source: 'sync-engine',
+        message: `Cleaned ${cleanedOwned.length} manifest-owned duplicate(s): ${cleanedOwned.join(', ')}`,
+        severity: 'warning',
+      });
+    }
+    if (cleanedForced.length > 0) {
+      plan.warnings.push({
+        source: 'sync-engine',
+        message: `Force-cleaned ${cleanedForced.length} non-manifest-owned duplicate(s): ${cleanedForced.join(', ')}`,
+        severity: 'warning',
+      });
     }
   }
 
@@ -180,10 +242,24 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
       if (output.action === 'skipped') continue;
 
       if (output.action === 'removed') {
+        const allowedDirs = ['.agents/skills'];
+        if (!isPathWithinRepo(repoRoot, output.targetPath, allowedDirs)) {
+          plan.warnings.push({
+            source: relative(repoRoot, output.targetPath) || output.targetPath,
+            message: `Refusing to delete outside allowed directories: ${output.targetPath}`,
+            severity: 'warning',
+          });
+          continue;
+        }
         try {
           await rm(output.targetPath, { recursive: true, force: true });
-        } catch {
-          /* Ignore */
+        } catch (err: unknown) {
+          const e = err as Error & { code?: string };
+          plan.warnings.push({
+            source: relative(repoRoot, output.targetPath) || output.targetPath,
+            message: `Failed to remove ${output.targetPath}: ${e.message}`,
+            severity: 'warning',
+          });
         }
         continue;
       }
