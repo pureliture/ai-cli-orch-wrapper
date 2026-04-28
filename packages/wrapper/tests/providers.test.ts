@@ -4,19 +4,95 @@ import { GeminiProvider } from '../src/providers/gemini';
 import { CodexProvider } from '../src/providers/codex';
 import { ProviderRegistry } from '../src/providers/registry';
 import { getCachedProviderAuth } from '../src/providers/auth-cache';
+import { readVersion } from '../src/util/read-version';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-async function makeFakeBinary(binDir: string, name: string, output: string): Promise<string> {
+interface FakeBinaryOptions {
+  stdout?: string;
+  stderr?: string;
+  exitCode?: number;
+}
+
+async function makeFakeBinary(
+  binDir: string,
+  name: string,
+  output: string | FakeBinaryOptions
+): Promise<string> {
   const full = path.join(binDir, name);
+  const options = typeof output === 'string' ? { stdout: `${output}\n` } : output;
   await fs.writeFile(
     full,
-    `#!/usr/bin/env sh\nprintf "%s\\n" "${output}"\n`,
+    `#!/usr/bin/env node\nprocess.stdout.write(${JSON.stringify(options.stdout ?? '')});\nprocess.stderr.write(${JSON.stringify(options.stderr ?? '')});\nprocess.exit(${options.exitCode ?? 0});\n`,
     { mode: 0o755 }
   );
   return full;
 }
+
+async function withoutProviderAuthEnv<T>(fn: () => Promise<T>): Promise<T> {
+  const keys = ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'OPENAI_API_KEY'];
+  const original: Record<string, string | undefined> = {};
+  for (const key of keys) {
+    original[key] = process.env[key];
+    delete process.env[key];
+  }
+  try {
+    return await fn();
+  } finally {
+    for (const key of keys) {
+      if (original[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = original[key];
+      }
+    }
+  }
+}
+
+describe('readVersion()', () => {
+  let tmpBin: string;
+
+  before(async () => {
+    tmpBin = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-version-bin-'));
+  });
+
+  after(async () => {
+    await fs.rm(tmpBin, { recursive: true, force: true });
+  });
+
+  it('returns the first non-empty stdout line when stdout is available', async () => {
+    const binary = await makeFakeBinary(tmpBin, 'stdout-version', {
+      stdout: '\n  cli 1.2.3  \nignored\n',
+      stderr: 'stderr 9.9.9\n',
+    });
+
+    assert.equal(await readVersion(binary), 'cli 1.2.3');
+  });
+
+  it('falls back to the first non-empty stderr line', async () => {
+    const binary = await makeFakeBinary(tmpBin, 'stderr-version', {
+      stderr: '\n  cli 4.5.6  \nignored\n',
+    });
+
+    assert.equal(await readVersion(binary), 'cli 4.5.6');
+  });
+
+  it('returns an empty string when a successful probe has no version text', async () => {
+    const binary = await makeFakeBinary(tmpBin, 'empty-version', {});
+
+    assert.equal(await readVersion(binary), '');
+  });
+
+  it('returns undefined when the version probe fails', async () => {
+    const binary = await makeFakeBinary(tmpBin, 'failed-version', {
+      stdout: 'cli 0.0.0\n',
+      exitCode: 1,
+    });
+
+    assert.equal(await readVersion(binary), undefined);
+  });
+});
 
 describe('GeminiProvider', () => {
   let tmpHome: string;
@@ -158,12 +234,74 @@ describe('GeminiProvider', () => {
       }
     }
     const provider = new MockGemini();
-    const result = await provider.checkAuth();
+    const result = await withoutProviderAuthEnv(() => provider.checkAuth());
     assert.strictEqual(result.ok, true);
     assert.equal(result.method, 'cli-fallback');
     assert.equal(result.version, 'gemini-cli 3.0.0');
     assert.equal(result.binaryPath, `${tmpBin}/gemini`);
     assert.equal(result.hint, undefined);
+  });
+
+  it('checkAuth() fallback: reports stderr-only version output', async () => {
+    class MockGemini extends GeminiProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
+    await makeFakeBinary(tmpBin, 'gemini', {
+      stderr: '\n  gemini-cli 3.1.0  \nignored\n',
+    });
+
+    try {
+      const result = await withoutProviderAuthEnv(() => new MockGemini().checkAuth());
+      assert.strictEqual(result.ok, true);
+      assert.equal(result.method, 'cli-fallback');
+      assert.equal(result.version, 'gemini-cli 3.1.0');
+      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
+      assert.equal(result.hint, undefined);
+    } finally {
+      await makeFakeBinary(tmpBin, 'gemini', 'gemini-cli 3.0.0');
+    }
+  });
+
+  it('checkAuth() fallback: stays ready when the version probe has no output', async () => {
+    class MockGemini extends GeminiProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
+    await makeFakeBinary(tmpBin, 'gemini', {});
+
+    try {
+      const result = await withoutProviderAuthEnv(() => new MockGemini().checkAuth());
+      assert.strictEqual(result.ok, true);
+      assert.equal(result.method, 'cli-fallback');
+      assert.equal(result.version, '');
+      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
+      assert.equal(result.hint, undefined);
+    } finally {
+      await makeFakeBinary(tmpBin, 'gemini', 'gemini-cli 3.0.0');
+    }
+  });
+
+  it('checkAuth() fallback: returns missing when the version probe fails', async () => {
+    class MockGemini extends GeminiProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
+    await makeFakeBinary(tmpBin, 'gemini', {
+      stderr: 'permission denied\n',
+      exitCode: 1,
+    });
+
+    try {
+      const result = await withoutProviderAuthEnv(() => new MockGemini().checkAuth());
+      assert.strictEqual(result.ok, false);
+      assert.equal(result.method, 'missing');
+    } finally {
+      await makeFakeBinary(tmpBin, 'gemini', 'gemini-cli 3.0.0');
+    }
   });
 
   it('checkAuth() fast-path: returns error when oauth_creds.json is a directory', async () => {
@@ -363,6 +501,41 @@ describe('CodexProvider', () => {
     } finally {
       process.env.PATH = originalPath;
       await fs.rm(authPath, { force: true });
+    }
+  });
+
+  it('checkAuth() fallback: reports cli-fallback via binary version output', async () => {
+    class MockCodex extends CodexProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
+
+    const result = await withoutProviderAuthEnv(() => new MockCodex().checkAuth());
+    assert.strictEqual(result.ok, true);
+    assert.equal(result.method, 'cli-fallback');
+    assert.equal(result.version, 'codex-cli 1.0.0');
+    assert.equal(result.binaryPath, `${tmpBin}/codex`);
+    assert.equal(result.hint, undefined);
+  });
+
+  it('checkAuth() fallback: stays ready when the version probe has no output', async () => {
+    class MockCodex extends CodexProvider {
+      override isAvailable() {
+        return true;
+      }
+    }
+    await makeFakeBinary(tmpBin, 'codex', {});
+
+    try {
+      const result = await withoutProviderAuthEnv(() => new MockCodex().checkAuth());
+      assert.strictEqual(result.ok, true);
+      assert.equal(result.method, 'cli-fallback');
+      assert.equal(result.version, '');
+      assert.equal(result.binaryPath, `${tmpBin}/codex`);
+      assert.equal(result.hint, undefined);
+    } finally {
+      await makeFakeBinary(tmpBin, 'codex', 'codex-cli 1.0.0');
     }
   });
 

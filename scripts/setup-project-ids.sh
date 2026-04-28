@@ -7,6 +7,54 @@
 set -euo pipefail
 
 OWNER="pureliture"
+missing_required_ids=()
+
+is_missing_id() {
+  local value="${1:-}"
+  [[ -z "$value" || "$value" == "null" ]]
+}
+
+require_id() {
+  local label="$1"
+  local value="${2:-}"
+
+  if is_missing_id "$value"; then
+    missing_required_ids+=("$label")
+  fi
+}
+
+validate_required_project_ids() {
+  missing_required_ids=()
+
+  require_id "Project number (PM_PROJECT_NUMBER)" "${PROJECT_NUMBER:-}"
+  require_id "Project node ID (PM_PROJECT_ID)" "${PROJECT_ID:-}"
+  require_id "Status field (PM_STATUS_FIELD_ID)" "${STATUS_FIELD_ID:-}"
+  require_id "Status option Backlog (PM_BACKLOG_OPTION_ID)" "${BACKLOG_OPTION_ID:-}"
+  require_id "Status option Ready (PM_READY_OPTION_ID)" "${READY_OPTION_ID:-}"
+  require_id "Status option In Progress (PM_IN_PROGRESS_OPTION_ID)" "${IN_PROGRESS_OPTION_ID:-}"
+  require_id "Status option In Review (PM_IN_REVIEW_OPTION_ID)" "${IN_REVIEW_OPTION_ID:-}"
+  require_id "Status option Done (PM_DONE_OPTION_ID)" "${DONE_OPTION_ID:-}"
+  require_id "Priority field (PM_PRIORITY_FIELD_ID)" "${PRIORITY_FIELD_ID:-}"
+  require_id "Priority option P0 (PM_P0_OPTION_ID)" "${P0_OPTION_ID:-}"
+  require_id "Priority option P1 (PM_P1_OPTION_ID)" "${P1_OPTION_ID:-}"
+  require_id "Priority option P2 (PM_P2_OPTION_ID)" "${P2_OPTION_ID:-}"
+
+  if ((${#missing_required_ids[@]} > 0)); then
+    echo "" >&2
+    echo "ERROR: Incomplete canonical GitHub Project IDs; refusing to print the shell export block." >&2
+    echo "Missing required IDs:" >&2
+
+    local missing_id
+    for missing_id in "${missing_required_ids[@]}"; do
+      echo "  - ${missing_id}" >&2
+    done
+
+    echo "Canonical Status requires: field ID plus Backlog, Ready, In Progress, In Review, Done option IDs." >&2
+    echo "Canonical Priority requires: field ID plus P0, P1, P2 option IDs." >&2
+    echo "Compare the project setup with docs/reference/project-board.md." >&2
+    return 1
+  fi
+}
 
 echo "Fetching GitHub Projects V2 IDs for @${OWNER}..."
 echo ""
@@ -65,20 +113,14 @@ printf '%s' "$FIELDS_JSON" |
 echo ""
 echo "── Status field options ──"
 printf '%s' "$FIELDS_JSON" |
-  jq -r '.fields[] | select(.name == "Status") | .options[] | "  \(.name)  [\(.id)]"'
+  jq -r '.fields[] | select(.name == "Status") | .options[]? | "  \(.name)  [\(.id)]"'
 
 echo ""
 echo "── Priority field options ──"
 printf '%s' "$FIELDS_JSON" |
-  jq -r '.fields[] | select(.name == "Priority") | .options[] | "  \(.name)  [\(.id)]"'
+  jq -r '.fields[] | select(.name == "Priority") | .options[]? | "  \(.name)  [\(.id)]"'
 
-if [[ -z "$STATUS_FIELD_ID" || -z "$BACKLOG_OPTION_ID" || -z "$READY_OPTION_ID" ||
-      -z "$IN_PROGRESS_OPTION_ID" || -z "$IN_REVIEW_OPTION_ID" || -z "$DONE_OPTION_ID" ||
-      -z "$PRIORITY_FIELD_ID" || -z "$P0_OPTION_ID" || -z "$P1_OPTION_ID" || -z "$P2_OPTION_ID" ]]; then
-  echo ""
-  echo "WARN: Missing one or more canonical Status/Priority fields or options." >&2
-  echo "      Compare the project setup with docs/reference/project-board.md." >&2
-fi
+validate_required_project_ids || exit $?
 
 echo ""
 echo "── Add to your shell rc (~/.zshrc or ~/.bashrc) ──"

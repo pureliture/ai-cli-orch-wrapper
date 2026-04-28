@@ -168,6 +168,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     const cleanable = duplicateWarnings.filter((w) => w.severity === 'warning');
     const cleanedOwned: string[] = [];
     const cleanedForced: string[] = [];
+    const cleanedPaths = new Set<string>();
     for (const warning of cleanable) {
       const targets = warning.cleanupTargets;
       if (targets && targets.length > 0) {
@@ -185,6 +186,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
             }
             try {
               await rm(targetPath, { recursive: true, force: true });
+              cleanedPaths.add(normalize(targetPath));
               if (isOwned) {
                 cleanedOwned.push(targetPath);
               } else {
@@ -217,6 +219,11 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     for (const path of cleanedForced) {
       delete plan.manifest.targetHashes[path];
       delete plan.manifest.targets[path];
+    }
+    if (cleanedPaths.size > 0) {
+      plan.outputs = plan.outputs.filter(
+        (output) => !cleanedPaths.has(normalize(output.targetPath))
+      );
     }
 
     // Record removals in manifest
@@ -272,6 +279,9 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
         }
       } else if (output.kind === 'directory' && output.sourcePath) {
         await mkdir(dirname(output.targetPath), { recursive: true });
+        if (output.action === 'updated') {
+          await rm(output.targetPath, { recursive: true, force: true });
+        }
         await cp(output.sourcePath, output.targetPath, { recursive: true, force: true });
       }
     }
@@ -356,6 +366,7 @@ async function computeTransformPlan(
         owner: o.owner ?? 'aco',
         kind: o.assetKind ?? 'shared-skill',
         source: o.sourcePath,
+        hashFormat: o.kind === 'directory' ? 'directory' : undefined,
       };
     }
   }

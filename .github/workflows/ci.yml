@@ -61,6 +61,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build --workspace=packages/wrapper
+      - run: npm run test:scripts
       - run: npm test --workspace=packages/wrapper
 
   go-build:
