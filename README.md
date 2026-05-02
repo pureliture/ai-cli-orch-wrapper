@@ -1,303 +1,556 @@
-# ai-cli-orch-wrapper
+<!-- ──────────────── HERO BANNER ──────────────── -->
+<div align="center">
 
-`ai-cli-orch-wrapper`는 Claude Code 중심의 repo-local harness를 Codex CLI와 Gemini CLI 대상
-context, provider 실행, session 기록과 연결하기 위한 AI workflow harness입니다.
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12&height=240&section=header&text=ai-cli-orch-wrapper&fontSize=58&fontColor=ffffff&animation=fadeIn&fontAlignY=36&desc=Repo-local%20AI%20workflow%20harness%20for%20Claude%20·%20Codex%20·%20Gemini&descSize=15&descAlignY=58&descAlign=50" alt="banner" width="100%" />
 
-단순히 외부 AI CLI를 호출하는 wrapper가 아니라, command pack 설치, Claude 기준 자산의
-Codex/Gemini target sync, provider 실행, session-aware `result/status/cancel`을 하나의
-반복 가능한 개발 워크플로우로 묶는 것이 목표입니다.
+<br/>
 
-현재 source implementation의 Node wrapper는 `aco` CLI를 담당하며, Go runtime은 `aco delegate`와 blocking
-provider 실행 실험을 담당합니다. 주요 provider는 **Gemini**와 **Codex**입니다. 공개 npm package는
-release 시점에 따라 source implementation보다 뒤처질 수 있으므로, 최신 source 기준 기능을 확인할 때는
-로컬 checkout에서 build한 CLI를 사용합니다. 개선 방향과
-PR 실행 기준은 [docs/roadmap.md](docs/roadmap.md)와
-[docs/pr-implementation-plan.md](docs/pr-implementation-plan.md)를 참고합니다.
+<!-- Project badges -->
+<a href="https://www.npmjs.com/package/@pureliture/ai-cli-orch-wrapper">
+  <img src="https://img.shields.io/npm/v/@pureliture/ai-cli-orch-wrapper?style=for-the-badge&logo=npm&logoColor=white&color=CB3837&label=npm" alt="npm" />
+</a>
+<img src="https://img.shields.io/badge/license-ISC-3b82f6?style=for-the-badge" alt="license" />
+<img src="https://img.shields.io/badge/node-%E2%89%A518-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="node" />
+<img src="https://img.shields.io/badge/PRs-welcome-10b981?style=for-the-badge" alt="prs" />
+<img src="https://img.shields.io/badge/OpenSpec-driven-8b5cf6?style=for-the-badge" alt="openspec" />
 
-이 프로젝트의 변경 관리는 OpenSpec 기반으로 진행합니다. 기능 변경이나 문서 구조 변경은
-`openspec/changes/<change-name>/` 아래 proposal, design, spec, tasks를 먼저 명시하고,
-구현 후 검증과 archive 흐름으로 이어가는 것을 기본 개발 방식으로 둡니다.
+<br/><br/>
 
-## 현재 구현 범위
+<!-- Tagline -->
+<h3>
+  단순한 CLI wrapper가 아닙니다.<br/>
+  <code>Claude</code> · <code>Codex</code> · <code>Gemini</code>를 하나의 반복 가능한 개발 워크플로우로 묶는 <b>AI Workflow Harness</b>입니다.
+</h3>
 
-현재 source implementation에서 확인할 수 있는 범위:
+<br/>
 
-| 영역 | 현재 가능한 일 | 대표 명령 |
-| --- | --- | --- |
-| Command pack | Claude slash command pack 설치, 갱신, 상태 확인 | `aco pack setup`, `aco pack status` |
-| Context sync | Claude 기준 자산을 Codex/Gemini 대상 context로 동기화하고 drift 확인 | `node packages/wrapper/dist/cli.js sync --check` |
-| Provider setup | Gemini/Codex CLI 존재 여부와 local credential readiness 확인 | `aco provider setup <provider>` |
-| Provider run | provider별 command 실행과 session 기록 생성 | `aco run gemini review`, `aco run codex review` |
-| Session ops | 실행 상태, 결과, 취소 흐름 확인 | `aco status`, `aco result`, `aco cancel --session <id>` |
+<!-- Tech stack -->
+<p>
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Claude-D97706?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude" />
+  <img src="https://img.shields.io/badge/Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini" />
+  <img src="https://img.shields.io/badge/OpenAI_Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="Codex" />
+</p>
 
-아직 planned work로 남겨 둔 범위:
+<br/>
 
-- 인증 없는 demo를 위한 mock provider
-- `aco doctor`
-- review artifact v1과 structured findings v2
-- multi-provider aggregation과 follow-up draft
+<!-- Quick navigation -->
+<p>
+  <a href="#-아키텍처-개요"><img src="https://img.shields.io/badge/🏛️_Architecture-1e293b?style=for-the-badge" alt="Architecture" /></a>
+  <a href="#-사용자-가이드"><img src="https://img.shields.io/badge/📖_User_Guide-1e293b?style=for-the-badge" alt="User Guide" /></a>
+  <a href="#-사용-시나리오"><img src="https://img.shields.io/badge/🎯_Use_Cases-1e293b?style=for-the-badge" alt="Use Cases" /></a>
+  <a href="#%EF%B8%8F-하네스-구성"><img src="https://img.shields.io/badge/🛠️_Harness-1e293b?style=for-the-badge" alt="Harness" /></a>
+</p>
 
-평가자 관점에서는 [docs/case-study.md](docs/case-study.md)에서 문제·제약·설계·한계를 먼저
-보고, [docs/roadmap.md](docs/roadmap.md)와
-[docs/pr-implementation-plan.md](docs/pr-implementation-plan.md)에서 실행 기준을 확인하는
-흐름이 가장 빠릅니다.
+</div>
 
-## 설치
+<br/>
 
-필요한 기본 환경:
+<!-- ────────────── SECTION DIVIDER ────────────── -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&customColorList=12&height=3" width="100%" />
 
-| Dependency | Required | Notes |
-| --- | --- | --- |
-| Node.js / npm | Yes | npm workspace와 공개 npm CLI 실행에 필요합니다. |
-| Claude Code | Yes | repo-local command pack과 harness의 기준 실행면입니다. |
-| Gemini CLI | Provider별 | Gemini provider를 사용할 때 필요합니다. |
-| Codex CLI | Provider별 | Codex provider를 사용할 때 필요합니다. |
+<br/>
 
-처음 사용하는 경우에는 `pack setup`으로 command pack을 준비하고, 사용할 provider를 하나 이상
-설정합니다. 최신 source implementation의 context sync까지 확인하려면 아래 로컬 checkout 흐름을 사용합니다.
+## 🏛️ 아키텍처 개요
+
+> command pack 설치, Claude 기준 자산의 Codex/Gemini target sync, provider 실행, session-aware
+> `result/status/cancel` — 외부 AI CLI를 **하나의 반복 가능한 개발 워크플로우**로 묶는 것이 목표입니다.
+
+<p align="center">
+  <img src="docs/images/architecture-overview.svg" alt="System Architecture" width="100%" />
+</p>
+
+<br/>
+
+### 🎨 핵심 설계 포인트
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### 🟣 Harness / Generated 분리
+`.claude/`는 **사람이 관리하는 기준 자산**.<br/>
+Codex·Gemini 대상 파일은 생성 산출물로 관리되어 운영 중 수동 수정과 자동 생성의 경계가 분명합니다.
+
+</td>
+<td width="50%" valign="top">
+
+#### 🔵 Provider Abstraction
+동일한 `aco` 진입점에서<br/>
+**Gemini · Codex별 실행 차이를 흡수**합니다.<br/>
+새 provider 추가는 `IProvider` 구현 + registry 등록으로 끝납니다.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+#### 🟢 Session-Aware Operations
+`aco status`, `aco result`, `aco cancel`로<br/>
+**실행 상태를 운영 명령으로 노출**합니다.<br/>
+모든 실행은 `~/.aco/sessions/`에 보존됩니다.
+
+</td>
+<td width="50%" valign="top">
+
+#### 🟠 Node + Go 이중 실행면
+**Node wrapper**는 공개 npm UX를,<br/>
+**Go runtime**은 blocking provider 실행 실험을 담당합니다.<br/>
+책임 경계가 문서·구현 양쪽에서 분리됩니다.
+
+</td>
+</tr>
+</table>
+
+<br/>
+
+### 🔄 Context 동기화 흐름
+
+<p align="center">
+  <img src="docs/images/context-sync.svg" alt="Context Sync Flow" width="100%" />
+</p>
+
+> 💡 `aco sync`는 **default-deny** 정책으로 동작합니다. `.claude/skills/` 전체를 복사하지 않고
+> 명시적으로 허용된 ACO-owned 공유 skill만 `.agents/skills/`에 동기화합니다.
+> 자세한 변환 규칙은 [docs/reference/context-sync.md](docs/reference/context-sync.md)를 참고합니다.
+
+<br/>
+
+<!-- ────────────── SECTION DIVIDER ────────────── -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&customColorList=12&height=3" width="100%" />
+
+<br/>
+
+## 📖 사용자 가이드
+
+### ⚡ 요구사항
+
+<table>
+<thead>
+<tr>
+<th>의존성</th><th>필수 여부</th><th>용도</th><th>설치</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img src="https://img.shields.io/badge/Node.js-339933?style=flat-square&logo=nodedotjs&logoColor=white" /></td>
+<td>✅ 필수</td>
+<td>npm workspace 및 공개 npm CLI 실행</td>
+<td><code>≥ 18.x</code></td>
+</tr>
+<tr>
+<td><img src="https://img.shields.io/badge/Claude_Code-D97706?style=flat-square&logo=anthropic&logoColor=white" /></td>
+<td>✅ 필수</td>
+<td>repo-local command pack 기준 실행면</td>
+<td>Anthropic 공식 CLI</td>
+</tr>
+<tr>
+<td><img src="https://img.shields.io/badge/Gemini_CLI-4285F4?style=flat-square&logo=googlegemini&logoColor=white" /></td>
+<td>🟡 Provider별</td>
+<td>Gemini provider 사용 시</td>
+<td><code>npm i -g @google/gemini-cli</code></td>
+</tr>
+<tr>
+<td><img src="https://img.shields.io/badge/Codex_CLI-412991?style=flat-square&logo=openai&logoColor=white" /></td>
+<td>🟡 Provider별</td>
+<td>Codex provider 사용 시</td>
+<td><code>npm i -g @openai/codex</code></td>
+</tr>
+</tbody>
+</table>
+
+<br/>
+
+### 🚀 설치
+
+<details open>
+<summary><b>방법 1 — npx로 바로 사용 (권장)</b></summary>
 
 ```bash
-# 방법 1: npx 사용
 npx @pureliture/ai-cli-orch-wrapper pack setup
-npx @pureliture/ai-cli-orch-wrapper provider setup <provider>
+npx @pureliture/ai-cli-orch-wrapper provider setup gemini
+npx @pureliture/ai-cli-orch-wrapper provider setup codex
 ```
 
-저장소 checkout에서 직접 실행할 때는 build 후 `dist/cli.js`를 사용합니다.
+</details>
+
+<details>
+<summary><b>방법 2 — 저장소 checkout에서 직접 실행 (최신 source)</b></summary>
 
 ```bash
-# 방법 2: 저장소에서 직접 실행
 npm install
 npm run build
 node packages/wrapper/dist/cli.js pack setup
-node packages/wrapper/dist/cli.js provider setup <provider>
-node packages/wrapper/dist/cli.js sync --check
-```
-
-설치 후 버전을 확인합니다.
-
-```bash
-npx @pureliture/ai-cli-orch-wrapper --version
-aco --version
-```
-
-`sync --check`는 생성 대상을 수정하지 않고 stale/drift 여부만 확인합니다. 생성 산출물을 의도적으로
-갱신해야 할 때만 별도 sync 명령을 실행합니다. 공개 npm package가 아직 source implementation을
-따라오지 않은 release에서는 `aco sync`가 없을 수 있습니다.
-
-## Provider 설정
-
-Gemini와 Codex provider는 외부 CLI와 local credential 상태에 의존합니다. Codex provider와 sync 명령은
-source implementation 기준 기능이며, 공개 npm package release가 아직 따라오지 않은 경우 로컬 checkout
-build 경로로 확인합니다.
-
-| Provider | External CLI install | Local credential sources | Readiness fallback |
-| --- | --- | --- | --- |
-| Gemini | `npm install -g @google/gemini-cli` | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `~/.gemini/oauth_creds.json` | `gemini --version` |
-| Codex | `npm install -g @openai/codex` | `OPENAI_API_KEY`, `~/.codex/auth.json` | `codex --version` |
-
-```bash
-npx @pureliture/ai-cli-orch-wrapper provider setup <provider>
-```
-
-로컬 checkout에서 실행하는 경우:
-
-```bash
 node packages/wrapper/dist/cli.js provider setup gemini
-node packages/wrapper/dist/cli.js provider setup codex
-```
-
-`provider setup`은 외부 CLI가 설치되어 있는지 확인한 뒤, local credential readiness를 휴리스틱으로
-확인합니다. fallback의 `--version` 실행은 provider binary availability 확인이며 remote 인증 검증이
-아닙니다.
-
-Codex OAuth 토큰에 `expires_at` 값이 있고 만료된 경우에는 `codex login`을 다시 실행해야 합니다.
-Headless/CI 환경에서는 Gemini delegate/runtime 경로에 `GEMINI_API_KEY`, Codex에
-`OPENAI_API_KEY`를 설정합니다. `GOOGLE_API_KEY`는 Node wrapper의 local readiness
-heuristic에서만 Gemini credential로 인식되며, Go delegate runtime allowlist에는 전달되지
-않습니다.
-
-## CLI 개요
-
-PATH에 `aco`가 노출된 환경에서는 다음 명령을 중심으로 사용합니다. 단, 공개 npm package release가
-source implementation보다 뒤처진 경우 일부 source 기준 명령은 로컬 build CLI로 실행합니다.
-
-| Command group | Commands | Purpose |
-| --- | --- | --- |
-| Pack | `aco pack install`, `aco pack setup`, `aco pack status` | Claude command pack 설치, 설정, 상태 확인 |
-| Provider | `aco provider setup gemini`, `aco provider setup codex` | provider CLI와 credential readiness 확인 |
-| Sync | `node packages/wrapper/dist/cli.js sync --check` | Codex/Gemini generated target drift를 읽기 전용으로 확인 |
-| Run | `aco run gemini review`, `aco run codex review` | provider command 실행과 session 기록 생성 |
-| Session | `aco status`, `aco result`, `aco cancel --session <id>` | session 상태 조회, 결과 확인, 실행 취소 |
-
-자주 쓰는 시작 명령:
-
-```bash
-aco pack status
-aco provider setup gemini
-aco run gemini review
-aco status
-aco result
-```
-
-source checkout에서 sync drift를 확인할 때:
-
-```bash
 node packages/wrapper/dist/cli.js sync --check
 ```
 
-실행 중인 provider 작업을 취소해야 할 때는 session id를 지정합니다.
+</details>
+
+설치 후 버전 확인:
 
 ```bash
-aco cancel --session <id>
+aco --version
+# 또는
+npx @pureliture/ai-cli-orch-wrapper --version
 ```
 
-`aco run`은 provider 실행 전에 실행 콘텍스트 대시보드를 stderr에 출력합니다.
+<br/>
+
+### 🔧 Provider 설정
+
+<table>
+<thead>
+<tr>
+<th align="center">Provider</th>
+<th>외부 CLI 설치</th>
+<th>인증 소스</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><img src="https://img.shields.io/badge/Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white" /></td>
+<td><code>npm install -g @google/gemini-cli</code></td>
+<td><code>GEMINI_API_KEY</code> · <code>GOOGLE_API_KEY</code> · <code>~/.gemini/oauth_creds.json</code></td>
+</tr>
+<tr>
+<td align="center"><img src="https://img.shields.io/badge/Codex-412991?style=for-the-badge&logo=openai&logoColor=white" /></td>
+<td><code>npm install -g @openai/codex</code></td>
+<td><code>OPENAI_API_KEY</code> · <code>~/.codex/auth.json</code></td>
+</tr>
+</tbody>
+</table>
+
+```bash
+# provider CLI와 local credential readiness 확인
+aco provider setup gemini
+aco provider setup codex
+```
+
+> ⚠️ **Headless / CI 환경 주의사항**
+> - Gemini: `GEMINI_API_KEY` 환경변수 필수 (`GOOGLE_API_KEY`는 Node wrapper readiness heuristic 전용)
+> - Codex: `OPENAI_API_KEY` 또는 OAuth. 토큰 만료 시 `codex login` 재실행
+
+<br/>
+
+### 📊 CLI 명령 참조
+
+<table>
+<thead>
+<tr>
+<th align="center">그룹</th>
+<th>명령</th>
+<th>목적</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center"><img src="https://img.shields.io/badge/📦-Pack-8b5cf6?style=for-the-badge" /></td>
+<td><code>aco pack install</code><br/><code>aco pack setup</code><br/><code>aco pack status</code></td>
+<td>Claude command pack 설치·설정·상태 확인</td>
+</tr>
+<tr>
+<td align="center"><img src="https://img.shields.io/badge/🔌-Provider-3b82f6?style=for-the-badge" /></td>
+<td><code>aco provider setup &lt;name&gt;</code></td>
+<td>provider CLI · credential readiness 확인</td>
+</tr>
+<tr>
+<td align="center"><img src="https://img.shields.io/badge/🔄-Sync-06b6d4?style=for-the-badge" /></td>
+<td><code>aco sync --check</code><br/><code>aco sync --force</code></td>
+<td>Codex/Gemini target drift 확인 및 갱신</td>
+</tr>
+<tr>
+<td align="center"><img src="https://img.shields.io/badge/▶️-Run-10b981?style=for-the-badge" /></td>
+<td><code>aco run gemini review</code><br/><code>aco run codex review</code></td>
+<td>provider command 실행 · session 생성</td>
+</tr>
+<tr>
+<td align="center"><img src="https://img.shields.io/badge/💾-Session-0d9488?style=for-the-badge" /></td>
+<td><code>aco status</code><br/><code>aco result</code><br/><code>aco cancel --session &lt;id&gt;</code></td>
+<td>session 상태 · 결과 · 취소</td>
+</tr>
+</tbody>
+</table>
+
+<details>
+<summary>📺 <b>Runtime Session 대시보드 예시</b> (펼치기)</summary>
+
+`aco run` 실행 시 stderr에 출력되는 대시보드:
 
 ```text
 🛰️  aco Runtime Session
 
 ✨ Active
-  Provider: gemini
-  Command: review
+  Provider:   gemini
+  Command:    review
   Session ID: f3f2d9...b1
-  Permission: default
-  Working Dir: /path/to/repo
-  Branch: main
-  Prompt Template: /path/to/repo/.claude/aco/prompts/gemini/review.md
-  Auth: ready (oauth)
+  Auth:       ready (oauth)
+  Branch:     main
 
 🧩 Exposed
-  Providers: gemini
-  Agents: reviewer,planner
-  Hooks: PostToolUse
-  Config: settings.json
-  Shared Skills: review-skill
+  Providers:  gemini
+  Agents:     reviewer, planner
+  Hooks:      PostToolUse
+  Skills:     review-skill
 ```
 
-CI/`NO_COLOR`에서는 ANSI 없이 평문 출력됩니다.
+</details>
 
-`aco status`는 저장된 세션 메타데이터를 이용해 같은 runtime 요약도 보여줍니다.
+<br/>
 
-```text
-Session:    f3f2d9...b1
-Provider:   gemini
-Command:    review
-Status:     done
-Started:    2026-04-24T00:00:00.000Z
-Runtime:
-  Branch:    main
-  Prompt:    /path/to/repo/.claude/aco/prompts/gemini/review.md
-  Auth:      ready (oauth)
-  Agents:    reviewer,planner
-  Hooks:     PostToolUse
-  Skills:    review-skill
+<!-- ────────────── SECTION DIVIDER ────────────── -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&customColorList=12&height=3" width="100%" />
+
+<br/>
+
+## 🎯 사용 시나리오
+
+<table>
+<thead>
+<tr>
+<th align="center" width="33%">
+<img src="https://img.shields.io/badge/🚀_시나리오_1-새_저장소_셋업-8b5cf6?style=for-the-badge" />
+</th>
+<th align="center" width="33%">
+<img src="https://img.shields.io/badge/🔍_시나리오_2-Multi--Provider_리뷰-3b82f6?style=for-the-badge" />
+</th>
+<th align="center" width="33%">
+<img src="https://img.shields.io/badge/📊_시나리오_3-세션_추적-0d9488?style=for-the-badge" />
+</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td valign="top">
+
+**🎬 상황**
+AI CLI workflow를 처음 도입하는 저장소
+
+**📋 단계**
+
+```diff
++ ① 패키지 설치
+  npx @pureliture/ai-cli-orch-wrapper pack setup
+
++ ② provider 설정
+  aco provider setup gemini
+
++ ③ context sync 상태 확인
+  aco sync --check
+
++ ④ 첫 실행
+  aco run gemini review
+
++ ⑤ 결과 확인
+  aco result
 ```
 
-## 이 저장소가 다루는 범위
+**✨ 결과**
+`~/.aco/sessions/`에 session 로그 생성, `AGENTS.md` · `GEMINI.md` 자동 생성
 
-Claude Code 하네스를 repo-local 자산으로 관리하면서도, 실제 실행은 외부 AI CLI와 연결하려면 다음 관심사를 함께 다뤄야 합니다.
+</td>
+<td valign="top">
 
-- command pack 설치와 업데이트를 반복 가능한 방식으로 배포
-- Claude 중심 설정을 Codex·Gemini 대상 산출물로 동기화
-- provider 실행 차이를 감추면서 세션 상태와 실패를 추적
-- 하네스 자산과 생성 산출물을 분리해 드리프트를 안전하게 관리
+**🎬 상황**
+PR 머지 전 Gemini와 Codex **양쪽 리뷰**를 받고 싶을 때
 
-`ai-cli-orch-wrapper`는 이 문제를 **설치 가능한 npm 패키지 + repo-local harness + context sync + provider runtime** 조합으로 풀도록 설계했습니다.
+**📋 단계**
 
-이 README는 설치와 운영 진입점을 제공합니다. 세부 설계, sync contract, GitHub workflow, runbook은 아래의 [문서](#문서) 섹션에서 연결된 문서를 기준으로 봅니다.
+```diff
++ ① Gemini 리뷰 실행
+  aco run gemini review
 
-## Architecture at a Glance
++ ② session ID 메모
+  aco status
 
-이 저장소는 두 실행면을 분리합니다.
++ ③ Codex 리뷰 실행
+  aco run codex review
 
-- **Node wrapper CLI**: 공개 npm package와 source build의 `aco` 명령. command pack 설치,
-  provider setup, source 기준 `aco sync`, `aco run`, 세션 로그와 운영 명령 담당
-- **Go runtime**: `cmd/aco/`의 runtime 실험. `aco delegate`와 blocking provider 실행 담당
++ ④ 각 결과 조회
+  aco result --session <id>
 
-```text
-Repo-local harness source
-.claude/commands + .claude/agents + .claude/skills + .claude/settings
-        │
-        │ aco pack / aco sync
-        ▼
-Generated and managed targets
-AGENTS.md + GEMINI.md + .agents/skills + .codex/* + .gemini/* + .aco/sync-manifest.json
-        │
-        │ aco run <provider> <command>
-        ▼
-Provider CLIs
-Gemini CLI / Codex CLI
-        │
-        │ session log + lifecycle metadata
-        ▼
-Session operations
-aco status / aco result / aco cancel
++ ⑤ follow-up 작업 생성
+  /gh-pr-followup
 ```
 
-이 분리는 설치·운영 UX와 provider 실행 런타임의 책임을 나눠, 패키지 사용성과 실행 제어를 동시에 유지하기 위한 결정입니다.
+**✨ 결과**
+두 provider의 advisory output을 각각 session으로 보존, human review 보조
 
-핵심 설계 포인트:
+</td>
+<td valign="top">
 
-- **repo-local harness + generated target 분리**: `.claude/`는 기준 자산으로 두고, Codex/Gemini 대상 파일은 생성 산출물로 관리
-- **managed output + manifest 추적**: `aco sync`는 `.aco/sync-manifest.json`으로 생성 대상의 변경과 드리프트를 추적
-- **provider abstraction**: 동일한 `aco` 진입점에서 Gemini·Codex 같은 provider별 실행 차이를 흡수
-- **session-aware operations**: `aco status`, `aco result`, `aco cancel`로 실행 상태를 운영 명령으로 노출
+**🎬 상황**
+실행 중인 작업의 상태를 확인하거나 취소해야 할 때
 
-자세한 내용은 [docs/architecture.md](docs/architecture.md)를 참고합니다.
+**📋 단계**
 
-## Harness Layout
+```diff
++ ① 전체 세션 목록 확인
+  aco status
 
-이 저장소는 repo-local `.claude/`를 하네스 기준면으로 사용합니다. 사람이 직접 유지하는 source surface입니다.
++ ② 특정 세션 상세 확인
+  aco status --session <id>
 
-```text
++ ③ 결과 출력
+  aco result --session <id>
+
++ ④ 실행 중 작업 취소
+  aco cancel --session <id>
+```
+
+**✨ 결과**
+`task.json` · `output.log` 기반으로 모든 session 이력 추적 가능
+
+</td>
+</tr>
+</tbody>
+</table>
+
+<br/>
+
+<!-- ────────────── SECTION DIVIDER ────────────── -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&customColorList=12&height=3" width="100%" />
+
+<br/>
+
+## 🛠️ 하네스 구성
+
+이 저장소는 repo-local `.claude/`를 **harness 기준면**으로 사용합니다.
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### 🟣 Source Surface (hand-maintained)
+
+```
 .claude/
-├── agents/             # Claude Code agent definitions
-├── commands/           # Slash commands used by this repo
-├── skills/             # Local workflow skills
-├── aco/
-│   └── prompts/        # Provider prompt templates
-├── settings.json       # Shared Claude Code settings
-└── settings.local.json # Local-only settings
+├── 📁 agents/         # Claude Code agent definitions
+├── 📁 commands/       # Slash commands used by this repo
+├── 📁 skills/         # Local workflow skills
+├── 📁 aco/
+│   └── prompts/       # Provider prompt templates
+├── ⚙️ settings.json   # Shared Claude Code settings
+└── ⚙️ settings.local.json  # Local-only (gitignored)
 ```
 
-생성 대상은 하네스 기준면 밖에 둡니다. 일부 파일은 사람이 읽고 검토하지만, source of truth는 `.claude/`와 sync manifest입니다.
+> **사람이 직접 관리하는 영역**<br/>
+> 이 파일들이 모든 변환의 source of truth입니다.
 
-```text
-AGENTS.md               # Codex project instructions generated from Claude context
-GEMINI.md               # Gemini project instructions generated from Claude context
-.agents/skills/         # Shared skill surface for Codex/Gemini-compatible workflows
-.codex/agents/          # Codex agent target surface
-.codex/hooks.json       # Codex hook target surface
-.gemini/agents/         # Gemini agent target surface
-.gemini/settings.json   # Gemini settings target surface
-.aco/sync-manifest.json # Managed output manifest and drift tracking
+</td>
+<td width="50%" valign="top">
+
+### ⚪ Generated Targets (managed by `aco sync`)
+
+```
+📄 AGENTS.md               # Codex 프로젝트 지침
+📄 GEMINI.md               # Gemini 프로젝트 지침
+📁 .agents/skills/         # Codex·Gemini 공유 (ACO-owned only)
+📁 .codex/agents/          # Codex custom agent
+📄 .codex/hooks.json       # Codex hook
+📁 .gemini/agents/         # Gemini agent
+📄 .gemini/settings.json   # Gemini settings
+🗂️ .aco/sync-manifest.json  # Drift tracking
 ```
 
-이 구조는 사람이 유지하는 기준 자산과, `aco sync`가 관리하는 생성 산출물을 분리해 운영 중 수동 수정과 자동 생성의 경계를 분명히 하기 위한 것입니다.
+> **`aco sync`가 관리하는 영역**<br/>
+> 수동 편집 시 drift 경고가 발생합니다.
 
-자세한 명령 흐름과 운영 규칙은 [docs/guides/github-workflow.md](docs/guides/github-workflow.md)를 참고합니다.
+</td>
+</tr>
+</table>
 
-## 저장소 구조
+### 🔄 Sync 명령 패턴
 
-```text
-packages/
-  wrapper/          — @pureliture/ai-cli-orch-wrapper package: aco CLI, provider runtime, sync engine, pack setup
-  installer/        — install-time entrypoints and transitional installer implementation
-templates/
-  commands/         — Packaged Claude Code slash command templates
-  prompts/          — Provider prompt templates
-.claude/            — Maintained Claude harness source surface
-.agents/skills/     — Shared Codex/Gemini skill surface and GitHub Kanban policy
-.codex/agents/      — Generated or maintained Codex custom agent surface
-.gemini/            — Gemini command and agent surfaces
-cmd/aco/            — Go runtime experiment for delegate/blocking provider execution
-docs/               — Architecture, guides, reference docs, roadmap, and runbook
-openspec/           — Specs, change proposals, designs, and task lists
+```bash
+# ① 읽기 전용 — drift 여부만 확인 (변경 없음)
+aco sync --check
+
+# ② CI 모드 — 중복 경고 포함, strict 검증
+aco sync --check --strict
+
+# ③ 의도적 갱신 — generated target을 다시 생성
+aco sync --force
 ```
 
-새 provider를 추가할 때는 provider-specific behavior를 `packages/wrapper/src/providers/` 아래 provider abstraction 뒤에 둡니다. 하네스 정책이나 PM workflow를 바꿀 때는 `.agents/skills/github-kanban-ops/`와 관련 command/template surface의 정렬 여부를 같이 봅니다.
+자세한 운영 규칙은 [docs/reference/context-sync.md](docs/reference/context-sync.md)와
+[docs/guides/runbook.md](docs/guides/runbook.md)를 참고합니다.
 
-## 개발
+<br/>
+
+<!-- ────────────── SECTION DIVIDER ────────────── -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&customColorList=12&height=3" width="100%" />
+
+<br/>
+
+## ✅ 현재 구현 범위
+
+<table>
+<thead>
+<tr>
+<th align="center">상태</th>
+<th>영역</th>
+<th>가능한 일</th>
+<th>대표 명령</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="center">🟢</td>
+<td><b>Command pack</b></td>
+<td>Claude slash command pack 설치·갱신·상태 확인</td>
+<td><code>aco pack setup</code></td>
+</tr>
+<tr>
+<td align="center">🟢</td>
+<td><b>Context sync</b></td>
+<td>Claude 자산을 Codex/Gemini target으로 동기화·drift 확인</td>
+<td><code>aco sync --check</code></td>
+</tr>
+<tr>
+<td align="center">🟢</td>
+<td><b>Provider setup</b></td>
+<td>Gemini/Codex CLI · credential readiness 확인</td>
+<td><code>aco provider setup &lt;name&gt;</code></td>
+</tr>
+<tr>
+<td align="center">🟢</td>
+<td><b>Provider run</b></td>
+<td>provider별 command 실행 · session 생성</td>
+<td><code>aco run gemini review</code></td>
+</tr>
+<tr>
+<td align="center">🟢</td>
+<td><b>Session ops</b></td>
+<td>실행 상태 · 결과 · 취소</td>
+<td><code>aco status</code></td>
+</tr>
+<tr>
+<td align="center">🟡</td>
+<td><b>Mock provider</b></td>
+<td>인증 없는 demo · CI 검증</td>
+<td>planned</td>
+</tr>
+<tr>
+<td align="center">🟡</td>
+<td><b>aco doctor</b></td>
+<td>환경 헬스체크 v1</td>
+<td>planned</td>
+</tr>
+<tr>
+<td align="center">🟡</td>
+<td><b>Review artifact</b></td>
+<td>review.md (v1) · structured findings (v2)</td>
+<td>planned</td>
+</tr>
+</tbody>
+</table>
+
+<br/>
+
+## 🧰 개발
 
 ```bash
 npm install
@@ -306,87 +559,125 @@ npm test
 npm run typecheck
 ```
 
-문서나 하네스 동기화 동작을 바꿀 때 자주 쓰는 추가 확인:
+harness 동기화 동작을 바꿀 때 추가 확인:
 
 ```bash
 npm run test:fixtures
 npm run test:smoke
 git diff --check
-node packages/wrapper/dist/cli.js sync --check
+aco sync --check
 ```
 
-GitHub PM command parity나 shared skill 정책을 바꿀 때는 관련 command/template 파일과 shared skill copy가 같이 정렬되어야 합니다. 자세한 유지보수 규칙은 [AGENTS.md](AGENTS.md)와 [docs/guides/contributing.md](docs/guides/contributing.md)를 참고합니다.
-
-커밋 메시지는 저장소의 commit template과 커밋 작성 프롬프트를 기준으로 작성합니다.
+커밋 메시지 템플릿 설정:
 
 ```bash
 git config commit.template .gitmessage
 ```
 
-- Template: [.gitmessage](.gitmessage)
-- Prompt: [docs/guides/commit-message-prompt.md](docs/guides/commit-message-prompt.md)
-- Codex가 커밋을 작성할 때는 prompt의 한국어 작성 규칙, 제목+본문 형식, AI CLI/model contributor trailer 규칙을 따른다.
+- 📄 Template: [.gitmessage](.gitmessage)
+- 💬 Prompt: [docs/guides/commit-message-prompt.md](docs/guides/commit-message-prompt.md)
 
-## 문제 해결
+<br/>
 
-### `aco: command not found`
+## ❓ 문제 해결
 
-전역 설치가 필요한 환경이면 package를 전역 설치한 뒤 PATH를 확인합니다.
+<details>
+<summary><code>aco: command not found</code></summary>
 
 ```bash
 npm install -g @pureliture/ai-cli-orch-wrapper
 aco --version
-```
-
-npx 기반으로만 사용할 수도 있습니다.
-
-```bash
+# 또는 npx로만 사용
 npx @pureliture/ai-cli-orch-wrapper --version
 ```
+</details>
 
-### Provider를 찾을 수 없거나 인증되지 않은 경우
-
-먼저 provider별 외부 CLI가 설치되어 있는지 확인하고, provider setup을 다시 실행합니다.
+<details>
+<summary>Provider를 찾을 수 없거나 인증되지 않은 경우</summary>
 
 ```bash
 npm install -g @google/gemini-cli
 npm install -g @openai/codex
-npx @pureliture/ai-cli-orch-wrapper provider setup gemini
-npx @pureliture/ai-cli-orch-wrapper provider setup codex
+aco provider setup gemini
+aco provider setup codex
 ```
 
-Headless/CI 환경에서는 Gemini delegate/runtime 경로에 `GEMINI_API_KEY`, Codex에 `OPENAI_API_KEY`를 설정합니다. `GOOGLE_API_KEY`는 Node wrapper의 local readiness heuristic에서만 Gemini credential로 인식됩니다. Codex OAuth를 쓰는 로컬 환경에서 토큰이 만료되면 `codex login`을 다시 실행합니다.
+Codex OAuth 토큰 만료 시: `codex login` 재실행<br/>
+Headless/CI 환경: `GEMINI_API_KEY` · `OPENAI_API_KEY` 환경변수 설정
+</details>
 
-### slash command가 보이지 않는 경우
-
-command pack이 설치되지 않았거나 stale 상태일 수 있습니다.
+<details>
+<summary>slash command가 보이지 않는 경우</summary>
 
 ```bash
 aco pack status
 aco pack setup
 ```
+</details>
 
-### Codex/Gemini target surface가 stale해 보이는 경우
-
-먼저 read-only check로 drift 여부를 확인합니다.
+<details>
+<summary>Codex/Gemini target surface가 stale해 보이는 경우</summary>
 
 ```bash
+# 읽기 전용 drift 확인 (변경 없음)
+aco sync --check
+# 또는 source checkout에서
 node packages/wrapper/dist/cli.js sync --check
 ```
+</details>
 
-`sync --check`는 생성 대상을 변경하지 않습니다. 공개 npm package release가 아직 source implementation을 따라오지 않은 경우 `aco sync`는 없을 수 있으므로, source checkout에서는 build 후 `node packages/wrapper/dist/cli.js sync --check`로 확인합니다. 의도적으로 generated target을 갱신해야 하는 상황인지 확인한 뒤 sync 명령을 실행합니다. 운영 절차는 [docs/reference/context-sync.md](docs/reference/context-sync.md)와 [docs/guides/runbook.md](docs/guides/runbook.md)를 참고합니다.
+<br/>
 
-## 문서
+## 📚 문서
 
-전체 목차는 [docs/README.md](docs/README.md)를 참고합니다. 주요 진입점:
+<table>
+<thead>
+<tr>
+<th>문서</th><th>언제 참고</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>📌 <a href="docs/case-study.md"><b>Case Study</b></a></td>
+<td>문제 배경, 제약, 설계 선택, 현재 한계를 빠르게 파악할 때</td>
+</tr>
+<tr>
+<td>🏛️ <a href="docs/architecture.md"><b>Architecture</b></a></td>
+<td>wrapper, sync engine, provider runtime 구조를 자세히 볼 때</td>
+</tr>
+<tr>
+<td>🔄 <a href="docs/reference/context-sync.md"><b>Context Sync Reference</b></a></td>
+<td>managed output, manifest, drift 처리 규칙을 확인할 때</td>
+</tr>
+<tr>
+<td>🗺️ <a href="docs/roadmap.md"><b>Roadmap</b></a></td>
+<td>planned work와 구현 우선순위를 확인할 때</td>
+</tr>
+<tr>
+<td>🚦 <a href="docs/guides/github-workflow.md"><b>GitHub Workflow</b></a></td>
+<td>issue, branch, PR, Project board 운영 방식을 따를 때</td>
+</tr>
+<tr>
+<td>🤝 <a href="docs/guides/contributing.md"><b>Contributing</b></a></td>
+<td>개발 환경, 검증, 변경 제출 규칙을 확인할 때</td>
+</tr>
+<tr>
+<td>🚑 <a href="docs/guides/runbook.md"><b>Runbook</b></a></td>
+<td>운영 중 실패나 복구 절차를 볼 때</td>
+</tr>
+</tbody>
+</table>
 
-| Document | When to use |
-| --- | --- |
-| [Case Study](docs/case-study.md) | 문제 배경, 제약, 설계 선택, 현재 한계를 빠르게 평가할 때 |
-| [Roadmap](docs/roadmap.md) | planned work와 구현 우선순위를 확인할 때 |
-| [PR Implementation Plan](docs/pr-implementation-plan.md) | PR 단위 실행 기준과 남은 구현 단계를 확인할 때 |
-| [Architecture](docs/architecture.md) | wrapper, sync engine, provider runtime의 구조를 자세히 볼 때 |
-| [Context Sync Reference](docs/reference/context-sync.md) | managed output, manifest, drift 처리 규칙을 확인할 때 |
-| [GitHub Workflow Guide](docs/guides/github-workflow.md) | issue, branch, PR, Project board 운영 방식을 따를 때 |
-| [Contributing](docs/guides/contributing.md) | 개발 환경, 검증, 변경 제출 규칙을 확인할 때 |
-| [Runbook](docs/guides/runbook.md) | 운영 중 실패나 복구 절차를 더 자세히 볼 때 |
+전체 목차: [docs/README.md](docs/README.md)
+
+<br/>
+
+<!-- ────────────── FOOTER ────────────── -->
+
+<div align="center">
+
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12&height=120&section=footer" width="100%" />
+
+<sub>Made with 🩵 by <a href="https://github.com/pureliture">@pureliture</a> · Built on <code>OpenSpec</code> · Powered by <code>Claude Code</code></sub>
+
+</div>

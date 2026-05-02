@@ -1,0 +1,189 @@
+<svg viewBox="0 0 760 480" xmlns="http://www.w3.org/2000/svg"
+     font-family="'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdf4ff"/>
+      <stop offset="50%" stop-color="#eef2ff"/>
+      <stop offset="100%" stop-color="#f0fdfa"/>
+    </linearGradient>
+
+    <!-- Actor gradients -->
+    <linearGradient id="user-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f472b6"/>
+      <stop offset="100%" stop-color="#db2777"/>
+    </linearGradient>
+    <linearGradient id="cli-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="registry-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="provider-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="store-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2dd4bf"/>
+      <stop offset="100%" stop-color="#0d9488"/>
+    </linearGradient>
+
+    <!-- Drop shadow -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5"/>
+      <feOffset dx="0" dy="2" result="offset-blur"/>
+      <feFlood flood-color="#1e1b4b" flood-opacity="0.15"/>
+      <feComposite in2="offset-blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Arrow markers -->
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6"/>
+    </marker>
+    <marker id="arrow-purple" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8b5cf6"/>
+    </marker>
+    <marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#0d9488"/>
+    </marker>
+    <marker id="arrow-green" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="760" height="480" rx="16" fill="url(#bg-grad)"/>
+
+  <!-- Decorative dots -->
+  <circle cx="20" cy="20" r="2.5" fill="#ec4899" opacity="0.4"/>
+  <circle cx="740" cy="20" r="2.5" fill="#0d9488" opacity="0.4"/>
+
+  <!-- Title -->
+  <text x="380" y="26" text-anchor="middle" dominant-baseline="middle"
+        font-size="15" font-weight="700" fill="#1e293b" letter-spacing="0.3">Session Lifecycle — aco run</text>
+  <line x1="290" y1="44" x2="340" y2="44" stroke="#ec4899" stroke-width="2" stroke-linecap="round"/>
+  <line x1="420" y1="44" x2="470" y2="44" stroke="#0d9488" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="380" cy="44" r="3" fill="#3b82f6"/>
+
+  <!-- ─── ACTOR HEADERS ─── -->
+  <!-- User -->
+  <g filter="url(#shadow)">
+    <rect x="25" y="60" width="120" height="40" rx="8" fill="url(#user-grad)"/>
+  </g>
+  <text x="85" y="80" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">👤  User</text>
+
+  <!-- aco CLI -->
+  <g filter="url(#shadow)">
+    <rect x="170" y="60" width="140" height="40" rx="8" fill="url(#cli-grad)"/>
+  </g>
+  <text x="240" y="80" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">⚙️  aco CLI</text>
+
+  <!-- Registry -->
+  <g filter="url(#shadow)">
+    <rect x="335" y="60" width="130" height="40" rx="8" fill="url(#registry-grad)"/>
+  </g>
+  <text x="400" y="80" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">📚  Registry</text>
+
+  <!-- Provider -->
+  <g filter="url(#shadow)">
+    <rect x="490" y="60" width="120" height="40" rx="8" fill="url(#provider-grad)"/>
+  </g>
+  <text x="550" y="80" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">🤖  Provider</text>
+
+  <!-- Store -->
+  <g filter="url(#shadow)">
+    <rect x="630" y="60" width="105" height="40" rx="8" fill="url(#store-grad)"/>
+  </g>
+  <text x="682" y="80" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">💾  Store</text>
+
+  <!-- ─── LIFELINES (vertical dashed lines) ─── -->
+  <line x1="85"  y1="105" x2="85"  y2="450" stroke="#ec4899" stroke-width="1" stroke-dasharray="3,3" opacity="0.45"/>
+  <line x1="240" y1="105" x2="240" y2="450" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3,3" opacity="0.45"/>
+  <line x1="400" y1="105" x2="400" y2="450" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="3,3" opacity="0.45"/>
+  <line x1="550" y1="105" x2="550" y2="450" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" opacity="0.45"/>
+  <line x1="682" y1="105" x2="682" y2="450" stroke="#0d9488" stroke-width="1" stroke-dasharray="3,3" opacity="0.45"/>
+
+  <!-- ─── MESSAGE 1: User → CLI: aco run ─── -->
+  <circle cx="42" cy="135" r="9" fill="#ec4899"/>
+  <text x="42" y="135" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="700" fill="white">1</text>
+  <line x1="85" y1="135" x2="234" y2="135" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+  <rect x="100" y="120" width="135" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"/>
+  <text x="167" y="129" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="500" fill="#1e293b">aco run gemini review</text>
+
+  <!-- ─── MESSAGE 2: CLI → Registry: resolve ─── -->
+  <circle cx="197" cy="180" r="9" fill="#3b82f6"/>
+  <text x="197" y="180" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="700" fill="white">2</text>
+  <line x1="240" y1="180" x2="394" y2="180" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
+  <rect x="252" y="165" width="135" height="18" rx="9" fill="white" stroke="#a78bfa" stroke-width="1"/>
+  <text x="319" y="174" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="500" fill="#1e293b">resolve provider key</text>
+
+  <!-- ─── MESSAGE 3: CLI → Store: create session ─── -->
+  <circle cx="197" cy="225" r="9" fill="#3b82f6"/>
+  <text x="197" y="225" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="700" fill="white">3</text>
+  <line x1="240" y1="225" x2="676" y2="225" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
+  <rect x="475" y="210" width="155" height="18" rx="9" fill="white" stroke="#2dd4bf" stroke-width="1"/>
+  <text x="552" y="219" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="500" fill="#1e293b">create session (uuid)</text>
+
+  <!-- ─── MESSAGE 4: CLI → Provider: invoke ─── -->
+  <circle cx="197" cy="270" r="9" fill="#3b82f6"/>
+  <text x="197" y="270" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="700" fill="white">4</text>
+  <line x1="240" y1="270" x2="544" y2="270" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-green)"/>
+  <rect x="345" y="255" width="160" height="18" rx="9" fill="white" stroke="#34d399" stroke-width="1"/>
+  <text x="425" y="264" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="500" fill="#1e293b">invoke prompt + input</text>
+
+  <!-- ─── MESSAGE 5: Provider → CLI: stream output (dashed return) ─── -->
+  <circle cx="595" cy="315" r="9" fill="#10b981"/>
+  <text x="595" y="315" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="700" fill="white">5</text>
+  <line x1="550" y1="315" x2="246" y2="315" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-green)"/>
+  <rect x="290" y="300" width="135" height="18" rx="9" fill="white" stroke="#34d399" stroke-width="1"/>
+  <text x="357" y="309" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="500" fill="#1e293b">stream output</text>
+
+  <!-- ─── MESSAGE 6: CLI → Store: write log ─── -->
+  <circle cx="197" cy="360" r="9" fill="#3b82f6"/>
+  <text x="197" y="360" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="700" fill="white">6</text>
+  <line x1="240" y1="360" x2="676" y2="360" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
+  <rect x="430" y="345" width="200" height="18" rx="9" fill="white" stroke="#2dd4bf" stroke-width="1"/>
+  <text x="530" y="354" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="500" fill="#1e293b">write output.log + task.json</text>
+
+  <!-- ─── MESSAGE 7: CLI → User: result/error (dashed return) ─── -->
+  <circle cx="285" cy="405" r="9" fill="#3b82f6"/>
+  <text x="285" y="405" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="700" fill="white">7</text>
+  <line x1="240" y1="405" x2="91" y2="405" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-blue)"/>
+  <rect x="100" y="390" width="135" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"/>
+  <text x="167" y="399" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="500" fill="#1e293b">provider output / error</text>
+
+  <!-- ─── LEGEND ─── -->
+  <line x1="40" y1="445" x2="80" y2="445" stroke="#3b82f6" stroke-width="1.5"/>
+  <text x="88" y="445" dominant-baseline="middle" font-size="10" fill="#475569">solid: request</text>
+  <line x1="180" y1="445" x2="220" y2="445" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,3"/>
+  <text x="228" y="445" dominant-baseline="middle" font-size="10" fill="#475569">dashed: response / async</text>
+</svg>
