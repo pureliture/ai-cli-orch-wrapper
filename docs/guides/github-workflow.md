@@ -310,19 +310,9 @@ reasoningEffort: high
 
 ## CI/CD Workflow
 
-```mermaid
-flowchart LR
-    event[Push or PR to main] --> lint[lint<br/>npm run format:check]
-    event --> contract[contract<br/>verify-contract.ts]
-    event --> typecheck[typecheck<br/>build + tsc --noEmit]
-    lint --> test[test<br/>npm test]
-    typecheck --> test
-    event --> gobuild[go-build<br/>go build ./cmd/aco]
-    gobuild --> gotest[go-test<br/>go test ./...]
-    test --> smoke[smoke<br/>npm pack + aco --version + aco run --help]
-    gobuild --> fixtures[fixtures<br/>npm run test:fixtures]
-    test --> fixtures
-```
+<p align="center">
+  <img src="../images/ci-pipeline.svg" alt="CI Pipeline" width="100%" />
+</p>
 
 | Job         | 명령 표면                                                                                         | 역할                                              |
 | ----------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------- |
