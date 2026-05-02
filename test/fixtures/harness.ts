@@ -226,7 +226,12 @@ class BinaryRunnerImpl implements BinaryRunner {
     const startedAt = Date.now();
 
     return new Promise((resolve, reject) => {
-      const child = spawn(this.binaryPath, args, {
+      // Node.js wrapper scripts (.js) need to be run via `node` on Windows
+      // and to avoid chmod dependency on all platforms.
+      const isJs = this.binaryPath.endsWith('.js');
+      const cmd = isJs ? 'node' : this.binaryPath;
+      const cmdArgs = isJs ? [this.binaryPath, ...args] : args;
+      const child = spawn(cmd, cmdArgs, {
         env: this.envFor(opts),
         stdio: ['pipe', 'pipe', 'pipe'],
       });
@@ -265,7 +270,10 @@ class BinaryRunnerImpl implements BinaryRunner {
   }
 
   spawn(args: string[], opts: { mockPathOnly?: boolean } = {}): ChildProcess {
-    return spawn(this.binaryPath, args, {
+    const isJs = this.binaryPath.endsWith('.js');
+    const cmd = isJs ? 'node' : this.binaryPath;
+    const cmdArgs = isJs ? [this.binaryPath, ...args] : args;
+    return spawn(cmd, cmdArgs, {
       env: this.envFor(opts),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -316,7 +324,14 @@ async function isNodeBinary(binaryPath: string): Promise<boolean> {
 // ---------------------------------------------------------------------------
 
 async function main(): Promise<void> {
-  const binaryArg = process.argv.find((a, i) => process.argv[i - 1] === '--binary');
+  // Accept the *last* --binary flag so callers can override the default:
+  //   npm run test:fixtures -- --binary /tmp/custom-aco
+  let binaryArg: string | undefined;
+  for (let i = 0; i < process.argv.length; i++) {
+    if (process.argv[i] === '--binary' && i + 1 < process.argv.length) {
+      binaryArg = process.argv[i + 1];
+    }
+  }
   if (!binaryArg) {
     console.error('Usage: npx ts-node test/fixtures/harness.ts --binary <path>');
     process.exit(1);
