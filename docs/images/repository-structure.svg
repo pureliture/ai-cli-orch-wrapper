@@ -1,0 +1,181 @@
+<svg viewBox="0 0 760 460" xmlns="http://www.w3.org/2000/svg"
+     font-family="'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdf4ff"/>
+      <stop offset="50%" stop-color="#eef2ff"/>
+      <stop offset="100%" stop-color="#f0fdfa"/>
+    </linearGradient>
+
+    <!-- Component gradients -->
+    <linearGradient id="root-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="purple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="blue-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="cyan-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#0891b2"/>
+    </linearGradient>
+    <linearGradient id="orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#d97706"/>
+    </linearGradient>
+    <linearGradient id="rose-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </linearGradient>
+
+    <!-- Drop shadow -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5"/>
+      <feOffset dx="0" dy="2" result="offset-blur"/>
+      <feFlood flood-color="#1e1b4b" flood-opacity="0.15"/>
+      <feComposite in2="offset-blur" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="760" height="460" rx="16" fill="url(#bg-grad)"/>
+
+  <!-- Decorative dots -->
+  <circle cx="20" cy="20" r="2.5" fill="#8b5cf6" opacity="0.4"/>
+  <circle cx="740" cy="20" r="2.5" fill="#22d3ee" opacity="0.4"/>
+  <circle cx="20" cy="440" r="2.5" fill="#fb7185" opacity="0.4"/>
+  <circle cx="740" cy="440" r="2.5" fill="#fbbf24" opacity="0.4"/>
+
+  <!-- Title -->
+  <text x="380" y="28" text-anchor="middle" dominant-baseline="middle"
+        font-size="15" font-weight="700" fill="#1e293b" letter-spacing="0.3">Repository Structure</text>
+  <line x1="290" y1="46" x2="340" y2="46" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
+  <line x1="420" y1="46" x2="470" y2="46" stroke="#22d3ee" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="380" cy="46" r="3" fill="#3b82f6"/>
+
+  <!-- ─── ROOT ─── -->
+  <g filter="url(#shadow)">
+    <rect x="305" y="65" width="150" height="44" rx="10" fill="url(#root-grad)"/>
+  </g>
+  <text x="380" y="79" text-anchor="middle" dominant-baseline="middle"
+        font-size="11" font-weight="700" fill="#94a3b8" letter-spacing="0.5">REPOSITORY</text>
+  <text x="380" y="96" text-anchor="middle" dominant-baseline="middle"
+        font-size="14" font-weight="700" fill="white">📂  /</text>
+
+  <!-- ─── BRANCHES (curved lines from root) ─── -->
+  <path d="M 380 109 Q 380 130 100 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  <path d="M 380 109 Q 380 130 240 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  <path d="M 380 109 Q 380 130 380 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  <path d="M 380 109 Q 380 130 520 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+  <path d="M 380 109 Q 380 130 660 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+
+  <!-- ───── BRANCH 1: packages/ (Node.js) ───── -->
+  <g filter="url(#shadow)">
+    <rect x="35" y="145" width="170" height="125" rx="10" fill="white" stroke="#60a5fa" stroke-width="1.5"/>
+    <rect x="35" y="145" width="170" height="32" rx="10" fill="url(#blue-grad)"/>
+    <rect x="35" y="161" width="170" height="16" fill="url(#blue-grad)"/>
+  </g>
+  <text x="120" y="161" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">📦  packages/</text>
+  <text x="48" y="196" font-size="10" fill="#1e293b" font-weight="600">wrapper/</text>
+  <text x="58" y="212" font-size="9.5" fill="#64748b">aco CLI · provider runtime</text>
+  <text x="58" y="226" font-size="9.5" fill="#64748b">sync engine · pack setup</text>
+  <text x="48" y="246" font-size="10" fill="#1e293b" font-weight="600">installer/</text>
+  <text x="58" y="262" font-size="9.5" fill="#64748b">install-time entrypoints</text>
+
+  <!-- ───── BRANCH 2: cmd + internal (Go) ───── -->
+  <g filter="url(#shadow)">
+    <rect x="225" y="145" width="170" height="125" rx="10" fill="white" stroke="#22d3ee" stroke-width="1.5"/>
+    <rect x="225" y="145" width="170" height="32" rx="10" fill="url(#cyan-grad)"/>
+    <rect x="225" y="161" width="170" height="16" fill="url(#cyan-grad)"/>
+  </g>
+  <text x="310" y="161" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">🐹  Go runtime</text>
+  <text x="238" y="196" font-size="10" fill="#1e293b" font-weight="600">cmd/aco/</text>
+  <text x="248" y="212" font-size="9.5" fill="#64748b">Go CLI entrypoint</text>
+  <text x="248" y="226" font-size="9.5" fill="#64748b">aco delegate · run</text>
+  <text x="238" y="246" font-size="10" fill="#1e293b" font-weight="600">internal/</text>
+  <text x="248" y="262" font-size="9.5" fill="#64748b">provider · runner</text>
+
+  <!-- ───── BRANCH 3: templates/ ───── -->
+  <g filter="url(#shadow)">
+    <rect x="305" y="145" width="150" height="125" rx="10" fill="white" stroke="#fbbf24" stroke-width="1.5"/>
+    <rect x="305" y="145" width="150" height="32" rx="10" fill="url(#orange-grad)"/>
+    <rect x="305" y="161" width="150" height="16" fill="url(#orange-grad)"/>
+  </g>
+  <text x="380" y="161" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">📋  templates/</text>
+  <text x="318" y="196" font-size="10" fill="#1e293b" font-weight="600">commands/</text>
+  <text x="328" y="212" font-size="9.5" fill="#64748b">slash command</text>
+  <text x="328" y="226" font-size="9.5" fill="#64748b">templates</text>
+  <text x="318" y="246" font-size="10" fill="#1e293b" font-weight="600">prompts/</text>
+  <text x="328" y="262" font-size="9.5" fill="#64748b">provider prompts</text>
+
+  <!-- ───── BRANCH 4: docs/ ───── -->
+  <g filter="url(#shadow)">
+    <rect x="465" y="145" width="130" height="125" rx="10" fill="white" stroke="#a78bfa" stroke-width="1.5"/>
+    <rect x="465" y="145" width="130" height="32" rx="10" fill="url(#purple-grad)"/>
+    <rect x="465" y="161" width="130" height="16" fill="url(#purple-grad)"/>
+  </g>
+  <text x="530" y="161" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">📚  docs/</text>
+  <text x="478" y="196" font-size="9.5" fill="#1e293b">architecture.md</text>
+  <text x="478" y="212" font-size="9.5" fill="#1e293b">case-study.md</text>
+  <text x="478" y="228" font-size="9.5" fill="#1e293b">roadmap.md</text>
+  <text x="478" y="244" font-size="9.5" fill="#1e293b">guides/</text>
+  <text x="478" y="260" font-size="9.5" fill="#1e293b">reference/</text>
+
+  <!-- ───── BRANCH 5: .github/workflows ───── -->
+  <g filter="url(#shadow)">
+    <rect x="605" y="145" width="120" height="125" rx="10" fill="white" stroke="#fb7185" stroke-width="1.5"/>
+    <rect x="605" y="145" width="120" height="32" rx="10" fill="url(#rose-grad)"/>
+    <rect x="605" y="161" width="120" height="16" fill="url(#rose-grad)"/>
+  </g>
+  <text x="665" y="161" text-anchor="middle" dominant-baseline="middle"
+        font-size="11" font-weight="700" fill="white">🚦  .github/</text>
+  <text x="615" y="196" font-size="9.5" fill="#1e293b" font-weight="600">workflows/</text>
+  <text x="625" y="212" font-size="9" fill="#64748b">ci.yml</text>
+  <text x="625" y="226" font-size="9" fill="#64748b">release.yml</text>
+  <text x="625" y="244" font-size="9" fill="#64748b">project sync</text>
+
+  <!-- ─── HARNESS LAYER (Source vs Generated) ─── -->
+  <line x1="40" y1="290" x2="720" y2="290" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="380" y="305" text-anchor="middle" dominant-baseline="middle"
+        font-size="11" font-weight="700" fill="#475569" letter-spacing="0.3">Harness Surface</text>
+
+  <!-- Source: .claude/ -->
+  <g filter="url(#shadow)">
+    <rect x="50" y="320" width="320" height="115" rx="10" fill="white" stroke="#a78bfa" stroke-width="1.5"/>
+    <rect x="50" y="320" width="320" height="32" rx="10" fill="url(#purple-grad)"/>
+    <rect x="50" y="336" width="320" height="16" fill="url(#purple-grad)"/>
+  </g>
+  <text x="210" y="336" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">🟣  .claude/  —  Source of Truth</text>
+  <text x="65" y="370" font-size="10" fill="#1e293b">📁 commands/ · agents/ · skills/</text>
+  <text x="65" y="388" font-size="10" fill="#1e293b">📁 aco/prompts/</text>
+  <text x="65" y="406" font-size="10" fill="#1e293b">⚙️ settings.json · settings.local.json</text>
+  <text x="65" y="424" font-size="10" fill="#94a3b8" font-style="italic">hand-maintained · gitignored: settings.local.json</text>
+
+  <!-- Generated targets -->
+  <g filter="url(#shadow)">
+    <rect x="390" y="320" width="320" height="115" rx="10" fill="white" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3"/>
+    <rect x="390" y="320" width="320" height="32" rx="10" fill="#475569"/>
+    <rect x="390" y="336" width="320" height="16" fill="#475569"/>
+  </g>
+  <text x="550" y="336" text-anchor="middle" dominant-baseline="middle"
+        font-size="12" font-weight="700" fill="white">⚪  Generated  —  managed by aco sync</text>
+  <text x="405" y="370" font-size="10" fill="#1e293b">📄 AGENTS.md · GEMINI.md</text>
+  <text x="405" y="388" font-size="10" fill="#1e293b">📁 .agents/skills/ (ACO-owned only)</text>
+  <text x="405" y="406" font-size="10" fill="#1e293b">📁 .codex/agents/ · .gemini/agents/</text>
+  <text x="405" y="424" font-size="10" fill="#94a3b8" font-style="italic">auto-generated · .aco/sync-manifest.json tracks drift</text>
+</svg>
