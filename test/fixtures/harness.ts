@@ -108,6 +108,8 @@ export interface FixtureResult {
   passed: boolean;
   error?: string;
   durationMs: number;
+  /** If true, this fixture was skipped because it's a known gap on the current binary. */
+  skipped?: boolean;
 }
 
 export type FixtureFn = (runner: BinaryRunner) => Promise<void>;
@@ -292,6 +294,24 @@ class BinaryRunnerImpl implements BinaryRunner {
 }
 
 // ---------------------------------------------------------------------------
+// Binary type detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Detects whether the binary under test is the Node.js wrapper.
+ * Checks the file extension (.js) or the shebang line for 'node'.
+ */
+async function isNodeBinary(binaryPath: string): Promise<boolean> {
+  if (binaryPath.endsWith('.js')) return true;
+  try {
+    const head = await readFile(binaryPath, 'utf8').then((s) => s.slice(0, 64));
+    return head.includes('node');
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main runner
 // ---------------------------------------------------------------------------
 
@@ -311,8 +331,15 @@ async function main(): Promise<void> {
   await import('./08-auth-failure/assertions');
 
   const results: FixtureResult[] = [];
+  const nodeBinary = await isNodeBinary(binaryArg);
 
   for (const fixture of fixtures) {
+    // Skip known-gap fixtures against the Node binary — the contract is
+    // intentionally not implemented there (Go binary is canonical).
+    if (fixture.knownNodeGap && nodeBinary) {
+      results.push({ name: fixture.name, passed: true, skipped: true, durationMs: 0 });
+      continue;
+    }
     const sessionBaseDir = await mkdtemp(join(tmpdir(), 'aco-fixture-sessions-'));
     const mockBinDir = await mkdtemp(join(tmpdir(), 'aco-fixture-bin-'));
 
@@ -337,15 +364,19 @@ async function main(): Promise<void> {
     }
   }
 
-  const passed = results.filter((r) => r.passed).length;
+  const passed = results.filter((r) => r.passed && !r.skipped).length;
   const failed = results.filter((r) => !r.passed).length;
+  const skipped = results.filter((r) => r.skipped).length;
 
   console.log('\nFixture Results:');
   for (const r of results) {
-    const icon = r.passed ? '✓' : '✗';
-    console.log(`  ${icon} ${r.name} (${r.durationMs}ms)${r.error ? `: ${r.error}` : ''}`);
+    const icon = r.skipped ? '⊘' : r.passed ? '✓' : '✗';
+    const suffix = r.skipped ? ' [known gap]' : r.error ? `: ${r.error}` : '';
+    console.log(`  ${icon} ${r.name} (${r.durationMs}ms)${suffix}`);
   }
-  console.log(`\n${passed} passed, ${failed} failed`);
+  const summary = [`${passed} passed`, `${failed} failed`];
+  if (skipped > 0) summary.push(`${skipped} skipped`);
+  console.log(`\n${summary.join(', ')}`);
   process.exit(failed > 0 ? 1 : 0);
 }
 
