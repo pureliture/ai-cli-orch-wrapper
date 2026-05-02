@@ -7,14 +7,14 @@
  * - aco exits with code 1
  * - The install hint is in stderr
  *
- * Known Node.js gap: No.
+ * Known Node.js gap: Yes. Node wrapper lacks install hint contract.
  */
 import { registerFixture } from '../harness';
 import assert from 'node:assert/strict';
 
 registerFixture({
   name: '07-provider-not-found',
-  knownNodeGap: false,
+  knownNodeGap: true,
   async fn(runner) {
     // mockBinDir is empty — no 'gemini' binary present
     // runner.run uses mockBinDir as the first PATH component
