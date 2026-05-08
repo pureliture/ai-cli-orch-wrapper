@@ -419,6 +419,12 @@ describe('aco ask CLI', () => {
     assert.doesNotMatch(saveOnly.stdout, /Brief/);
     assert.doesNotMatch(saveOnly.stdout, /Summary:/);
     assert.doesNotMatch(saveOnly.stdout, /Findings:/);
+    const saveOnlyRunId = await latestRunId(saveOnly.home);
+    const saveOnlyLedger = JSON.parse(
+      await readFile(join(saveOnly.home, '.aco', 'runs', saveOnlyRunId, 'ledger.json'), 'utf8')
+    );
+    assert.match(saveOnlyLedger.sessions[0].summary, /Provider: mock/);
+    assert.doesNotMatch(saveOnlyLedger.sessions[0].summary, /\(no provider output\)/);
 
     const full = await runCli([
       'ask',
@@ -436,6 +442,12 @@ describe('aco ask CLI', () => {
     assert.equal(full.code, 0);
     assert.match(full.stdout, /Provider: mock/);
     assert.match(full.stdout, /Findings:/);
+    const fullRunId = await latestRunId(full.home);
+    const fullLedger = JSON.parse(
+      await readFile(join(full.home, '.aco', 'runs', fullRunId, 'ledger.json'), 'utf8')
+    );
+    assert.match(fullLedger.sessions[0].summary, /Provider: mock/);
+    assert.doesNotMatch(fullLedger.sessions[0].summary, /\(no provider output\)/);
   });
 
   it('loads presets and input files into saved artifacts', async () => {
@@ -606,7 +618,7 @@ describe('aco ask CLI', () => {
     assert.match(badPreset.stderr, /Invalid --preset/);
   });
 
-  it('keeps fullOutput empty in stream-only mode even when maxOutputBuffer is set', async () => {
+  it('captures bounded fullOutput for summaries when maxOutputBuffer is set', async () => {
     const provider = new MockProvider();
     const output = new Writable({
       write(_chunk, _encoding, callback) {
@@ -626,7 +638,7 @@ describe('aco ask CLI', () => {
     });
 
     assert.ok(runResult.hasOutput);
-    assert.equal(runResult.fullOutput, '');
+    assert.equal(runResult.fullOutput.length, 600);
   });
 
   it('caps fullOutput in runResult when bounded output buffering is set', async () => {

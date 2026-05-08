@@ -34,13 +34,14 @@ export async function invokeProviderForSession(
 ): Promise<ProviderSessionRunResult> {
   const outputBuffer = options.outputBuffer ?? { mode: 'stream-only' };
   const outputBufferMode = outputBuffer.mode ?? 'stream-only';
-  const maxBuffer =
-    outputBufferMode === 'bounded'
-      ? Math.min(
-          options.maxOutputBuffer ?? outputBuffer.maxBytes ?? DEFAULT_OUTPUT_BUFFER_BYTES,
-          MAX_OUTPUT_BUFFER_BYTES
-        )
-      : 0;
+  const shouldCaptureOutput =
+    options.maxOutputBuffer !== undefined || outputBufferMode === 'bounded';
+  const maxBuffer = shouldCaptureOutput
+    ? Math.min(
+        options.maxOutputBuffer ?? outputBuffer.maxBytes ?? DEFAULT_OUTPUT_BUFFER_BYTES,
+        MAX_OUTPUT_BUFFER_BYTES
+      )
+    : 0;
   let fullOutput = '';
   let hasOutput = false;
   let error: unknown;
