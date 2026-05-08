@@ -377,7 +377,6 @@ Options:
   --yes                           Explicitly consent to provider execution`);
 }
 
-
 async function writeChunk(stream: Writable, chunk: string): Promise<void> {
   if (stream.write(chunk)) return;
   await new Promise<void>((resolve) => stream.once('drain', resolve));
