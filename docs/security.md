@@ -1,0 +1,108 @@
+# Security Model
+
+작성일: 2026-05-08
+
+`ai-cli-orch-wrapper` is a consent-gated external AI delegation wrapper for Claude Code. It helps Claude Code ask external AI CLIs for advisory work, but it is not a sandbox, secret scanner, or remote auth verifier.
+
+## Consent-Gated Execution
+
+`aco ask` never invokes providers unless the user gives explicit execution consent.
+
+```bash
+aco ask --task "review this input" --dry-run
+aco ask --providers mock --task "review this input" --input "demo" --yes
+```
+
+`--dry-run` prints the plan and does not create provider sessions. `--yes` is required for provider execution. `--yes` and `--dry-run` are mutually exclusive.
+
+## What `aco ask` Sends
+
+When execution is approved, `aco ask` sends the following to each selected provider:
+
+- advisory system/task prompt
+- permission profile guidance
+- optional preset instructions from `.claude/aco/tasks/<name>.md`
+- task text from `--task`
+- explicit user input from `--input`
+- explicit file content from `--input-file`
+
+`aco ask` does not implicitly read stdin. It does not automatically discover unrelated project files.
+
+## Token-Saving Output Model
+
+Default output mode is `brief`.
+
+| Mode        | Behavior                                                   |
+| ----------- | ---------------------------------------------------------- |
+| `brief`     | Prints metadata and a bounded provider summary only        |
+| `save-only` | Prints save locations only                                 |
+| `full`      | Prints full provider output only when explicitly requested |
+
+Full provider output is stored under `~/.aco/sessions/<session-id>/output.log` and can be read later with `aco result`.
+
+## Artifact Storage
+
+Artifacts are stored under the local user's home directory:
+
+```text
+~/.aco/runs/<run-id>/
+~/.aco/sessions/<session-id>/
+```
+
+Artifact files can contain user-provided input and provider output. Treat them as local sensitive files when the task input is sensitive.
+
+See [Session And Run Artifacts](reference/session-artifacts.md).
+
+## Environment Caveat
+
+The Node wrapper invokes provider CLIs as local child processes. Those child processes inherit the environment supplied to the `aco` process unless the provider implementation changes that behavior.
+
+Do not run `aco ask --yes` with secrets in the environment unless you are comfortable with the selected provider CLI process seeing that environment.
+
+## Node Wrapper vs Go Runtime Boundary
+
+This repository has both a Node wrapper and a Go runtime. The Go runtime has its own process and environment boundary experiments. Those Go runtime allowlist protections do not automatically apply to Node wrapper provider execution.
+
+For `aco ask`, use the Node wrapper security model documented here.
+
+## Provider Permissions
+
+Default permission profile is `restricted`.
+
+`restricted` means the wrapper requests the safest available provider behavior and includes advisory prompt instructions such as not modifying files. It is not a complete OS-level sandbox and does not prove that a provider cannot modify files if the provider CLI ignores the requested behavior.
+
+Do not enable broader permission profiles unless the task requires it and the provider behavior is understood.
+
+## Secrets Policy
+
+Do not send secrets, credentials, private tokens, local auth files, or unrelated sensitive files through `--input` or `--input-file`.
+
+Examples to avoid:
+
+```text
+.env
+~/.codex/auth.json
+~/.gemini/oauth_creds.json
+private keys
+production credentials
+```
+
+`aco doctor` does not print secret values. It reports local readiness heuristics only.
+
+## `.acoignore` Status
+
+`.acoignore.example` is provided as a policy/example file only. Goal 2 does not implement `.acoignore` enforcement.
+
+Until enforcement exists, the user is responsible for choosing safe `--input` and `--input-file` content.
+
+## Inspect Before Sharing
+
+Before pasting or sharing provider output, inspect artifacts:
+
+```bash
+aco result
+cat ~/.aco/sessions/<session-id>/brief.md
+cat ~/.aco/runs/<run-id>/ledger.json
+```
+
+If output appears to contain secrets, stop and delete or quarantine the artifact locally before sharing.

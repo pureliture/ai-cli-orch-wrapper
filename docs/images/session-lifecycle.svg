@@ -70,7 +70,7 @@
 
   <!-- Title -->
   <text x="380" y="26" text-anchor="middle" dominant-baseline="middle"
-        font-size="15" font-weight="700" fill="#1e293b" letter-spacing="0.3">Delegation Lifecycle — aco ask MVP</text>
+        font-size="15" font-weight="700" fill="#1e293b" letter-spacing="0.3">Delegation Lifecycle — consent-gated aco ask</text>
   <line x1="290" y1="44" x2="340" y2="44" stroke="#ec4899" stroke-width="2" stroke-linecap="round"/>
   <line x1="420" y1="44" x2="470" y2="44" stroke="#0d9488" stroke-width="2" stroke-linecap="round"/>
   <circle cx="380" cy="44" r="3" fill="#3b82f6"/>
@@ -179,12 +179,12 @@
   <line x1="240" y1="405" x2="91" y2="405" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-blue)"/>
   <rect x="100" y="390" width="135" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"/>
   <text x="167" y="399" text-anchor="middle" dominant-baseline="middle"
-        font-size="10" font-weight="500" fill="#1e293b">bounded brief / error</text>
+        font-size="10" font-weight="500" fill="#1e293b">bounded summary / paths</text>
 
   <!-- ─── LEGEND ─── -->
   <line x1="40" y1="445" x2="80" y2="445" stroke="#3b82f6" stroke-width="1.5"/>
   <text x="88" y="445" dominant-baseline="middle" font-size="10" fill="#475569">solid: request</text>
   <line x1="180" y1="445" x2="220" y2="445" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,3"/>
   <text x="228" y="445" dominant-baseline="middle" font-size="10" fill="#475569">dashed: response / async</text>
-  <text x="510" y="445" dominant-baseline="middle" font-size="10" fill="#475569">Full output stays in artifacts; brief saves tokens</text>
+  <text x="510" y="445" dominant-baseline="middle" font-size="10" fill="#475569">brief is bounded; save-only hides body; full is explicit</text>
 </svg>

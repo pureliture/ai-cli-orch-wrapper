@@ -4,16 +4,17 @@ import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
-import type { Writable } from 'node:stream';
 import { providerRegistry } from '../providers/registry.js';
 import { sessionStore } from '../session/store.js';
 import type { PermissionProfile } from '../providers/interface.js';
+import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
 
 const EXIT_ERROR = 1;
 const DEFAULT_PROVIDERS = ['mock'];
 const VALID_PERMISSION_PROFILES: PermissionProfile[] = ['default', 'restricted', 'unrestricted'];
 const VALID_OUTPUT_MODES = ['brief', 'save-only', 'full'] as const;
 const VALID_PRESET_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+const SUMMARY_CHAR_LIMIT = 600;
 const ADVISORY_NOTICE =
   'External provider output is advisory. Claude Code remains the supervisor and final synthesizer.';
 
@@ -37,6 +38,7 @@ interface AskSessionLedger {
   status: 'done' | 'failed' | 'cancelled';
   outputLog: string;
   briefPath: string;
+  summary: string;
   error?: string;
 }
 
@@ -89,20 +91,23 @@ export async function cmdAsk(args: string[]): Promise<void> {
     const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });
     let error: string | undefined;
     let status: AskSessionLedger['status'] = 'done';
-    try {
-      for await (const chunk of provider.invoke('ask', prompt, input, {
-        permissionProfile: options.permissionProfile,
-        sessionId: session.id,
-        onPid: (pid) => {
-          sessionStore.update(session.id, { pid }).catch(() => undefined);
-        },
-      })) {
-        await writeChunk(outputStream, chunk);
-        if (options.outputMode === 'full') {
-          process.stdout.write(chunk);
-        }
-      }
+    const runResult = await invokeProviderForSession({
+      provider,
+      command: 'ask',
+      prompt,
+      content: input,
+      permissionProfile: options.permissionProfile,
+      sessionId: session.id,
+      output: outputStream,
+      onChunk:
+        options.outputMode === 'full'
+          ? (chunk) => {
+              process.stdout.write(chunk);
+            }
+          : undefined,
+    });
 
+    if (!runResult.error) {
       const latest = await sessionStore.read(session.id);
       if (latest.status === 'cancelled') {
         status = 'cancelled';
@@ -111,7 +116,8 @@ export async function cmdAsk(args: string[]): Promise<void> {
       } else {
         await sessionStore.markDone(session.id);
       }
-    } catch (err) {
+    } else {
+      const err = runResult.error;
       error = err instanceof Error ? err.message : String(err);
       await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
       const latest = await sessionStore.read(session.id).catch(() => undefined);
@@ -121,10 +127,9 @@ export async function cmdAsk(args: string[]): Promise<void> {
         status = 'failed';
         await sessionStore.markFailed(session.id);
       }
-    } finally {
-      await endWritable(outputStream);
     }
 
+    const summary = summarizeProviderOutput(runResult.fullOutput, provider.key);
     const brief = renderSessionBrief({
       runId,
       task: options.task ?? '',
@@ -132,6 +137,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       sessionId: session.id,
       outputLog,
       status,
+      summary,
       error,
     });
     const briefPath = join(sessionDir, 'brief.md');
@@ -143,6 +149,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       status,
       outputLog,
       briefPath,
+      summary,
       ...(error ? { error } : {}),
     });
   }
@@ -257,7 +264,7 @@ async function collectInput(options: AskOptions): Promise<string> {
     chunks.push(fileInput);
   }
 
-  return chunks.join('\n\n').trim();
+  return chunks.join('\n\n');
 }
 
 async function loadPreset(name: string): Promise<string> {
@@ -312,6 +319,7 @@ function renderSessionBrief(input: {
   sessionId: string;
   outputLog: string;
   status: AskSessionLedger['status'];
+  summary: string;
   error?: string;
 }): string {
   return [
@@ -322,6 +330,8 @@ function renderSessionBrief(input: {
     `Session: ${input.sessionId}`,
     `Status: ${input.status}`,
     `Full output saved: ${input.outputLog}`,
+    `Summary:`,
+    input.summary,
     '',
     `Advisory: ${ADVISORY_NOTICE}`,
     input.error ? `Error: ${input.error}` : undefined,
@@ -348,12 +358,25 @@ function renderRunBrief(runId: string, options: AskOptions, sessions: AskSession
       `Session: ${session.id}`,
       `Status: ${session.status}`,
       `Full output saved: ${session.outputLog}`,
+      `Summary:`,
+      session.summary,
       session.error ? `Error: ${session.error}` : undefined,
       '',
     ]),
   ]
     .filter((line): line is string => line !== undefined)
     .join('\n');
+}
+
+function summarizeProviderOutput(output: string, providerKey: string): string {
+  const mockFindingsIndex = providerKey === 'mock' ? output.lastIndexOf('\nFindings:\n') : -1;
+  const beforeFindings = mockFindingsIndex === -1 ? output : output.slice(0, mockFindingsIndex);
+  const source = beforeFindings.trimEnd();
+  if (!source) return '(no provider output)';
+
+  if (source.length <= SUMMARY_CHAR_LIMIT) return source;
+
+  return `${source.slice(0, SUMMARY_CHAR_LIMIT).trimEnd()}\n...[truncated to ${SUMMARY_CHAR_LIMIT} chars]`;
 }
 
 function parseFlag<T extends string = string>(args: string[], flag: string): T | undefined {
@@ -373,20 +396,9 @@ Options:
   --preset <name>                 .claude/aco/tasks/<name>.md
   --permission-profile <profile>  restricted|default|unrestricted (default: restricted)
   --output-mode <mode>            brief|save-only|full (default: brief)
+                                    brief summary bound: ${SUMMARY_CHAR_LIMIT} chars
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
-}
-
-async function writeChunk(stream: Writable, chunk: string): Promise<void> {
-  if (stream.write(chunk)) return;
-  await new Promise<void>((resolve) => stream.once('drain', resolve));
-}
-
-async function endWritable(stream: Writable): Promise<void> {
-  if (stream.writableEnded || stream.destroyed) return;
-  await new Promise<void>((resolve, reject) => {
-    stream.end((err?: Error | null) => (err ? reject(err) : resolve()));
-  });
 }
 
 function fail(message: string): never {

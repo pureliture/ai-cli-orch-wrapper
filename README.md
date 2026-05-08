@@ -19,7 +19,7 @@
 <!-- Tagline -->
 <h3>
   <code>Claude</code> · <code>Codex</code> · <code>Gemini</code>를<br/>
-  하나의 작업 흐름에서 서브에이전트처럼 호출하는 <b>AI CLI Wrapper</b>입니다.
+  Claude Code가 감독하고 외부 AI CLI는 advisory로 위임하는 <b>consent-gated AI delegation wrapper</b>입니다.
 </h3>
 
 <br/>
@@ -277,6 +277,11 @@ aco provider setup codex
 <td>provider command 실행 · session 생성</td>
 </tr>
 <tr>
+<td align="center"><img src="https://img.shields.io/badge/🩺-Doctor-f97316?style=for-the-badge" /></td>
+<td><code>aco doctor</code></td>
+<td>local-only 환경 · harness · provider readiness 진단</td>
+</tr>
+<tr>
 <td align="center"><img src="https://img.shields.io/badge/💾-Session-0d9488?style=for-the-badge" /></td>
 <td><code>aco status</code><br/><code>aco result</code><br/><code>aco cancel --session &lt;id&gt;</code></td>
 <td>session 상태 · 결과 · 취소</td>
@@ -284,7 +289,11 @@ aco provider setup codex
 </tbody>
 </table>
 
-### 🧭 Consent-Gated Delegation MVP
+`aco doctor`는 local-only 진단 명령입니다. Node/aco version, git repo, `.claude` harness, generic
+`/aco` command, `aco-delegation` skill, provider availability, local credential readiness heuristic,
+sync drift 상태를 확인하지만 real provider execution이나 remote auth verification은 수행하지 않습니다.
+
+### 🧭 Consent-Gated Delegation
 
 `aco ask`는 Claude Code 세션 안에서 외부 AI CLI에 advisory 작업을 맡기기 위한 high-level
 wrapper입니다. provider 실행은 명시적 동의 없이는 시작되지 않습니다.
@@ -298,10 +307,14 @@ aco ask --providers mock --task "review this demo input" --input "demo" --yes --
 
 # 저장된 full output 조회
 aco result
+
+# local harness/provider readiness 점검. 네트워크나 real provider 호출 없음
+aco doctor
 ```
 
 기본값은 `--permission-profile restricted`와 `--output-mode brief`입니다. `--output-mode full`은
 사용자가 현재 Claude Code 세션에 provider raw output을 직접 넣고 싶을 때만 명시적으로 사용합니다.
+`brief`는 provider별 600자 bounded summary만 stdout에 포함하고, full output은 artifact에 저장합니다.
 `mock` provider는 인증 없는 deterministic demo 전용이며, 실제 AI 품질을 의미하지 않습니다.
 
 <details>
@@ -558,22 +571,22 @@ aco sync --force
 <td><code>aco status</code></td>
 </tr>
 <tr>
-<td align="center">🟡</td>
+<td align="center">🟢</td>
 <td><b>Mock provider</b></td>
 <td>인증 없는 demo · CI 검증</td>
-<td>planned</td>
+<td><code>aco ask --providers mock</code></td>
 </tr>
 <tr>
-<td align="center">🟡</td>
+<td align="center">🟢</td>
 <td><b>aco doctor</b></td>
-<td>환경 헬스체크 v1</td>
-<td>planned</td>
+<td>local-only 환경 헬스체크 v1</td>
+<td><code>aco doctor</code></td>
 </tr>
 <tr>
-<td align="center">🟡</td>
-<td><b>Review artifact</b></td>
-<td>review.md (v1) · structured findings (v2)</td>
-<td>planned</td>
+<td align="center">🟢</td>
+<td><b>Run/session artifact v1</b></td>
+<td>ledger · brief · input · prompt · output · error log</td>
+<td><code>aco result</code></td>
 </tr>
 </tbody>
 </table>
@@ -671,6 +684,14 @@ node packages/wrapper/dist/cli.js sync --check
 </tr>
 </thead>
 <tbody>
+<tr>
+<td>🔐 <a href="docs/security.md"><b>Security Model</b></a></td>
+<td>consent gate, token-saving output modes, artifacts, secrets policy를 확인할 때</td>
+</tr>
+<tr>
+<td>💾 <a href="docs/reference/session-artifacts.md"><b>Session Artifacts</b></a></td>
+<td><code>~/.aco/runs</code>와 <code>~/.aco/sessions</code> layout을 확인할 때</td>
+</tr>
 <tr>
 <td>📌 <a href="docs/case-study.md"><b>Case Study</b></a></td>
 <td>문제 배경, 제약, 설계 선택, 현재 한계를 빠르게 파악할 때</td>
