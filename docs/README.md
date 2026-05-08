@@ -16,14 +16,16 @@ low-level `aco run`, `aco status`, `aco result`, `aco cancel`과 Go delegate run
 provider 실행 실험으로 나뉜다. MVP에서 `aco ask`는 기본 provider를 no-auth `mock`으로 두며,
 real Codex/Gemini provider는 `--providers codex,gemini`처럼 명시했을 때만 실행한다.
 
-현재 문서는 프로젝트의 재포지셔닝과 개선 계획도 함께 담고 있다. 구현 기준으로는
-[pr-implementation-plan.md](pr-implementation-plan.md)를 사용하고, 원문 제안은
-[archive/2026-04-24-gpt-pro-direction-raw.md](archive/2026-04-24-gpt-pro-direction-raw.md)에
+현재 문서는 프로젝트의 재포지셔닝과 개선 계획도 함께 담고 있다. 현재 Goal 2 hardening의
+구현 기준과 검증 증거는 [plans/consent-gated-delegation-hardening/](plans/consent-gated-delegation-hardening/)에
+두고, 이전 PR 분할 기준은 [pr-implementation-plan.md](pr-implementation-plan.md)에 역사적 실행 계획으로
+보존한다. 원문 제안은 [archive/2026-04-24-gpt-pro-direction-raw.md](archive/2026-04-24-gpt-pro-direction-raw.md)에
 보존한다.
 
-문서 역할은 다음처럼 나눈다. `roadmap.md`는 방향과 우선순위, `pr-implementation-plan.md`는
-PR별 실행 기준, `archive/`는 판단 근거 보존용 기록이다. archive 문서의 issue 후보나 PR 순서는
-현재 실행 기준으로 사용하지 않는다.
+문서 역할은 다음처럼 나눈다. `roadmap.md`는 방향과 우선순위, `plans/`는 현재 목표별
+spec/plan/review/validation ledger, `pr-implementation-plan.md`는 이전 PR별 실행 기준,
+`archive/`는 판단 근거 보존용 기록이다. archive 문서의 issue 후보나 PR 순서는 현재 실행
+기준으로 사용하지 않는다.
 
 ## 빠른 시작
 
@@ -55,6 +57,7 @@ aco sync --check
 aco ask --providers mock --task "review this demo input" --input "demo" --dry-run
 aco ask --providers mock --task "review this demo input" --input "demo" --yes --output-mode brief
 aco result
+aco doctor
 aco run gemini review
 aco status
 aco result
@@ -76,10 +79,12 @@ aco result
 1. 이 문서의 [현재 상태 요약](#현재-상태-요약) — 무엇이 구현되어 있고 무엇이 계획인지
 2. [case-study.md](case-study.md) — 문제, 제약, 설계, trade-off, 현재 한계
 3. [architecture.md](architecture.md) — CLI 런타임, context sync, 저장소 구조
-4. [guides/runbook.md](guides/runbook.md) — consent-gated delegation demo와 운영 절차
-5. [roadmap.md](roadmap.md) — 프로젝트 포지셔닝과 개선 우선순위
-6. [pr-implementation-plan.md](pr-implementation-plan.md) — 구현자가 따를 PR1-PR8a/8b 실행 기준
-7. [contract/go-node-boundary.md](contract/go-node-boundary.md) — Go/Node.js 책임 경계
+4. [security.md](security.md) — consent gate, output modes, artifact storage, secrets policy
+5. [reference/session-artifacts.md](reference/session-artifacts.md) — `~/.aco/runs`와 `~/.aco/sessions` layout
+6. [guides/runbook.md](guides/runbook.md) — consent-gated delegation demo와 운영 절차
+7. [roadmap.md](roadmap.md) — 프로젝트 포지셔닝과 개선 우선순위
+8. [plans/consent-gated-delegation-hardening/](plans/consent-gated-delegation-hardening/) — Goal 2 hardening spec, plan, review, validation ledger
+9. [contract/go-node-boundary.md](contract/go-node-boundary.md) — Go/Node.js 책임 경계
 
 ### 패키지를 설치·운영하는 사용자
 
@@ -103,7 +108,7 @@ aco result
 | [`case-study.md`](case-study.md)                         | 어떤 문제를 어떤 설계로 풀었나               | 평가자, 신규 기여자   |
 | [`architecture.md`](architecture.md)                     | 왜 이렇게 설계됐나                           | 신규 기여자, 아키텍트 |
 | [`roadmap.md`](roadmap.md)                               | 무엇을 먼저 개선할 것인가                    | 평가자, 관리자        |
-| [`pr-implementation-plan.md`](pr-implementation-plan.md) | PR을 어떤 기준으로 자를 것인가               | 구현자, 관리자        |
+| [`pr-implementation-plan.md`](pr-implementation-plan.md) | 이전 PR 분할 기준과 역사적 실행 계획         | 구현자, 관리자        |
 | [`plans/`](plans/)                                       | 현재 목표의 spec/plan/review/validation 기록 | 구현자, 관리자        |
 | [`contract/`](contract/)                                 | 정확히 어떻게 동작하는가 (규범)              | 구현자, 외부 통합자   |
 | [`guides/`](guides/)                                     | 어떻게 하나 (작업 단위)                      | 기여자, 운영자        |
@@ -113,8 +118,8 @@ aco result
 ## 엔지니어링 참조
 
 1. [architecture.md](architecture.md) — 전체 그림
-2. [plans/consent-gated-delegation-mvp/01-spec.md](plans/consent-gated-delegation-mvp/01-spec.md) — `aco ask` MVP contract
-3. [plans/consent-gated-delegation-mvp/04-validation.md](plans/consent-gated-delegation-mvp/04-validation.md) — 구현·검증 결과
+2. [plans/consent-gated-delegation-hardening/01-hardening-spec.md](plans/consent-gated-delegation-hardening/01-hardening-spec.md) — Goal 2 hardening contract
+3. [plans/consent-gated-delegation-hardening/04-validation.md](plans/consent-gated-delegation-hardening/04-validation.md) — Goal 2 구현·검증 결과
 4. [contract/README.md](contract/README.md) — 규범 계약 문서 인덱스
 5. [contract/go-node-boundary.md](contract/go-node-boundary.md) — Go/Node.js 책임 경계
 6. [contract/process-execution-contract.md](contract/process-execution-contract.md) — 프로세스 실행 계약

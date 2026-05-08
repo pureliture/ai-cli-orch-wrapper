@@ -89,7 +89,7 @@
         font-size="12" font-weight="700" fill="white">📦  packages/</text>
   <text x="48" y="196" font-size="10" fill="#1e293b" font-weight="600">wrapper/</text>
   <text x="58" y="212" font-size="9.5" fill="#64748b">aco CLI · provider runtime</text>
-  <text x="58" y="226" font-size="9.5" fill="#64748b">ask · run · sync · pack</text>
+  <text x="58" y="226" font-size="9.5" fill="#64748b">ask · doctor · run · sync · pack</text>
   <text x="48" y="246" font-size="10" fill="#1e293b" font-weight="600">installer/</text>
   <text x="58" y="262" font-size="9.5" fill="#64748b">install-time entrypoints</text>
 
@@ -130,8 +130,8 @@
   <text x="530" y="161" text-anchor="middle" dominant-baseline="middle"
         font-size="12" font-weight="700" fill="white">📚  docs/</text>
   <text x="478" y="196" font-size="9.5" fill="#1e293b">architecture.md</text>
-  <text x="478" y="212" font-size="9.5" fill="#1e293b">case-study.md</text>
-  <text x="478" y="228" font-size="9.5" fill="#1e293b">roadmap.md</text>
+  <text x="478" y="212" font-size="9.5" fill="#1e293b">security.md</text>
+  <text x="478" y="228" font-size="9.5" fill="#1e293b">session-artifacts.md</text>
   <text x="478" y="244" font-size="9.5" fill="#1e293b">guides/</text>
   <text x="478" y="260" font-size="9.5" fill="#1e293b">reference/</text>
 
