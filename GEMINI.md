@@ -2,6 +2,54 @@
 
 Gemini project instructions for this repository.
 
+## 공통 작업 원칙
+
+이 repo의 세부 규칙은 이 파일의 worktree/context-sync 정책과 root `~/.openclaw/AGENTS.md`의 공통 원칙을 함께 따른다.
+
+- 구현 전에 모호한 가정, 가능한 해석, 위험한 변경 범위를 먼저 드러낸다.
+- 요청받은 문제를 해결하는 최소 변경을 우선하고, 단일 사용처를 위한 추상화나 미래 기능을 만들지 않는다.
+- provider-neutral wrapper 구조와 context-sync surface 경계를 따른다. 관련 없는 리팩터링, 포맷 변경, dead code 삭제는 하지 않는다.
+- 모든 변경 라인은 사용자 요청, runtime compatibility, 또는 검증 필요성과 직접 연결되어야 한다.
+- 비사소한 변경은 성공 기준과 검증 명령을 먼저 정하고, 완료 전에 실제 결과를 확인한다.
+- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`의 generated block은 sync contract를 먼저 확인하고, 불가피할 때만 손으로 수정한다.
+
+## Review Guidelines
+
+리뷰 코멘트는 기본적으로 한국어로 작성한다. 단, 코드, 파일 경로, 명령어, API 이름, 라이브러리 이름은 영어 원문을 유지한다.
+
+사소한 스타일 지적보다 merge 전에 고쳐야 할 correctness, security, runtime behavior, compatibility, CI breakage를 우선한다.
+
+### Severity
+
+- P0: 즉시 수정 필요. 보안 취약점, secret 노출, 데이터 손실, 빌드/배포 불가, 주요 기능 중단.
+- P1: merge 전 수정 권장. 런타임 버그, contract 깨짐, 테스트 실패 가능성, 호환성 문제, 잘못된 에러 처리.
+- P2: follow-up 가능. 테스트 보강, 문서 보강, 작은 UX 개선, 구조 개선.
+- P3: 선택 사항. 취향에 가까운 개선, 장기 리팩터링 제안.
+
+GitHub 코드 리뷰에서는 P0/P1 위주로 flag한다. P2/P3는 정말 의미 있는 경우에만 요약한다.
+
+### Review Focus
+
+- Security: secret leakage, command injection, path traversal, unsafe deserialization, auth/authz bypass, sensitive logging.
+- Correctness: edge cases, null/undefined handling, error handling, data loss, race conditions.
+- Runtime behavior: timeout, cancellation, retries, resource cleanup, concurrency, process/network/file-system behavior.
+- Compatibility: public API, CLI behavior, config format, migration path, backward compatibility.
+- Testing: changed behavior에 맞는 unit/integration/e2e test가 있는지 확인한다.
+- Dependencies: 새 dependency의 필요성, 보안성, 유지보수성, bundle/build 영향 확인.
+- Documentation: 사용자에게 보이는 behavior 변경이면 docs, examples, migration notes 필요 여부 확인.
+
+### Output Expectations
+
+각 finding은 다음 정보를 포함한다.
+
+- 문제 위치
+- 실제 영향
+- 왜 문제가 되는지
+- 수정 방향
+- 검증 방법
+
+확실하지 않은 추측은 blocker로 단정하지 말고 “확인 필요”로 분리한다.
+
 <!-- BEGIN ACO GENERATED CONTEXT -->
 ## Projects/ai-cli-orch-wrapper/CLAUDE.md
 
@@ -67,51 +115,9 @@ Use the repository commit template at `.gitmessage` and the Korean commit-writin
 - Commit messages must use a title plus body format.
 - The title must follow conventional commit style such as `fix(tests): replace echo pipeline with herestrings`.
 - The body must explain the why, what changed, and affected files or areas in Korean by default.
-- When an AI assistant creates a commit, it must follow `docs/guides/commit-message-prompt.md`.
+- When Codex creates a commit, it must follow `docs/guides/commit-message-prompt.md`.
 - Commit messages must include contributor trailers for every AI CLI and model used in development so GitHub Contributors can show the CLI/model identities where GitHub recognizes them.
 - If a CLI or model has no GitHub-recognized identity, still include explicit `AI-CLI:` and `AI-Model:` trailers in addition to any available `Co-authored-by:` trailers.
-  - **How to Add AI as a Co-Author (Manual Method):** Add the corresponding line to the end of the commit message, usually after a blank line:
-  - **Claude Code:** `Co-authored-by: Claude Code {session수행중인 모델명} <noreply@anthropic.com>`
-  - **Codex:** `Co-authored-by: Codex {session수행중인 모델명} <noreply@sourcegraph.com>`
-  - **Gemini CLI:** `Co-authored-by: Gemini CLI {session수행중인 모델명} <gemini-code-assist@google.com>`
-  - 각 CLI에서 커밋이 발생할 때 반드시 위 형식에 맞는 `Co-authored-by` 트레일러가 추가되어야 한다.
-
-## Review Guidelines
-
-리뷰 코멘트는 기본적으로 한국어로 작성한다. 단, 코드, 파일 경로, 명령어, API 이름, 라이브러리 이름은 영어 원문을 유지한다.
-
-사소한 스타일 지적보다 merge 전에 고쳐야 할 correctness, security, runtime behavior, compatibility, CI breakage를 우선한다.
-
-### Severity
-
-- P0: 즉시 수정 필요. 보안 취약점, secret 노출, 데이터 손실, 빌드/배포 불가, 주요 기능 중단.
-- P1: merge 전 수정 권장. 런타임 버그, contract 깨짐, 테스트 실패 가능성, 호환성 문제, 잘못된 에러 처리.
-- P2: follow-up 가능. 테스트 보강, 문서 보강, 작은 UX 개선, 구조 개선.
-- P3: 선택 사항. 취향에 가까운 개선, 장기 리팩터링 제안.
-
-GitHub 코드 리뷰에서는 P0/P1 위주로 flag한다. P2/P3는 정말 의미 있는 경우에만 요약한다.
-
-### Review Focus
-
-- Security: secret leakage, command injection, path traversal, unsafe deserialization, auth/authz bypass, sensitive logging.
-- Correctness: edge cases, null/undefined handling, error handling, data loss, race conditions.
-- Runtime behavior: timeout, cancellation, retries, resource cleanup, concurrency, process/network/file-system behavior.
-- Compatibility: public API, CLI behavior, config format, migration path, backward compatibility.
-- Testing: changed behavior에 맞는 unit/integration/e2e test가 있는지 확인한다.
-- Dependencies: 새 dependency의 필요성, 보안성, 유지보수성, bundle/build 영향 확인.
-- Documentation: 사용자에게 보이는 behavior 변경이면 docs, examples, migration notes 필요 여부 확인.
-
-### Output Expectations
-
-각 finding은 다음 정보를 포함한다.
-
-- 문제 위치
-- 실제 영향
-- 왜 문제가 되는지
-- 수정 방향
-- 검증 방법
-
-확실하지 않은 추측은 blocker로 단정하지 말고 “확인 필요”로 분리한다.
 
 ## Validation
 

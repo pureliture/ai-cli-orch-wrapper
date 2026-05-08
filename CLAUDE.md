@@ -3,6 +3,17 @@
 Claude Code project instructions for this repository. Codex receives the matching
 repo-level instructions from `AGENTS.md`.
 
+## 공통 작업 원칙
+
+이 repo의 세부 규칙은 이 파일의 worktree/context-sync 정책과 root `~/.openclaw/AGENTS.md`의 공통 원칙을 함께 따른다.
+
+- 구현 전에 모호한 가정, 가능한 해석, 위험한 변경 범위를 먼저 드러낸다.
+- 요청받은 문제를 해결하는 최소 변경을 우선하고, 단일 사용처를 위한 추상화나 미래 기능을 만들지 않는다.
+- provider-neutral wrapper 구조와 context-sync surface 경계를 따른다. 관련 없는 리팩터링, 포맷 변경, dead code 삭제는 하지 않는다.
+- 모든 변경 라인은 사용자 요청, runtime compatibility, 또는 검증 필요성과 직접 연결되어야 한다.
+- 비사소한 변경은 성공 기준과 검증 명령을 먼저 정하고, 완료 전에 실제 결과를 확인한다.
+- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`의 generated block은 sync contract를 먼저 확인하고, 불가피할 때만 손으로 수정한다.
+
 ## Repo Structure
 
 This repo is an npm workspace with the following layout:
