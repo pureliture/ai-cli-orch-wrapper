@@ -63,6 +63,9 @@ aco status
 aco result
 ```
 
+`aco run`은 출력 정책을 `stream-only`로 두어 기본 동작에서 대형 출력의 메모리 보존을 억제한다. `aco ask`는
+`brief` 모드에서 `bounded` 정책으로 출력 미리보기 크기를 제한한다.
+
 `aco ask`는 provider 실행 전 `--dry-run`으로 실행 계획을 확인할 수 있고, 실제 외부 provider
 실행에는 `--yes`가 필요하다. 기본 permission profile은 `restricted`, 기본 output mode는
 `brief`다. full provider output은 Claude Code stdout으로 바로 흘리지 않고

@@ -17,7 +17,7 @@ import { cmdAsk } from './commands/ask.js';
 import { cmdDoctor } from './commands/doctor.js';
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
-import type { PermissionProfile } from './providers/interface.js';
+import type { PermissionProfile, OutputBufferPolicy } from './providers/interface.js';
 import { getCachedProviderAuth } from './providers/auth-cache.js';
 import { collectRuntimeContext } from './runtime/context.js';
 import { renderRuntimeDashboard } from './runtime/dashboard.js';
@@ -30,6 +30,10 @@ const execFileAsync = promisify(execFile);
 const VERSION = loadVersion();
 const EXIT_ERROR = 1;
 const VALID_PERMISSION_PROFILES: PermissionProfile[] = ['default', 'restricted', 'unrestricted'];
+
+export function resolveRunOutputBuffering(): OutputBufferPolicy {
+  return { mode: 'stream-only' };
+}
 
 async function main(): Promise<void> {
   const [, , subcommand, ...rest] = process.argv;
@@ -225,7 +229,7 @@ async function cmdRun(args: string[]): Promise<void> {
     permissionProfile,
     sessionId: session.id,
     output: tee,
-    maxOutputBuffer: Infinity,
+    outputBuffer: resolveRunOutputBuffering(),
   });
   const runError = runResult.error;
 
@@ -471,7 +475,9 @@ function printUsage(): void {
   aco provider setup <name>`);
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(EXIT_ERROR);
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err);
+    process.exit(EXIT_ERROR);
+  });
+}
