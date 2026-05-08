@@ -427,8 +427,10 @@ async function endWritable(stream: Writable): Promise<void> {
 }
 
 function trimOutputForPreview(output: string, maxCharacters: number): string {
-  const characters = Array.from(output);
-  if (characters.length > maxCharacters) {
+  const wasPreTrimmed = output.length > maxCharacters * 2;
+  const previewSource = wasPreTrimmed ? output.slice(0, maxCharacters * 2) : output;
+  const characters = Array.from(previewSource);
+  if (characters.length > maxCharacters || wasPreTrimmed) {
     return `${characters.slice(0, maxCharacters).join('')}\n... (truncated)`;
   }
   return output;

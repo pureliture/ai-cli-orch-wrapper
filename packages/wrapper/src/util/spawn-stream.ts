@@ -21,6 +21,8 @@ export interface SpawnStreamOptions extends InvokeOptions {
 }
 
 const MAX_STDERR_CHARS = 4_000;
+const MAX_LAST_LINE_BUFFER_CHARS = 16 * 1024;
+const VALID_OUTPUT_BUFFER_MODES: OutputBufferMode[] = ['stream-only', 'bounded', 'disabled'];
 
 function normalizeOutputBufferPolicy(
   outputBuffer: OutputBufferPolicy | undefined
@@ -45,8 +47,6 @@ function normalizeOutputBufferPolicy(
 
   return { mode, maxBytes };
 }
-
-const VALID_OUTPUT_BUFFER_MODES: OutputBufferMode[] = ['stream-only', 'bounded', 'disabled'];
 
 const trimToMaxBytes = (
   value: Buffer<ArrayBufferLike>,
@@ -76,6 +76,12 @@ export async function* spawnStream(
   config: SpawnStreamConfig,
   options?: SpawnStreamOptions
 ): AsyncIterable<string> {
+  const outputBufferPolicy = normalizeOutputBufferPolicy(options?.outputBuffer);
+  const outputBufferMode = outputBufferPolicy.mode;
+  const outputBufferMaxBytes = outputBufferPolicy.maxBytes;
+  const outputBufferSnapshot = options?.outputBuffer?.snapshot;
+  const shouldCaptureOutput = outputBufferMode === 'bounded' && outputBufferSnapshot !== undefined;
+
   const child = spawn(binary, args, {
     stdio: [config.stdin, 'pipe', 'pipe'],
   });
@@ -87,12 +93,6 @@ export async function* spawnStream(
   if (config.stdin === 'pipe' && child.stdin) {
     child.stdin.end();
   }
-
-  const outputBufferPolicy = normalizeOutputBufferPolicy(options?.outputBuffer);
-  const outputBufferMode = outputBufferPolicy.mode;
-  const outputBufferMaxBytes = outputBufferPolicy.maxBytes;
-  const outputBufferSnapshot = options?.outputBuffer?.snapshot;
-  const shouldCaptureOutput = outputBufferMode === 'bounded' && outputBufferSnapshot !== undefined;
 
   let boundedOutput: Buffer<ArrayBufferLike> = Buffer.alloc(0);
   const maxSnapshotBytes = outputBufferMaxBytes;
@@ -137,6 +137,9 @@ export async function* spawnStream(
     if (lastNewlineIndex !== -1) {
       // Discard everything before the last newline, keep only the last line
       lastLineBuffer = lastLineBuffer.substring(lastNewlineIndex + 1);
+    }
+    if (lastLineBuffer.length > MAX_LAST_LINE_BUFFER_CHARS) {
+      lastLineBuffer = lastLineBuffer.slice(-MAX_LAST_LINE_BUFFER_CHARS);
     }
   }
 
