@@ -38,6 +38,7 @@ function testProvider(key: string): void {
 }
 
 if (target === 'gemini' || target === 'all') testProvider('gemini');
+if (target === 'mock' || target === 'all') testProvider('mock');
 
 console.log(`\nResults: ${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);

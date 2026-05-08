@@ -2,6 +2,7 @@ import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { GeminiProvider } from '../src/providers/gemini';
 import { CodexProvider } from '../src/providers/codex';
+import { MockProvider } from '../src/providers/mock';
 import { ProviderRegistry } from '../src/providers/registry';
 import { getCachedProviderAuth } from '../src/providers/auth-cache';
 import { readVersion } from '../src/util/read-version';
@@ -609,6 +610,13 @@ describe('ProviderRegistry', () => {
     assert.equal(provider.key, 'codex');
   });
 
+  it('get("mock") returns MockProvider', () => {
+    const registry = new ProviderRegistry();
+    const provider = registry.get('mock');
+    assert.ok(provider !== undefined);
+    assert.equal(provider.key, 'mock');
+  });
+
   it('get("unknown") returns undefined', () => {
     const registry = new ProviderRegistry();
     assert.equal(registry.get('unknown'), undefined);
@@ -626,7 +634,35 @@ describe('ProviderRegistry', () => {
     const keys = registry.keys();
     assert.ok(keys.includes('gemini'));
     assert.ok(keys.includes('codex'));
-    assert.equal(keys.length, 2);
+    assert.ok(keys.includes('mock'));
+  });
+});
+
+describe('MockProvider', () => {
+  it('is always available and does not require external auth', async () => {
+    const provider = new MockProvider();
+    const auth = await provider.checkAuth();
+
+    assert.equal(provider.isAvailable(), true);
+    assert.equal(auth.ok, true);
+    assert.equal(auth.method, 'cli-fallback');
+    assert.equal(auth.version, 'mock-provider 0.1.0');
+  });
+
+  it('emits deterministic advisory demo output', async () => {
+    const provider = new MockProvider();
+    const chunks: string[] = [];
+
+    for await (const chunk of provider.invoke('ask', 'Review this input.', 'demo')) {
+      chunks.push(chunk);
+    }
+
+    const output = chunks.join('');
+    assert.match(output, /Provider: mock/);
+    assert.match(output, /Mode: deterministic demo/);
+    assert.match(output, /Purpose: validates aco ask\/result workflow without external credentials/);
+    assert.match(output, /Task prompt/);
+    assert.match(output, /demo/);
   });
 });
 

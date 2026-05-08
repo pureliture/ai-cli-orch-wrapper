@@ -89,7 +89,7 @@
         font-size="12" font-weight="700" fill="white">📦  packages/</text>
   <text x="48" y="196" font-size="10" fill="#1e293b" font-weight="600">wrapper/</text>
   <text x="58" y="212" font-size="9.5" fill="#64748b">aco CLI · provider runtime</text>
-  <text x="58" y="226" font-size="9.5" fill="#64748b">sync engine · pack setup</text>
+  <text x="58" y="226" font-size="9.5" fill="#64748b">ask · run · sync · pack</text>
   <text x="48" y="246" font-size="10" fill="#1e293b" font-weight="600">installer/</text>
   <text x="58" y="262" font-size="9.5" fill="#64748b">install-time entrypoints</text>
 
@@ -118,8 +118,8 @@
   <text x="318" y="196" font-size="10" fill="#1e293b" font-weight="600">commands/</text>
   <text x="328" y="212" font-size="9.5" fill="#64748b">slash command</text>
   <text x="328" y="226" font-size="9.5" fill="#64748b">templates</text>
-  <text x="318" y="246" font-size="10" fill="#1e293b" font-weight="600">prompts/</text>
-  <text x="328" y="262" font-size="9.5" fill="#64748b">provider prompts</text>
+  <text x="318" y="246" font-size="10" fill="#1e293b" font-weight="600">commands/aco.md</text>
+  <text x="328" y="262" font-size="9.5" fill="#64748b">generic /aco only</text>
 
   <!-- ───── BRANCH 4: docs/ ───── -->
   <g filter="url(#shadow)">
@@ -161,10 +161,10 @@
   </g>
   <text x="210" y="336" text-anchor="middle" dominant-baseline="middle"
         font-size="12" font-weight="700" fill="white">🟣  .claude/  —  Source of Truth</text>
-  <text x="65" y="370" font-size="10" fill="#1e293b">📁 commands/ · agents/ · skills/</text>
-  <text x="65" y="388" font-size="10" fill="#1e293b">📁 aco/prompts/</text>
-  <text x="65" y="406" font-size="10" fill="#1e293b">⚙️ settings.json · settings.local.json</text>
-  <text x="65" y="424" font-size="10" fill="#94a3b8" font-style="italic">hand-maintained · gitignored: settings.local.json</text>
+  <text x="65" y="370" font-size="10" fill="#1e293b">📄 commands/aco.md · no /aco:* explosion</text>
+  <text x="65" y="388" font-size="10" fill="#1e293b">📁 skills/aco-delegation/ · aco/tasks/</text>
+  <text x="65" y="406" font-size="10" fill="#1e293b">⚙️ settings.json · aco/prompts/ legacy</text>
+  <text x="65" y="424" font-size="10" fill="#94a3b8" font-style="italic">hand-maintained · task-specific behavior via presets</text>
 
   <!-- Generated targets -->
   <g filter="url(#shadow)">

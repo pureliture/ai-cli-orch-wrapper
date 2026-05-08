@@ -1,6 +1,7 @@
 import type { IProvider } from './interface.js';
 import { GeminiProvider } from './gemini.js';
 import { CodexProvider } from './codex.js';
+import { MockProvider } from './mock.js';
 
 export class ProviderRegistry {
   private readonly providers = new Map<string, IProvider>();
@@ -8,8 +9,10 @@ export class ProviderRegistry {
   constructor() {
     const geminiProvider = new GeminiProvider();
     const codexProvider = new CodexProvider();
+    const mockProvider = new MockProvider();
     this.register('gemini', geminiProvider);
     this.register('codex', codexProvider);
+    this.register('mock', mockProvider);
   }
 
   register(key: string, provider: IProvider): void {
