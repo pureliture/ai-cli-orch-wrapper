@@ -410,26 +410,18 @@ async function endWritable(stream: Writable): Promise<void> {
 function readBoundedOutput(path: string, limit: number = 1000): string {
   try {
     const stats = statSync(path);
-    if (stats.size <= limit) {
-      const fd = openSync(path, 'r');
-      try {
-        const buffer = Buffer.alloc(stats.size);
-        readSync(fd, buffer, 0, stats.size, 0);
-        return buffer.toString('utf8');
-      } finally {
-        closeSync(fd);
-      }
-    }
+    const UTF8_MAX_BYTES = 4;
+    const maxPreviewBytes = Math.min(stats.size, limit * UTF8_MAX_BYTES + UTF8_MAX_BYTES);
     const fd = openSync(path, 'r');
     try {
-      const UTF8_MAX_BYTES = 4;
-      const buffer = Buffer.alloc(limit * UTF8_MAX_BYTES + UTF8_MAX_BYTES);
-      const bytesRead = readSync(fd, buffer, 0, limit * UTF8_MAX_BYTES + UTF8_MAX_BYTES, 0);
-      let content = buffer.toString('utf8', 0, bytesRead);
-      if (content.length > limit) {
-        content = content.substring(0, limit);
+      const buffer = Buffer.alloc(maxPreviewBytes);
+      const bytesRead = readSync(fd, buffer, 0, maxPreviewBytes, 0);
+      const content = buffer.toString('utf8', 0, bytesRead);
+      const characters = Array.from(content);
+      if (characters.length > limit) {
+        return characters.slice(0, limit).join('') + '\n... (truncated)';
       }
-      return content + '\n... (truncated)';
+      return bytesRead < stats.size ? `${content}\n... (truncated)` : content;
     } finally {
       closeSync(fd);
     }

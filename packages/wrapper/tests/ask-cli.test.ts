@@ -194,6 +194,26 @@ describe('aco ask CLI', () => {
     await stat(join(runDir, 'brief.md'));
   });
 
+  it('does not mark multibyte brief output as truncated when it is within the character limit', async () => {
+    const multibyteInput = '가'.repeat(300);
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'review multibyte output',
+      '--input',
+      multibyteInput,
+      '--yes',
+      '--output-mode',
+      'brief',
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.equal(result.stdout.includes(multibyteInput), true);
+    assert.doesNotMatch(result.stdout, /\.\.\. \(truncated\)/);
+  });
+
   it('supports save-only and full output modes explicitly', async () => {
     const saveOnly = await runCli([
       'ask',
