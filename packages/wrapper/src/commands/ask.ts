@@ -257,7 +257,7 @@ async function collectInput(options: AskOptions): Promise<string> {
     chunks.push(fileInput);
   }
 
-  return chunks.join('\n\n').trim();
+  return chunks.join('\n\n');
 }
 
 async function loadPreset(name: string): Promise<string> {

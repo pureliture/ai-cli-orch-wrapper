@@ -269,6 +269,38 @@ describe('aco ask CLI', () => {
     assert.match(input, /file demo/);
   });
 
+  it('preserves exact raw input including whitespace and newlines', async () => {
+    const home = await makeHome();
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-raw-input-'));
+    const inputContent = '  file content with leading/trailing spaces and newlines  \n\n';
+    await writeFile(join(workspace, 'raw-input.md'), inputContent);
+
+    const result = await runCli(
+      [
+        'ask',
+        '--providers',
+        'mock',
+        '--task',
+        'check raw input',
+        '--input',
+        '  inline content  ',
+        '--input-file',
+        'raw-input.md',
+        '--yes',
+      ],
+      { home, cwd: workspace }
+    );
+
+    assert.equal(result.code, 0);
+    const sessionId = await latestSessionId(home);
+    const sessionDir = join(home, '.aco', 'sessions', sessionId);
+
+    const input = await readFile(join(sessionDir, 'input.md'), 'utf8');
+    // Expected: "  inline content  " + "\n\n" + "  file content with leading/trailing spaces and newlines  \n\n"
+    const expected = '  inline content  \n\n  file content with leading/trailing spaces and newlines  \n\n';
+    assert.equal(input, expected);
+  });
+
   it('saves partial output on provider failure so aco result can inspect it', async () => {
     const failed = await runCli(
       [
