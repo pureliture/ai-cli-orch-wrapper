@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { dirname, isAbsolute, join, relative } from 'node:path';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import { providerRegistry } from '../providers/registry.js';
 import { runSync } from '../sync/sync-engine.js';
 
@@ -207,7 +208,7 @@ function loadVersion(): string {
     const pkgPath =
       typeof __dirname !== 'undefined'
         ? join(__dirname, '..', '..', 'package.json')
-        : new URL('../../package.json', (0, eval)('import.meta.url') as string).pathname;
+        : fileURLToPath(new URL('../../package.json', (0, eval)('import.meta.url') as string));
     const raw = readFileSync(pkgPath, 'utf8');
     const parsed = JSON.parse(raw) as { version?: string };
     return parsed.version ?? '0.0.0';

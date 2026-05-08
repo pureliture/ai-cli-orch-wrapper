@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path';
 import process from 'node:process';
 import { providerRegistry } from '../providers/registry.js';
 import { sessionStore } from '../session/store.js';
-import type { PermissionProfile } from '../providers/interface.js';
+import type { IProvider, PermissionProfile } from '../providers/interface.js';
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
 import { defaultSummarizeOutput } from '../util/summarize-output.js';
 
@@ -131,7 +131,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       }
     }
 
-    const summary = summarizeProviderOutput(runResult.fullOutput, provider);
+    const summary = await summarizeProviderOutput(runResult.fullOutput, provider, outputLog);
     const brief = renderSessionBrief({
       runId,
       task: options.task ?? '',
@@ -370,13 +370,39 @@ function renderRunBrief(runId: string, options: AskOptions, sessions: AskSession
     .join('\n');
 }
 
-function summarizeProviderOutput(output: string, provider: import('../providers/interface.js').IProvider): string {
+async function summarizeProviderOutput(
+  output: string,
+  provider: IProvider,
+  outputLog: string
+): Promise<string> {
+  let source = output;
+
+  if (provider.key === 'mock') {
+    source = await loadMockOutputForSummary(outputLog, output);
+  }
+
   if (provider.summarizeOutput) {
-    return provider.summarizeOutput(output, SUMMARY_CHAR_LIMIT);
+    return provider.summarizeOutput(source, SUMMARY_CHAR_LIMIT);
   }
   // Fallback for providers that have not yet implemented summarizeOutput.
   // All built-in providers should implement this; the fallback is a safety net.
-  return defaultSummarizeOutput(output, SUMMARY_CHAR_LIMIT);
+  return defaultSummarizeOutput(source, SUMMARY_CHAR_LIMIT);
+}
+
+async function loadMockOutputForSummary(outputLogPath: string, fallback: string): Promise<string> {
+  const findingsMarker = '\nFindings:\n';
+  if (fallback.includes(findingsMarker)) {
+    return fallback;
+  }
+
+  try {
+    const fullOutput = await readFile(outputLogPath, 'utf8');
+    const markerIndex = fullOutput.lastIndexOf(findingsMarker);
+    if (markerIndex === -1) return fallback;
+    return fullOutput.slice(0, markerIndex);
+  } catch {
+    return fallback;
+  }
 }
 
 function parseFlag<T extends string = string>(args: string[], flag: string): T | undefined {

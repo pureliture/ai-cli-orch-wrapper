@@ -330,6 +330,36 @@ describe('aco ask CLI', () => {
     assert.doesNotMatch(ledger.sessions[0].summary, new RegExp(hiddenTail));
   });
 
+  it('removes the Findings section from mock summary even if the full output exceeds the in-memory buffer', async () => {
+    const longInput = `${'x'.repeat(2000)}\nTail details after a long input body.`;
+
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'summarize mock output with long trailing findings',
+      '--input',
+      longInput,
+      '--yes',
+      '--output-mode',
+      'brief',
+    ]);
+
+    assert.equal(result.code, 0);
+    const sessionId = await latestSessionId(result.home);
+    const sessionDir = join(result.home, '.aco', 'sessions', sessionId);
+
+    const output = await readFile(join(sessionDir, 'output.log'), 'utf8');
+    assert.match(output, /\nFindings:\n/);
+    assert.match(output, /Treat this mock output as deterministic test data/);
+
+    const sessionBrief = await readFile(join(sessionDir, 'brief.md'), 'utf8');
+    assert.match(sessionBrief, /Summary:/);
+    assert.doesNotMatch(sessionBrief, /\nFindings:\n/);
+    assert.doesNotMatch(sessionBrief, /Treat this mock output as deterministic test data/);
+  });
+
   it('does not truncate brief summaries at Findings headings inside raw input', async () => {
     const inputWithHeading = 'alpha\nFindings:\nomega\n';
 
