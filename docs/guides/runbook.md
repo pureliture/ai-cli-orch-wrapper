@@ -17,7 +17,7 @@ Expected behavior:
 - `--dry-run` shows the plan and prints `Provider execution: skipped`.
 - `--yes --output-mode brief` creates run/session artifacts and prints a bounded summary, not full provider output.
 - `aco result` prints the full deterministic mock output from `output.log`.
-- `aco doctor` prints local diagnostics only. It does not call real providers or verify remote auth.
+- `aco doctor` prints local diagnostics only. It does not call real providers or verify remote auth. It uses `HOME` or `USERPROFILE` heuristics for credential paths, and falls back gracefully when neither is set.
 
 ## Inspecting Artifacts
 

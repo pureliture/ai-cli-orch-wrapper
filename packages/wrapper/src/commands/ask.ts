@@ -8,6 +8,7 @@ import { providerRegistry } from '../providers/registry.js';
 import { sessionStore } from '../session/store.js';
 import type { PermissionProfile } from '../providers/interface.js';
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
+import { defaultSummarizeOutput } from '../util/summarize-output.js';
 
 const EXIT_ERROR = 1;
 const DEFAULT_PROVIDERS = ['mock'];
@@ -99,6 +100,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       permissionProfile: options.permissionProfile,
       sessionId: session.id,
       output: outputStream,
+      maxOutputBuffer: SUMMARY_CHAR_LIMIT,
       onChunk:
         options.outputMode === 'full'
           ? (chunk) => {
@@ -129,7 +131,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       }
     }
 
-    const summary = summarizeProviderOutput(runResult.fullOutput, provider.key);
+    const summary = summarizeProviderOutput(runResult.fullOutput, provider);
     const brief = renderSessionBrief({
       runId,
       task: options.task ?? '',
@@ -368,15 +370,13 @@ function renderRunBrief(runId: string, options: AskOptions, sessions: AskSession
     .join('\n');
 }
 
-function summarizeProviderOutput(output: string, providerKey: string): string {
-  const mockFindingsIndex = providerKey === 'mock' ? output.lastIndexOf('\nFindings:\n') : -1;
-  const beforeFindings = mockFindingsIndex === -1 ? output : output.slice(0, mockFindingsIndex);
-  const source = beforeFindings.trimEnd();
-  if (!source) return '(no provider output)';
-
-  if (source.length <= SUMMARY_CHAR_LIMIT) return source;
-
-  return `${source.slice(0, SUMMARY_CHAR_LIMIT).trimEnd()}\n...[truncated to ${SUMMARY_CHAR_LIMIT} chars]`;
+function summarizeProviderOutput(output: string, provider: import('../providers/interface.js').IProvider): string {
+  if (provider.summarizeOutput) {
+    return provider.summarizeOutput(output, SUMMARY_CHAR_LIMIT);
+  }
+  // Fallback for providers that have not yet implemented summarizeOutput.
+  // All built-in providers should implement this; the fallback is a safety net.
+  return defaultSummarizeOutput(output, SUMMARY_CHAR_LIMIT);
 }
 
 function parseFlag<T extends string = string>(args: string[], flag: string): T | undefined {

@@ -38,7 +38,7 @@ Default output mode is `brief`.
 | `save-only` | Prints save locations only                                 |
 | `full`      | Prints full provider output only when explicitly requested |
 
-Full provider output is stored under `~/.aco/sessions/<session-id>/output.log` and can be read later with `aco result`.
+Full provider output is stored under `~/.aco/sessions/<session-id>/output.log` and can be read later with `aco result`. Provider-specific summarization strips provider-internal sections (e.g., `Findings:` for the mock provider) before truncating to the 600-character bound. The full output stream is still captured to disk; only the in-memory summary buffer is bounded to limit memory usage.
 
 ## Artifact Storage
 

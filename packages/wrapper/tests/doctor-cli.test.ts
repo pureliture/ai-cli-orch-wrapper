@@ -48,7 +48,7 @@ async function makeMarkerBinary(binDir: string, name: string, markerPath: string
 
 async function runCli(
   args: string[],
-  options: { home?: string; cwd?: string; env?: Record<string, string> } = {}
+  options: { home?: string; cwd?: string; env?: Record<string, string | undefined> } = {}
 ): Promise<CliResult> {
   const home = options.home ?? (await makeHome());
   const cliRoot = resolve(__dirname, '..');
@@ -185,6 +185,34 @@ describe('aco doctor CLI', () => {
     assert.match(
       result.stdout,
       /Sync drift: needs attention \(sync manifest points at another checkout\)/
+    );
+  });
+
+  it('reports missing HOME and USERPROFILE in auth heuristics without crashing', async () => {
+    const home = await makeHome();
+    const workspace = await makeWorkspace();
+    const binDir = await mkdtemp(join(tmpdir(), 'aco-doctor-bin-'));
+    await makeFakeBinary(binDir, 'codex');
+    await makeFakeBinary(binDir, 'gemini');
+
+    const result = await runCli(['doctor'], {
+      home,
+      cwd: workspace,
+      env: {
+        PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+        HOME: undefined,
+        USERPROFILE: undefined,
+      },
+    });
+
+    assert.equal(result.code, 0);
+    assert.match(
+      result.stdout,
+      /codex: available; local auth heuristic missing \(no HOME or USERPROFILE set; codex login OR export OPENAI_API_KEY\)/
+    );
+    assert.match(
+      result.stdout,
+      /gemini: available; local auth heuristic missing \(no HOME or USERPROFILE set; gemini auth login OR export GEMINI_API_KEY\)/
     );
   });
 });

@@ -47,6 +47,19 @@ function isPathWithinRepo(root: string, target: string, allowed: string[]): bool
   return false;
 }
 
+/**
+ * Run the context sync engine.
+ *
+ * @param repoRoot - The repository root path.
+ * @param options - Sync options.
+ * @param options.check - When true, performs read-only validation without
+ *   writing any files to disk. Throws on drift/conflicts but never mutates.
+ * @param options.dryRun - When true, prints what would change without writing.
+ * @param options.force - When true, overwrites managed targets even if drift.
+ * @param options.strict - When true, fails on duplicate provider warnings.
+ * @param options.cleanDuplicates - When true, cleans manifest-owned duplicates.
+ * @param options.forceClean - When true, cleans non-manifest-owned duplicates.
+ */
 export async function runSync(repoRoot: string, options: SyncOptions = {}): Promise<SyncResult> {
   const {
     dryRun = false,

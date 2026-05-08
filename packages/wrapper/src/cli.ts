@@ -225,6 +225,7 @@ async function cmdRun(args: string[]): Promise<void> {
     permissionProfile,
     sessionId: session.id,
     output: tee,
+    maxOutputBuffer: Infinity,
   });
   const runError = runResult.error;
 
