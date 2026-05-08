@@ -57,6 +57,9 @@ aco result
 `~/.aco/sessions/<session-id>/output.log`에 저장되며, run-level 요약은
 `~/.aco/runs/<run-id>/brief.md`와 `ledger.json`에 저장된다.
 
+`aco run`은 기본적으로 `stream-only` 출력 정책을 사용하고, `aco ask`의 `brief` 모드만
+`bounded` 출력 정책을 사용해 preview 크기를 제한한다.
+
 실제 Codex/Gemini provider를 호출할 때도 같은 동의 규칙을 적용한다. external provider output은
 advisory이며, 최종 판단과 종합은 Claude Code와 maintainer가 수행한다.
 

@@ -1,5 +1,25 @@
 export type PermissionProfile = 'default' | 'restricted' | 'unrestricted';
 
+export type OutputBufferMode = 'stream-only' | 'bounded' | 'disabled';
+
+export type OutputBufferBytes = number;
+
+export const DEFAULT_OUTPUT_BUFFER_MODE: OutputBufferMode = 'stream-only';
+export const DEFAULT_OUTPUT_BUFFER_BYTES: OutputBufferBytes = 1_048_576;
+export const MAX_OUTPUT_BUFFER_BYTES: OutputBufferBytes = 16_777_216;
+
+export interface OutputBufferPolicy {
+  /** Buffering mode for provider invoke output. */
+  mode?: OutputBufferMode;
+  /** Maximum bytes retained in bounded mode. */
+  maxBytes?: OutputBufferBytes;
+  /**
+   * Mutable snapshot sink for bounded mode.
+   * The sink is only populated when mode is `bounded`.
+   */
+  snapshot?: { value: string };
+}
+
 export type AuthMethod = 'api-key' | 'oauth' | 'cli-fallback' | 'missing';
 
 export interface AuthResult {
@@ -13,6 +33,8 @@ export interface AuthResult {
 export interface InvokeOptions {
   permissionProfile?: PermissionProfile;
   sessionId?: string;
+  /** Output buffering policy for provider stdout collection. */
+  outputBuffer?: OutputBufferPolicy;
   /** Called once the provider process has been spawned, with its PID. */
   onPid?: (pid: number) => void;
 }
