@@ -5,10 +5,16 @@
 
 ## 현재 상태 요약
 
-`ai-cli-orch-wrapper`는 Claude Code 중심의 repo-local harness를 Codex/Gemini 대상 context,
-provider 실행, session 기록과 연결하기 위한 `aco` CLI 작업공간이다. 현재 구현된 표면은
-Node wrapper CLI의 pack/provider setup, `aco sync`, `aco run`, `aco status`, `aco result`,
-`aco cancel`과 Go delegate runtime의 blocking provider 실행 실험으로 나뉜다.
+`ai-cli-orch-wrapper`는 Claude Code 세션 안에서 사용자의 명시적 동의를 받은 뒤
+Codex/Gemini 같은 외부 AI CLI에 작업을 위임하고, 결과는 session/run artifact로 저장하며,
+Claude Code에는 bounded brief만 반환해 토큰 사용량을 줄이는 generic external AI delegation
+wrapper다. Claude Code는 supervisor이자 final synthesizer로 남고, 외부 provider 출력은
+advisory로 취급한다.
+
+현재 구현된 표면은 Node wrapper CLI의 pack/provider setup, `aco sync`, high-level `aco ask`,
+low-level `aco run`, `aco status`, `aco result`, `aco cancel`과 Go delegate runtime의 blocking
+provider 실행 실험으로 나뉜다. MVP에서 `aco ask`는 기본 provider를 no-auth `mock`으로 두며,
+real Codex/Gemini provider는 `--providers codex,gemini`처럼 명시했을 때만 실행한다.
 
 현재 문서는 프로젝트의 재포지셔닝과 개선 계획도 함께 담고 있다. 구현 기준으로는
 [pr-implementation-plan.md](pr-implementation-plan.md)를 사용하고, 원문 제안은
@@ -46,10 +52,19 @@ node packages/wrapper/dist/cli.js sync --check
 ```bash
 aco pack status
 aco sync --check
+aco ask --providers mock --task "review this demo input" --input "demo" --dry-run
+aco ask --providers mock --task "review this demo input" --input "demo" --yes --output-mode brief
+aco result
 aco run gemini review
 aco status
 aco result
 ```
+
+`aco ask`는 provider 실행 전 `--dry-run`으로 실행 계획을 확인할 수 있고, 실제 외부 provider
+실행에는 `--yes`가 필요하다. 기본 permission profile은 `restricted`, 기본 output mode는
+`brief`다. full provider output은 Claude Code stdout으로 바로 흘리지 않고
+`~/.aco/sessions/<session-id>/output.log`에 저장하며, run-level 요약은
+`~/.aco/runs/<run-id>/brief.md`와 `ledger.json`에 저장한다.
 
 ## 독자별 탐색 경로
 
@@ -58,9 +73,10 @@ aco result
 1. 이 문서의 [현재 상태 요약](#현재-상태-요약) — 무엇이 구현되어 있고 무엇이 계획인지
 2. [case-study.md](case-study.md) — 문제, 제약, 설계, trade-off, 현재 한계
 3. [architecture.md](architecture.md) — CLI 런타임, context sync, 저장소 구조
-4. [roadmap.md](roadmap.md) — 프로젝트 포지셔닝과 개선 우선순위
-5. [pr-implementation-plan.md](pr-implementation-plan.md) — 구현자가 따를 PR1-PR8a/8b 실행 기준
-6. [contract/go-node-boundary.md](contract/go-node-boundary.md) — Go/Node.js 책임 경계
+4. [guides/runbook.md](guides/runbook.md) — consent-gated delegation demo와 운영 절차
+5. [roadmap.md](roadmap.md) — 프로젝트 포지셔닝과 개선 우선순위
+6. [pr-implementation-plan.md](pr-implementation-plan.md) — 구현자가 따를 PR1-PR8a/8b 실행 기준
+7. [contract/go-node-boundary.md](contract/go-node-boundary.md) — Go/Node.js 책임 경계
 
 ### 패키지를 설치·운영하는 사용자
 
@@ -79,23 +95,26 @@ aco result
 
 ## 문서 분류
 
-| 카테고리                                                 | 답해야 하는 질문                | 주 독자               |
-| -------------------------------------------------------- | ------------------------------- | --------------------- |
-| [`case-study.md`](case-study.md)                         | 어떤 문제를 어떤 설계로 풀었나  | 평가자, 신규 기여자   |
-| [`architecture.md`](architecture.md)                     | 왜 이렇게 설계됐나              | 신규 기여자, 아키텍트 |
-| [`roadmap.md`](roadmap.md)                               | 무엇을 먼저 개선할 것인가       | 평가자, 관리자        |
-| [`pr-implementation-plan.md`](pr-implementation-plan.md) | PR을 어떤 기준으로 자를 것인가  | 구현자, 관리자        |
-| [`contract/`](contract/)                                 | 정확히 어떻게 동작하는가 (규범) | 구현자, 외부 통합자   |
-| [`guides/`](guides/)                                     | 어떻게 하나 (작업 단위)         | 기여자, 운영자        |
-| [`reference/`](reference/)                               | 이 필드/설정/명령의 정의는      | 운영자, 툴 사용자     |
-| [`archive/`](archive/)                                   | 과거에 어떻게 결정됐나          | 컨텍스트 추적자       |
+| 카테고리                                                 | 답해야 하는 질문                             | 주 독자               |
+| -------------------------------------------------------- | -------------------------------------------- | --------------------- |
+| [`case-study.md`](case-study.md)                         | 어떤 문제를 어떤 설계로 풀었나               | 평가자, 신규 기여자   |
+| [`architecture.md`](architecture.md)                     | 왜 이렇게 설계됐나                           | 신규 기여자, 아키텍트 |
+| [`roadmap.md`](roadmap.md)                               | 무엇을 먼저 개선할 것인가                    | 평가자, 관리자        |
+| [`pr-implementation-plan.md`](pr-implementation-plan.md) | PR을 어떤 기준으로 자를 것인가               | 구현자, 관리자        |
+| [`plans/`](plans/)                                       | 현재 목표의 spec/plan/review/validation 기록 | 구현자, 관리자        |
+| [`contract/`](contract/)                                 | 정확히 어떻게 동작하는가 (규범)              | 구현자, 외부 통합자   |
+| [`guides/`](guides/)                                     | 어떻게 하나 (작업 단위)                      | 기여자, 운영자        |
+| [`reference/`](reference/)                               | 이 필드/설정/명령의 정의는                   | 운영자, 툴 사용자     |
+| [`archive/`](archive/)                                   | 과거에 어떻게 결정됐나                       | 컨텍스트 추적자       |
 
 ## 엔지니어링 참조
 
 1. [architecture.md](architecture.md) — 전체 그림
-2. [contract/README.md](contract/README.md) — 규범 계약 문서 인덱스
-3. [contract/go-node-boundary.md](contract/go-node-boundary.md) — Go/Node.js 책임 경계
-4. [contract/process-execution-contract.md](contract/process-execution-contract.md) — 프로세스 실행 계약
+2. [plans/consent-gated-delegation-mvp/01-spec.md](plans/consent-gated-delegation-mvp/01-spec.md) — `aco ask` MVP contract
+3. [plans/consent-gated-delegation-mvp/04-validation.md](plans/consent-gated-delegation-mvp/04-validation.md) — 구현·검증 결과
+4. [contract/README.md](contract/README.md) — 규범 계약 문서 인덱스
+5. [contract/go-node-boundary.md](contract/go-node-boundary.md) — Go/Node.js 책임 경계
+6. [contract/process-execution-contract.md](contract/process-execution-contract.md) — 프로세스 실행 계약
 
 ## 아카이브
 
