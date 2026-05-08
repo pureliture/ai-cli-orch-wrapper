@@ -7,7 +7,7 @@ import process from 'node:process';
 import type { Writable } from 'node:stream';
 import { providerRegistry } from '../providers/registry.js';
 import { sessionStore } from '../session/store.js';
-import type { PermissionProfile } from '../providers/interface.js';
+import type { OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
 
 const EXIT_ERROR = 1;
 const DEFAULT_PROVIDERS = ['mock'];
@@ -18,6 +18,13 @@ const ADVISORY_NOTICE =
   'External provider output is advisory. Claude Code remains the supervisor and final synthesizer.';
 
 type OutputMode = (typeof VALID_OUTPUT_MODES)[number];
+
+export function resolveAskOutputBuffering(outputMode: OutputMode): OutputBufferPolicy {
+  if (outputMode === 'brief') {
+    return { mode: 'bounded' };
+  }
+  return { mode: 'stream-only' };
+}
 
 interface AskOptions {
   providers: string[];
@@ -88,12 +95,17 @@ export async function cmdAsk(args: string[]): Promise<void> {
 
     const outputLog = sessionStore.outputLogPath(session.id);
     const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });
+    const outputBuffer = resolveAskOutputBuffering(options.outputMode);
+    if (outputBuffer.mode === 'bounded') {
+      outputBuffer.snapshot = { value: '' };
+    }
     let error: string | undefined;
     let status: AskSessionLedger['status'] = 'done';
     try {
       for await (const chunk of provider.invoke('ask', prompt, input, {
         permissionProfile: options.permissionProfile,
         sessionId: session.id,
+        outputBuffer,
         onPid: (pid) => {
           sessionStore.update(session.id, { pid }).catch(() => undefined);
         },
@@ -127,8 +139,15 @@ export async function cmdAsk(args: string[]): Promise<void> {
     }
 
     let outputPreview: string | undefined;
-    if (existsSync(outputLog)) {
+    if (outputBuffer.mode === 'bounded' && outputBuffer.snapshot) {
+      outputPreview = trimOutputForPreview(outputBuffer.snapshot.value, 1000);
+    }
+
+    if (!outputPreview && existsSync(outputLog)) {
       outputPreview = readBoundedOutput(outputLog, 1000);
+    }
+
+    if (outputPreview) {
       outputPreviews[session.id] = outputPreview;
     }
 
@@ -405,6 +424,16 @@ async function endWritable(stream: Writable): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     stream.end((err?: Error | null) => (err ? reject(err) : resolve()));
   });
+}
+
+function trimOutputForPreview(output: string, maxCharacters: number): string {
+  const wasPreTrimmed = output.length > maxCharacters * 2;
+  const previewSource = wasPreTrimmed ? output.slice(0, maxCharacters * 2) : output;
+  const characters = Array.from(previewSource);
+  if (characters.length > maxCharacters || wasPreTrimmed) {
+    return `${characters.slice(0, maxCharacters).join('')}\n... (truncated)`;
+  }
+  return output;
 }
 
 function readBoundedOutput(path: string, limit: number = 1000): string {

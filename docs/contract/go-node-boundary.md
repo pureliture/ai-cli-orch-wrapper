@@ -133,7 +133,7 @@ export interface IProvider {
     command: string,
     prompt: string,
     content: string,
-    options?: InvokeOptions
+    options?: InvokeOptions // includes outputBuffer mode defaults: stream-only, bounded(+maxBytes), disabled
   ): AsyncIterable<string>;
 }
 ```

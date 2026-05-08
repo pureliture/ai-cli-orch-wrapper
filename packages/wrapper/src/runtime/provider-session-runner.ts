@@ -1,5 +1,11 @@
 import type { Writable } from 'node:stream';
-import type { IProvider, PermissionProfile } from '../providers/interface.js';
+import {
+  DEFAULT_OUTPUT_BUFFER_BYTES,
+  MAX_OUTPUT_BUFFER_BYTES,
+  type IProvider,
+  type OutputBufferPolicy,
+  type PermissionProfile,
+} from '../providers/interface.js';
 import { sessionStore } from '../session/store.js';
 
 export interface ProviderSessionRunOptions {
@@ -11,7 +17,9 @@ export interface ProviderSessionRunOptions {
   sessionId: string;
   output: Writable;
   onChunk?: (chunk: string) => void | Promise<void>;
-  /** Maximum number of characters to buffer in memory. Beyond this, output is still written to the stream but not accumulated. */
+  /** Provider stdout buffering policy. Defaults to stream-only to avoid unbounded accumulation. */
+  outputBuffer?: OutputBufferPolicy;
+  /** Maximum number of characters to buffer in memory. Used only for bounded output collection. */
   maxOutputBuffer?: number;
 }
 
@@ -24,7 +32,15 @@ export interface ProviderSessionRunResult {
 export async function invokeProviderForSession(
   options: ProviderSessionRunOptions
 ): Promise<ProviderSessionRunResult> {
-  const maxBuffer = options.maxOutputBuffer ?? Infinity;
+  const outputBuffer = options.outputBuffer ?? { mode: 'stream-only' };
+  const outputBufferMode = outputBuffer.mode ?? 'stream-only';
+  const maxBuffer =
+    outputBufferMode === 'bounded'
+      ? Math.min(
+          options.maxOutputBuffer ?? outputBuffer.maxBytes ?? DEFAULT_OUTPUT_BUFFER_BYTES,
+          MAX_OUTPUT_BUFFER_BYTES
+        )
+      : 0;
   let fullOutput = '';
   let hasOutput = false;
   let error: unknown;
@@ -37,6 +53,7 @@ export async function invokeProviderForSession(
       {
         permissionProfile: options.permissionProfile,
         sessionId: options.sessionId,
+        outputBuffer,
         onPid: (pid) => {
           sessionStore.update(options.sessionId, { pid }).catch((err: unknown) => {
             console.warn(
@@ -48,7 +65,7 @@ export async function invokeProviderForSession(
       }
     )) {
       await writeChunk(options.output, chunk);
-      if (fullOutput.length < maxBuffer) {
+      if (maxBuffer > 0 && fullOutput.length < maxBuffer) {
         fullOutput += chunk;
         if (fullOutput.length > maxBuffer) {
           fullOutput = fullOutput.slice(0, maxBuffer);
