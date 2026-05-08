@@ -136,6 +136,7 @@ export class SessionStore {
         fileStream.end(cb);
       },
     });
+    (tee as { skipDrainWait?: boolean }).skipDrainWait = true;
 
     return tee;
   }
