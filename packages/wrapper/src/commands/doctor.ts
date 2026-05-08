@@ -76,7 +76,7 @@ function formatLocalProviderReadiness(key: string): string {
 function formatCodexReadiness(): string {
   if (process.env.OPENAI_API_KEY) return 'available; local auth heuristic ready (OPENAI_API_KEY)';
 
-  const authPath = join(process.env.HOME ?? '', '.codex', 'auth.json');
+  const authPath = join(process.env.HOME || process.env.USERPROFILE || '', '.codex', 'auth.json');
   if (!authPath || !existsSync(authPath)) {
     return 'available; local auth heuristic missing (codex login OR export OPENAI_API_KEY)';
   }
@@ -99,7 +99,7 @@ function formatGeminiReadiness(): string {
   if (process.env.GEMINI_API_KEY) return 'available; local auth heuristic ready (GEMINI_API_KEY)';
   if (process.env.GOOGLE_API_KEY) return 'available; local auth heuristic ready (GOOGLE_API_KEY)';
 
-  const credsPath = join(process.env.HOME ?? '', '.gemini', 'oauth_creds.json');
+  const credsPath = join(process.env.HOME || process.env.USERPROFILE || '', '.gemini', 'oauth_creds.json');
   if (!credsPath || !existsSync(credsPath)) {
     return 'available; local auth heuristic missing (gemini auth login OR export GEMINI_API_KEY)';
   }
