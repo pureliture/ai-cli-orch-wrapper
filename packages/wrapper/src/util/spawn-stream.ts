@@ -1,8 +1,5 @@
 import { spawn } from 'node:child_process';
-import type {
-  InvokeOptions,
-  OutputBufferMode,
-} from '../providers/interface.js';
+import type { InvokeOptions, OutputBufferMode } from '../providers/interface.js';
 import {
   DEFAULT_OUTPUT_BUFFER_BYTES,
   DEFAULT_OUTPUT_BUFFER_MODE,
@@ -43,9 +40,7 @@ function normalizeOutputBufferPolicy(
   }
 
   if (maxBytes > MAX_OUTPUT_BUFFER_BYTES) {
-    throw new Error(
-      `Invalid outputBuffer.maxBytes: exceeds max ${MAX_OUTPUT_BUFFER_BYTES} bytes`
-    );
+    throw new Error(`Invalid outputBuffer.maxBytes: exceeds max ${MAX_OUTPUT_BUFFER_BYTES} bytes`);
   }
 
   return { mode, maxBytes };
@@ -53,7 +48,10 @@ function normalizeOutputBufferPolicy(
 
 const VALID_OUTPUT_BUFFER_MODES: OutputBufferMode[] = ['stream-only', 'bounded', 'disabled'];
 
-const trimToMaxBytes = (value: Buffer<ArrayBufferLike>, maxBytes: number): Buffer<ArrayBufferLike> => {
+const trimToMaxBytes = (
+  value: Buffer<ArrayBufferLike>,
+  maxBytes: number
+): Buffer<ArrayBufferLike> => {
   if (value.length <= maxBytes) return value;
   return Buffer.from(value.subarray(value.length - maxBytes));
 };
