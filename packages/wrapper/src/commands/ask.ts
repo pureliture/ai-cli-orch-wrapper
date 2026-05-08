@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { createWriteStream, existsSync, readFileSync } from 'node:fs';
+import { closeSync, createWriteStream, existsSync, openSync, readSync, statSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -74,6 +74,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
   await mkdir(runDir, { recursive: true, mode: 0o700 });
 
   const sessions: AskSessionLedger[] = [];
+  const outputPreviews: Record<string, string> = {};
   for (const provider of providers) {
     const session = await sessionStore.create(
       provider.key,
@@ -127,7 +128,8 @@ export async function cmdAsk(args: string[]): Promise<void> {
 
     let outputPreview: string | undefined;
     if (existsSync(outputLog)) {
-      outputPreview = truncateOutput(readFileSync(outputLog, 'utf8'));
+      outputPreview = readBoundedOutput(outputLog, 1000);
+      outputPreviews[session.id] = outputPreview;
     }
 
     const brief = renderSessionBrief({
@@ -151,13 +153,6 @@ export async function cmdAsk(args: string[]): Promise<void> {
       briefPath,
       ...(error ? { error } : {}),
     });
-  }
-
-  const outputPreviews: Record<string, string> = {};
-  for (const session of sessions) {
-    if (existsSync(session.outputLog)) {
-      outputPreviews[session.id] = truncateOutput(readFileSync(session.outputLog, 'utf8'));
-    }
   }
 
   const runBrief = renderRunBrief(runId, options, sessions, outputPreviews);
@@ -346,7 +341,12 @@ function renderSessionBrief(input: {
     .join('\n');
 }
 
-function renderRunBrief(runId: string, options: AskOptions, sessions: AskSessionLedger[], outputPreviews?: Record<string, string>): string {
+function renderRunBrief(
+  runId: string,
+  options: AskOptions,
+  sessions: AskSessionLedger[],
+  outputPreviews?: Record<string, string>
+): string {
   return [
     '# aco ask brief',
     '',
@@ -364,7 +364,9 @@ function renderRunBrief(runId: string, options: AskOptions, sessions: AskSession
       `Status: ${session.status}`,
       `Full output saved: ${session.outputLog}`,
       session.error ? `Error: ${session.error}` : undefined,
-      outputPreviews && outputPreviews[session.id] ? `\nOutput Preview:\n---\n${outputPreviews[session.id]}\n---` : undefined,
+      outputPreviews && outputPreviews[session.id]
+        ? `\nOutput Preview:\n---\n${outputPreviews[session.id]}\n---`
+        : undefined,
       '',
     ]),
   ]
@@ -405,9 +407,35 @@ async function endWritable(stream: Writable): Promise<void> {
   });
 }
 
-function truncateOutput(output: string, limit: number = 1000): string {
-  if (output.length <= limit) return output;
-  return output.substring(0, limit) + '\n... (truncated)';
+function readBoundedOutput(path: string, limit: number = 1000): string {
+  try {
+    const stats = statSync(path);
+    if (stats.size <= limit) {
+      const fd = openSync(path, 'r');
+      try {
+        const buffer = Buffer.alloc(stats.size);
+        readSync(fd, buffer, 0, stats.size, 0);
+        return buffer.toString('utf8');
+      } finally {
+        closeSync(fd);
+      }
+    }
+    const fd = openSync(path, 'r');
+    try {
+      const UTF8_MAX_BYTES = 4;
+      const buffer = Buffer.alloc(limit * UTF8_MAX_BYTES + UTF8_MAX_BYTES);
+      const bytesRead = readSync(fd, buffer, 0, limit * UTF8_MAX_BYTES + UTF8_MAX_BYTES, 0);
+      let content = buffer.toString('utf8', 0, bytesRead);
+      if (content.length > limit) {
+        content = content.substring(0, limit);
+      }
+      return content + '\n... (truncated)';
+    } finally {
+      closeSync(fd);
+    }
+  } catch {
+    return '';
+  }
 }
 
 function fail(message: string): never {
