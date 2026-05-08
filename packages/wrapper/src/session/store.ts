@@ -3,7 +3,7 @@ import { existsSync, createWriteStream, readdirSync, readFileSync } from 'node:f
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
-import { Transform, type Writable } from 'node:stream';
+import { Writable } from 'node:stream';
 import type { RuntimeContext } from '../runtime/types.js';
 
 export type SessionStatus = 'running' | 'done' | 'failed' | 'cancelled';
@@ -125,21 +125,24 @@ export class SessionStore {
     const logPath = this.outputLogPath(id);
     const fileStream = createWriteStream(logPath, { flags: 'a', mode: 0o600 });
 
-    const tee = new Transform({
-      transform(chunk: Buffer, _enc: string, cb: () => void) {
-        process.stdout.write(chunk);
-        fileStream.write(chunk);
-        this.push(chunk);
-        cb();
+    return new Writable({
+      write(chunk: Buffer, _enc: string, cb: (error?: Error | null) => void) {
+        Promise.all([writeSink(process.stdout, chunk), writeSink(fileStream, chunk)]).then(
+          () => cb(),
+          (err: unknown) => cb(err instanceof Error ? err : new Error(String(err)))
+        );
       },
-      flush(cb: () => void) {
+      final(cb: (error?: Error | null) => void) {
         fileStream.end(cb);
       },
     });
-    (tee as { skipDrainWait?: boolean }).skipDrainWait = true;
-
-    return tee;
   }
 }
 
 export const sessionStore = new SessionStore();
+
+function writeSink(stream: Writable, chunk: Buffer): Promise<void> {
+  return new Promise((resolve, reject) => {
+    stream.write(chunk, (err?: Error | null) => (err ? reject(err) : resolve()));
+  });
+}

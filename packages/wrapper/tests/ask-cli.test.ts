@@ -310,6 +310,7 @@ describe('aco ask CLI', () => {
     assert.equal(result.code, 0);
     assert.match(result.stdout, /Summary:/);
     assert.match(result.stdout, /Provider: mock/);
+    assert.match(result.stdout, /\.\.\.\[truncated to 600 chars\]/);
     assert.doesNotMatch(result.stdout, new RegExp(hiddenTail));
     assert.doesNotMatch(result.stdout, /Findings:/);
 
@@ -326,7 +327,10 @@ describe('aco ask CLI', () => {
 
     assert.match(sessionBrief, /Summary:/);
     assert.match(runBrief, /Summary:/);
+    assert.match(sessionBrief, /\.\.\.\[truncated to 600 chars\]/);
+    assert.match(runBrief, /\.\.\.\[truncated to 600 chars\]/);
     assert.equal(typeof ledger.sessions[0].summary, 'string');
+    assert.match(ledger.sessions[0].summary, /\.\.\.\[truncated to 600 chars\]/);
     assert.doesNotMatch(ledger.sessions[0].summary, new RegExp(hiddenTail));
   });
 
@@ -339,6 +343,39 @@ describe('aco ask CLI', () => {
       'mock',
       '--task',
       'summarize input containing a findings heading',
+      '--input',
+      inputWithHeading,
+      '--yes',
+      '--output-mode',
+      'brief',
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.match(result.stdout, /alpha/);
+    assert.match(result.stdout, /omega/);
+    assert.doesNotMatch(result.stdout, /Treat this mock output as deterministic test data/);
+
+    const runId = await latestRunId(result.home);
+    const ledger = JSON.parse(
+      await readFile(join(result.home, '.aco', 'runs', runId, 'ledger.json'), 'utf8')
+    );
+    assert.match(ledger.sessions[0].summary, /alpha/);
+    assert.match(ledger.sessions[0].summary, /omega/);
+    assert.doesNotMatch(
+      ledger.sessions[0].summary,
+      /Treat this mock output as deterministic test data/
+    );
+  });
+
+  it('keeps raw input after Findings headings when the provider footer is beyond the summary source prefix', async () => {
+    const inputWithHeading = `alpha\nFindings:\nomega\n${'tail '.repeat(180)}`;
+
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'summarize long input containing a findings heading',
       '--input',
       inputWithHeading,
       '--yes',
@@ -569,7 +606,7 @@ describe('aco ask CLI', () => {
     assert.match(badPreset.stderr, /Invalid --preset/);
   });
 
-  it('caps fullOutput in runResult when maxOutputBuffer is set', async () => {
+  it('keeps fullOutput empty in stream-only mode even when maxOutputBuffer is set', async () => {
     const provider = new MockProvider();
     const output = new Writable({
       write(_chunk, _encoding, callback) {
@@ -585,6 +622,30 @@ describe('aco ask CLI', () => {
       permissionProfile: 'restricted',
       sessionId: 'test-session-cap',
       output,
+      maxOutputBuffer: 600,
+    });
+
+    assert.ok(runResult.hasOutput);
+    assert.equal(runResult.fullOutput, '');
+  });
+
+  it('caps fullOutput in runResult when bounded output buffering is set', async () => {
+    const provider = new MockProvider();
+    const output = new Writable({
+      write(_chunk, _encoding, callback) {
+        callback();
+      },
+    });
+
+    const runResult = await invokeProviderForSession({
+      provider,
+      command: 'ask',
+      prompt: 'test',
+      content: 'x'.repeat(2000),
+      permissionProfile: 'restricted',
+      sessionId: 'test-session-cap',
+      output,
+      outputBuffer: { mode: 'bounded' },
       maxOutputBuffer: 600,
     });
 

@@ -16,6 +16,7 @@ const VALID_PERMISSION_PROFILES: PermissionProfile[] = ['default', 'restricted',
 const VALID_OUTPUT_MODES = ['brief', 'save-only', 'full'] as const;
 const VALID_PRESET_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 const SUMMARY_CHAR_LIMIT = 600;
+const SUMMARY_SOURCE_CHAR_LIMIT = 16 * 1024;
 const ADVISORY_NOTICE =
   'External provider output is advisory. Claude Code remains the supervisor and final synthesizer.';
 
@@ -112,7 +113,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       sessionId: session.id,
       output: outputStream,
       outputBuffer,
-      maxOutputBuffer: SUMMARY_CHAR_LIMIT,
+      maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
       onChunk:
         options.outputMode === 'full'
           ? (chunk) => {
