@@ -5,6 +5,7 @@ import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 import { readVersion } from '../util/read-version.js';
+import { defaultSummarizeOutput } from '../util/summarize-output.js';
 
 export class GeminiProvider implements IProvider {
   readonly key = 'gemini';
@@ -87,5 +88,9 @@ export class GeminiProvider implements IProvider {
 
     const args = [...this.buildArgs(command, options), `${prompt}\n\n${content}`];
     yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe' }, options);
+  }
+
+  summarizeOutput(output: string, maxLength: number): string {
+    return defaultSummarizeOutput(output, maxLength);
   }
 }

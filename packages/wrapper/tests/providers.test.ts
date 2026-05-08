@@ -664,6 +664,72 @@ describe('MockProvider', () => {
     assert.match(output, /Task prompt/);
     assert.match(output, /demo/);
   });
+
+  describe('summarizeOutput()', () => {
+    it('strips the Findings section', () => {
+      const provider = new MockProvider();
+      const output = 'Header\n\nFindings:\n- finding one\n- finding two';
+      const summary = provider.summarizeOutput(output, 1000);
+      assert.match(summary, /Header/);
+      assert.doesNotMatch(summary, /Findings:/);
+      assert.doesNotMatch(summary, /finding one/);
+    });
+
+    it('truncates to maxLength', () => {
+      const provider = new MockProvider();
+      const output = 'x'.repeat(2000);
+      const summary = provider.summarizeOutput(output, 100);
+      assert.match(summary, /\.\.\.\[truncated to 100 chars\]/);
+      assert.ok(summary.length <= 100 + '\n...[truncated to 100 chars]'.length);
+    });
+
+    it('handles output without Findings', () => {
+      const provider = new MockProvider();
+      const output = 'Just some text';
+      const summary = provider.summarizeOutput(output, 1000);
+      assert.equal(summary, 'Just some text');
+    });
+
+    it('returns a placeholder for empty output', () => {
+      const provider = new MockProvider();
+      const summary = provider.summarizeOutput('', 1000);
+      assert.equal(summary, '(no provider output)');
+    });
+  });
+});
+
+describe('CodexProvider', () => {
+  it('implements summarizeOutput with default truncation', () => {
+    const provider = new CodexProvider();
+    const output = 'a'.repeat(2000);
+    const summary = provider.summarizeOutput(output, 100);
+    assert.match(summary, /\.\.\.\[truncated to 100 chars\]/);
+    assert.ok(summary.length <= 100 + '\n...[truncated to 100 chars]'.length);
+  });
+
+  it('returns full output when within maxLength', () => {
+    const provider = new CodexProvider();
+    const output = 'short codex output';
+    const summary = provider.summarizeOutput(output, 1000);
+    assert.equal(summary, 'short codex output');
+  });
+});
+
+describe('GeminiProvider', () => {
+  it('implements summarizeOutput with default truncation', () => {
+    const provider = new GeminiProvider();
+    const output = 'b'.repeat(2000);
+    const summary = provider.summarizeOutput(output, 100);
+    assert.match(summary, /\.\.\.\[truncated to 100 chars\]/);
+    assert.ok(summary.length <= 100 + '\n...[truncated to 100 chars]'.length);
+  });
+
+  it('returns full output when within maxLength', () => {
+    const provider = new GeminiProvider();
+    const output = 'short gemini output';
+    const summary = provider.summarizeOutput(output, 1000);
+    assert.equal(summary, 'short gemini output');
+  });
 });
 
 describe('Auth cache', () => {
