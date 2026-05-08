@@ -14,6 +14,7 @@ import {
   packUninstall,
   providerSetup,
 } from './commands/pack-install.js';
+import { cmdAsk } from './commands/ask.js';
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile } from './providers/interface.js';
@@ -50,6 +51,9 @@ async function main(): Promise<void> {
       break;
     case 'run':
       await cmdRun(rest);
+      break;
+    case 'ask':
+      await cmdAsk(rest);
       break;
     case 'result':
       await cmdResult(rest);
@@ -464,6 +468,7 @@ function printUsage(): void {
   aco --version
   aco --help
   aco sync [--check] [--dry-run] [--force]
+  aco ask --task <text> [--providers codex,gemini,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--dry-run|--yes]
   aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]
   aco result [--session <id>]
   aco status [--session <id>]

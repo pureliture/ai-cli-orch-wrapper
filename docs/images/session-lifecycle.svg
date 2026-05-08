@@ -70,7 +70,7 @@
 
   <!-- Title -->
   <text x="380" y="26" text-anchor="middle" dominant-baseline="middle"
-        font-size="15" font-weight="700" fill="#1e293b" letter-spacing="0.3">Session Lifecycle — aco run</text>
+        font-size="15" font-weight="700" fill="#1e293b" letter-spacing="0.3">Delegation Lifecycle — aco ask MVP</text>
   <line x1="290" y1="44" x2="340" y2="44" stroke="#ec4899" stroke-width="2" stroke-linecap="round"/>
   <line x1="420" y1="44" x2="470" y2="44" stroke="#0d9488" stroke-width="2" stroke-linecap="round"/>
   <circle cx="380" cy="44" r="3" fill="#3b82f6"/>
@@ -90,12 +90,12 @@
   <text x="240" y="80" text-anchor="middle" dominant-baseline="middle"
         font-size="12" font-weight="700" fill="white">⚙️  aco CLI</text>
 
-  <!-- Registry -->
+  <!-- Consent -->
   <g filter="url(#shadow)">
     <rect x="335" y="60" width="130" height="40" rx="8" fill="url(#registry-grad)"/>
   </g>
   <text x="400" y="80" text-anchor="middle" dominant-baseline="middle"
-        font-size="12" font-weight="700" fill="white">📚  Registry</text>
+        font-size="12" font-weight="700" fill="white">✅  Consent</text>
 
   <!-- Provider -->
   <g filter="url(#shadow)">
@@ -104,12 +104,12 @@
   <text x="550" y="80" text-anchor="middle" dominant-baseline="middle"
         font-size="12" font-weight="700" fill="white">🤖  Provider</text>
 
-  <!-- Store -->
+  <!-- Artifacts -->
   <g filter="url(#shadow)">
     <rect x="630" y="60" width="105" height="40" rx="8" fill="url(#store-grad)"/>
   </g>
   <text x="682" y="80" text-anchor="middle" dominant-baseline="middle"
-        font-size="12" font-weight="700" fill="white">💾  Store</text>
+        font-size="12" font-weight="700" fill="white">💾  Artifacts</text>
 
   <!-- ─── LIFELINES (vertical dashed lines) ─── -->
   <line x1="85"  y1="105" x2="85"  y2="450" stroke="#ec4899" stroke-width="1" stroke-dasharray="3,3" opacity="0.45"/>
@@ -118,32 +118,32 @@
   <line x1="550" y1="105" x2="550" y2="450" stroke="#10b981" stroke-width="1" stroke-dasharray="3,3" opacity="0.45"/>
   <line x1="682" y1="105" x2="682" y2="450" stroke="#0d9488" stroke-width="1" stroke-dasharray="3,3" opacity="0.45"/>
 
-  <!-- ─── MESSAGE 1: User → CLI: aco run ─── -->
+  <!-- ─── MESSAGE 1: User → CLI: aco ask ─── -->
   <circle cx="42" cy="135" r="9" fill="#ec4899"/>
   <text x="42" y="135" text-anchor="middle" dominant-baseline="middle"
         font-size="10" font-weight="700" fill="white">1</text>
   <line x1="85" y1="135" x2="234" y2="135" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
   <rect x="100" y="120" width="135" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"/>
   <text x="167" y="129" text-anchor="middle" dominant-baseline="middle"
-        font-size="10" font-weight="500" fill="#1e293b">aco run gemini review</text>
+        font-size="10" font-weight="500" fill="#1e293b">aco ask --dry-run</text>
 
-  <!-- ─── MESSAGE 2: CLI → Registry: resolve ─── -->
+  <!-- ─── MESSAGE 2: CLI → Consent: validate ─── -->
   <circle cx="197" cy="180" r="9" fill="#3b82f6"/>
   <text x="197" y="180" text-anchor="middle" dominant-baseline="middle"
         font-size="10" font-weight="700" fill="white">2</text>
   <line x1="240" y1="180" x2="394" y2="180" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#arrow-purple)"/>
   <rect x="252" y="165" width="135" height="18" rx="9" fill="white" stroke="#a78bfa" stroke-width="1"/>
   <text x="319" y="174" text-anchor="middle" dominant-baseline="middle"
-        font-size="10" font-weight="500" fill="#1e293b">resolve provider key</text>
+        font-size="10" font-weight="500" fill="#1e293b">show plan; no invoke</text>
 
-  <!-- ─── MESSAGE 3: CLI → Store: create session ─── -->
+  <!-- ─── MESSAGE 3: CLI → Artifacts: create run/session ─── -->
   <circle cx="197" cy="225" r="9" fill="#3b82f6"/>
   <text x="197" y="225" text-anchor="middle" dominant-baseline="middle"
         font-size="10" font-weight="700" fill="white">3</text>
   <line x1="240" y1="225" x2="676" y2="225" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
-  <rect x="475" y="210" width="155" height="18" rx="9" fill="white" stroke="#2dd4bf" stroke-width="1"/>
-  <text x="552" y="219" text-anchor="middle" dominant-baseline="middle"
-        font-size="10" font-weight="500" fill="#1e293b">create session (uuid)</text>
+  <rect x="430" y="210" width="200" height="18" rx="9" fill="white" stroke="#2dd4bf" stroke-width="1"/>
+  <text x="530" y="219" text-anchor="middle" dominant-baseline="middle"
+        font-size="10" font-weight="500" fill="#1e293b">--yes creates run + session</text>
 
   <!-- ─── MESSAGE 4: CLI → Provider: invoke ─── -->
   <circle cx="197" cy="270" r="9" fill="#3b82f6"/>
@@ -152,7 +152,7 @@
   <line x1="240" y1="270" x2="544" y2="270" stroke="#10b981" stroke-width="1.5" marker-end="url(#arrow-green)"/>
   <rect x="345" y="255" width="160" height="18" rx="9" fill="white" stroke="#34d399" stroke-width="1"/>
   <text x="425" y="264" text-anchor="middle" dominant-baseline="middle"
-        font-size="10" font-weight="500" fill="#1e293b">invoke prompt + input</text>
+        font-size="10" font-weight="500" fill="#1e293b">invoke advisory provider</text>
 
   <!-- ─── MESSAGE 5: Provider → CLI: stream output (dashed return) ─── -->
   <circle cx="595" cy="315" r="9" fill="#10b981"/>
@@ -161,7 +161,7 @@
   <line x1="550" y1="315" x2="246" y2="315" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-green)"/>
   <rect x="290" y="300" width="135" height="18" rx="9" fill="white" stroke="#34d399" stroke-width="1"/>
   <text x="357" y="309" text-anchor="middle" dominant-baseline="middle"
-        font-size="10" font-weight="500" fill="#1e293b">stream output</text>
+        font-size="10" font-weight="500" fill="#1e293b">stream full output</text>
 
   <!-- ─── MESSAGE 6: CLI → Store: write log ─── -->
   <circle cx="197" cy="360" r="9" fill="#3b82f6"/>
@@ -170,7 +170,7 @@
   <line x1="240" y1="360" x2="676" y2="360" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arrow-teal)"/>
   <rect x="430" y="345" width="200" height="18" rx="9" fill="white" stroke="#2dd4bf" stroke-width="1"/>
   <text x="530" y="354" text-anchor="middle" dominant-baseline="middle"
-        font-size="10" font-weight="500" fill="#1e293b">write output.log + task.json</text>
+        font-size="10" font-weight="500" fill="#1e293b">write ledger + brief + logs</text>
 
   <!-- ─── MESSAGE 7: CLI → User: result/error (dashed return) ─── -->
   <circle cx="285" cy="405" r="9" fill="#3b82f6"/>
@@ -179,11 +179,12 @@
   <line x1="240" y1="405" x2="91" y2="405" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-blue)"/>
   <rect x="100" y="390" width="135" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"/>
   <text x="167" y="399" text-anchor="middle" dominant-baseline="middle"
-        font-size="10" font-weight="500" fill="#1e293b">provider output / error</text>
+        font-size="10" font-weight="500" fill="#1e293b">bounded brief / error</text>
 
   <!-- ─── LEGEND ─── -->
   <line x1="40" y1="445" x2="80" y2="445" stroke="#3b82f6" stroke-width="1.5"/>
   <text x="88" y="445" dominant-baseline="middle" font-size="10" fill="#475569">solid: request</text>
   <line x1="180" y1="445" x2="220" y2="445" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,3"/>
   <text x="228" y="445" dominant-baseline="middle" font-size="10" fill="#475569">dashed: response / async</text>
+  <text x="510" y="445" dominant-baseline="middle" font-size="10" fill="#475569">Full output stays in artifacts; brief saves tokens</text>
 </svg>
