@@ -115,9 +115,8 @@ export async function cmdAsk(args: string[]): Promise<void> {
       error = err instanceof Error ? err.message : String(err);
       await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
       const latest = await sessionStore.read(session.id).catch(() => undefined);
-      if (latest?.status === 'cancelled' || isCancellationError(error)) {
+      if (latest?.status === 'cancelled') {
         status = 'cancelled';
-        await sessionStore.markCancelled(session.id);
       } else {
         status = 'failed';
         await sessionStore.markFailed(session.id);
@@ -290,7 +289,7 @@ function buildPrompt(options: AskOptions, preset: string | undefined): string {
     preset ? `Preset instructions:\n${preset.trim()}` : undefined,
     options.task ? `Task:\n${options.task}` : undefined,
   ]
-    .filter((line): line is string => Boolean(line))
+    .filter((line): line is string => line !== undefined)
     .join('\n');
 }
 
@@ -378,9 +377,6 @@ Options:
   --yes                           Explicitly consent to provider execution`);
 }
 
-function isCancellationError(message: string): boolean {
-  return message.includes('terminated by signal SIGTERM');
-}
 
 async function writeChunk(stream: Writable, chunk: string): Promise<void> {
   if (stream.write(chunk)) return;
