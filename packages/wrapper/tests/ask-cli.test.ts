@@ -165,7 +165,7 @@ describe('aco ask CLI', () => {
     assert.match(result.stdout, /Run:/);
     assert.match(result.stdout, /Session:/);
     assert.match(result.stdout, /Full output saved/);
-    assert.doesNotMatch(result.stdout, /Findings:/);
+    assert.match(result.stdout, /Findings:/);
 
     const sessionId = await latestSessionId(result.home);
     const sessionDir = join(result.home, '.aco', 'sessions', sessionId);
@@ -192,6 +192,26 @@ describe('aco ask CLI', () => {
     assert.equal(ledger.outputMode, 'brief');
     assert.equal(ledger.sessions[0].id, sessionId);
     await stat(join(runDir, 'brief.md'));
+  });
+
+  it('does not mark multibyte brief output as truncated when it is within the character limit', async () => {
+    const multibyteInput = '가'.repeat(300);
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'review multibyte output',
+      '--input',
+      multibyteInput,
+      '--yes',
+      '--output-mode',
+      'brief',
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.equal(result.stdout.includes(multibyteInput), true);
+    assert.doesNotMatch(result.stdout, /\.\.\. \(truncated\)/);
   });
 
   it('supports save-only and full output modes explicitly', async () => {
