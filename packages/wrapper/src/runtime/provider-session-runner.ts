@@ -84,6 +84,11 @@ export async function invokeProviderForSession(
 }
 
 async function writeChunk(stream: Writable, chunk: string): Promise<void> {
+  if ((stream as { skipDrainWait?: boolean }).skipDrainWait) {
+    stream.write(chunk);
+    return;
+  }
+
   if (stream.write(chunk)) return;
   await new Promise<void>((resolve) => stream.once('drain', resolve));
 }

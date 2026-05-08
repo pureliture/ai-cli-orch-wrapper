@@ -1,10 +1,13 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
-import { mkdtemp, readdir, readFile, rm, stat, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, stat, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { Writable } from 'node:stream';
+import { invokeProviderForSession } from '../src/runtime/provider-session-runner';
+import { MockProvider } from '../src/providers/mock';
 
 interface CliResult {
   code: number | null;
@@ -165,7 +168,7 @@ describe('aco ask CLI', () => {
     assert.match(result.stdout, /Run:/);
     assert.match(result.stdout, /Session:/);
     assert.match(result.stdout, /Full output saved/);
-    assert.match(result.stdout, /Findings:/);
+    assert.doesNotMatch(result.stdout, /Findings:/);
 
     const sessionId = await latestSessionId(result.home);
     const sessionDir = join(result.home, '.aco', 'sessions', sessionId);
@@ -194,24 +197,170 @@ describe('aco ask CLI', () => {
     await stat(join(runDir, 'brief.md'));
   });
 
-  it('does not mark multibyte brief output as truncated when it is within the character limit', async () => {
-    const multibyteInput = '가'.repeat(300);
+  it('preserves raw inline input including leading spaces and trailing newline', async () => {
+    const rawInput = '  leading spaces stay\ntrailing newline stays\n';
+
     const result = await runCli([
       'ask',
       '--providers',
       'mock',
       '--task',
-      'review multibyte output',
+      'preserve raw inline input',
       '--input',
-      multibyteInput,
+      rawInput,
+      '--yes',
+      '--output-mode',
+      'save-only',
+    ]);
+
+    assert.equal(result.code, 0);
+    const sessionId = await latestSessionId(result.home);
+    const savedInput = await readFile(
+      join(result.home, '.aco', 'sessions', sessionId, 'input.md'),
+      'utf8'
+    );
+
+    assert.equal(savedInput, rawInput);
+  });
+
+  it('preserves raw input-file content exactly', async () => {
+    const home = await makeHome();
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-workspace-'));
+    const rawFileInput = '  file leading spaces stay\nfile trailing newline stays\n';
+    await writeFile(join(workspace, 'raw-input.md'), rawFileInput);
+
+    const result = await runCli(
+      [
+        'ask',
+        '--providers',
+        'mock',
+        '--task',
+        'preserve raw file input',
+        '--input-file',
+        'raw-input.md',
+        '--yes',
+        '--output-mode',
+        'save-only',
+      ],
+      { home, cwd: workspace }
+    );
+
+    assert.equal(result.code, 0);
+    const sessionId = await latestSessionId(home);
+    const savedInput = await readFile(
+      join(home, '.aco', 'sessions', sessionId, 'input.md'),
+      'utf8'
+    );
+
+    assert.equal(savedInput, rawFileInput);
+  });
+
+  it('combines inline and file input with a deterministic raw-preserving separator', async () => {
+    const home = await makeHome();
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-workspace-'));
+    const inlineInput = ' inline block ends with newline\n';
+    const fileInput = '\nfile block starts with newline\n';
+    await writeFile(join(workspace, 'combined-input.md'), fileInput);
+
+    const result = await runCli(
+      [
+        'ask',
+        '--providers',
+        'mock',
+        '--task',
+        'preserve combined raw input',
+        '--input',
+        inlineInput,
+        '--input-file',
+        'combined-input.md',
+        '--yes',
+        '--output-mode',
+        'save-only',
+      ],
+      { home, cwd: workspace }
+    );
+
+    assert.equal(result.code, 0);
+    const sessionId = await latestSessionId(home);
+    const savedInput = await readFile(
+      join(home, '.aco', 'sessions', sessionId, 'input.md'),
+      'utf8'
+    );
+
+    assert.equal(savedInput, `${inlineInput}\n\n${fileInput}`);
+  });
+
+  it('prints a bounded provider summary in brief mode without dumping the full body', async () => {
+    const hiddenTail = 'UNIQUE_AFTER_BOUND_SHOULD_NOT_APPEAR_IN_BRIEF';
+    const largeInput = `${'x'.repeat(1400)}${hiddenTail}`;
+
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'summarize this long provider output',
+      '--input',
+      largeInput,
       '--yes',
       '--output-mode',
       'brief',
     ]);
 
     assert.equal(result.code, 0);
-    assert.equal(result.stdout.includes(multibyteInput), true);
-    assert.doesNotMatch(result.stdout, /\.\.\. \(truncated\)/);
+    assert.match(result.stdout, /Summary:/);
+    assert.match(result.stdout, /Provider: mock/);
+    assert.doesNotMatch(result.stdout, new RegExp(hiddenTail));
+    assert.doesNotMatch(result.stdout, /Findings:/);
+
+    const sessionId = await latestSessionId(result.home);
+    const sessionBrief = await readFile(
+      join(result.home, '.aco', 'sessions', sessionId, 'brief.md'),
+      'utf8'
+    );
+    const runId = await latestRunId(result.home);
+    const runBrief = await readFile(join(result.home, '.aco', 'runs', runId, 'brief.md'), 'utf8');
+    const ledger = JSON.parse(
+      await readFile(join(result.home, '.aco', 'runs', runId, 'ledger.json'), 'utf8')
+    );
+
+    assert.match(sessionBrief, /Summary:/);
+    assert.match(runBrief, /Summary:/);
+    assert.equal(typeof ledger.sessions[0].summary, 'string');
+    assert.doesNotMatch(ledger.sessions[0].summary, new RegExp(hiddenTail));
+  });
+
+  it('does not truncate brief summaries at Findings headings inside raw input', async () => {
+    const inputWithHeading = 'alpha\nFindings:\nomega\n';
+
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'summarize input containing a findings heading',
+      '--input',
+      inputWithHeading,
+      '--yes',
+      '--output-mode',
+      'brief',
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.match(result.stdout, /alpha/);
+    assert.match(result.stdout, /omega/);
+    assert.doesNotMatch(result.stdout, /Treat this mock output as deterministic test data/);
+
+    const runId = await latestRunId(result.home);
+    const ledger = JSON.parse(
+      await readFile(join(result.home, '.aco', 'runs', runId, 'ledger.json'), 'utf8')
+    );
+    assert.match(ledger.sessions[0].summary, /alpha/);
+    assert.match(ledger.sessions[0].summary, /omega/);
+    assert.doesNotMatch(
+      ledger.sessions[0].summary,
+      /Treat this mock output as deterministic test data/
+    );
   });
 
   it('supports save-only and full output modes explicitly', async () => {
@@ -231,6 +380,7 @@ describe('aco ask CLI', () => {
     assert.equal(saveOnly.code, 0);
     assert.match(saveOnly.stdout, /saved/);
     assert.doesNotMatch(saveOnly.stdout, /Brief/);
+    assert.doesNotMatch(saveOnly.stdout, /Summary:/);
     assert.doesNotMatch(saveOnly.stdout, /Findings:/);
 
     const full = await runCli([
@@ -289,43 +439,6 @@ describe('aco ask CLI', () => {
     assert.match(input, /file demo/);
   });
 
-  it('preserves exact raw input including whitespace and newlines', async () => {
-    const home = await makeHome();
-    const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-raw-input-'));
-    try {
-      const inputContent = '  file content with leading/trailing spaces and newlines  \n\n';
-      await writeFile(join(workspace, 'raw-input.md'), inputContent);
-
-      const result = await runCli(
-        [
-          'ask',
-          '--providers',
-          'mock',
-          '--task',
-          'check raw input',
-          '--input',
-          '  inline content  ',
-          '--input-file',
-          'raw-input.md',
-          '--yes',
-        ],
-        { home, cwd: workspace }
-      );
-
-      assert.equal(result.code, 0);
-      const sessionId = await latestSessionId(home);
-      const sessionDir = join(home, '.aco', 'sessions', sessionId);
-
-      const input = await readFile(join(sessionDir, 'input.md'), 'utf8');
-      // Expected: "  inline content  " + "\n\n" + "  file content with leading/trailing spaces and newlines  \n\n"
-      const expected = '  inline content  \n\n  file content with leading/trailing spaces and newlines  \n\n';
-      assert.equal(input, expected);
-    } finally {
-      await rm(home, { recursive: true, force: true });
-      await rm(workspace, { recursive: true, force: true });
-    }
-  });
-
   it('saves partial output on provider failure so aco result can inspect it', async () => {
     const failed = await runCli(
       [
@@ -351,6 +464,7 @@ describe('aco ask CLI', () => {
 
     assert.equal(task.status, 'failed');
     assert.match(output, /Provider: mock/);
+    await stat(join(sessionDir, 'error.log'));
 
     const result = await runCli(['result', '--session', sessionId], { home: failed.home });
     assert.equal(result.code, 0);
@@ -453,5 +567,28 @@ describe('aco ask CLI', () => {
     ]);
     assert.equal(badPreset.code, 1);
     assert.match(badPreset.stderr, /Invalid --preset/);
+  });
+
+  it('caps fullOutput in runResult when maxOutputBuffer is set', async () => {
+    const provider = new MockProvider();
+    const output = new Writable({
+      write(_chunk, _encoding, callback) {
+        callback();
+      },
+    });
+
+    const runResult = await invokeProviderForSession({
+      provider,
+      command: 'ask',
+      prompt: 'test',
+      content: 'x'.repeat(2000),
+      permissionProfile: 'restricted',
+      sessionId: 'test-session-cap',
+      output,
+      maxOutputBuffer: 600,
+    });
+
+    assert.ok(runResult.hasOutput);
+    assert.equal(runResult.fullOutput.length, 600);
   });
 });

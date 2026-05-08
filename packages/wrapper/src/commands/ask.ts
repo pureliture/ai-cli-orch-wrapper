@@ -1,19 +1,21 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { closeSync, createWriteStream, existsSync, openSync, readSync, statSync } from 'node:fs';
+import { createWriteStream, existsSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
-import type { Writable } from 'node:stream';
 import { providerRegistry } from '../providers/registry.js';
 import { sessionStore } from '../session/store.js';
 import type { OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
+import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
+import { defaultSummarizeOutput } from '../util/summarize-output.js';
 
 const EXIT_ERROR = 1;
 const DEFAULT_PROVIDERS = ['mock'];
 const VALID_PERMISSION_PROFILES: PermissionProfile[] = ['default', 'restricted', 'unrestricted'];
 const VALID_OUTPUT_MODES = ['brief', 'save-only', 'full'] as const;
 const VALID_PRESET_NAME = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
+const SUMMARY_CHAR_LIMIT = 600;
 const ADVISORY_NOTICE =
   'External provider output is advisory. Claude Code remains the supervisor and final synthesizer.';
 
@@ -44,6 +46,7 @@ interface AskSessionLedger {
   status: 'done' | 'failed' | 'cancelled';
   outputLog: string;
   briefPath: string;
+  summary: string;
   error?: string;
 }
 
@@ -81,7 +84,6 @@ export async function cmdAsk(args: string[]): Promise<void> {
   await mkdir(runDir, { recursive: true, mode: 0o700 });
 
   const sessions: AskSessionLedger[] = [];
-  const outputPreviews: Record<string, string> = {};
   for (const provider of providers) {
     const session = await sessionStore.create(
       provider.key,
@@ -101,21 +103,25 @@ export async function cmdAsk(args: string[]): Promise<void> {
     }
     let error: string | undefined;
     let status: AskSessionLedger['status'] = 'done';
-    try {
-      for await (const chunk of provider.invoke('ask', prompt, input, {
-        permissionProfile: options.permissionProfile,
-        sessionId: session.id,
-        outputBuffer,
-        onPid: (pid) => {
-          sessionStore.update(session.id, { pid }).catch(() => undefined);
-        },
-      })) {
-        await writeChunk(outputStream, chunk);
-        if (options.outputMode === 'full') {
-          process.stdout.write(chunk);
-        }
-      }
+    const runResult = await invokeProviderForSession({
+      provider,
+      command: 'ask',
+      prompt,
+      content: input,
+      permissionProfile: options.permissionProfile,
+      sessionId: session.id,
+      output: outputStream,
+      outputBuffer,
+      maxOutputBuffer: SUMMARY_CHAR_LIMIT,
+      onChunk:
+        options.outputMode === 'full'
+          ? (chunk) => {
+              process.stdout.write(chunk);
+            }
+          : undefined,
+    });
 
+    if (!runResult.error) {
       const latest = await sessionStore.read(session.id);
       if (latest.status === 'cancelled') {
         status = 'cancelled';
@@ -124,7 +130,8 @@ export async function cmdAsk(args: string[]): Promise<void> {
       } else {
         await sessionStore.markDone(session.id);
       }
-    } catch (err) {
+    } else {
+      const err = runResult.error;
       error = err instanceof Error ? err.message : String(err);
       await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
       const latest = await sessionStore.read(session.id).catch(() => undefined);
@@ -134,23 +141,9 @@ export async function cmdAsk(args: string[]): Promise<void> {
         status = 'failed';
         await sessionStore.markFailed(session.id);
       }
-    } finally {
-      await endWritable(outputStream);
     }
 
-    let outputPreview: string | undefined;
-    if (outputBuffer.mode === 'bounded' && outputBuffer.snapshot) {
-      outputPreview = trimOutputForPreview(outputBuffer.snapshot.value, 1000);
-    }
-
-    if (!outputPreview && existsSync(outputLog)) {
-      outputPreview = readBoundedOutput(outputLog, 1000);
-    }
-
-    if (outputPreview) {
-      outputPreviews[session.id] = outputPreview;
-    }
-
+    const summary = summarizeProviderOutput(runResult.fullOutput, provider);
     const brief = renderSessionBrief({
       runId,
       task: options.task ?? '',
@@ -158,8 +151,8 @@ export async function cmdAsk(args: string[]): Promise<void> {
       sessionId: session.id,
       outputLog,
       status,
+      summary,
       error,
-      outputPreview,
     });
     const briefPath = join(sessionDir, 'brief.md');
     await writeFile(briefPath, brief, { mode: 0o600 });
@@ -170,11 +163,12 @@ export async function cmdAsk(args: string[]): Promise<void> {
       status,
       outputLog,
       briefPath,
+      summary,
       ...(error ? { error } : {}),
     });
   }
 
-  const runBrief = renderRunBrief(runId, options, sessions, outputPreviews);
+  const runBrief = renderRunBrief(runId, options, sessions);
   await writeFile(join(runDir, 'brief.md'), runBrief, { mode: 0o600 });
   await writeFile(
     join(runDir, 'ledger.json'),
@@ -339,8 +333,8 @@ function renderSessionBrief(input: {
   sessionId: string;
   outputLog: string;
   status: AskSessionLedger['status'];
+  summary: string;
   error?: string;
-  outputPreview?: string;
 }): string {
   return [
     '# aco ask session brief',
@@ -350,22 +344,18 @@ function renderSessionBrief(input: {
     `Session: ${input.sessionId}`,
     `Status: ${input.status}`,
     `Full output saved: ${input.outputLog}`,
+    `Summary:`,
+    input.summary,
     '',
     `Advisory: ${ADVISORY_NOTICE}`,
     input.error ? `Error: ${input.error}` : undefined,
-    input.outputPreview ? `\nOutput Preview:\n---\n${input.outputPreview}\n---` : undefined,
     '',
   ]
     .filter((line): line is string => line !== undefined)
     .join('\n');
 }
 
-function renderRunBrief(
-  runId: string,
-  options: AskOptions,
-  sessions: AskSessionLedger[],
-  outputPreviews?: Record<string, string>
-): string {
+function renderRunBrief(runId: string, options: AskOptions, sessions: AskSessionLedger[]): string {
   return [
     '# aco ask brief',
     '',
@@ -382,15 +372,26 @@ function renderRunBrief(
       `Session: ${session.id}`,
       `Status: ${session.status}`,
       `Full output saved: ${session.outputLog}`,
+      `Summary:`,
+      session.summary,
       session.error ? `Error: ${session.error}` : undefined,
-      outputPreviews && outputPreviews[session.id]
-        ? `\nOutput Preview:\n---\n${outputPreviews[session.id]}\n---`
-        : undefined,
       '',
     ]),
   ]
     .filter((line): line is string => line !== undefined)
     .join('\n');
+}
+
+function summarizeProviderOutput(
+  output: string,
+  provider: import('../providers/interface.js').IProvider
+): string {
+  if (provider.summarizeOutput) {
+    return provider.summarizeOutput(output, SUMMARY_CHAR_LIMIT);
+  }
+  // Fallback for providers that have not yet implemented summarizeOutput.
+  // All built-in providers should implement this; the fallback is a safety net.
+  return defaultSummarizeOutput(output, SUMMARY_CHAR_LIMIT);
 }
 
 function parseFlag<T extends string = string>(args: string[], flag: string): T | undefined {
@@ -410,53 +411,9 @@ Options:
   --preset <name>                 .claude/aco/tasks/<name>.md
   --permission-profile <profile>  restricted|default|unrestricted (default: restricted)
   --output-mode <mode>            brief|save-only|full (default: brief)
+                                    brief summary bound: ${SUMMARY_CHAR_LIMIT} chars
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
-}
-
-async function writeChunk(stream: Writable, chunk: string): Promise<void> {
-  if (stream.write(chunk)) return;
-  await new Promise<void>((resolve) => stream.once('drain', resolve));
-}
-
-async function endWritable(stream: Writable): Promise<void> {
-  if (stream.writableEnded || stream.destroyed) return;
-  await new Promise<void>((resolve, reject) => {
-    stream.end((err?: Error | null) => (err ? reject(err) : resolve()));
-  });
-}
-
-function trimOutputForPreview(output: string, maxCharacters: number): string {
-  const wasPreTrimmed = output.length > maxCharacters * 2;
-  const previewSource = wasPreTrimmed ? output.slice(0, maxCharacters * 2) : output;
-  const characters = Array.from(previewSource);
-  if (characters.length > maxCharacters || wasPreTrimmed) {
-    return `${characters.slice(0, maxCharacters).join('')}\n... (truncated)`;
-  }
-  return output;
-}
-
-function readBoundedOutput(path: string, limit: number = 1000): string {
-  try {
-    const stats = statSync(path);
-    const UTF8_MAX_BYTES = 4;
-    const maxPreviewBytes = Math.min(stats.size, limit * UTF8_MAX_BYTES + UTF8_MAX_BYTES);
-    const fd = openSync(path, 'r');
-    try {
-      const buffer = Buffer.alloc(maxPreviewBytes);
-      const bytesRead = readSync(fd, buffer, 0, maxPreviewBytes, 0);
-      const content = buffer.toString('utf8', 0, bytesRead);
-      const characters = Array.from(content);
-      if (characters.length > limit) {
-        return characters.slice(0, limit).join('') + '\n... (truncated)';
-      }
-      return bytesRead < stats.size ? `${content}\n... (truncated)` : content;
-    } finally {
-      closeSync(fd);
-    }
-  } catch {
-    return '';
-  }
 }
 
 function fail(message: string): never {
