@@ -1,7 +1,7 @@
 {
   "name": "ai-cli-orch-wrapper",
   "version": "0.4.0",
-  "description": "Claude Code slash-command pack for Gemini CLI — installable npm workspace.",
+  "description": "Consent-gated external AI delegation wrapper for Claude Code, Codex, Gemini, and mock provider workflows.",
   "private": true,
   "workspaces": [
     "packages/*"
@@ -19,8 +19,11 @@
   },
   "keywords": [
     "claude-code",
+    "codex-cli",
     "gemini-cli",
-    "slash-commands"
+    "ai-delegation",
+    "slash-commands",
+    "consent-gate"
   ],
   "license": "MIT",
   "devDependencies": {

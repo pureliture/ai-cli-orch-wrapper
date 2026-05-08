@@ -2,6 +2,25 @@
 
 `aco sync`는 Claude Code 프로젝트 설정을 Codex와 Gemini의 프로젝트 단위 설정으로 동기화한다.
 
+## Delegation Surfaces
+
+Consent-gated delegation intentionally keeps the Claude Code UX centered on one generic command:
+
+```text
+.claude/commands/aco.md
+```
+
+Task-specific behavior belongs in natural language task text, CLI flags, or presets:
+
+```text
+.claude/aco/tasks/<preset>.md
+.claude/skills/aco-delegation/SKILL.md
+```
+
+Do not add `/aco:review`, `/aco:spec-review`, `/aco:plan-review`, or similar task-specific slash commands. If delegation guidance changes, update the generic `/aco` command and `aco-delegation` skill instead.
+
+`aco sync` may expose relevant shared policy surfaces to Codex/Gemini targets according to the existing managed-block and allowed-skill rules. It does not turn `.claude/aco/tasks/` into provider execution by itself; `aco ask --yes` remains the execution gate.
+
 ## 중요: `.agents/skills`는 `.claude/skills`의 미러가 아님
 
 `aco sync`는 더 이상 모든 `.claude/skills/<skill>/`을 `.agents/skills/<skill>/`로 재귀 복사하지 않는다. 기본 정책은 **default-deny**이며, 명시적으로 허용된 ACO-owned 공유 정책/reference skill만 `.agents/skills/`에 동기화된다.
@@ -11,6 +30,7 @@
 - `github-kanban-ops`와 같이 ACO가 직접 유지보수하는 공유 정책 skill만 `.agents/skills/`에 남는다.
 
 허용 여부는 다음 순서로 결정된다 (exclude가 include보다 우선, 위쪽이 아래쪽보다 우선):
+
 1. `.aco/sync.yaml`의 `skills.exclude`
 2. `.aco/sync.yaml`의 `skills.include`
 3. Built-in ACO-owned 기본값 (예: `github-kanban-ops`는 ACO-owned로 하드코딩)
@@ -20,14 +40,14 @@
 
 ## 지원되는 CLI 표면 (2026-04-22 기준)
 
-| 표면 | Codex CLI 0.122.0 | Gemini CLI 0.38.2 |
-|---------|-------------------|-------------------|
-| 프로젝트 지침 | `AGENTS.md` | `GEMINI.md` |
-| Skills | `.agents/skills/<skill>/SKILL.md` | `.agents/skills/<skill>/SKILL.md` |
-| Custom agents | `.codex/agents/*.toml` | `.gemini/agents/*.md` |
-| Hooks | `.codex/hooks.json` + `codex_hooks` feature flag | `.gemini/settings.json` hooks |
-| 비대화형 prompt | `codex exec [PROMPT]` | `gemini --prompt <prompt>` |
-| Reasoning effort CLI flag | **지원 안 함** | **지원 안 함** |
+| 표면                      | Codex CLI 0.122.0                                | Gemini CLI 0.38.2                 |
+| ------------------------- | ------------------------------------------------ | --------------------------------- |
+| 프로젝트 지침             | `AGENTS.md`                                      | `GEMINI.md`                       |
+| Skills                    | `.agents/skills/<skill>/SKILL.md`                | `.agents/skills/<skill>/SKILL.md` |
+| Custom agents             | `.codex/agents/*.toml`                           | `.gemini/agents/*.md`             |
+| Hooks                     | `.codex/hooks.json` + `codex_hooks` feature flag | `.gemini/settings.json` hooks     |
+| 비대화형 prompt           | `codex exec [PROMPT]`                            | `gemini --prompt <prompt>`        |
+| Reasoning effort CLI flag | **지원 안 함**                                   | **지원 안 함**                    |
 
 Codex와 Gemini는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사용한다. `.codex/skills` 또는 `.gemini/skills`를 직접 사용하지 않는다. 이 경로들은 공유 표면이 아니다.
 
@@ -97,18 +117,18 @@ aco sync --clean-duplicates --force-clean
 
 `aco sync`는 다음 산출물을 관리한다:
 
-| 산출물 | 유형 | 설명 |
-|--------|------|-------------|
-| `AGENTS.md` | 관리 block | Claude context에서 생성한 Codex 프로젝트 지침 |
-| `GEMINI.md` | 관리 block | Claude context에서 생성한 Gemini 프로젝트 지침 |
-| `.agents/skills/<skill>/` | 디렉터리 | 명시적으로 허용된 ACO-owned skill만 복사 |
-| `.codex/agents/*.toml` | 파일 | Codex custom agent 정의 |
-| `.codex/hooks.json` | 파일 | Codex hook 설정 |
-| `.codex/config.toml` | 관리 block | Codex feature flag (`codex_hooks = true`) |
-| `.gemini/agents/*.md` | 파일 | Gemini custom agent 정의 |
-| `.gemini/settings.json` | 파일 | hook entry가 포함된 Gemini 설정 |
-| `.aco/sync-manifest.json` | 파일 | 소유권, 해시, 경고를 담은 sync manifest |
-| `.aco/sync.yaml` | 파일 | skill include/exclude 규칙 (선택) |
+| 산출물                    | 유형       | 설명                                           |
+| ------------------------- | ---------- | ---------------------------------------------- |
+| `AGENTS.md`               | 관리 block | Claude context에서 생성한 Codex 프로젝트 지침  |
+| `GEMINI.md`               | 관리 block | Claude context에서 생성한 Gemini 프로젝트 지침 |
+| `.agents/skills/<skill>/` | 디렉터리   | 명시적으로 허용된 ACO-owned skill만 복사       |
+| `.codex/agents/*.toml`    | 파일       | Codex custom agent 정의                        |
+| `.codex/hooks.json`       | 파일       | Codex hook 설정                                |
+| `.codex/config.toml`      | 관리 block | Codex feature flag (`codex_hooks = true`)      |
+| `.gemini/agents/*.md`     | 파일       | Gemini custom agent 정의                       |
+| `.gemini/settings.json`   | 파일       | hook entry가 포함된 Gemini 설정                |
+| `.aco/sync-manifest.json` | 파일       | 소유권, 해시, 경고를 담은 sync manifest        |
+| `.aco/sync.yaml`          | 파일       | skill include/exclude 규칙 (선택)              |
 
 ## 외부 asset 소유권
 

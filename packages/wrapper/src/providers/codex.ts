@@ -5,6 +5,7 @@ import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 import { readVersion } from '../util/read-version.js';
+import { defaultSummarizeOutput } from '../util/summarize-output.js';
 
 export class CodexProvider implements IProvider {
   readonly key = 'codex';
@@ -100,5 +101,9 @@ export class CodexProvider implements IProvider {
     const combined = content ? `${prompt}\n\n${content}` : prompt;
     const args = [...this.buildArgs(command, options), combined];
     yield* spawnStream(binary, args, { processName: 'codex', stdin: 'pipe' }, options);
+  }
+
+  summarizeOutput(output: string, maxLength: number): string {
+    return defaultSummarizeOutput(output, maxLength);
   }
 }

@@ -1,4 +1,5 @@
 import type { AuthResult, InvokeOptions, IProvider } from './interface.js';
+import { defaultSummarizeOutput } from '../util/summarize-output.js';
 
 export class MockProvider implements IProvider {
   readonly key = 'mock';
@@ -29,7 +30,7 @@ export class MockProvider implements IProvider {
       }
     }
 
-    const input = content.trim() || '(empty input)';
+    const input = content.length > 0 ? content : '(empty input)';
     yield [
       'Provider: mock',
       'Mode: deterministic demo',
@@ -51,5 +52,11 @@ export class MockProvider implements IProvider {
     if (process.env.ACO_MOCK_FAIL === '1') {
       throw new Error('mock provider forced failure');
     }
+  }
+
+  summarizeOutput(output: string, maxLength: number): string {
+    const findingsIndex = output.lastIndexOf('\nFindings:\n');
+    const beforeFindings = findingsIndex === -1 ? output : output.slice(0, findingsIndex);
+    return defaultSummarizeOutput(beforeFindings, maxLength);
   }
 }

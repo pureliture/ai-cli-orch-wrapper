@@ -6,7 +6,6 @@ import { homedir } from 'node:os';
 import process from 'node:process';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { Writable } from 'node:stream';
 import {
   packInstall,
   packSetup,
@@ -15,6 +14,7 @@ import {
   providerSetup,
 } from './commands/pack-install.js';
 import { cmdAsk } from './commands/ask.js';
+import { cmdDoctor } from './commands/doctor.js';
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile } from './providers/interface.js';
@@ -22,6 +22,7 @@ import { getCachedProviderAuth } from './providers/auth-cache.js';
 import { collectRuntimeContext } from './runtime/context.js';
 import { renderRuntimeDashboard } from './runtime/dashboard.js';
 import { formatAuthStatus } from './runtime/auth-display.js';
+import { invokeProviderForSession } from './runtime/provider-session-runner.js';
 import { runSync } from './sync/sync-engine.js';
 
 const execFileAsync = promisify(execFile);
@@ -54,6 +55,9 @@ async function main(): Promise<void> {
       break;
     case 'ask':
       await cmdAsk(rest);
+      break;
+    case 'doctor':
+      await cmdDoctor(rest);
       break;
     case 'result':
       await cmdResult(rest);
@@ -213,31 +217,17 @@ async function cmdRun(args: string[]): Promise<void> {
   process.stderr.write(renderRuntimeDashboard(runtimeContext) + '\n');
 
   const tee = sessionStore.createOutputTee(session.id);
-  let hasOutput = false;
-  let runError: unknown;
-
-  try {
-    for await (const chunk of provider.invoke(command, prompt, content, {
-      permissionProfile,
-      sessionId: session.id,
-      onPid: (pid) => {
-        // Fire-and-forget pid update so the session can be cancelled
-        sessionStore.update(session.id, { pid }).catch((err: unknown) => {
-          console.warn(
-            'Failed to record process PID:',
-            err instanceof Error ? err.message : String(err)
-          );
-        });
-      },
-    })) {
-      tee.write(chunk);
-      hasOutput = true;
-    }
-  } catch (err) {
-    runError = err;
-  } finally {
-    await endWritable(tee);
-  }
+  const runResult = await invokeProviderForSession({
+    provider,
+    command,
+    prompt,
+    content,
+    permissionProfile,
+    sessionId: session.id,
+    output: tee,
+    maxOutputBuffer: Infinity,
+  });
+  const runError = runResult.error;
 
   if (runError) {
     const msg = runError instanceof Error ? runError.message : String(runError);
@@ -247,7 +237,7 @@ async function cmdRun(args: string[]): Promise<void> {
     process.exit(EXIT_ERROR);
   }
 
-  if (!hasOutput && permissionProfile === 'restricted') {
+  if (!runResult.hasOutput && permissionProfile === 'restricted') {
     await appendFile(
       sessionStore.errorLogPath(session.id),
       'Permission profile: restricted — output may be blocked\n',
@@ -469,6 +459,7 @@ function printUsage(): void {
   aco --help
   aco sync [--check] [--dry-run] [--force]
   aco ask --task <text> [--providers codex,gemini,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--dry-run|--yes]
+  aco doctor
   aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]
   aco result [--session <id>]
   aco status [--session <id>]
@@ -478,13 +469,6 @@ function printUsage(): void {
   aco pack status [--global]
   aco pack setup [--global] [--force]
   aco provider setup <name>`);
-}
-
-async function endWritable(stream: Writable): Promise<void> {
-  if (stream.writableEnded || stream.destroyed) return;
-  await new Promise<void>((resolve, reject) => {
-    stream.end((err?: Error | null) => (err ? reject(err) : resolve()));
-  });
 }
 
 main().catch((err) => {

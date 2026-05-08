@@ -1,5 +1,42 @@
 # 운영 Runbook
 
+## No-Auth Consent-Gated Demo
+
+Use the built Node wrapper for the public CLI path:
+
+```bash
+npm run build
+node packages/wrapper/dist/cli.js ask --providers mock --task "review this demo input" --input "demo" --dry-run
+node packages/wrapper/dist/cli.js ask --providers mock --task "review this demo input" --input "demo" --yes --output-mode brief
+node packages/wrapper/dist/cli.js result
+node packages/wrapper/dist/cli.js doctor
+```
+
+Expected behavior:
+
+- `--dry-run` shows the plan and prints `Provider execution: skipped`.
+- `--yes --output-mode brief` creates run/session artifacts and prints a bounded summary, not full provider output.
+- `aco result` prints the full deterministic mock output from `output.log`.
+- `aco doctor` prints local diagnostics only. It does not call real providers or verify remote auth. It uses `HOME` or `USERPROFILE` heuristics for credential paths, and falls back gracefully when neither is set.
+
+## Inspecting Artifacts
+
+```bash
+aco status
+aco result
+cat ~/.aco/runs/<run-id>/ledger.json
+cat ~/.aco/sessions/<session-id>/brief.md
+cat ~/.aco/sessions/<session-id>/output.log
+```
+
+See [Session And Run Artifacts](../reference/session-artifacts.md).
+
+## Safety Reminder
+
+Do not pass secrets, credential files, private tokens, or unrelated private files through `--input` or `--input-file`. `.acoignore.example` is an example policy file only; Goal 2 does not enforce `.acoignore`.
+
+See [Security Model](../security.md).
+
 ## 배포
 
 ### 1. 빌드

@@ -179,7 +179,7 @@
   <text x="645" y="172" text-anchor="middle" dominant-baseline="middle"
         font-size="9.5" fill="#1e293b" font-weight="500">npm pack + ask mock</text>
   <text x="645" y="186" text-anchor="middle" dominant-baseline="middle"
-        font-size="9" fill="#64748b">dry-run / brief / result</text>
+        font-size="9" fill="#64748b">dry-run / brief / result / doctor</text>
 
   <!-- fixtures -->
   <g filter="url(#shadow)">

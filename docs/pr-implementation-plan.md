@@ -2,6 +2,13 @@
 
 작성일: 2026-04-24
 
+> 2026-05-08 Goal 2 note: this file is a historical PR decomposition plan. PR #92 and the Goal 2
+> hardening branch already implement several items that this document originally listed as future
+> PRs, including `aco ask`, the `mock` provider, local-only `aco doctor`, security docs, and
+> session/run artifact v1 docs. Use [roadmap.md](roadmap.md) and
+> [plans/consent-gated-delegation-hardening](plans/consent-gated-delegation-hardening/) for current
+> Goal 2 execution status.
+
 이 문서는 `ai-cli-orch-wrapper`를 repo-local AI workflow harness로 개선하기 위한
 PR1-PR8a/8b 실행 기준이다. [roadmap.md](roadmap.md)는 방향성과 우선순위를 정리하고, 이 문서는
 각 PR을 실제 개발 단위로 자르기 위한 scope, non-goals, acceptance criteria, verification을
