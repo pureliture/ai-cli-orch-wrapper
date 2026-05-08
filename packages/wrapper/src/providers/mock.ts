@@ -29,7 +29,7 @@ export class MockProvider implements IProvider {
       }
     }
 
-    const input = content.trim() || '(empty input)';
+    const input = content.length > 0 ? content : '(empty input)';
     yield [
       'Provider: mock',
       'Mode: deterministic demo',

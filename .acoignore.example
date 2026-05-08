@@ -1,0 +1,25 @@
+# .acoignore.example
+#
+# Goal 2 status: this file is an example/policy reference only.
+# ai-cli-orch-wrapper does not enforce .acoignore filtering yet.
+# Do not assume these patterns are applied automatically.
+
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+
+# Local AI provider credentials
+.codex/auth.json
+.gemini/oauth_creds.json
+
+# Common local/private data
+private/
+secrets/
+credentials/
+*.secret
+*.token
