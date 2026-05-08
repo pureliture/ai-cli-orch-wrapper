@@ -37,6 +37,29 @@ node packages/wrapper/dist/cli.js pack setup
 
 ## 일반적인 문제
 
+## Consent-Gated Delegation MVP
+
+`aco ask`는 Claude Code 세션에서 외부 AI CLI에 advisory 작업을 위임하기 위한 high-level 명령이다.
+외부 provider는 `--yes` 없이는 실행되지 않는다.
+
+```bash
+# provider 실행 없이 계획만 확인
+aco ask --providers mock --task "review this demo input" --input "demo" --dry-run
+
+# 명시 동의 후 mock provider로 no-auth demo 실행
+aco ask --providers mock --task "review this demo input" --input "demo" --yes --output-mode brief
+
+# full provider output 조회
+aco result
+```
+
+기본 permission profile은 `restricted`이고 기본 output mode는 `brief`다. full output은
+`~/.aco/sessions/<session-id>/output.log`에 저장되며, run-level 요약은
+`~/.aco/runs/<run-id>/brief.md`와 `ledger.json`에 저장된다.
+
+실제 Codex/Gemini provider를 호출할 때도 같은 동의 규칙을 적용한다. external provider output은
+advisory이며, 최종 판단과 종합은 Claude Code와 maintainer가 수행한다.
+
 ### `aco: command not found`
 
 ```bash
