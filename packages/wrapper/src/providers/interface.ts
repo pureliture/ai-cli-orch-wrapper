@@ -30,4 +30,12 @@ export interface IProvider {
     content: string,
     options?: InvokeOptions
   ): AsyncIterable<string>;
+
+  /**
+   * Summarize provider output for brief display.
+   * @param output - The full provider output.
+   * @param maxLength - Maximum length of the summary.
+   * @returns A bounded summary string.
+   */
+  summarizeOutput?(output: string, maxLength: number): string;
 }

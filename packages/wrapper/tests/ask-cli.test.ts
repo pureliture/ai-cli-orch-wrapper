@@ -5,6 +5,9 @@ import { mkdtemp, readdir, readFile, stat, writeFile, mkdir } from 'node:fs/prom
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { Writable } from 'node:stream';
+import { invokeProviderForSession } from '../src/runtime/provider-session-runner';
+import { MockProvider } from '../src/providers/mock';
 
 interface CliResult {
   code: number | null;
@@ -564,5 +567,28 @@ describe('aco ask CLI', () => {
     ]);
     assert.equal(badPreset.code, 1);
     assert.match(badPreset.stderr, /Invalid --preset/);
+  });
+
+  it('caps fullOutput in runResult when maxOutputBuffer is set', async () => {
+    const provider = new MockProvider();
+    const output = new Writable({
+      write(_chunk, _encoding, callback) {
+        callback();
+      },
+    });
+
+    const runResult = await invokeProviderForSession({
+      provider,
+      command: 'ask',
+      prompt: 'test',
+      content: 'x'.repeat(2000),
+      permissionProfile: 'restricted',
+      sessionId: 'test-session-cap',
+      output,
+      maxOutputBuffer: 600,
+    });
+
+    assert.ok(runResult.hasOutput);
+    assert.equal(runResult.fullOutput.length, 600);
   });
 });

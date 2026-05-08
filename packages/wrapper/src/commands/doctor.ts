@@ -74,41 +74,65 @@ function formatLocalProviderReadiness(key: string): string {
 }
 
 function formatCodexReadiness(): string {
-  if (process.env.OPENAI_API_KEY) return 'available; local auth heuristic ready (OPENAI_API_KEY)';
-
-  const authPath = join(process.env.HOME || process.env.USERPROFILE || '', '.codex', 'auth.json');
-  if (!authPath || !existsSync(authPath)) {
-    return 'available; local auth heuristic missing (codex login OR export OPENAI_API_KEY)';
-  }
-
-  try {
-    const parsed = JSON.parse(readFileSync(authPath, 'utf8')) as { expires_at?: number };
-    if (typeof parsed.expires_at === 'number') {
-      const now = Math.floor(Date.now() / 1000);
-      if (parsed.expires_at < now) {
-        return 'available; local auth heuristic expired (run codex login)';
+  return formatCredentialReadiness({
+    envKeys: ['OPENAI_API_KEY'],
+    credPath: ['.codex', 'auth.json'],
+    missingMsg: 'codex login OR export OPENAI_API_KEY',
+    loginCmd: 'run codex login',
+    validateCred: (parsed) => {
+      const p = parsed as { expires_at?: number };
+      if (typeof p.expires_at === 'number') {
+        const now = Math.floor(Date.now() / 1000);
+        if (p.expires_at < now) {
+          return 'available; local auth heuristic expired (run codex login)';
+        }
       }
-    }
-    return 'available; local auth heuristic ready (oauth file)';
-  } catch {
-    return 'available; local auth heuristic unreadable (run codex login)';
-  }
+      return null;
+    },
+  });
 }
 
 function formatGeminiReadiness(): string {
-  if (process.env.GEMINI_API_KEY) return 'available; local auth heuristic ready (GEMINI_API_KEY)';
-  if (process.env.GOOGLE_API_KEY) return 'available; local auth heuristic ready (GOOGLE_API_KEY)';
+  return formatCredentialReadiness({
+    envKeys: ['GEMINI_API_KEY', 'GOOGLE_API_KEY'],
+    credPath: ['.gemini', 'oauth_creds.json'],
+    missingMsg: 'gemini auth login OR export GEMINI_API_KEY',
+    loginCmd: 'run gemini auth login',
+  });
+}
 
-  const credsPath = join(process.env.HOME || process.env.USERPROFILE || '', '.gemini', 'oauth_creds.json');
-  if (!credsPath || !existsSync(credsPath)) {
-    return 'available; local auth heuristic missing (gemini auth login OR export GEMINI_API_KEY)';
+interface CredentialReadinessOptions {
+  envKeys: string[];
+  credPath: string[];
+  missingMsg: string;
+  loginCmd: string;
+  validateCred?: (parsed: unknown) => string | null;
+}
+
+function formatCredentialReadiness(options: CredentialReadinessOptions): string {
+  for (const key of options.envKeys) {
+    if (process.env[key]) return `available; local auth heuristic ready (${key})`;
+  }
+
+  const homeDir = process.env.HOME ?? process.env.USERPROFILE;
+  if (!homeDir) {
+    return `available; local auth heuristic missing (no HOME or USERPROFILE set; ${options.missingMsg})`;
+  }
+
+  const fullPath = join(homeDir, ...options.credPath);
+  if (!existsSync(fullPath)) {
+    return `available; local auth heuristic missing (${options.missingMsg})`;
   }
 
   try {
-    JSON.parse(readFileSync(credsPath, 'utf8'));
+    const parsed = JSON.parse(readFileSync(fullPath, 'utf8'));
+    if (options.validateCred) {
+      const result = options.validateCred(parsed);
+      if (result) return result;
+    }
     return 'available; local auth heuristic ready (oauth file)';
   } catch {
-    return 'available; local auth heuristic unreadable (run gemini auth login)';
+    return `available; local auth heuristic unreadable (${options.loginCmd})`;
   }
 }
 
@@ -180,7 +204,11 @@ function findGitDirAncestor(startDir: string): string | null {
 
 function loadVersion(): string {
   try {
-    const raw = readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8');
+    const pkgPath =
+      typeof __dirname !== 'undefined'
+        ? join(__dirname, '..', '..', 'package.json')
+        : new URL('../../package.json', (0, eval)('import.meta.url') as string).pathname;
+    const raw = readFileSync(pkgPath, 'utf8');
     const parsed = JSON.parse(raw) as { version?: string };
     return parsed.version ?? '0.0.0';
   } catch {

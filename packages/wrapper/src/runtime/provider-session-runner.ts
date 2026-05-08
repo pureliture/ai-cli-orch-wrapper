@@ -11,6 +11,8 @@ export interface ProviderSessionRunOptions {
   sessionId: string;
   output: Writable;
   onChunk?: (chunk: string) => void | Promise<void>;
+  /** Maximum number of characters to buffer in memory. Beyond this, output is still written to the stream but not accumulated. */
+  maxOutputBuffer?: number;
 }
 
 export interface ProviderSessionRunResult {
@@ -22,6 +24,7 @@ export interface ProviderSessionRunResult {
 export async function invokeProviderForSession(
   options: ProviderSessionRunOptions
 ): Promise<ProviderSessionRunResult> {
+  const maxBuffer = options.maxOutputBuffer ?? Infinity;
   let fullOutput = '';
   let hasOutput = false;
   let error: unknown;
@@ -35,12 +38,22 @@ export async function invokeProviderForSession(
         permissionProfile: options.permissionProfile,
         sessionId: options.sessionId,
         onPid: (pid) => {
-          sessionStore.update(options.sessionId, { pid }).catch(() => undefined);
+          sessionStore.update(options.sessionId, { pid }).catch((err: unknown) => {
+            console.warn(
+              'Failed to record process PID:',
+              err instanceof Error ? err.message : String(err)
+            );
+          });
         },
       }
     )) {
       await writeChunk(options.output, chunk);
-      fullOutput += chunk;
+      if (fullOutput.length < maxBuffer) {
+        fullOutput += chunk;
+        if (fullOutput.length > maxBuffer) {
+          fullOutput = fullOutput.slice(0, maxBuffer);
+        }
+      }
       hasOutput = true;
       await options.onChunk?.(chunk);
     }
