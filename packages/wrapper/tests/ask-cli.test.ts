@@ -165,7 +165,7 @@ describe('aco ask CLI', () => {
     assert.match(result.stdout, /Run:/);
     assert.match(result.stdout, /Session:/);
     assert.match(result.stdout, /Full output saved/);
-    assert.doesNotMatch(result.stdout, /Findings:/);
+    assert.match(result.stdout, /Findings:/);
 
     const sessionId = await latestSessionId(result.home);
     const sessionDir = join(result.home, '.aco', 'sessions', sessionId);

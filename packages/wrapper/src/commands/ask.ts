@@ -1,5 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { createWriteStream, existsSync } from 'node:fs';
+import { createWriteStream, existsSync, readFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -125,6 +125,11 @@ export async function cmdAsk(args: string[]): Promise<void> {
       await endWritable(outputStream);
     }
 
+    let outputPreview: string | undefined;
+    if (existsSync(outputLog)) {
+      outputPreview = truncateOutput(readFileSync(outputLog, 'utf8'));
+    }
+
     const brief = renderSessionBrief({
       runId,
       task: options.task ?? '',
@@ -133,6 +138,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       outputLog,
       status,
       error,
+      outputPreview,
     });
     const briefPath = join(sessionDir, 'brief.md');
     await writeFile(briefPath, brief, { mode: 0o600 });
@@ -147,7 +153,14 @@ export async function cmdAsk(args: string[]): Promise<void> {
     });
   }
 
-  const runBrief = renderRunBrief(runId, options, sessions);
+  const outputPreviews: Record<string, string> = {};
+  for (const session of sessions) {
+    if (existsSync(session.outputLog)) {
+      outputPreviews[session.id] = truncateOutput(readFileSync(session.outputLog, 'utf8'));
+    }
+  }
+
+  const runBrief = renderRunBrief(runId, options, sessions, outputPreviews);
   await writeFile(join(runDir, 'brief.md'), runBrief, { mode: 0o600 });
   await writeFile(
     join(runDir, 'ledger.json'),
@@ -313,6 +326,7 @@ function renderSessionBrief(input: {
   outputLog: string;
   status: AskSessionLedger['status'];
   error?: string;
+  outputPreview?: string;
 }): string {
   return [
     '# aco ask session brief',
@@ -325,13 +339,14 @@ function renderSessionBrief(input: {
     '',
     `Advisory: ${ADVISORY_NOTICE}`,
     input.error ? `Error: ${input.error}` : undefined,
+    input.outputPreview ? `\nOutput Preview:\n---\n${input.outputPreview}\n---` : undefined,
     '',
   ]
     .filter((line): line is string => line !== undefined)
     .join('\n');
 }
 
-function renderRunBrief(runId: string, options: AskOptions, sessions: AskSessionLedger[]): string {
+function renderRunBrief(runId: string, options: AskOptions, sessions: AskSessionLedger[], outputPreviews?: Record<string, string>): string {
   return [
     '# aco ask brief',
     '',
@@ -349,6 +364,7 @@ function renderRunBrief(runId: string, options: AskOptions, sessions: AskSession
       `Status: ${session.status}`,
       `Full output saved: ${session.outputLog}`,
       session.error ? `Error: ${session.error}` : undefined,
+      outputPreviews && outputPreviews[session.id] ? `\nOutput Preview:\n---\n${outputPreviews[session.id]}\n---` : undefined,
       '',
     ]),
   ]
@@ -387,6 +403,11 @@ async function endWritable(stream: Writable): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     stream.end((err?: Error | null) => (err ? reject(err) : resolve()));
   });
+}
+
+function truncateOutput(output: string, limit: number = 1000): string {
+  if (output.length <= limit) return output;
+  return output.substring(0, limit) + '\n... (truncated)';
 }
 
 function fail(message: string): never {
