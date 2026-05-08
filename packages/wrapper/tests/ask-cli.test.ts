@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
-import { mkdtemp, readdir, readFile, stat, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, rm, stat, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -287,6 +287,43 @@ describe('aco ask CLI', () => {
     assert.match(prompt, /Never modify files/);
     assert.match(input, /inline demo/);
     assert.match(input, /file demo/);
+  });
+
+  it('preserves exact raw input including whitespace and newlines', async () => {
+    const home = await makeHome();
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-raw-input-'));
+    try {
+      const inputContent = '  file content with leading/trailing spaces and newlines  \n\n';
+      await writeFile(join(workspace, 'raw-input.md'), inputContent);
+
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'mock',
+          '--task',
+          'check raw input',
+          '--input',
+          '  inline content  ',
+          '--input-file',
+          'raw-input.md',
+          '--yes',
+        ],
+        { home, cwd: workspace }
+      );
+
+      assert.equal(result.code, 0);
+      const sessionId = await latestSessionId(home);
+      const sessionDir = join(home, '.aco', 'sessions', sessionId);
+
+      const input = await readFile(join(sessionDir, 'input.md'), 'utf8');
+      // Expected: "  inline content  " + "\n\n" + "  file content with leading/trailing spaces and newlines  \n\n"
+      const expected = '  inline content  \n\n  file content with leading/trailing spaces and newlines  \n\n';
+      assert.equal(input, expected);
+    } finally {
+      await rm(home, { recursive: true, force: true });
+      await rm(workspace, { recursive: true, force: true });
+    }
   });
 
   it('saves partial output on provider failure so aco result can inspect it', async () => {
