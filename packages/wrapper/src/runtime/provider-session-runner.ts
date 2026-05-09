@@ -29,6 +29,8 @@ export interface ProviderSessionRunResult {
   error?: unknown;
 }
 
+const OMITTED_OUTPUT_MARKER = '\n...[output omitted]...\n';
+
 export async function invokeProviderForSession(
   options: ProviderSessionRunOptions
 ): Promise<ProviderSessionRunResult> {
@@ -42,7 +44,7 @@ export async function invokeProviderForSession(
         MAX_OUTPUT_BUFFER_BYTES
       )
     : 0;
-  let fullOutput = '';
+  const outputCapture = maxBuffer > 0 ? createBoundedOutputCapture(maxBuffer) : undefined;
   let hasOutput = false;
   let error: unknown;
 
@@ -66,12 +68,7 @@ export async function invokeProviderForSession(
       }
     )) {
       await writeChunk(options.output, chunk);
-      if (maxBuffer > 0 && fullOutput.length < maxBuffer) {
-        fullOutput += chunk;
-        if (fullOutput.length > maxBuffer) {
-          fullOutput = fullOutput.slice(0, maxBuffer);
-        }
-      }
+      outputCapture?.append(chunk);
       hasOutput = true;
       await options.onChunk?.(chunk);
     }
@@ -81,15 +78,10 @@ export async function invokeProviderForSession(
     await endWritable(options.output);
   }
 
-  return { fullOutput, hasOutput, ...(error ? { error } : {}) };
+  return { fullOutput: outputCapture?.value() ?? '', hasOutput, ...(error ? { error } : {}) };
 }
 
 async function writeChunk(stream: Writable, chunk: string): Promise<void> {
-  if ((stream as { skipDrainWait?: boolean }).skipDrainWait) {
-    stream.write(chunk);
-    return;
-  }
-
   if (stream.write(chunk)) return;
   await new Promise<void>((resolve) => stream.once('drain', resolve));
 }
@@ -99,4 +91,37 @@ async function endWritable(stream: Writable): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     stream.end((err?: Error | null) => (err ? reject(err) : resolve()));
   });
+}
+
+function createBoundedOutputCapture(maxBuffer: number): {
+  append(chunk: string): void;
+  value(): string;
+} {
+  let head = '';
+  let tail = '';
+  let totalLength = 0;
+
+  return {
+    append(chunk: string): void {
+      totalLength += chunk.length;
+      if (head.length < maxBuffer) {
+        head += chunk.slice(0, maxBuffer - head.length);
+      }
+
+      tail += chunk;
+      if (tail.length > maxBuffer) {
+        tail = tail.slice(tail.length - maxBuffer);
+      }
+    },
+    value(): string {
+      if (totalLength <= maxBuffer) return head;
+
+      const marker = OMITTED_OUTPUT_MARKER.slice(0, maxBuffer);
+      const available = Math.max(0, maxBuffer - marker.length);
+      const headLength = Math.ceil(available / 2);
+      const tailLength = available - headLength;
+
+      return `${head.slice(0, headLength)}${marker}${tail.slice(tail.length - tailLength)}`;
+    },
+  };
 }

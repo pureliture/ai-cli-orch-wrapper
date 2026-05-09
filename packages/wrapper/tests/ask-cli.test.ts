@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path';
 import { Writable } from 'node:stream';
 import { invokeProviderForSession } from '../src/runtime/provider-session-runner';
 import { MockProvider } from '../src/providers/mock';
+import type { IProvider } from '../src/providers/interface';
 
 interface CliResult {
   code: number | null;
@@ -368,14 +369,15 @@ describe('aco ask CLI', () => {
   });
 
   it('keeps raw input after Findings headings when the provider footer is beyond the summary source prefix', async () => {
-    const inputWithHeading = `alpha\nFindings:\nomega\n${'tail '.repeat(180)}`;
+    const inputWithHeading = `alpha\nFindings:\nomega\n${'tail '.repeat(4000)}`;
+    assert.ok(inputWithHeading.length > 16 * 1024);
 
     const result = await runCli([
       'ask',
       '--providers',
       'mock',
       '--task',
-      'summarize long input containing a findings heading',
+      'x',
       '--input',
       inputWithHeading,
       '--yes',
@@ -663,5 +665,51 @@ describe('aco ask CLI', () => {
 
     assert.ok(runResult.hasOutput);
     assert.equal(runResult.fullOutput.length, 600);
+  });
+
+  it('waits for writable drain even when the sink exposes compatibility flags', async () => {
+    let drainCount = 0;
+    let sawDrainBeforeSecondChunk = false;
+    const output = new Writable({
+      highWaterMark: 1,
+      write(_chunk, _encoding, callback) {
+        setTimeout(callback, 25);
+      },
+    }) as Writable & { skipDrainWait?: boolean };
+    output.skipDrainWait = true;
+    output.on('drain', () => {
+      drainCount += 1;
+    });
+
+    const provider: IProvider = {
+      key: 'slow-test',
+      installHint: 'test provider',
+      isAvailable: () => true,
+      checkAuth: async () => ({
+        ok: true,
+        method: 'cli-fallback',
+        version: 'test',
+        binaryPath: 'test',
+      }),
+      buildArgs: () => ['slow-test'],
+      async *invoke() {
+        yield 'first chunk';
+        sawDrainBeforeSecondChunk = drainCount > 0;
+        yield 'second chunk';
+      },
+    };
+
+    const runResult = await invokeProviderForSession({
+      provider,
+      command: 'ask',
+      prompt: 'test',
+      content: 'test',
+      permissionProfile: 'restricted',
+      sessionId: 'test-session-drain',
+      output,
+    });
+
+    assert.ok(runResult.hasOutput);
+    assert.equal(sawDrainBeforeSecondChunk, true);
   });
 });
