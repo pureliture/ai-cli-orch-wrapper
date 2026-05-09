@@ -191,12 +191,15 @@ Use this workflow when the user asks Codex to triage unresolved PR review thread
 3. Fetch unresolved review threads using GitHub MCP tools or `gh api graphql`.
 4. Categorize each unresolved thread as an immediate fix, deferred issue, or needs user decision.
 5. For immediate fixes, make the local code change, reply with a concise fix summary, and resolve the thread only when the user asked Codex to handle review follow-up.
-6. For deferred issues, use only `task`, `bug`, or `chore`; never create an `epic` from a review thread without separate user instruction.
-7. Generate each deferred issue body with `.agents/skills/github-kanban-ops/scripts/make_issue_body.py`, including the review comment, affected path or line, deferred scope, acceptance criteria, and PR reference in `Notes`.
-8. Create each deferred issue with `type:<type>`, `origin:review`, and optional `area:*` labels only.
-9. Add deferred issues to the active Project, set `Status=Backlog`, and set assessed `Priority` when confidence is sufficient.
-10. If priority confidence is too low, leave `Priority` unset and report `Priority unset for deferred issue — triage needed`.
-11. Report resolved threads, deferred issue URLs, Project status and Priority results, review replies, and warnings.
+6. Preserve review traceability for immediate fixes: commit review follow-up changes as new commits on top of the reviewed PR head, then push with a normal fast-forward `git push`.
+7. Do not amend, rebase, squash, force-push, or use `--force-with-lease` during `/gh-pr-followup` unless the user explicitly asks for branch-history repair.
+8. If explicit branch-history repair requires a non-fast-forward push, report the before and after head SHAs and why the repair was needed.
+9. For deferred issues, use only `task`, `bug`, or `chore`; never create an `epic` from a review thread without separate user instruction.
+10. Generate each deferred issue body with `.agents/skills/github-kanban-ops/scripts/make_issue_body.py`, including the review comment, affected path or line, deferred scope, acceptance criteria, and PR reference in `Notes`.
+11. Create each deferred issue with `type:<type>`, `origin:review`, and optional `area:*` labels only.
+12. Add deferred issues to the active Project, set `Status=Backlog`, and set assessed `Priority` when confidence is sufficient.
+13. If priority confidence is too low, leave `Priority` unset and report `Priority unset for deferred issue — triage needed`.
+14. Report resolved threads, deferred issue URLs, Project status and Priority results, review replies, and warnings.
 
 ### Plan or Triage
 
