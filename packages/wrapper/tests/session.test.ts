@@ -134,4 +134,80 @@ describe('SessionStore', () => {
     assert.ok(logPath.startsWith(dir));
     assert.ok(logPath.endsWith('output.log'));
   });
+
+  it('createOutputTee() writes output without buffering unread readable chunks', async () => {
+    const { store } = await makeStore();
+    const record = await store.create('gemini', 'review');
+    const originalStdoutWrite = process.stdout.write;
+    let stdout = '';
+
+    process.stdout.write = ((chunk: string | Uint8Array, ...args: unknown[]) => {
+      stdout += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
+      const callback = args.find((arg): arg is () => void => typeof arg === 'function');
+      callback?.();
+      return true;
+    }) as typeof process.stdout.write;
+
+    try {
+      const tee = store.createOutputTee(record.id);
+      const chunk = Buffer.from('x'.repeat(1024));
+
+      await new Promise<void>((resolve, reject) => {
+        tee.write(chunk, (err?: Error | null) => (err ? reject(err) : resolve()));
+      });
+
+      assert.equal((tee as { readableLength?: number }).readableLength ?? 0, 0);
+
+      await new Promise<void>((resolve, reject) => {
+        tee.end((err?: Error | null) => (err ? reject(err) : resolve()));
+      });
+
+      assert.equal(stdout, chunk.toString('utf8'));
+      assert.equal(await readFile(store.outputLogPath(record.id), 'utf8'), chunk.toString('utf8'));
+    } finally {
+      process.stdout.write = originalStdoutWrite;
+    }
+  });
+
+  it('createOutputTee() waits for stdout backpressure before accepting the next chunk', async () => {
+    const { store } = await makeStore();
+    const record = await store.create('gemini', 'review');
+    const originalStdoutWrite = process.stdout.write;
+    let releaseStdout: (() => void) | undefined;
+
+    process.stdout.write = ((_chunk: string | Uint8Array, ...args: unknown[]) => {
+      const callback = args.find((arg): arg is () => void => typeof arg === 'function');
+      releaseStdout = callback;
+      return false;
+    }) as typeof process.stdout.write;
+
+    try {
+      const tee = store.createOutputTee(record.id);
+      let writeCompleted = false;
+      const writeDone = new Promise<void>((resolve, reject) => {
+        tee.write(Buffer.from('blocked'), (err?: Error | null) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+          writeCompleted = true;
+          resolve();
+        });
+      });
+
+      await new Promise((resolve) => setImmediate(resolve));
+      assert.equal(writeCompleted, false);
+
+      releaseStdout?.();
+      await writeDone;
+
+      assert.equal(writeCompleted, true);
+
+      await new Promise<void>((resolve, reject) => {
+        tee.end((err?: Error | null) => (err ? reject(err) : resolve()));
+      });
+    } finally {
+      process.stdout.write = originalStdoutWrite;
+    }
+  });
 });
