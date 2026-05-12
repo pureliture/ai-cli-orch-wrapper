@@ -352,12 +352,8 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
 
 function printPackInstallRecovery(targetBase: string, options: PackRecoveryOptions): void {
   const uninstallArgs = `pack uninstall${options.global ? ' --global' : ''}`;
-  console.error(
-    `  Pack files may already be installed. Manifest: ${MANIFEST_PATH(targetBase)}.`
-  );
-  console.error(
-    `  Recovery: run '${uninstallArgs}' through the same entrypoint used for setup.`
-  );
+  console.error(`  Pack files may already be installed. Manifest: ${MANIFEST_PATH(targetBase)}.`);
+  console.error(`  Recovery: run '${uninstallArgs}' through the same entrypoint used for setup.`);
   if (options.binaryVerified) {
     console.error(`  Recovery command: ${options.binaryName} ${uninstallArgs}`);
   }
