@@ -1,0 +1,554 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  realpath,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { delimiter, join, resolve } from 'node:path';
+import { computeHash } from '../src/sync/hash.js';
+import { describeBinaryRecovery, packSetup } from '../src/commands/pack-install.js';
+import { resolveRunPromptTemplate } from '../src/runtime/run-prompt-template.js';
+import { runSync } from '../src/sync/sync-engine.js';
+import type { SyncManifest } from '../src/sync/transform-interface.js';
+
+interface CliResult {
+  code: number;
+  stdout: string;
+  stderr: string;
+}
+
+const wrapperRoot = resolve(__dirname, '..');
+
+async function withWorkspace(run: (workspace: string) => Promise<void>): Promise<void> {
+  const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-runtime-contract-'));
+  const oldCwd = process.cwd();
+  try {
+    process.chdir(workspace);
+    await run(workspace);
+  } finally {
+    process.chdir(oldCwd);
+    await rm(workspace, { recursive: true, force: true });
+  }
+}
+
+async function makeFakeAcoBinary(name = 'aco-test-local'): Promise<string> {
+  const binDir = await mkdtemp(join(tmpdir(), 'aco-pack-runtime-bin-'));
+  const binary = join(binDir, name);
+  await writeFile(binary, '#!/usr/bin/env node\nprocess.stdout.write("aco 0.4.0\\n");\n');
+  await chmod(binary, 0o755);
+  return binDir;
+}
+
+async function setupPack(options: { force?: boolean } = {}): Promise<void> {
+  await packSetup({
+    binaryName: 'aco-test-local',
+    force: options.force,
+  });
+}
+
+async function runCli(
+  args: string[],
+  options: { cwd: string; env?: Record<string, string | undefined>; timeoutMs?: number }
+): Promise<CliResult> {
+  const cliPath = join(wrapperRoot, 'src', 'cli.ts');
+  const tsxRegister = require.resolve('tsx/cjs');
+
+  return new Promise((resolveResult) => {
+    execFile(
+      process.execPath,
+      ['--require', tsxRegister, cliPath, ...args],
+      {
+        cwd: options.cwd,
+        env: {
+          ...process.env,
+          NO_COLOR: '1',
+          ...options.env,
+        },
+        timeout: options.timeoutMs ?? 8000,
+      },
+      (error, stdout, stderr) => {
+        let code = 0;
+        if (error) {
+          code =
+            typeof (error as { code?: unknown }).code === 'number'
+              ? (error as { code: number }).code
+              : 1;
+        }
+        resolveResult({ code, stdout, stderr });
+      }
+    );
+  });
+}
+
+async function setupSyncConflictWorkspace(workspace: string): Promise<string> {
+  const canonicalWorkspace = await realpath(workspace);
+  await mkdir(join(workspace, '.claude', 'agents'), { recursive: true });
+  await writeFile(join(workspace, 'CLAUDE.md'), 'test context\n');
+  await writeFile(join(workspace, '.claude', 'agents', 'reviewer.md'), '---\nid: reviewer\n---\n');
+
+  const targetPath = join(canonicalWorkspace, '.codex', 'agents', 'reviewer.toml');
+  const originalTargetContent = 'name = "reviewer"\n';
+  await mkdir(join(workspace, '.codex', 'agents'), { recursive: true });
+  await writeFile(targetPath, originalTargetContent);
+
+  const manifest: SyncManifest = {
+    version: '1',
+    generatedAt: new Date().toISOString(),
+    sourceHashes: {},
+    targetHashes: {
+      [targetPath]: computeHash(originalTargetContent),
+    },
+    targets: {},
+    skipped: [],
+    warnings: [],
+  };
+  await mkdir(join(workspace, '.aco'), { recursive: true });
+  await writeFile(join(workspace, '.aco', 'sync-manifest.json'), JSON.stringify(manifest));
+  await writeFile(targetPath, 'name = "manually-edited-reviewer"\n');
+  return targetPath;
+}
+
+async function listMarkdownFiles(root: string): Promise<string[]> {
+  const files: string[] = [];
+
+  async function walk(dir: string, prefix = ''): Promise<void> {
+    const entries = await readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const rel = prefix ? join(prefix, entry.name) : entry.name;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full, rel);
+      } else if (entry.name.endsWith('.md')) {
+        files.push(rel);
+      }
+    }
+  }
+
+  await walk(root);
+  return files.sort();
+}
+
+function templateDisplayName(file: string, options: { command?: boolean } = {}): string {
+  const name = file.replace(/\.md$/, '').split('/').join(':');
+  return options.command ? `/${name}` : name;
+}
+
+function normalizeMarkdown(content: string): string {
+  return content.replace(/\r\n/g, '\n');
+}
+
+describe('pack template runtime contract', () => {
+  it('installs commands, prompt templates, and task presets while preserving existing presets', async () => {
+    const binDir = await makeFakeAcoBinary();
+    await withWorkspace(async (workspace) => {
+      await mkdir(join(workspace, '.claude', 'aco', 'tasks'), { recursive: true });
+      await writeFile(join(workspace, '.claude', 'aco', 'tasks', 'review.md'), 'user preset\n');
+
+      process.env.PATH = `${binDir}${delimiter}${process.env.PATH ?? ''}`;
+      await setupPack();
+
+      await stat(join(workspace, '.claude', 'commands', 'aco.md'));
+      await stat(join(workspace, '.claude', 'aco', 'prompts', 'gemini', 'review.md'));
+      await stat(join(workspace, '.claude', 'aco', 'prompts', 'codex', 'review.md'));
+      await stat(join(workspace, '.claude', 'aco', 'tasks', 'spec-critique.md'));
+      await stat(join(workspace, '.claude', 'aco', 'tasks', 'plan-critique.md'));
+      await stat(join(workspace, '.claude', 'aco', 'tasks', 'tdd.md'));
+      await stat(join(workspace, '.claude', 'aco', 'tasks', 'code-simplify.md'));
+      await stat(join(workspace, '.claude', 'aco', 'tasks', 'default.md'));
+
+      const reviewPreset = await readFile(
+        join(workspace, '.claude', 'aco', 'tasks', 'review.md'),
+        'utf8'
+      );
+      assert.equal(reviewPreset, 'user preset\n');
+    });
+  });
+
+  it('force overwrites packaged task presets and keeps the manifest entry', async () => {
+    const binDir = await makeFakeAcoBinary();
+    await withWorkspace(async (workspace) => {
+      await mkdir(join(workspace, '.claude', 'aco', 'tasks'), { recursive: true });
+      const presetPath = join(workspace, '.claude', 'aco', 'tasks', 'review.md');
+      await writeFile(presetPath, 'user preset\n');
+
+      process.env.PATH = `${binDir}${delimiter}${process.env.PATH ?? ''}`;
+      await setupPack({ force: true });
+
+      const reviewPreset = await readFile(presetPath, 'utf8');
+      assert.notEqual(reviewPreset, 'user preset\n');
+
+      const manifest = JSON.parse(
+        await readFile(join(workspace, '.claude', 'aco', 'aco-manifest.json'), 'utf8')
+      ) as { files: string[] };
+      assert.equal(
+        manifest.files.some((file) => file.endsWith('/.claude/aco/tasks/review.md')),
+        true
+      );
+    });
+  });
+
+  it('reports commands, prompt templates, and task presets in pack status', async () => {
+    const binDir = await makeFakeAcoBinary();
+    await withWorkspace(async (workspace) => {
+      process.env.PATH = `${binDir}${delimiter}${process.env.PATH ?? ''}`;
+      await setupPack();
+
+      const result = await runCli(['pack', 'status'], {
+        cwd: workspace,
+        env: { PATH: process.env.PATH },
+      });
+
+      assert.equal(result.code, 0, result.stdout + result.stderr);
+      const outputLines = new Set(result.stdout.split(/\r?\n/).map((line) => line.trim()));
+
+      assert.equal(outputLines.has('Commands:'), true);
+      assert.equal(outputLines.has('Prompt templates:'), true);
+      assert.equal(outputLines.has('Task presets:'), true);
+
+      const templatesRoot = resolve(wrapperRoot, '..', '..', 'templates');
+      for (const command of await listMarkdownFiles(join(templatesRoot, 'commands'))) {
+        assert.equal(outputLines.has(templateDisplayName(command, { command: true })), true);
+      }
+      for (const prompt of await listMarkdownFiles(join(templatesRoot, 'prompts'))) {
+        assert.equal(outputLines.has(templateDisplayName(prompt)), true);
+      }
+      for (const task of await listMarkdownFiles(join(templatesRoot, 'tasks'))) {
+        assert.equal(outputLines.has(templateDisplayName(task)), true);
+      }
+    });
+  });
+
+  it('keeps repo-local task presets byte-aligned with packaged task presets', async () => {
+    const templatesTasks = resolve(wrapperRoot, '..', '..', 'templates', 'tasks');
+    const repoLocalTasks = resolve(wrapperRoot, '..', '..', '.claude', 'aco', 'tasks');
+    const packagedFiles = await listMarkdownFiles(templatesTasks);
+    const repoLocalFiles = await listMarkdownFiles(repoLocalTasks);
+
+    assert.notEqual(packagedFiles.length, 0);
+    assert.deepEqual(repoLocalFiles, packagedFiles);
+
+    for (const taskFile of packagedFiles) {
+      const packaged = await readFile(join(templatesTasks, taskFile), 'utf8');
+      const repoLocal = await readFile(join(repoLocalTasks, taskFile), 'utf8');
+      assert.equal(normalizeMarkdown(repoLocal), normalizeMarkdown(packaged), taskFile);
+    }
+  });
+
+  it('resolves documented review prompts and keeps unknown commands on generic fallback', async () => {
+    const binDir = await makeFakeAcoBinary();
+    await withWorkspace(async (workspace) => {
+      process.env.PATH = `${binDir}${delimiter}${process.env.PATH ?? ''}`;
+      await setupPack();
+      const geminiReview = await resolveRunPromptTemplate({
+        cwd: workspace,
+        home: workspace,
+        providerKey: 'gemini',
+        command: 'review',
+      });
+      assert.equal(
+        geminiReview.promptTemplatePath,
+        join(workspace, '.claude', 'aco', 'prompts', 'gemini', 'review.md')
+      );
+
+      const codexReview = await resolveRunPromptTemplate({
+        cwd: workspace,
+        home: workspace,
+        providerKey: 'codex',
+        command: 'review',
+      });
+      assert.equal(
+        codexReview.promptTemplatePath,
+        join(workspace, '.claude', 'aco', 'prompts', 'codex', 'review.md')
+      );
+
+      const unknown = await resolveRunPromptTemplate({
+        cwd: workspace,
+        home: workspace,
+        providerKey: 'gemini',
+        command: 'unknown-command',
+      });
+      assert.equal(unknown.promptTemplatePath, undefined);
+      assert.match(unknown.prompt, /Perform a unknown-command/);
+    });
+  });
+
+  it('fails documented review commands before provider invocation when the prompt template is missing', async () => {
+    await assert.rejects(
+      resolveRunPromptTemplate({
+        cwd: await mkdtemp(join(tmpdir(), 'aco-missing-review-cwd-')),
+        home: await mkdtemp(join(tmpdir(), 'aco-missing-review-home-')),
+        providerKey: 'gemini',
+        command: 'review',
+      }),
+      /Missing prompt template.*gemini.*review/
+    );
+  });
+
+  it('loads documented presets after pack setup and keeps missing preset errors actionable', async () => {
+    const binDir = await makeFakeAcoBinary();
+    await withWorkspace(async (workspace) => {
+      process.env.PATH = `${binDir}${delimiter}${process.env.PATH ?? ''}`;
+      await setupPack();
+
+      for (const preset of [
+        'review',
+        'spec-critique',
+        'plan-critique',
+        'tdd',
+        'code-simplify',
+        'default',
+      ]) {
+        const result = await runCli(['ask', '--preset', preset, '--dry-run'], {
+          cwd: workspace,
+          env: { PATH: process.env.PATH },
+        });
+        assert.equal(result.code, 0, `${preset}: ${result.stdout}${result.stderr}`);
+        assert.match(result.stdout, new RegExp(`Preset: ${preset}`));
+        assert.match(result.stdout, /Provider execution: skipped/);
+      }
+
+      const missing = await runCli(['ask', '--preset', 'missing-preset', '--dry-run'], {
+        cwd: workspace,
+        env: { PATH: process.env.PATH },
+      });
+      assert.equal(missing.code, 1);
+      assert.match(missing.stdout + missing.stderr, /Preset not found: missing-preset/);
+    });
+  });
+
+  it('does not auto-install the public package when binary verification fails', async () => {
+    const message = describeBinaryRecovery({
+      binaryName: 'missing-aco',
+      reason: 'not found in PATH',
+      packageRoot: wrapperRoot,
+      publicPackageName: '@pureliture/ai-cli-orch-wrapper',
+    });
+
+    assert.doesNotMatch(message, /npm install -g @pureliture\/ai-cli-orch-wrapper/);
+    assert.match(message, /missing-aco/);
+    assert.match(message, /current package/i);
+  });
+
+  it('passes --binary-name through the pack setup CLI path', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-binary-name-'));
+    const binDir = await makeFakeAcoBinary('aco-test-local');
+    try {
+      const result = await runCli(['pack', 'setup', '--binary-name', 'aco-test-local'], {
+        cwd: workspace,
+        env: {
+          HOME: await mkdtemp(join(tmpdir(), 'aco-pack-binary-home-')),
+          USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-binary-profile-')),
+          PATH: binDir,
+        },
+      });
+
+      assert.equal(result.code, 0, result.stdout + result.stderr);
+      assert.match(result.stdout + result.stderr, /aco-test-local/);
+      assert.doesNotMatch(
+        result.stdout + result.stderr,
+        /npm install -g @pureliture\/ai-cli-orch-wrapper/
+      );
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not print provider setup commands when the requested binary is not verified', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-missing-binary-'));
+    const emptyBinDir = await mkdtemp(join(tmpdir(), 'aco-pack-empty-bin-'));
+    try {
+      const result = await runCli(['pack', 'setup', '--binary-name', 'definitely-missing-aco'], {
+        cwd: workspace,
+        env: {
+          HOME: await mkdtemp(join(tmpdir(), 'aco-pack-missing-binary-home-')),
+          USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-missing-binary-profile-')),
+          PATH: emptyBinDir,
+        },
+      });
+
+      assert.equal(result.code, 0, result.stdout + result.stderr);
+      assert.match(result.stdout + result.stderr, /Binary 'definitely-missing-aco' was not verified/);
+      assert.doesNotMatch(result.stdout + result.stderr, /\n  aco provider setup /);
+      assert.match(
+        result.stdout + result.stderr,
+        /Provider setup commands require a verified 'definitely-missing-aco' binary/
+      );
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+      await rm(emptyBinDir, { recursive: true, force: true });
+    }
+  });
+
+  it('reports pack uninstall recovery when post-install sync fails after template writes', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-post-sync-failure-'));
+    const binDir = await makeFakeAcoBinary('aco');
+    try {
+      await writeFile(join(workspace, 'CLAUDE.md'), '# Source context\n');
+      await writeFile(join(workspace, 'AGENTS.md'), '# Locked generated target\n');
+      await chmod(join(workspace, 'AGENTS.md'), 0o444);
+
+      const result = await runCli(['pack', 'setup'], {
+        cwd: workspace,
+        env: {
+          HOME: await mkdtemp(join(tmpdir(), 'aco-pack-post-sync-home-')),
+          USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-post-sync-profile-')),
+          PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+        },
+      });
+
+      assert.equal(result.code, 1);
+      assert.equal(existsSync(join(workspace, '.claude', 'aco', 'tasks', 'review.md')), true);
+      assert.match(result.stdout + result.stderr, /Pack files may already be installed/);
+      assert.match(result.stdout + result.stderr, /\.claude[/\\]aco[/\\]aco-manifest\.json/);
+      assert.match(result.stdout + result.stderr, /same entrypoint used for setup/);
+      assert.match(result.stdout + result.stderr, /Recovery command: aco pack uninstall/);
+    } finally {
+      await chmod(join(workspace, 'AGENTS.md'), 0o644).catch(() => undefined);
+      await rm(workspace, { recursive: true, force: true });
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it('includes global scope and binary override in post-install sync recovery', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-global-sync-failure-'));
+    const home = await mkdtemp(join(tmpdir(), 'aco-pack-global-home-'));
+    const binDir = await makeFakeAcoBinary('aco-test-local');
+    try {
+      await writeFile(join(workspace, 'CLAUDE.md'), '# Source context\n');
+      await writeFile(join(workspace, 'AGENTS.md'), '# Locked generated target\n');
+      await chmod(join(workspace, 'AGENTS.md'), 0o444);
+
+      const result = await runCli(
+        ['pack', 'setup', '--global', '--binary-name', 'aco-test-local'],
+        {
+          cwd: workspace,
+          env: {
+            HOME: home,
+            USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-global-profile-')),
+            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+          },
+        }
+      );
+
+      assert.equal(result.code, 1);
+      assert.match(result.stdout + result.stderr, /Pack files may already be installed/);
+      assert.match(
+        result.stdout + result.stderr,
+        new RegExp(`${home.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[/\\\\]\\.claude[/\\\\]aco[/\\\\]aco-manifest\\.json`)
+      );
+      assert.match(result.stdout + result.stderr, /Recovery command: aco-test-local pack uninstall --global/);
+    } finally {
+      await chmod(join(workspace, 'AGENTS.md'), 0o644).catch(() => undefined);
+      await rm(workspace, { recursive: true, force: true });
+      await rm(home, { recursive: true, force: true });
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps post-install sync recovery entrypoint-neutral when binary is not verified', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-neutral-sync-failure-'));
+    const emptyBinDir = await mkdtemp(join(tmpdir(), 'aco-pack-neutral-empty-bin-'));
+    try {
+      await writeFile(join(workspace, 'CLAUDE.md'), '# Source context\n');
+      await writeFile(join(workspace, 'AGENTS.md'), '# Locked generated target\n');
+      await chmod(join(workspace, 'AGENTS.md'), 0o444);
+
+      const result = await runCli(['pack', 'setup', '--binary-name', 'missing-aco'], {
+        cwd: workspace,
+        env: {
+          HOME: await mkdtemp(join(tmpdir(), 'aco-pack-neutral-home-')),
+          USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-neutral-profile-')),
+          PATH: emptyBinDir,
+        },
+      });
+
+      assert.equal(result.code, 1);
+      assert.match(result.stdout + result.stderr, /same entrypoint used for setup/);
+      assert.match(result.stdout + result.stderr, /pack uninstall/);
+      assert.doesNotMatch(result.stdout + result.stderr, /Recovery command: aco pack uninstall/);
+      assert.doesNotMatch(result.stdout + result.stderr, /missing-aco pack uninstall/);
+    } finally {
+      await chmod(join(workspace, 'AGENTS.md'), 0o644).catch(() => undefined);
+      await rm(workspace, { recursive: true, force: true });
+      await rm(emptyBinDir, { recursive: true, force: true });
+    }
+  });
+
+  it('stops pack setup before template writes when sync preflight finds a fatal conflict', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-sync-conflict-'));
+    const binDir = await makeFakeAcoBinary('aco');
+    try {
+      await setupSyncConflictWorkspace(workspace);
+
+      const result = await runCli(['pack', 'setup'], {
+        cwd: workspace,
+        env: {
+          HOME: await mkdtemp(join(tmpdir(), 'aco-pack-sync-home-')),
+          USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-sync-profile-')),
+          PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+        },
+      });
+
+      assert.equal(result.code, 1);
+      assert.match(result.stdout + result.stderr, /Sync conflict|Sync check failed/);
+      assert.equal(existsSync(join(workspace, '.claude', 'commands', 'aco.md')), false);
+      assert.equal(existsSync(join(workspace, '.claude', 'aco', 'prompts')), false);
+      assert.equal(existsSync(join(workspace, '.claude', 'aco', 'tasks')), false);
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it('continues pack setup for no-source workspaces and update-only drift', async () => {
+    const binDir = await makeFakeAcoBinary('aco');
+    const noSourceWorkspace = await mkdtemp(join(tmpdir(), 'aco-pack-no-source-'));
+    const driftWorkspace = await mkdtemp(join(tmpdir(), 'aco-pack-stale-sync-'));
+    try {
+      const noSource = await runCli(['pack', 'setup'], {
+        cwd: noSourceWorkspace,
+        env: {
+          HOME: await mkdtemp(join(tmpdir(), 'aco-pack-no-source-home-')),
+          USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-no-source-profile-')),
+          PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+        },
+      });
+      assert.equal(noSource.code, 0, noSource.stdout + noSource.stderr);
+      assert.equal(
+        existsSync(join(noSourceWorkspace, '.claude', 'aco', 'tasks', 'review.md')),
+        true
+      );
+
+      await writeFile(join(driftWorkspace, 'CLAUDE.md'), '# Original\n');
+      await runSync(driftWorkspace, { dryRun: false });
+      await writeFile(join(driftWorkspace, 'CLAUDE.md'), '# Updated\n');
+
+      const drift = await runCli(['pack', 'setup'], {
+        cwd: driftWorkspace,
+        env: {
+          HOME: await mkdtemp(join(tmpdir(), 'aco-pack-drift-home-')),
+          USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-drift-profile-')),
+          PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+        },
+      });
+      assert.equal(drift.code, 0, drift.stdout + drift.stderr);
+      assert.equal(existsSync(join(driftWorkspace, '.claude', 'aco', 'tasks', 'review.md')), true);
+      assert.doesNotMatch(drift.stdout + drift.stderr, /Sync conflict/);
+    } finally {
+      await rm(noSourceWorkspace, { recursive: true, force: true });
+      await rm(driftWorkspace, { recursive: true, force: true });
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+});
