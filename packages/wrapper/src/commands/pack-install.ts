@@ -109,7 +109,9 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<Pac
 
   if (!options.skipSuccessMessage) {
     if (binaryVerified) {
-      console.log(`\n✓ Pack installed. Run '${binaryName} pack setup' to verify provider readiness.`);
+      console.log(
+        `\n✓ Pack installed. Run '${binaryName} pack setup' to verify provider readiness.`
+      );
     } else {
       console.log(`\n✓ Pack installed. Verify '${binaryName}' before running provider setup.`);
     }
