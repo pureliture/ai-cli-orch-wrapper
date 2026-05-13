@@ -21,6 +21,10 @@ export interface ProviderSessionRunOptions {
   outputBuffer?: OutputBufferPolicy;
   /** Maximum number of characters to buffer in memory. Used only for bounded output collection. */
   maxOutputBuffer?: number;
+  /** Maximum provider execution time in milliseconds. */
+  timeoutMs?: number;
+  /** Grace period after SIGTERM before SIGKILL. */
+  killGraceMs?: number;
 }
 
 export interface ProviderSessionRunResult {
@@ -57,6 +61,8 @@ export async function invokeProviderForSession(
         permissionProfile: options.permissionProfile,
         sessionId: options.sessionId,
         outputBuffer,
+        timeoutMs: options.timeoutMs,
+        killGraceMs: options.killGraceMs,
         onPid: (pid) => {
           sessionStore.update(options.sessionId, { pid }).catch((err: unknown) => {
             console.warn(
