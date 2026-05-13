@@ -23,6 +23,7 @@ import { collectRuntimeContext } from './runtime/context.js';
 import { renderRuntimeDashboard } from './runtime/dashboard.js';
 import { formatAuthStatus } from './runtime/auth-display.js';
 import { invokeProviderForSession } from './runtime/provider-session-runner.js';
+import { resolveRunPromptTemplate } from './runtime/run-prompt-template.js';
 import { runSync } from './sync/sync-engine.js';
 
 const execFileAsync = promisify(execFile);
@@ -111,7 +112,13 @@ async function cmdPack(args: string[]): Promise<void> {
     case undefined: {
       const isGlobal = args.includes('--global');
       const force = args.includes('--force');
-      await packSetup({ global: isGlobal, force });
+      const binaryName = parseFlag(args, '--binary-name');
+      if (args.includes('--binary-name') && (!binaryName || binaryName.startsWith('-'))) {
+        console.error('Error: --binary-name requires a valid value');
+        printUsage();
+        process.exit(EXIT_ERROR);
+      }
+      await packSetup({ global: isGlobal, force, binaryName });
       return;
     }
     default:
@@ -180,32 +187,12 @@ async function cmdRun(args: string[]): Promise<void> {
     content = Buffer.concat(chunks).toString();
   }
 
-  const cwdPromptPath = join(
-    process.cwd(),
-    '.claude',
-    'aco',
-    'prompts',
+  const { prompt, promptTemplatePath } = await resolveRunPromptTemplate({
+    cwd: process.cwd(),
+    home: homedir(),
     providerKey,
-    `${command}.md`
-  );
-  const globalPromptPath = join(
-    homedir(),
-    '.claude',
-    'aco',
-    'prompts',
-    providerKey,
-    `${command}.md`
-  );
-  let prompt = `You are a code reviewer. Perform a ${command} for the following content.`;
-  let promptTemplatePath: string | undefined;
-
-  if (existsSync(cwdPromptPath)) {
-    prompt = await readFile(cwdPromptPath, 'utf8');
-    promptTemplatePath = cwdPromptPath;
-  } else if (existsSync(globalPromptPath)) {
-    prompt = await readFile(globalPromptPath, 'utf8');
-    promptTemplatePath = globalPromptPath;
-  }
+    command,
+  });
 
   const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
   const auth = await getCachedProviderAuth(provider, { skipCache: true });
@@ -471,7 +458,7 @@ function printUsage(): void {
   aco pack install [--global] [--force] [--binary-name <name>]
   aco pack uninstall [--global]
   aco pack status [--global]
-  aco pack setup [--global] [--force]
+  aco pack setup [--global] [--force] [--binary-name <name>]
   aco provider setup <name>`);
 }
 
