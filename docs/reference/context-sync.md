@@ -157,6 +157,14 @@ provider-specific command (예: `.gemini/commands/gh-issue.toml`, `.claude/comma
 
 ## Pack Setup 통합
 
-`aco pack setup`은 command와 prompt 템플릿을 설치한 뒤 자동으로 `aco sync`를 실행한다. sync 경고는 setup 출력에 표시된다. 치명적인 sync 충돌, 즉 소유권이 없는 대상 drift가 있으면 파일 쓰기 전에 setup이 실패하며, `aco sync --check` 또는 `aco sync --force`로 해결하라는 안내를 출력한다.
+`aco pack setup`은 command, provider prompt, task preset 템플릿을 설치한 뒤 자동으로 `aco sync`를 실행한다.
+
+- `templates/commands/**` -> `.claude/commands/**`
+- `templates/prompts/**` -> `.claude/aco/prompts/**`
+- `templates/tasks/**` -> `.claude/aco/tasks/**`
+
+설치된 task preset은 `aco ask --preset <name>`이 읽는 advisory prompt source이며, 그 자체로 provider를 실행하지 않는다. 실제 provider 실행은 `aco ask --yes` 또는 `aco run <provider> <command>`에서만 발생한다.
+
+setup은 pack 파일을 쓰기 전에 sync preflight를 실행한다. manifest-owned target conflict는 fatal로 처리되어 파일 쓰기 전에 실패하고, `aco sync --check` 또는 `aco sync --force` 안내를 출력한다. no-source workspace와 update-only drift는 setup을 막지 않으며, 설치 후 sync 단계에서 skip 또는 refresh로 처리된다. 설치 후 sync가 실패하면 setup에 사용한 것과 같은 entrypoint로 `pack uninstall`을 실행하고, `--global` setup은 `pack uninstall --global`을 recovery 경로로 사용한다.
 
 `aco pack status`는 ACO command pack 상태와 외부 통합 관찰 결과를 별도로 보고한다.

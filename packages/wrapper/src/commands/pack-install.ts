@@ -12,12 +12,15 @@ import { getCachedProviderAuth } from '../providers/auth-cache.js';
 const execFileAsync = promisify(execFile);
 
 const BINARY_CHECK_TIMEOUT_MS = 5_000;
-const NPM_INSTALL_TIMEOUT_MS = 60_000;
 const EXIT_ERROR = 1;
 const PUBLIC_PACKAGE_NAME = '@pureliture/ai-cli-orch-wrapper';
 
+function findPackageRoot(startDir: string): string {
+  return resolve(startDir, '..', '..');
+}
+
 function findTemplatesDir(startDir: string): string {
-  const packageRoot = resolve(startDir, '..', '..');
+  const packageRoot = findPackageRoot(startDir);
   const monorepoRoot = resolve(packageRoot, '..', '..');
   const devPath = join(monorepoRoot, 'templates');
   const prodPath = join(packageRoot, 'templates');
@@ -31,26 +34,43 @@ function findTemplatesDir(startDir: string): string {
   return prodPath;
 }
 
+const PACKAGE_ROOT = findPackageRoot(__dirname);
 const TEMPLATES_DIR = findTemplatesDir(__dirname);
 
 export interface PackInstallOptions {
   global?: boolean;
   force?: boolean;
   binaryName?: string;
+  skipSuccessMessage?: boolean;
+}
+
+export interface PackInstallResult {
+  binaryName: string;
+  binaryVerified: boolean;
+}
+
+interface PackRecoveryOptions extends PackInstallResult {
+  global?: boolean;
 }
 
 const MANIFEST_PATH = (targetBase: string) => join(targetBase, 'aco', 'aco-manifest.json');
 
-export async function packInstall(options: PackInstallOptions = {}): Promise<void> {
+function resolveTargetBase(options: Pick<PackInstallOptions, 'global'>): string {
+  return options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
+}
+
+export async function packInstall(options: PackInstallOptions = {}): Promise<PackInstallResult> {
   if (!existsSync(TEMPLATES_DIR)) {
     throw new Error(`Template source not found at ${TEMPLATES_DIR}`);
   }
 
-  const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
+  const targetBase = resolveTargetBase(options);
   const commandsSrc = join(TEMPLATES_DIR, 'commands');
   const promptsSrc = join(TEMPLATES_DIR, 'prompts');
+  const tasksSrc = join(TEMPLATES_DIR, 'tasks');
   const commandsDest = join(targetBase, 'commands');
   const promptsDest = join(targetBase, 'aco', 'prompts');
+  const tasksDest = join(targetBase, 'aco', 'tasks');
 
   console.log(`Installing aco command pack to ${targetBase} …\n`);
 
@@ -63,6 +83,7 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
     'prompt template',
     installedFiles
   );
+  await copyTree(tasksSrc, tasksDest, options.force ?? false, 'task preset', installedFiles);
 
   const manifestPath = MANIFEST_PATH(targetBase);
   let existingFiles: string[] = [];
@@ -84,13 +105,23 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
   }
 
   const binaryName = options.binaryName ?? 'aco';
-  await placeWrapperBinary(binaryName);
+  const binaryVerified = await placeWrapperBinary(binaryName);
 
-  console.log(`\n✓ Pack installed. Run 'aco pack setup' to verify provider readiness.`);
+  if (!options.skipSuccessMessage) {
+    if (binaryVerified) {
+      console.log(
+        `\n✓ Pack installed. Run '${binaryName} pack setup' to verify provider readiness.`
+      );
+    } else {
+      console.log(`\n✓ Pack installed. Verify '${binaryName}' before running provider setup.`);
+    }
+  }
+
+  return { binaryName, binaryVerified };
 }
 
 export async function packUninstall(options: { global?: boolean } = {}): Promise<void> {
-  const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
+  const targetBase = resolveTargetBase(options);
   const manifestPath = MANIFEST_PATH(targetBase);
   const resolvedTargetBase = resolve(targetBase);
 
@@ -135,8 +166,10 @@ export async function packUninstall(options: { global?: boolean } = {}): Promise
 }
 
 export async function packStatus(options: { global?: boolean } = {}): Promise<void> {
-  const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
+  const targetBase = resolveTargetBase(options);
   const commandsDest = join(targetBase, 'commands');
+  const promptsDest = join(targetBase, 'aco', 'prompts');
+  const tasksDest = join(targetBase, 'aco', 'tasks');
   const repoRoot = process.cwd();
 
   console.log('aco pack status\n');
@@ -154,6 +187,34 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
       const rel = relative(commandsDest, f);
       const slashName = rel.replace(/\.md$/, '').split(sep).join(':');
       console.log(`  /${slashName}`);
+    }
+  }
+
+  const promptFiles: string[] = [];
+  if (existsSync(promptsDest)) {
+    await collectFiles(promptsDest, promptFiles);
+  }
+  if (promptFiles.length === 0) {
+    console.log('Prompt templates: (none installed)');
+  } else {
+    console.log('Prompt templates:');
+    for (const f of promptFiles) {
+      const rel = relative(promptsDest, f);
+      console.log(`  ${rel.replace(/\.md$/, '').split(sep).join(':')}`);
+    }
+  }
+
+  const taskFiles: string[] = [];
+  if (existsSync(tasksDest)) {
+    await collectFiles(tasksDest, taskFiles);
+  }
+  if (taskFiles.length === 0) {
+    console.log('Task presets: (none installed)');
+  } else {
+    console.log('Task presets:');
+    for (const f of taskFiles) {
+      const rel = relative(tasksDest, f);
+      console.log(`  ${rel.replace(/\.md$/, '').split(sep).join(':')}`);
     }
   }
 
@@ -218,21 +279,32 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
 }
 
 export async function packSetup(options: PackInstallOptions = {}): Promise<void> {
-  await packInstall(options);
+  const repoRoot = process.cwd();
+  const targetBase = resolveTargetBase(options);
+  try {
+    await runPackSetupSyncPreflight(repoRoot);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error(`  [error] ${msg}`);
+    process.exit(1);
+  }
+  const installResult = await packInstall({ ...options, skipSuccessMessage: true });
 
   console.log('\n--- Provider Status ---');
   for (const key of providerRegistry.keys()) {
     const provider = providerRegistry.get(key)!;
     const available = provider.isAvailable();
     if (!available) {
-      console.log(`  ${key}: not installed  → run: aco provider setup ${key}`);
+      const setupHint = installResult.binaryVerified
+        ? `run: ${installResult.binaryName} provider setup ${key}`
+        : `verify '${installResult.binaryName}' before provider setup for ${key}`;
+      console.log(`  ${key}: not installed  → ${setupHint}`);
     } else {
       console.log(`  ${key}: installed ✓`);
     }
   }
 
   console.log('\n--- Context Sync ---');
-  const repoRoot = process.cwd();
   try {
     const result = await runSync(repoRoot, {
       dryRun: false,
@@ -257,17 +329,65 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
     if (msg.includes('conflict') || msg.includes('Conflict')) {
       console.error(`  [error] Sync conflict: ${msg}`);
       console.error(`  Run 'aco sync --check' for details, or 'aco sync --force' to overwrite.`);
+      printPackInstallRecovery(targetBase, { ...installResult, global: options.global });
       process.exit(1);
     } else if (msg.includes('no sync sources') || msg.includes('No sync sources')) {
       console.log(`  (skipped — no Claude context sources found)`);
     } else {
-      console.warn(`  [warn] Sync skipped: ${msg}`);
+      console.error(`  [error] Sync failed after pack install: ${msg}`);
+      printPackInstallRecovery(targetBase, { ...installResult, global: options.global });
+      process.exit(1);
     }
   }
 
   console.log('\nNext steps:');
-  for (const key of providerRegistry.keys()) {
-    console.log(`  aco provider setup ${key}`);
+  if (installResult.binaryVerified) {
+    for (const key of providerRegistry.keys()) {
+      console.log(`  ${installResult.binaryName} provider setup ${key}`);
+    }
+  } else {
+    console.log(
+      `  Provider setup commands require a verified '${installResult.binaryName}' binary.`
+    );
+    console.log(
+      `  Verify the current checkout/package first, then run provider setup for: ${providerRegistry.keys().join(', ')}`
+    );
+  }
+}
+
+function printPackInstallRecovery(targetBase: string, options: PackRecoveryOptions): void {
+  const uninstallArgs = `pack uninstall${options.global ? ' --global' : ''}`;
+  console.error(`  Pack files may already be installed. Manifest: ${MANIFEST_PATH(targetBase)}.`);
+  console.error(`  Recovery: run '${uninstallArgs}' through the same entrypoint used for setup.`);
+  if (options.binaryVerified) {
+    console.error(`  Recovery command: ${options.binaryName} ${uninstallArgs}`);
+  }
+}
+
+async function runPackSetupSyncPreflight(repoRoot: string): Promise<void> {
+  try {
+    await runSync(repoRoot, {
+      dryRun: false,
+      check: true,
+      force: false,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes('No sync sources')) {
+      return;
+    }
+    if (msg.includes('Conflicts:') || msg.includes('Sync conflicts detected')) {
+      throw new Error(
+        `Sync conflict preflight failed before pack template writes.\n${msg}\nRun 'aco sync --check' for details, or 'aco sync --force' to overwrite.`
+      );
+    }
+    if (msg.includes('Stale outputs:') || msg.includes('Sync check failed')) {
+      console.warn(
+        `  [warn] Sync preflight found stale outputs; setup will install pack files and refresh sync afterwards.`
+      );
+      return;
+    }
+    throw new Error(`Sync check failed before pack template writes.\n${msg}`);
   }
 }
 
@@ -336,7 +456,21 @@ async function collectFiles(dir: string, out: string[]): Promise<void> {
   }
 }
 
-async function placeWrapperBinary(binaryName: string): Promise<void> {
+export function describeBinaryRecovery(input: {
+  binaryName: string;
+  reason: string;
+  packageRoot: string;
+  publicPackageName: string;
+}): string {
+  return [
+    `Binary '${input.binaryName}' was not verified: ${input.reason}.`,
+    `Current package: ${input.packageRoot}`,
+    'Manual recovery: run this CLI through the current checkout or install/link this local package artifact explicitly.',
+    `Do not rely on an unrelated published ${input.publicPackageName} version for this local setup.`,
+  ].join('\n  ');
+}
+
+async function placeWrapperBinary(binaryName: string): Promise<boolean> {
   try {
     const { stdout } = await execFileAsync(binaryName, ['--version'], {
       timeout: BINARY_CHECK_TIMEOUT_MS,
@@ -344,25 +478,27 @@ async function placeWrapperBinary(binaryName: string): Promise<void> {
     const versionOutput = typeof stdout === 'string' ? stdout.trim().toLowerCase() : '';
     if (versionOutput.startsWith('aco ')) {
       console.log(`  binary: '${binaryName}' already in PATH ✓`);
-      return;
+      return true;
     }
     console.warn(
-      `  [warn] Found '${binaryName}' in PATH, but '--version' output did not look like ${PUBLIC_PACKAGE_NAME}. Proceeding to install ${PUBLIC_PACKAGE_NAME} globally.`
+      `  [warn] ${describeBinaryRecovery({
+        binaryName,
+        reason: `--version returned '${versionOutput || '(empty)'}'`,
+        packageRoot: PACKAGE_ROOT,
+        publicPackageName: PUBLIC_PACKAGE_NAME,
+      })}`
     );
-  } catch {
-    // Not found in PATH — proceed to global npm install
-  }
-
-  try {
-    console.log(`  binary: installing ${PUBLIC_PACKAGE_NAME} globally …`);
-    await execFileAsync('npm', ['install', '-g', PUBLIC_PACKAGE_NAME], {
-      timeout: NPM_INSTALL_TIMEOUT_MS,
-    });
-    console.log(`  binary: '${binaryName}' installed globally ✓`);
+    return false;
   } catch (err) {
-    const reason = err instanceof Error ? err.message : String(err);
-    console.warn(`  [warn] Could not install '${binaryName}' globally: ${reason}`);
-    console.warn(`         Run manually: npm install -g ${PUBLIC_PACKAGE_NAME}`);
+    console.warn(
+      `  [warn] ${describeBinaryRecovery({
+        binaryName,
+        reason: err instanceof Error ? err.message : String(err),
+        packageRoot: PACKAGE_ROOT,
+        publicPackageName: PUBLIC_PACKAGE_NAME,
+      })}`
+    );
+    return false;
   }
 }
 
