@@ -41,6 +41,7 @@ export interface PackInstallOptions {
   global?: boolean;
   force?: boolean;
   binaryName?: string;
+  skipSuccessMessage?: boolean;
 }
 
 export interface PackInstallResult {
@@ -106,10 +107,12 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<Pac
   const binaryName = options.binaryName ?? 'aco';
   const binaryVerified = await placeWrapperBinary(binaryName);
 
-  if (binaryVerified) {
-    console.log(`\n✓ Pack installed. Run '${binaryName} pack setup' to verify provider readiness.`);
-  } else {
-    console.log(`\n✓ Pack installed. Verify '${binaryName}' before running provider setup.`);
+  if (!options.skipSuccessMessage) {
+    if (binaryVerified) {
+      console.log(`\n✓ Pack installed. Run '${binaryName} pack setup' to verify provider readiness.`);
+    } else {
+      console.log(`\n✓ Pack installed. Verify '${binaryName}' before running provider setup.`);
+    }
   }
 
   return { binaryName, binaryVerified };
@@ -283,7 +286,7 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
     console.error(`  [error] ${msg}`);
     process.exit(1);
   }
-  const installResult = await packInstall(options);
+  const installResult = await packInstall({ ...options, skipSuccessMessage: true });
 
   console.log('\n--- Provider Status ---');
   for (const key of providerRegistry.keys()) {

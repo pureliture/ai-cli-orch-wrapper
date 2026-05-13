@@ -271,6 +271,19 @@ describe('pack template runtime contract', () => {
         join(workspace, '.claude', 'aco', 'prompts', 'codex', 'review.md')
       );
 
+      const nested = join(workspace, 'packages', 'app');
+      await mkdir(nested, { recursive: true });
+      const nestedCodexReview = await resolveRunPromptTemplate({
+        cwd: nested,
+        home: workspace,
+        providerKey: 'codex',
+        command: 'review',
+      });
+      assert.equal(
+        nestedCodexReview.promptTemplatePath,
+        join(workspace, '.claude', 'aco', 'prompts', 'codex', 'review.md')
+      );
+
       const unknown = await resolveRunPromptTemplate({
         cwd: workspace,
         home: workspace,
@@ -291,6 +304,28 @@ describe('pack template runtime contract', () => {
         command: 'review',
       }),
       /Missing prompt template.*gemini.*review/
+    );
+  });
+
+  it('rejects prompt template path segments that could escape the prompt root', async () => {
+    await assert.rejects(
+      resolveRunPromptTemplate({
+        cwd: await mkdtemp(join(tmpdir(), 'aco-invalid-command-cwd-')),
+        home: await mkdtemp(join(tmpdir(), 'aco-invalid-command-home-')),
+        providerKey: 'gemini',
+        command: '../review',
+      }),
+      /Invalid command name/
+    );
+
+    await assert.rejects(
+      resolveRunPromptTemplate({
+        cwd: await mkdtemp(join(tmpdir(), 'aco-invalid-provider-cwd-')),
+        home: await mkdtemp(join(tmpdir(), 'aco-invalid-provider-home-')),
+        providerKey: '../gemini',
+        command: 'review',
+      }),
+      /Invalid provider key/
     );
   });
 
