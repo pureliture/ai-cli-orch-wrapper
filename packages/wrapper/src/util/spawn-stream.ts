@@ -151,6 +151,37 @@ export async function* spawnStream(
     throw new Error(`${config.processName}: failed to open stdout pipe`);
   }
 
+  const closePromise = new Promise<void>((resolve, reject) => {
+    child.on('close', (code, signal) => {
+      clearExecutionTimers();
+      if (timedOut) {
+        reject(
+          new ProviderExecutionError(
+            'timeout',
+            `${config.processName} timed out after ${Math.ceil((options?.timeoutMs ?? 0) / 1000)}s`
+          )
+        );
+        return;
+      }
+
+      if (code !== 0 || signal !== null) {
+        const reason =
+          signal === null
+            ? `${config.processName} exited with code ${code}`
+            : `${config.processName} terminated by signal ${signal}`;
+        const detail = stderr.trim();
+        reject(new Error(detail ? `${reason}\n${detail}` : reason));
+      } else {
+        resolve();
+      }
+    });
+    child.on('error', (err) => {
+      clearExecutionTimers();
+      reject(err);
+    });
+  });
+  closePromise.catch(() => {});
+
   // Track the last line to detect sentinel without buffering entire output
   let lastLineBuffer = '';
 
@@ -190,33 +221,5 @@ export async function* spawnStream(
     }
   }
 
-  await new Promise<void>((resolve, reject) => {
-    child.on('close', (code, signal) => {
-      clearExecutionTimers();
-      if (timedOut) {
-        reject(
-          new ProviderExecutionError(
-            'timeout',
-            `${config.processName} timed out after ${Math.ceil((options?.timeoutMs ?? 0) / 1000)}s`
-          )
-        );
-        return;
-      }
-
-      if (code !== 0 || signal !== null) {
-        const reason =
-          signal === null
-            ? `${config.processName} exited with code ${code}`
-            : `${config.processName} terminated by signal ${signal}`;
-        const detail = stderr.trim();
-        reject(new Error(detail ? `${reason}\n${detail}` : reason));
-      } else {
-        resolve();
-      }
-    });
-    child.on('error', (err) => {
-      clearExecutionTimers();
-      reject(err);
-    });
-  });
+  await closePromise;
 }
