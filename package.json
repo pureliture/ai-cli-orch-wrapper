@@ -12,7 +12,8 @@
     "test:smoke": "npm run test:smoke --workspace=packages/wrapper --if-present",
     "test:fixtures": "go build -o aco ./cmd/aco && npx tsx test/fixtures/harness.ts --binary ./aco",
     "test:fixtures:node": "npm run build --workspace=packages/wrapper && chmod +x packages/wrapper/dist/cli.js && npx tsx test/fixtures/harness.ts --binary packages/wrapper/dist/cli.js",
-    "test:scripts": "bash test/scripts/project-id-validation.test.sh",
+    "test:scripts": "bash test/scripts/project-id-validation.test.sh && bash test/scripts/terminology-check.test.sh",
+    "check:terminology": "tsx scripts/check-terminology.ts",
     "typecheck": "npm run typecheck --workspace=packages/wrapper",
     "format:check": "prettier --check \"packages/*/src/**/*.ts\"",
     "release": "npm run build && changeset publish"
