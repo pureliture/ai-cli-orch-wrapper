@@ -31,6 +31,7 @@ Current fields:
 - `providers`
 - `permissionProfile`
 - `outputMode`
+- `timeoutSeconds`
 - `advisory`
 - `sessions`
 
@@ -115,6 +116,22 @@ Human-readable session summary with:
 ### `error.log`
 
 Created when provider execution fails or a cancellation path records an error. It is not created for successful sessions.
+
+## Timeout And Cancellation
+
+`aco run` and provider-invoking `aco ask --yes` apply provider execution timeout in this order:
+
+1. `--timeout <seconds>`
+2. `ACO_TIMEOUT_SECONDS`
+3. default `300` seconds
+
+Invalid timeout values are rejected before a provider session is created.
+
+When timeout occurs, the wrapper best-effort terminates the provider process, marks the session `failed`, preserves partial `output.log`, and writes the timeout reason to `error.log`.
+
+When `aco cancel --session <id>` cancels a running session, the wrapper marks the session `cancelled`, writes `error.log`, and best-effort terminates the provider process. If the original `aco run` or `aco ask --yes` process later observes that status, it does not overwrite `cancelled` with `done` or `failed`.
+
+`task.json` includes `pid` when the provider implementation exposes a spawned child process PID. `aco status --session <id>` reports the PID when present.
 
 ## Output Modes
 

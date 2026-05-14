@@ -73,6 +73,18 @@ Default permission profile is `restricted`.
 
 Do not enable broader permission profiles unless the task requires it and the provider behavior is understood.
 
+## Timeout And Cancellation Boundary
+
+`aco run` and `aco ask --yes` apply provider execution timeout with this precedence:
+
+1. `--timeout <seconds>`
+2. `ACO_TIMEOUT_SECONDS`
+3. default `300` seconds
+
+Timeout and `aco cancel --session <id>` are reliability controls. They best-effort terminate provider processes and record session artifacts, but they are not sandbox, secret-redaction, or remote-auth guarantees.
+
+Real Codex/Gemini smoke commands can require provider credentials, local CLI setup, network access, and real provider latency. Keep those commands opt-in and separate from default CI or deterministic repo tests.
+
 ## Secrets Policy
 
 Do not send secrets, credentials, private tokens, local auth files, or unrelated sensitive files through `--input` or `--input-file`.
