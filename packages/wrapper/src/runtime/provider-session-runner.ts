@@ -25,6 +25,8 @@ export interface ProviderSessionRunOptions {
   timeoutMs?: number;
   /** Grace period after SIGTERM before SIGKILL. */
   killGraceMs?: number;
+  /** Called once with the provider's OS PID when available. */
+  onPid?: (pid: number) => void;
 }
 
 export interface ProviderSessionRunResult {
@@ -64,6 +66,7 @@ export async function invokeProviderForSession(
         timeoutMs: options.timeoutMs,
         killGraceMs: options.killGraceMs,
         onPid: (pid) => {
+          options.onPid?.(pid);
           sessionStore.update(options.sessionId, { pid }).catch((err: unknown) => {
             console.warn(
               'Failed to record process PID:',

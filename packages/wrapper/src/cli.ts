@@ -23,12 +23,12 @@ import { collectRuntimeContext } from './runtime/context.js';
 import { renderRuntimeDashboard } from './runtime/dashboard.js';
 import { formatAuthStatus } from './runtime/auth-display.js';
 import { invokeProviderForSession } from './runtime/provider-session-runner.js';
+import { terminateProviderProcess } from './runtime/provider-process.js';
 import { resolveRunPromptTemplate } from './runtime/run-prompt-template.js';
 import {
   parseProviderTimeoutFlag,
   resolveProviderExecutionControl,
 } from './runtime/provider-execution-control.js';
-import { terminateProviderProcess } from './runtime/provider-process.js';
 import { runSync } from './sync/sync-engine.js';
 
 const execFileAsync = promisify(execFile);
@@ -220,6 +220,17 @@ async function cmdRun(args: string[]): Promise<void> {
   process.stderr.write(renderRuntimeDashboard(runtimeContext) + '\n');
 
   const tee = sessionStore.createOutputTee(session.id);
+  let activePid: number | undefined;
+  const handleSignal = (signal: NodeJS.Signals): void => {
+    if (activePid !== undefined) {
+      terminateProviderProcess(activePid, signal);
+    }
+    sessionStore.markCancelled(session.id).finally(() => {
+      process.exit(EXIT_ERROR);
+    });
+  };
+  process.on('SIGINT', handleSignal);
+  process.on('SIGTERM', handleSignal);
   const runResult = await invokeProviderForSession({
     provider,
     command,
@@ -231,7 +242,12 @@ async function cmdRun(args: string[]): Promise<void> {
     outputBuffer: resolveRunOutputBuffering(),
     timeoutMs: executionControl.timeoutMs,
     killGraceMs: executionControl.killGraceMs,
+    onPid: (pid) => {
+      activePid = pid;
+    },
   });
+  process.off('SIGINT', handleSignal);
+  process.off('SIGTERM', handleSignal);
   const runError = runResult.error;
   const latest = await sessionStore.read(session.id).catch(() => undefined);
 
