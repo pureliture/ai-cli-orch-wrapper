@@ -111,6 +111,34 @@ aco run codex review --input "demo"
 
 위 `aco run` 두 명령은 실제 provider CLI와 로컬 credential이 준비된 경우에만 실행한다. CI/기본 검증에서는 `test:pack-runtime-contract`의 fake provider smoke와 `aco ask --preset ... --dry-run`을 사용한다.
 
+## Provider Timeout And Session Reliability 검증
+
+deterministic repo validation:
+
+```bash
+npm exec --workspace=packages/wrapper -- node --require tsx/cjs --test tests/provider-session-reliability.test.ts
+npm run typecheck --workspace=packages/wrapper
+npm test --workspace=packages/wrapper
+git diff --check
+```
+
+`aco run`과 `aco ask --yes`는 provider timeout을 다음 순서로 결정한다.
+
+1. `--timeout <seconds>`
+2. `ACO_TIMEOUT_SECONDS`
+3. 기본값 `300`
+
+Timeout 발생 시 session은 `failed`가 되고, cancellation은 `cancelled`가 된다. 두 경로 모두 가능한 경우 `~/.aco/sessions/<session-id>/error.log`를 남긴다.
+
+optional live provider smoke:
+
+```bash
+node packages/wrapper/dist/cli.js run gemini review --input "hello" --permission-profile restricted --timeout 120
+node packages/wrapper/dist/cli.js run codex review --input "hello" --permission-profile restricted --timeout 120
+```
+
+이 live smoke는 실제 provider CLI, local auth, network, provider latency에 의존한다. 명시 승인 없이 CI나 기본 완료 검증으로 실행하지 않는다.
+
 ## 일반적인 문제
 
 ## Consent-Gated Delegation MVP

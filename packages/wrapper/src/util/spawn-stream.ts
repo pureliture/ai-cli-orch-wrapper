@@ -7,6 +7,9 @@ import {
   type OutputBufferPolicy,
 } from '../providers/interface.js';
 import { parseSentinel, type SentinelMeta } from './sentinel.js';
+import { DEFAULT_PROVIDER_KILL_GRACE_MS } from '../runtime/provider-execution-control.js';
+import { ProviderExecutionError } from '../runtime/provider-execution-error.js';
+import { terminateProviderProcess } from '../runtime/provider-process.js';
 
 export interface SpawnStreamConfig {
   /** Process name used in error messages, e.g. "gemini". */
@@ -84,10 +87,40 @@ export async function* spawnStream(
 
   const child = spawn(binary, args, {
     stdio: [config.stdin, 'pipe', 'pipe'],
+    detached: process.platform !== 'win32',
   });
 
   if (child.pid !== undefined) {
     options?.onPid?.(child.pid);
+  }
+
+  let timedOut = false;
+  let timeoutTimer: NodeJS.Timeout | undefined;
+  let forceKillTimer: NodeJS.Timeout | undefined;
+
+  const clearExecutionTimers = (): void => {
+    if (timeoutTimer !== undefined) {
+      clearTimeout(timeoutTimer);
+      timeoutTimer = undefined;
+    }
+    if (forceKillTimer !== undefined) {
+      clearTimeout(forceKillTimer);
+      forceKillTimer = undefined;
+    }
+  };
+
+  if (options?.timeoutMs !== undefined) {
+    timeoutTimer = setTimeout(() => {
+      timedOut = true;
+      if (child.pid !== undefined) {
+        terminateProviderProcess(child.pid, 'SIGTERM');
+        forceKillTimer = setTimeout(() => {
+          if (child.pid !== undefined) {
+            terminateProviderProcess(child.pid, 'SIGKILL');
+          }
+        }, options.killGraceMs ?? DEFAULT_PROVIDER_KILL_GRACE_MS);
+      }
+    }, options.timeoutMs);
   }
 
   if (config.stdin === 'pipe' && child.stdin) {
@@ -159,6 +192,17 @@ export async function* spawnStream(
 
   await new Promise<void>((resolve, reject) => {
     child.on('close', (code, signal) => {
+      clearExecutionTimers();
+      if (timedOut) {
+        reject(
+          new ProviderExecutionError(
+            'timeout',
+            `${config.processName} timed out after ${Math.ceil((options?.timeoutMs ?? 0) / 1000)}s`
+          )
+        );
+        return;
+      }
+
       if (code !== 0 || signal !== null) {
         const reason =
           signal === null
@@ -170,6 +214,9 @@ export async function* spawnStream(
         resolve();
       }
     });
-    child.on('error', reject);
+    child.on('error', (err) => {
+      clearExecutionTimers();
+      reject(err);
+    });
   });
 }

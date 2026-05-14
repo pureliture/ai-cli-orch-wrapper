@@ -24,6 +24,11 @@ import { renderRuntimeDashboard } from './runtime/dashboard.js';
 import { formatAuthStatus } from './runtime/auth-display.js';
 import { invokeProviderForSession } from './runtime/provider-session-runner.js';
 import { resolveRunPromptTemplate } from './runtime/run-prompt-template.js';
+import {
+  parseProviderTimeoutFlag,
+  resolveProviderExecutionControl,
+} from './runtime/provider-execution-control.js';
+import { terminateProviderProcess } from './runtime/provider-process.js';
 import { runSync } from './sync/sync-engine.js';
 
 const execFileAsync = promisify(execFile);
@@ -150,7 +155,7 @@ async function cmdProvider(args: string[]): Promise<void> {
 async function cmdRun(args: string[]): Promise<void> {
   if (args.includes('--help') || args.includes('-h')) {
     console.error(
-      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]'
+      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>]'
     );
     process.exit(0);
   }
@@ -160,7 +165,7 @@ async function cmdRun(args: string[]): Promise<void> {
 
   if (!providerKey || !command) {
     console.error(
-      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]'
+      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>]'
     );
     process.exit(EXIT_ERROR);
   }
@@ -176,6 +181,13 @@ async function cmdRun(args: string[]): Promise<void> {
     console.error(
       `Invalid --permission-profile '${permissionProfile}'. Valid values: default|restricted|unrestricted`
     );
+    process.exit(EXIT_ERROR);
+  }
+  let executionControl: ReturnType<typeof resolveProviderExecutionControl>;
+  try {
+    executionControl = resolveProviderExecutionControl(parseProviderTimeoutFlag(args));
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
     process.exit(EXIT_ERROR);
   }
   const inputFlag = parseFlag(args, '--input') ?? '';
@@ -217,8 +229,16 @@ async function cmdRun(args: string[]): Promise<void> {
     sessionId: session.id,
     output: tee,
     outputBuffer: resolveRunOutputBuffering(),
+    timeoutMs: executionControl.timeoutMs,
+    killGraceMs: executionControl.killGraceMs,
   });
   const runError = runResult.error;
+  const latest = await sessionStore.read(session.id).catch(() => undefined);
+
+  if (latest?.status === 'cancelled') {
+    console.error(`Session ${session.id} cancelled.`);
+    process.exit(EXIT_ERROR);
+  }
 
   if (runError) {
     const msg = runError instanceof Error ? runError.message : String(runError);
@@ -271,6 +291,7 @@ async function cmdStatus(args: string[]): Promise<void> {
     console.log(`Status:     ${record.status}`);
     console.log(`Started:    ${record.startedAt}`);
     if (record.endedAt) console.log(`Ended:      ${record.endedAt}`);
+    if (record.pid !== undefined) console.log(`PID:        ${record.pid}`);
     if (record.permissionProfile) console.log(`Permission: ${record.permissionProfile}`);
     if (record.runtimeContext) {
       const active = record.runtimeContext.active;
@@ -329,15 +350,13 @@ async function cmdCancel(args: string[]): Promise<void> {
     return;
   }
 
-  if (record.pid) {
-    try {
-      process.kill(record.pid, 'SIGTERM');
-    } catch {
-      // The process may have already exited — safe to ignore
-    }
-  }
-
+  await appendFile(sessionStore.errorLogPath(sessionId), `Session ${sessionId} cancelled.\n`, {
+    mode: 0o600,
+  });
   await sessionStore.markCancelled(sessionId);
+  if (record.pid) {
+    terminateProviderProcess(record.pid, 'SIGTERM');
+  }
   console.log(`Session ${sessionId} cancelled.`);
 }
 
@@ -451,7 +470,7 @@ function printUsage(): void {
   aco sync [--check] [--dry-run] [--force]
   aco ask --task <text> [--providers codex,gemini,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--dry-run|--yes]
   aco doctor
-  aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted]
+  aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>]
   aco result [--session <id>]
   aco status [--session <id>]
   aco cancel [--session <id>]

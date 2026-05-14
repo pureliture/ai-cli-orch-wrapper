@@ -37,6 +37,10 @@ export interface InvokeOptions {
   outputBuffer?: OutputBufferPolicy;
   /** Called once the provider process has been spawned, with its PID. */
   onPid?: (pid: number) => void;
+  /** Maximum provider execution time in milliseconds. */
+  timeoutMs?: number;
+  /** Grace period after SIGTERM before SIGKILL. */
+  killGraceMs?: number;
 }
 
 export interface IProvider {

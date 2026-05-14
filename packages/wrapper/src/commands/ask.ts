@@ -8,6 +8,12 @@ import { providerRegistry } from '../providers/registry.js';
 import { sessionStore } from '../session/store.js';
 import type { OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
+import {
+  parseProviderTimeoutFlag,
+  resolveProviderExecutionControl,
+  resolveProviderTimeoutSeconds,
+  type ProviderExecutionControl,
+} from '../runtime/provider-execution-control.js';
 import { defaultSummarizeOutput } from '../util/summarize-output.js';
 
 const EXIT_ERROR = 1;
@@ -39,6 +45,8 @@ interface AskOptions {
   outputMode: OutputMode;
   yes: boolean;
   dryRun: boolean;
+  timeoutSeconds: number;
+  executionControl: ProviderExecutionControl;
 }
 
 interface AskSessionLedger {
@@ -57,7 +65,12 @@ export async function cmdAsk(args: string[]): Promise<void> {
     return;
   }
 
-  const options = parseAskOptions(args);
+  let options: AskOptions;
+  try {
+    options = parseAskOptions(args);
+  } catch (err) {
+    fail(err instanceof Error ? err.message : String(err));
+  }
   validateAskOptions(options);
 
   const providers = resolveProviders(options.providers);
@@ -114,6 +127,8 @@ export async function cmdAsk(args: string[]): Promise<void> {
       output: outputStream,
       outputBuffer,
       maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
+      timeoutMs: options.executionControl.timeoutMs,
+      killGraceMs: options.executionControl.killGraceMs,
       onChunk:
         options.outputMode === 'full'
           ? (chunk) => {
@@ -182,6 +197,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
         providers: providers.map((provider) => provider.key),
         permissionProfile: options.permissionProfile,
         outputMode: options.outputMode,
+        timeoutSeconds: options.timeoutSeconds,
         advisory: ADVISORY_NOTICE,
         sessions,
       },
@@ -206,6 +222,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
 }
 
 function parseAskOptions(args: string[]): AskOptions {
+  const timeoutFlag = parseProviderTimeoutFlag(args);
   return {
     providers: parseProviders(parseFlag(args, '--providers')),
     task: parseFlag(args, '--task'),
@@ -216,6 +233,8 @@ function parseAskOptions(args: string[]): AskOptions {
     outputMode: parseFlag<OutputMode>(args, '--output-mode') ?? 'brief',
     yes: args.includes('--yes'),
     dryRun: args.includes('--dry-run'),
+    timeoutSeconds: resolveProviderTimeoutSeconds(timeoutFlag),
+    executionControl: resolveProviderExecutionControl(timeoutFlag),
   };
 }
 
@@ -320,6 +339,7 @@ function printDryRun(options: AskOptions, input: string, preset: string | undefi
   console.log(`Providers: ${options.providers.join(',')}`);
   console.log(`Permission profile: ${options.permissionProfile}`);
   console.log(`Output mode: ${options.outputMode}`);
+  console.log(`Timeout seconds: ${options.timeoutSeconds}`);
   if (options.preset) console.log(`Preset: ${options.preset}`);
   console.log(`Task: ${options.task ?? '(preset only)'}`);
   console.log(`Input bytes: ${Buffer.byteLength(input, 'utf8')}`);
@@ -365,6 +385,7 @@ function renderRunBrief(runId: string, options: AskOptions, sessions: AskSession
     `Providers: ${options.providers.join(',')}`,
     `Permission profile: ${options.permissionProfile}`,
     `Output mode: ${options.outputMode}`,
+    `Timeout seconds: ${options.timeoutSeconds}`,
     '',
     `Advisory: ${ADVISORY_NOTICE}`,
     '',
@@ -413,6 +434,7 @@ Options:
   --permission-profile <profile>  restricted|default|unrestricted (default: restricted)
   --output-mode <mode>            brief|save-only|full (default: brief)
                                     brief summary bound: ${SUMMARY_CHAR_LIMIT} chars
+  --timeout <seconds>             Provider execution timeout (default: 300, env: ACO_TIMEOUT_SECONDS)
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
 }
