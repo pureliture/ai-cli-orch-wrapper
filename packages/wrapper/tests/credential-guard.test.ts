@@ -17,6 +17,8 @@ describe('isCredentialLikePath: credential pattern detection', () => {
     '.env.production',
     '.env.test',
     'auth.json',
+    'credentials.json',
+    'creds.json',
     'api_credentials.json',
     'db_creds.json',
     'id_rsa',

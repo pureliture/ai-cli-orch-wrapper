@@ -7,7 +7,7 @@ import { basename } from 'node:path';
 const CREDENTIAL_PATTERNS: RegExp[] = [
   /^\.env(\.[^/]+)?$/, // .env, .env.local, .env.production, etc.
   /^auth\.json$/, // OAuth token files
-  /_cred(?:s|entials)?\.json$/i, // *_credentials.json, *_creds.json
+  /(?:^|[_-])cred(?:s|entials)?\.json$/i, // credentials.json, *_credentials.json, *_creds.json
   /^(id_rsa|id_ed25519|id_dsa|id_ecdsa)$/, // SSH private keys
   /\.(pem|key)$/i, // TLS/cert private keys
   /\.(pfx|p12)$/i, // PKCS#12 bundles
