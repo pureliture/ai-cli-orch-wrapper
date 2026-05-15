@@ -98,9 +98,7 @@ function allowedTermsForLine(line: string): string[] {
 
 function hasAllowComment(line: string, term: string): boolean {
   const normalizedTerm = term.toLocaleLowerCase();
-  return allowedTermsForLine(line).some(
-    (allowed) => allowed === normalizedTerm || allowed.includes(normalizedTerm)
-  );
+  return allowedTermsForLine(line).some((allowed) => allowed === normalizedTerm);
 }
 
 function main(): void {
@@ -123,19 +121,17 @@ function main(): void {
           continue;
         }
 
-        if (hasAllowComment(line, rule.discouraged)) {
-          continue;
+        if (!hasAllowComment(line, rule.discouraged)) {
+          violations.push(
+            [
+              `${file}:${lineIndex + 1}`,
+              `discouraged term: "${rule.discouraged}"`,
+              `preferred term: "${rule.preferred}"`,
+              `rule: ${rule.id}`,
+              `reason: ${rule.reason}`,
+            ].join('\n  ')
+          );
         }
-
-        violations.push(
-          [
-            `${file}:${lineIndex + 1}`,
-            `discouraged term: "${rule.discouraged}"`,
-            `preferred term: "${rule.preferred}"`,
-            `rule: ${rule.id}`,
-            `reason: ${rule.reason}`,
-          ].join('\n  ')
-        );
 
         lineForMatching = lineForMatching.split(discouragedLower).join(' '.repeat(discouragedLower.length));
       }
