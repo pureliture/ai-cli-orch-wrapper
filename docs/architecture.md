@@ -199,4 +199,4 @@ manifest가 소유한 대상에 drift가 있으면 운영자가 `aco sync --forc
 
 ### D6: Windows 지원은 범위 밖
 
-본 wrapper는 macOS와 Linux 동작만 보장한다. `chmod`, shebang(`#!/usr/bin/env ...`), POSIX 권한·시그널 모델 등 POSIX 의존 패턴은 그대로 사용한다. Windows 호환성 제안(예: cross-platform shim, polyfill, `mode` 옵션 제거, shebang 우회)은 won't fix로 처리한다. 향후 결정이 바뀌면 별도 epic으로 다루고 본 결정을 갱신한다. 본 결정은 Issue #113 (PR #111 리뷰 follow-up) 처리 중 확립.
+본 wrapper는 macOS와 Linux 동작만 보장한다. `chmod`, shebang(`#!/usr/bin/env node`), POSIX 권한·시그널 모델 등 POSIX 의존 패턴은 그대로 사용한다. Windows 호환성 제안(예: cross-platform shim, polyfill, `mode` 옵션 제거, shebang 우회)은 won't fix로 처리한다. 향후 결정이 바뀌면 별도 epic으로 다루고 본 결정을 갱신한다. 본 결정은 Issue #113 (PR #111 리뷰 follow-up) 처리 중 확립.
