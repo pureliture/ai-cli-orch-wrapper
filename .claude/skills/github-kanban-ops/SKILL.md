@@ -189,7 +189,7 @@ Use this workflow when the user asks Codex to triage unresolved PR review thread
 1. Confirm the user clearly intends to fetch or mutate review follow-up state for PR `#N`.
 2. Resolve Project configuration env-first, then from `docs/reference/project-board.md`.
 3. Fetch unresolved review threads using GitHub MCP tools or `gh api graphql`.
-4. Categorize each unresolved thread as an immediate fix, deferred issue, or needs user decision.
+4. Categorize each unresolved thread as an immediate fix, deferred issue, or needs user decision. Default to an immediate fix; defer only when fixing in the current PR would be actively wrong (scope violation, unresolved design decision, or meaningful regression risk).
 5. For immediate fixes, make the local code change, reply with a concise fix summary, and resolve the thread only when the user asked Codex to handle review follow-up.
 6. Preserve review traceability for immediate fixes: commit review follow-up changes as new commits on top of the reviewed PR head, then push with a normal fast-forward `git push`.
 7. Do not amend, rebase, squash, force-push, or use `--force-with-lease` during `/gh-pr-followup` unless the user explicitly asks for branch-history repair.
