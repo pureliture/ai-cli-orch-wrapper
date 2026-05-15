@@ -159,7 +159,7 @@ export async function syncSkills(
   // Sync current skills (deferred to sync-engine)
   for (const classified of classifiedSkills) {
     const { source, skillName, owner, kind } = classified;
-    const sourceDir = dirname(source.path);
+    const sourceDir = dirname(join(repoRoot, source.path));
     const targetDir = join(targetBase, skillName);
 
     // Validate sourcePath is within .claude/skills/
