@@ -4,6 +4,8 @@
 
 `aco ask`와 `aco run`은 provider output을 stdout에만 남기지 않고 사용자 홈의 `~/.aco/` 아래에 저장한다. Goal 2 기준 artifact contract는 `aco ask`의 run/session layout을 문서화하는 v1이다.
 
+Terminology reference: [Ubiquitous Language](ubiquitous-language.md) defines `run`, `session`, `artifact`, `brief`, and `output.log`.
+
 ## Why Artifacts Exist
 
 Claude Code 세션 안에서는 token-saving이 중요하다. `aco ask --output-mode brief`는 bounded summary만 보여 주고, full provider output은 artifact로 저장한다. Claude Code는 필요한 경우 `aco result` 또는 artifact 파일을 통해 full output을 다시 확인한다.

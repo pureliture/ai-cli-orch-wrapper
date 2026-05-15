@@ -41,6 +41,7 @@ Design constraints:
 
 Artifact reference: [Session And Run Artifacts](reference/session-artifacts.md).
 Security reference: [Security Model](security.md).
+Language reference: [Ubiquitous Language](reference/ubiquitous-language.md).
 
 ## 아키텍처 개요
 

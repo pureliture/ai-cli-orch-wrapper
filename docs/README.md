@@ -123,6 +123,7 @@ aco result
 4. [contract/README.md](contract/README.md) — 규범 계약 문서 인덱스
 5. [contract/go-node-boundary.md](contract/go-node-boundary.md) — Go/Node.js 책임 경계
 6. [contract/process-execution-contract.md](contract/process-execution-contract.md) — 프로세스 실행 계약
+7. [reference/ubiquitous-language.md](reference/ubiquitous-language.md) — provider invocation과 run/session artifact의 canonical terms
 
 ## 아카이브
 
