@@ -49,7 +49,7 @@ const DEFAULT_RULES: Rule[] = [
   },
 ].sort((left, right) => right.discouraged.length - left.discouraged.length);
 
-function parseArgs(argv: string[]): { root: string; files: string[] } {
+function parseArgs(argv: string[]): { root: string; files: string[]; userSpecified: boolean } {
   let root = process.cwd();
   const files: string[] = [];
 
@@ -84,6 +84,7 @@ function parseArgs(argv: string[]): { root: string; files: string[] } {
   return {
     root,
     files: files.length > 0 ? files : [...DEFAULT_SCAN_FILES],
+    userSpecified: files.length > 0,
   };
 }
 
@@ -102,12 +103,16 @@ function hasAllowComment(line: string, term: string): boolean {
 }
 
 function main(): void {
-  const { root, files } = parseArgs(process.argv.slice(2));
+  const { root, files, userSpecified } = parseArgs(process.argv.slice(2));
   const violations: string[] = [];
+  const missingFiles: string[] = [];
 
   for (const file of files) {
     const absolutePath = path.join(root, file);
     if (!existsSync(absolutePath)) {
+      if (!userSpecified) {
+        missingFiles.push(file);
+      }
       continue;
     }
 
@@ -138,9 +143,15 @@ function main(): void {
     });
   }
 
-  if (violations.length > 0) {
-    console.error(`terminology check failed with ${violations.length} violation(s):`);
-    console.error(violations.join('\n\n'));
+  if (violations.length > 0 || missingFiles.length > 0) {
+    if (violations.length > 0) {
+      console.error(`terminology check failed with ${violations.length} violation(s):`);
+      console.error(violations.join('\n\n'));
+    }
+    if (missingFiles.length > 0) {
+      console.error(`terminology check: ${missingFiles.length} default scan file(s) missing:`);
+      console.error(missingFiles.map((f) => `  ${f}`).join('\n'));
+    }
     process.exitCode = 1;
     return;
   }

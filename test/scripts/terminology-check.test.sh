@@ -104,4 +104,25 @@ assert_contains "$TMP_DIR/fail.err" "generated source"
 assert_contains "$TMP_DIR/fail.err" "generated target"
 assert_contains "$TMP_DIR/fail.err" "docs/architecture.md"
 
+MISSING_DIR="$(mktemp -d)"
+trap 'rm -rf "$MISSING_DIR"' EXIT
+mkdir -p "$MISSING_DIR/docs/reference"
+
+cat >"$MISSING_DIR/README.md" <<'DOC'
+# Fixture
+Provider advisory output is stored as an artifact.
+DOC
+
+set +e
+npx tsx "$ROOT_DIR/scripts/check-terminology.ts" --root "$MISSING_DIR" >"$MISSING_DIR/miss.out" 2>"$MISSING_DIR/miss.err"
+miss_status=$?
+set -e
+
+if [[ "$miss_status" -eq 0 ]]; then
+  echo "Expected terminology check to fail when default scan files are missing" >&2
+  exit 1
+fi
+
+assert_contains "$MISSING_DIR/miss.err" "default scan file"
+
 echo "terminology check script tests passed"
