@@ -150,3 +150,4 @@ bash -n scripts/pm-hook.sh scripts/setup-github-labels.sh scripts/setup-github-p
 - GSD/OMX workflows.
 - New sprint-based planning surfaces.
 - Extra GitHub label taxonomies that duplicate Project fields.
+- Windows 지원. macOS/Linux만 보장한다. `chmod`, shebang, POSIX 권한·시그널 모델 등의 POSIX 의존 패턴은 그대로 사용하며, Windows 호환성 제안(예: cross-platform shim, polyfill, `mode` 옵션 제거, shebang 우회)은 won't fix로 처리한다.
