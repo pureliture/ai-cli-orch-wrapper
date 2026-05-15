@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ubiquitous Language Kick-off | ai-cli-orch-wrapper Gray Box</title>
+    <meta
+      name="description"
+      content="ai-cli-orch-wrapper의 ubiquitous language OpenSpec proposal을 요약하고, gray box 경계를 선명하게 만들기 위한 범위, 영향, 착수 순서를 시각화한 kick-off 문서입니다."
+    />
+    <meta
+      name="keywords"
+      content="ai-cli-orch-wrapper, ubiquitous language, gray box, OpenSpec, ACO, AI CLI orchestration, technical documentation"
+    />
+    <meta name="author" content="ai-cli-orch-wrapper maintainers" />
+    <meta name="robots" content="index,follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Ubiquitous Language Kick-off for ai-cli-orch-wrapper" />
+    <meta
+      property="og:description"
+      content="도메인 용어를 하나의 공통 언어로 정리해 AI agent와 maintainer가 같은 gray box 경계를 보고 작업하도록 만드는 proposal 요약입니다."
+    />
+    <meta property="og:site_name" content="ai-cli-orch-wrapper" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "TechArticle",
+        "headline": "Ubiquitous Language Kick-off for ai-cli-orch-wrapper",
+        "description": "ai-cli-orch-wrapper의 ubiquitous language proposal을 요약하고 gray box 경계를 선명하게 만들기 위한 구현 착수 문서입니다.",
+        "author": {
+          "@type": "Organization",
+          "name": "ai-cli-orch-wrapper maintainers"
+        },
+        "datePublished": "2026-05-12",
+        "dateModified": "2026-05-14",
+        "inLanguage": "ko",
+        "keywords": [
+          "ubiquitous language",
+          "gray box",
+          "OpenSpec",
+          "AI CLI orchestration",
+          "technical documentation"
+        ],
+        "about": [
+          "Domain language",
+          "Session artifacts",
+          "Provider invocation",
+          "Context sync",
+          "Harness boundary"
+        ]
+      }
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --page: #f4f6f8;
+        --surface: #ffffff;
+        --surface-strong: #f9fafb;
+        --ink: #202124;
+        --ink-soft: #3b3f45;
+        --muted: #5f6873;
+        --line: #d8dde3;
+        --line-strong: #b8c0ca;
+        --teal: #0f766e;
+        --teal-soft: #dff5f1;
+        --amber: #b45309;
+        --amber-soft: #fff1d6;
+        --red: #b42318;
+        --red-soft: #ffe4df;
+        --blue: #2563eb;
+        --blue-soft: #e5edff;
+        --graphite: #24272c;
+        --shadow: 0 20px 48px rgba(26, 32, 44, 0.12);
+        --radius: 8px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background:
+          linear-gradient(90deg, rgba(15, 118, 110, 0.08) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(37, 99, 235, 0.06) 1px, transparent 1px), var(--page);
+        background-size: 56px 56px;
+        color: var(--ink);
+        font-family: 'Aptos', 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+        line-height: 1.65;
+      }
+
+      a {
+        color: var(--teal);
+        text-underline-offset: 3px;
+      }
+
+      a:hover {
+        color: var(--blue);
+      }
+
+      .skip-link {
+        position: absolute;
+        left: 16px;
+        top: -48px;
+        z-index: 10;
+        padding: 10px 14px;
+        border-radius: var(--radius);
+        background: var(--ink);
+        color: #fff;
+        transition: top 160ms ease;
+      }
+
+      .skip-link:focus {
+        top: 16px;
+      }
+
+      .hero {
+        background:
+          linear-gradient(135deg, rgba(15, 118, 110, 0.88), rgba(36, 39, 44, 0.96)), #24302f;
+        color: #fff;
+      }
+
+      .hero-inner,
+      main,
+      .footer-inner {
+        width: min(1120px, calc(100% - 40px));
+        margin: 0 auto;
+      }
+
+      .hero-inner {
+        display: grid;
+        grid-template-columns: 1.25fr 0.75fr;
+        gap: 34px;
+        align-items: end;
+        min-height: 460px;
+        padding: 56px 0 44px;
+      }
+
+      .eyebrow {
+        margin: 0 0 14px;
+        color: #b8f1e8;
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        letter-spacing: 0;
+        line-height: 1.18;
+      }
+
+      h1 {
+        max-width: 800px;
+        font-family: 'Iowan Old Style', 'Georgia', 'Apple SD Gothic Neo', serif;
+        font-size: 52px;
+        font-weight: 800;
+      }
+
+      .lead {
+        max-width: 760px;
+        margin: 22px 0 0;
+        color: #edf9f7;
+        font-size: 19px;
+      }
+
+      .hero-panel {
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        border-radius: var(--radius);
+        background: rgba(255, 255, 255, 0.08);
+        padding: 20px;
+        box-shadow: var(--shadow);
+      }
+
+      .hero-panel strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 15px;
+      }
+
+      .hero-panel p {
+        margin: 0;
+        color: #edf9f7;
+        font-size: 15px;
+      }
+
+      .meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 28px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        min-height: 34px;
+        padding: 6px 11px;
+        border: 1px solid rgba(255, 255, 255, 0.26);
+        border-radius: 999px;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      main {
+        padding: 34px 0 60px;
+      }
+
+      .toc {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        margin: -34px 0 34px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(244, 246, 248, 0.94);
+        backdrop-filter: blur(12px);
+      }
+
+      .toc nav {
+        width: min(1120px, calc(100% - 40px));
+        margin: 0 auto;
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding: 12px 0;
+      }
+
+      .toc a {
+        flex: 0 0 auto;
+        padding: 8px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface);
+        color: var(--ink-soft);
+        font-size: 13px;
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      section {
+        margin-top: 34px;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 16px;
+      }
+
+      .section-kicker {
+        margin: 0 0 8px;
+        color: var(--teal);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      h2 {
+        font-size: 31px;
+      }
+
+      h3 {
+        font-size: 19px;
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .summary-card,
+      .note,
+      .flow-box,
+      .term-group,
+      .matrix-card,
+      .decision-card,
+      .source-card {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        box-shadow: 0 8px 24px rgba(26, 32, 44, 0.06);
+      }
+
+      .summary-card {
+        padding: 18px;
+      }
+
+      .summary-card .number {
+        display: inline-grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        margin-bottom: 14px;
+        border-radius: 999px;
+        background: var(--teal-soft);
+        color: var(--teal);
+        font-weight: 900;
+      }
+
+      .summary-card p,
+      .term-group p,
+      .matrix-card p,
+      .decision-card p,
+      .source-card p {
+        margin: 10px 0 0;
+        color: var(--muted);
+      }
+
+      .note {
+        display: grid;
+        grid-template-columns: 18px 1fr;
+        gap: 12px;
+        padding: 16px 18px;
+        background: var(--amber-soft);
+        border-color: #f2ca85;
+      }
+
+      .note-marker {
+        width: 18px;
+        height: 18px;
+        margin-top: 4px;
+        border-radius: 50%;
+        background: var(--amber);
+      }
+
+      .note p {
+        margin: 0;
+      }
+
+      .boundary {
+        display: grid;
+        grid-template-columns: 1fr 1.08fr 1fr;
+        gap: 14px;
+        align-items: stretch;
+      }
+
+      .flow-box {
+        position: relative;
+        min-height: 250px;
+        padding: 18px;
+      }
+
+      .flow-box.source {
+        border-top: 5px solid var(--teal);
+      }
+
+      .flow-box.gray {
+        border-top: 5px solid var(--graphite);
+        background:
+          linear-gradient(45deg, rgba(36, 39, 44, 0.06) 25%, transparent 25%),
+          linear-gradient(-45deg, rgba(36, 39, 44, 0.06) 25%, transparent 25%), var(--surface);
+        background-size: 18px 18px;
+      }
+
+      .flow-box.target {
+        border-top: 5px solid var(--blue);
+      }
+
+      .flow-label {
+        display: inline-block;
+        margin-bottom: 12px;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .flow-box ul,
+      .compact-list {
+        margin: 12px 0 0;
+        padding-left: 20px;
+      }
+
+      .flow-box li,
+      .compact-list li {
+        margin: 7px 0;
+      }
+
+      .diagram-wrap {
+        margin-top: 18px;
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        background: var(--surface);
+        overflow: hidden;
+      }
+
+      .diagram-wrap svg {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+
+      .term-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+
+      .term-group {
+        padding: 18px;
+      }
+
+      .term-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .term {
+        display: inline-flex;
+        align-items: center;
+        min-height: 32px;
+        padding: 5px 10px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: var(--surface-strong);
+        color: var(--ink-soft);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .matrix {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+      }
+
+      .matrix-card {
+        padding: 16px;
+      }
+
+      .tag {
+        display: inline-flex;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .tag.new {
+        background: var(--teal-soft);
+        color: var(--teal);
+      }
+
+      .tag.touch {
+        background: var(--blue-soft);
+        color: var(--blue);
+      }
+
+      .tag.guard {
+        background: var(--amber-soft);
+        color: var(--amber);
+      }
+
+      .tag.stop {
+        background: var(--red-soft);
+        color: var(--red);
+      }
+
+      .decision-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+
+      .decision-card {
+        padding: 18px;
+      }
+
+      .decision-card h3 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .dot {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--teal);
+      }
+
+      .source-card {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 14px;
+        align-items: center;
+        padding: 18px;
+      }
+
+      .source-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+
+      .source-card code,
+      .inline-code {
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        background: var(--surface-strong);
+        padding: 2px 6px;
+        color: var(--ink-soft);
+        font-family: 'SFMono-Regular', 'Cascadia Code', 'Consolas', monospace;
+        font-size: 0.92em;
+      }
+
+      .button-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 8px 13px;
+        border-radius: var(--radius);
+        background: var(--ink);
+        color: #fff;
+        font-weight: 900;
+        text-decoration: none;
+      }
+
+      .button-link:hover {
+        background: var(--teal);
+        color: #fff;
+      }
+
+      .footer {
+        border-top: 1px solid var(--line);
+        background: var(--surface);
+      }
+
+      .footer-inner {
+        padding: 24px 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      @media (max-width: 900px) {
+        .hero-inner,
+        .boundary,
+        .summary-grid,
+        .term-grid,
+        .matrix,
+        .decision-grid,
+        .source-card {
+          grid-template-columns: 1fr;
+        }
+
+        .hero-inner {
+          min-height: auto;
+          padding: 42px 0 34px;
+        }
+
+        h1 {
+          font-size: 38px;
+        }
+
+        h2 {
+          font-size: 27px;
+        }
+      }
+
+      @media (max-width: 560px) {
+        .hero-inner,
+        main,
+        .footer-inner,
+        .toc nav {
+          width: min(100% - 28px, 1120px);
+        }
+
+        h1 {
+          font-size: 32px;
+        }
+
+        .lead {
+          font-size: 17px;
+        }
+
+        .section-head {
+          display: block;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">본문으로 이동</a>
+
+    <header class="hero">
+      <div class="hero-inner">
+        <div>
+          <p class="eyebrow">OpenSpec proposal digest</p>
+          <h1>Ubiquitous Language로 gray box의 회색을 선명하게 만든다</h1>
+          <p class="lead">
+            이 문서는 <span class="inline-code">introduce-ubiquitous-language</span>
+            proposal을 구현 착수자가 빠르게 이해하도록 재구성한 HTML kick-off입니다. 핵심은 코드만이
+            아니라 용어, 문서, artifact 이름까지 같은 경계 언어로 맞추는 것입니다.
+          </p>
+          <div class="meta-row" aria-label="문서 속성">
+            <span class="chip">대상: maintainer와 AI agent</span>
+            <span class="chip">범위: docs first</span>
+            <span class="chip">금지: public CLI rename</span>
+          </div>
+        </div>
+        <aside class="hero-panel" aria-label="핵심 요약">
+          <strong>한 문장 요약</strong>
+          <p>
+            흩어진 도메인 용어를 하나의 repo-owned glossary로 묶어
+            <span class="inline-code">aco ask</span>, <span class="inline-code">aco run</span>,
+            <span class="inline-code">aco sync</span>가 같은 의미 체계에서 계획되고 검증되게 만든다.
+          </p>
+        </aside>
+      </div>
+    </header>
+
+    <div class="toc" aria-label="문서 목차">
+      <nav>
+        <a href="#summary">요약</a>
+        <a href="#gray-box">Gray Box 시각화</a>
+        <a href="#terms">용어 지도</a>
+        <a href="#impact">영향 범위</a>
+        <a href="#kickoff">착수 질문</a>
+        <a href="#source">원문</a>
+      </nav>
+    </div>
+
+    <main id="main">
+      <section id="summary" aria-labelledby="summary-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">01. Executive Summary</p>
+            <h2 id="summary-title">proposal의 핵심은 세 가지입니다</h2>
+          </div>
+        </div>
+        <div class="summary-grid">
+          <article class="summary-card">
+            <span class="number">1</span>
+            <h3>언어도 interface다</h3>
+            <p>
+              현재 용어는 README, architecture, security, tests, implementation에 흩어져 있습니다.
+              문서 작성과 갱신을 LLM이 보조하더라도 최종 기준은 repo 안에 남아야 하며, agent가 매번
+              의미를 다시 추론하면 gray box 경계가 흐려집니다.
+            </p>
+          </article>
+          <article class="summary-card">
+            <span class="number">2</span>
+            <h3>repo-owned glossary를 만든다</h3>
+            <p>
+              <span class="inline-code">docs/reference/ubiquitous-language.md</span>
+              를 source of truth로 두고, provider invocation, session artifact, context sync,
+              harness boundary 용어를 정렬합니다.
+            </p>
+          </article>
+          <article class="summary-card">
+            <span class="number">3</span>
+            <h3>작게 연결하고 drift를 막는다</h3>
+            <p>
+              모든 문서를 한 번에 다시 쓰지 않습니다. 용어가 처음 등장하는 문서에 링크를 추가하고,
+              처음부터 자동 terminology check를 붙여 LLM-assisted 문서 갱신의 drift를 잡습니다.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="gray-box" aria-labelledby="gray-box-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">02. Boundary Model</p>
+            <h2 id="gray-box-title">gray box에서 “회색”이 의미하는 것</h2>
+          </div>
+        </div>
+        <div class="note">
+          <span class="note-marker" aria-hidden="true"></span>
+          <p>
+            회색은 완전한 black box도, 완전한 white box도 아닙니다. 내부 구현을 모두 노출하지
+            않더라도, maintainer와 agent가 같은 용어로 입력, 출력, evidence, artifact를 추적할 수
+            있어야 합니다.
+          </p>
+        </div>
+        <div class="boundary" aria-label="gray box boundary cards">
+          <article class="flow-box source">
+            <span class="flow-label">SOURCE SURFACE</span>
+            <h3>repo가 관리하고 LLM이 보조하는 기준</h3>
+            <ul>
+              <li>README와 architecture docs</li>
+              <li>security와 session artifact reference</li>
+              <li>LLM-assisted docs와 review notes</li>
+              <li>OpenSpec capabilities와 scenarios</li>
+              <li>public CLI contract</li>
+            </ul>
+          </article>
+          <article class="flow-box gray">
+            <span class="flow-label">GRAY BOX LANGUAGE LAYER</span>
+            <h3>공통 언어가 통과시키는 것</h3>
+            <ul>
+              <li>
+                동일한 의미의 <span class="inline-code">run</span>과
+                <span class="inline-code">session</span>
+              </li>
+              <li>provider output을 advisory로 다루는 규칙</li>
+              <li>artifact와 brief의 책임 분리</li>
+              <li>harness와 generated target의 경계</li>
+            </ul>
+          </article>
+          <article class="flow-box target">
+            <span class="flow-label">GENERATED TARGET</span>
+            <h3>agent가 생성하거나 수정하는 표면</h3>
+            <ul>
+              <li>provider prompts와 review notes</li>
+              <li>tests와 emitted artifact names</li>
+              <li>future OpenSpec changes</li>
+              <li>terminology-sensitive runtime output</li>
+            </ul>
+          </article>
+        </div>
+        <div class="diagram-wrap">
+          <svg viewBox="0 0 1120 360" role="img" aria-labelledby="diagram-title diagram-desc">
+            <title id="diagram-title">Ubiquitous language flow diagram</title>
+            <desc id="diagram-desc">
+              Glossary에서 docs, provider prompts, artifacts, tests로 용어가 흐르고 다시 review
+              gate를 통해 drift가 감지되는 흐름입니다.
+            </desc>
+            <rect width="1120" height="360" fill="#ffffff" />
+            <g font-family="Aptos, Segoe UI, sans-serif" font-size="18" fill="#202124">
+              <rect x="48" y="72" width="248" height="112" rx="8" fill="#dff5f1" stroke="#0f766e" />
+              <text x="72" y="116" font-weight="800">Glossary</text>
+              <text x="72" y="148" font-size="15" fill="#3b3f45">
+                docs/reference/ubiquitous-language.md
+              </text>
+
+              <rect x="436" y="42" width="248" height="78" rx="8" fill="#e5edff" stroke="#2563eb" />
+              <text x="460" y="86" font-weight="800">Docs and OpenSpec</text>
+
+              <rect
+                x="436"
+                y="142"
+                width="248"
+                height="78"
+                rx="8"
+                fill="#fff1d6"
+                stroke="#b45309"
+              />
+              <text x="460" y="186" font-weight="800">Provider Prompts</text>
+
+              <rect
+                x="436"
+                y="242"
+                width="248"
+                height="78"
+                rx="8"
+                fill="#f9fafb"
+                stroke="#b8c0ca"
+              />
+              <text x="460" y="286" font-weight="800">Artifacts and Tests</text>
+
+              <rect
+                x="824"
+                y="112"
+                width="248"
+                height="136"
+                rx="8"
+                fill="#ffe4df"
+                stroke="#b42318"
+              />
+              <text x="848" y="160" font-weight="800">Review Gate</text>
+              <text x="848" y="194" font-size="15" fill="#3b3f45">preferred terms pass</text>
+              <text x="848" y="220" font-size="15" fill="#3b3f45">
+                conflicting terms get flagged
+              </text>
+            </g>
+            <g stroke="#5f6873" stroke-width="3" fill="none" marker-end="url(#arrow)">
+              <path d="M 296 128 C 350 128, 376 82, 436 82" />
+              <path d="M 296 128 C 350 128, 376 181, 436 181" />
+              <path d="M 296 128 C 350 128, 376 282, 436 282" />
+              <path d="M 684 82 C 748 82, 766 152, 824 152" />
+              <path d="M 684 181 C 748 181, 766 181, 824 181" />
+              <path d="M 684 282 C 748 282, 766 214, 824 214" />
+              <path d="M 824 240 C 662 340, 262 332, 174 184" stroke-dasharray="8 8" />
+            </g>
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L9,3 z" fill="#5f6873" />
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </section>
+
+      <section id="terms" aria-labelledby="terms-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">03. Term Map</p>
+            <h2 id="terms-title">먼저 정렬해야 할 용어 묶음</h2>
+          </div>
+        </div>
+        <div class="term-grid">
+          <article class="term-group">
+            <h3>Provider Invocation</h3>
+            <p>외부 AI CLI를 호출하고 결과를 advisory evidence로 다루는 영역입니다.</p>
+            <div class="term-list">
+              <span class="term">provider</span>
+              <span class="term">advisory</span>
+              <span class="term">permission profile</span>
+              <span class="term">aco ask</span>
+              <span class="term">aco run</span>
+            </div>
+          </article>
+          <article class="term-group">
+            <h3>Session Artifacts</h3>
+            <p>실행 결과가 사람이 검토 가능한 증거로 남는 영역입니다.</p>
+            <div class="term-list">
+              <span class="term">run</span>
+              <span class="term">session</span>
+              <span class="term">artifact</span>
+              <span class="term">brief</span>
+              <span class="term">output log</span>
+            </div>
+          </article>
+          <article class="term-group">
+            <h3>Context Sync</h3>
+            <p>repo source와 generated target이 어떻게 연결되는지 설명하는 영역입니다.</p>
+            <div class="term-list">
+              <span class="term">source surface</span>
+              <span class="term">generated target</span>
+              <span class="term">sync manifest</span>
+              <span class="term">managed block</span>
+              <span class="term">drift</span>
+            </div>
+          </article>
+          <article class="term-group">
+            <h3>Harness Boundary</h3>
+            <p>agent와 wrapper가 어디까지 책임지는지 구분하는 영역입니다.</p>
+            <div class="term-list">
+              <span class="term">harness</span>
+              <span class="term">wrapper</span>
+              <span class="term">CLI contract</span>
+              <span class="term">review gate</span>
+              <span class="term">verification</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="impact" aria-labelledby="impact-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">04. Scope and Impact</p>
+            <h2 id="impact-title">바뀌는 곳과 바꾸지 않는 곳</h2>
+          </div>
+        </div>
+        <div class="matrix">
+          <article class="matrix-card">
+            <span class="tag new">New</span>
+            <h3>새 기준 문서</h3>
+            <p>
+              <span class="inline-code">docs/reference/ubiquitous-language.md</span>
+              를 glossary와 naming rules의 기준점으로 추가합니다.
+            </p>
+          </article>
+          <article class="matrix-card">
+            <span class="tag touch">Touch</span>
+            <h3>기존 문서 링크</h3>
+            <p>
+              README, architecture, security, session artifact docs에서 용어가 처음 등장하는 지점에
+              짧은 설명이나 링크를 붙입니다.
+            </p>
+          </article>
+          <article class="matrix-card">
+            <span class="tag guard">Guard</span>
+            <h3>가벼운 drift 방지</h3>
+            <p>
+              broad rename 대신 초기 자동 terminology check와 review checklist를 함께 두고, 충돌
+              용어를 조기에 잡습니다.
+            </p>
+          </article>
+          <article class="matrix-card">
+            <span class="tag stop">Non-goal</span>
+            <h3>공개 contract 보존</h3>
+            <p>
+              <span class="inline-code">aco</span> CLI 이름 변경, 스타일성 대규모 rename, 전 문서
+              일괄 rewrite는 이번 범위가 아닙니다.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="kickoff" aria-labelledby="kickoff-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">05. Kick-off Questions</p>
+            <h2 id="kickoff-title">구현 세션을 시작할 때 적용할 결정</h2>
+          </div>
+        </div>
+        <div class="decision-grid">
+          <article class="decision-card">
+            <h3><span class="dot"></span>1차 glossary 범위</h3>
+            <p>
+              좁게 시작합니다. 1차 범위는 provider invocation과 session artifacts로 제한하고, 나머지
+              용어는 placeholder와 backlog로 남겨 2차 확장에서 다룹니다.
+            </p>
+          </article>
+          <article class="decision-card">
+            <h3><span class="dot"></span>자동 check 시작점</h3>
+            <p>
+              처음부터 자동 terminology check를 넣습니다. PR review checklist는 보조 채널로 두고,
+              false positive는 alias나 allowlist로 조정합니다.
+            </p>
+          </article>
+          <article class="decision-card">
+            <h3><span class="dot"></span>code rename 강도</h3>
+            <p>
+              너무 엄격한 rename campaign은 피합니다. public contract는 보존하되 혼란을 줄이는
+              targeted naming, alias, docs-only 정렬을 우선합니다.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="source" aria-labelledby="source-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">06. Source</p>
+            <h2 id="source-title">원문 proposal과 다음 읽을거리</h2>
+          </div>
+        </div>
+        <div class="source-card">
+          <div>
+            <h3>OpenSpec proposal</h3>
+            <p>
+              이 HTML은 아래 원문을 읽기 쉬운 briefing 형식으로 재구성한 보조 문서입니다. 이
+              페이지의 결정 사항은 다음 implementation plan에 반영할 입력이며, 최종 변경 기준은
+              OpenSpec change directory의 proposal, design, tasks, spec입니다.
+            </p>
+            <p>
+              <code>openspec/changes/introduce-ubiquitous-language/proposal.md</code>
+            </p>
+          </div>
+          <div class="source-actions">
+            <a class="button-link" href="introduce-ubiquitous-language-implementation-plan.md">
+              Plan 열기
+            </a>
+            <a
+              class="button-link"
+              href="../../../openspec/changes/introduce-ubiquitous-language/proposal.md"
+            >
+              원문 열기
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        Last reviewed: 2026-05-14. This page is a kick-off briefing for the
+        <span class="inline-code">introduce-ubiquitous-language</span> OpenSpec change.
+      </div>
+    </footer>
+  </body>
+</html>

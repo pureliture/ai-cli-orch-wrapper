@@ -4,6 +4,8 @@
 
 `ai-cli-orch-wrapper` is a consent-gated external AI delegation wrapper for Claude Code. It helps Claude Code ask external AI CLIs for advisory work, but it is not a sandbox, secret scanner, or remote auth verifier.
 
+For canonical language around provider advisory output, permission profiles, runs, sessions, and briefs, see [Ubiquitous Language](reference/ubiquitous-language.md).
+
 ## Consent-Gated Execution
 
 `aco ask` never invokes providers unless the user gives explicit execution consent.

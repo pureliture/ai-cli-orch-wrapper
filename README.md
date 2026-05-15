@@ -58,6 +58,9 @@
 > command pack 설치, Claude 기준 자산의 Codex/Gemini target sync, provider 실행, session-aware
 > `result/status/cancel` — 외부 AI CLI를 **하나의 반복 가능한 개발 워크플로우**로 묶는 것이 목표입니다.
 
+용어 기준: provider invocation, run/session artifacts, briefs, advisory output은
+[Ubiquitous Language](docs/reference/ubiquitous-language.md)에 정의되어 있습니다.
+
 <p align="center">
   <img src="docs/images/architecture-overview.svg" alt="System Architecture" width="100%" />
 </p>
@@ -587,7 +590,7 @@ aco sync --force
 </tr>
 <tr>
 <td align="center">🟢</td>
-<td><b>Provider run</b></td>
+<td><b>Provider invocation</b></td>
 <td>provider별 command 실행 · session 생성</td>
 <td><code>aco run gemini review</code></td>
 </tr>
