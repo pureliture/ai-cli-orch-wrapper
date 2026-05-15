@@ -445,7 +445,7 @@ async function computeTransformPlan(
   }
 
   const manifest: SyncManifest = {
-    version: '2',
+    version: '3',
     generatedAt: new Date().toISOString(),
     sourceHashes,
     targetHashes,
