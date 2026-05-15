@@ -5,13 +5,13 @@ import { basename } from 'node:path';
  * Checked against the basename and full normalized path.
  */
 const CREDENTIAL_PATTERNS: RegExp[] = [
-  /^\.env(\.[^/]+)?$/,              // .env, .env.local, .env.production, etc.
-  /^auth\.json$/,                    // OAuth token files
-  /_cred(?:s|entials)?\.json$/i,      // *_credentials.json, *_creds.json
+  /^\.env(\.[^/]+)?$/, // .env, .env.local, .env.production, etc.
+  /^auth\.json$/, // OAuth token files
+  /_cred(?:s|entials)?\.json$/i, // *_credentials.json, *_creds.json
   /^(id_rsa|id_ed25519|id_dsa|id_ecdsa)$/, // SSH private keys
-  /\.(pem|key)$/i,                   // TLS/cert private keys
-  /\.(pfx|p12)$/i,                   // PKCS#12 bundles
-  /^secrets?\.(json|ya?ml)$/i,       // secrets.json, secrets.yaml, secrets.yml
+  /\.(pem|key)$/i, // TLS/cert private keys
+  /\.(pfx|p12)$/i, // PKCS#12 bundles
+  /^secrets?\.(json|ya?ml)$/i, // secrets.json, secrets.yaml, secrets.yml
 ];
 
 /**
