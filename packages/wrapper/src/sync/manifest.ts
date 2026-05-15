@@ -1,5 +1,5 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, relative, isAbsolute } from 'node:path';
 import type { SyncManifest, SyncWarning, ManifestTargetRecord } from './transform-interface.js';
 
 const MANIFEST_DIR = '.aco';
@@ -10,7 +10,7 @@ export async function readManifest(rootPath: string): Promise<SyncManifest | nul
     const path = join(rootPath, MANIFEST_DIR, MANIFEST_FILE);
     const content = await readFile(path, 'utf-8');
     const parsed = JSON.parse(content) as Partial<SyncManifest>;
-    return migrateManifest(parsed);
+    return migrateManifest(parsed, rootPath);
   } catch {
     return null;
   }
@@ -54,44 +54,77 @@ export function calculateDrift(current: SyncManifest | null, updated: SyncManife
 }
 
 /**
- * Migrate a legacy manifest (with only targetHashes) to the ownership-aware format.
+ * Migrate a manifest through version history:
+ *   v1 (targetHashes only) → v2 (ownership-aware targets)
+ *   v2 (absolute sourceHashes) → v3 (repo-relative sourceHashes)
  */
-function migrateManifest(parsed: Partial<SyncManifest>): SyncManifest {
+function migrateManifest(parsed: Partial<SyncManifest>, rootPath?: string): SyncManifest {
   const legacy = parsed as Record<string, unknown>;
 
-  // If already migrated, return as-is
-  if (legacy.targets && typeof legacy.targets === 'object') {
-    return {
-      version: (legacy.version as string) || '2',
-      generatedAt: (legacy.generatedAt as string) || new Date().toISOString(),
-      sourceHashes: (legacy.sourceHashes as Record<string, string>) || {},
-      targetHashes: (legacy.targetHashes as Record<string, string>) || {},
-      targets: (legacy.targets as Record<string, ManifestTargetRecord>) || {},
-      skipped: (legacy.skipped as SyncManifest['skipped']) || [],
-      warnings: (legacy.warnings as SyncWarning[]) || [],
-    };
+  // v1 → v2: add ownership-aware targets
+  if (!legacy.targets || typeof legacy.targets !== 'object') {
+    const targetHashes = (legacy.targetHashes as Record<string, string>) || {};
+    const targets: Record<string, ManifestTargetRecord> = {};
+    for (const [path, hash] of Object.entries(targetHashes)) {
+      targets[path] = {
+        hash,
+        owner: 'aco',
+        kind: inferKindFromPath(path),
+        hashFormat: 'legacy-v1',
+      };
+    }
+    legacy.targets = targets;
+    legacy.version = '2';
+    legacy.generatedAt = legacy.generatedAt ?? new Date().toISOString();
+    legacy.sourceHashes = legacy.sourceHashes ?? {};
+    legacy.targetHashes = targetHashes;
+    legacy.skipped = [];
+    legacy.warnings = legacy.warnings ?? [];
   }
 
-  // Migrate from legacy v1 format
-  const targetHashes = (legacy.targetHashes as Record<string, string>) || {};
-  const targets: Record<string, ManifestTargetRecord> = {};
+  // v2 → v3: convert absolute sourceHashes keys to repo-relative
+  const rawVersion = (legacy.version as string) || '2';
+  const sourceHashes = (legacy.sourceHashes as Record<string, string>) || {};
+  const warnings: SyncWarning[] = (legacy.warnings as SyncWarning[]) || [];
 
-  for (const [path, hash] of Object.entries(targetHashes)) {
-    targets[path] = {
-      hash,
-      owner: 'aco',
-      kind: inferKindFromPath(path),
-      hashFormat: 'legacy-v1',
-    };
+  if (rawVersion !== '3') {
+    const migratedHashes: Record<string, string> = {};
+    for (const [key, hash] of Object.entries(sourceHashes)) {
+      if (isAbsolute(key)) {
+        if (!rootPath) {
+          warnings.push({
+            severity: 'warning',
+            source: 'manifest-migration',
+            message: `Cannot migrate absolute sourceHash key "${key}": rootPath unavailable`,
+          });
+          continue;
+        }
+        const rel = relative(rootPath, key);
+        if (rel.startsWith('..')) {
+          warnings.push({
+            severity: 'warning',
+            source: 'manifest-migration',
+            message: `Skipping absolute sourceHash key outside repo root: "${key}"`,
+          });
+          continue;
+        }
+        migratedHashes[rel] = hash;
+      } else {
+        migratedHashes[key] = hash;
+      }
+    }
+    legacy.sourceHashes = migratedHashes;
+    legacy.version = '3';
+    legacy.warnings = warnings;
   }
 
   return {
-    version: '2',
-    generatedAt: new Date().toISOString(),
+    version: '3',
+    generatedAt: (legacy.generatedAt as string) || new Date().toISOString(),
     sourceHashes: (legacy.sourceHashes as Record<string, string>) || {},
-    targetHashes,
-    targets,
-    skipped: [],
+    targetHashes: (legacy.targetHashes as Record<string, string>) || {},
+    targets: (legacy.targets as Record<string, ManifestTargetRecord>) || {},
+    skipped: (legacy.skipped as SyncManifest['skipped']) || [],
     warnings: (legacy.warnings as SyncWarning[]) || [],
   };
 }

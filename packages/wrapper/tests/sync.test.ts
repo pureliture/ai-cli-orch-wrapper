@@ -737,7 +737,7 @@ describe('Skill Sync', () => {
         await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
       );
 
-      assert.equal(manifest.version, '2');
+      assert.equal(manifest.version, '3');
       const targetPath = join(tmpDir, '.agents', 'skills', 'github-kanban-ops');
       const record = manifest.targets[targetPath];
       assert.ok(record, 'Manifest should record the target');
@@ -769,7 +769,7 @@ describe('Skill Sync', () => {
       await runSync(tmpDir, { dryRun: false });
       const manifest = JSON.parse(await readFile(join(acoDir, 'sync-manifest.json'), 'utf-8'));
 
-      assert.equal(manifest.version, '2');
+      assert.equal(manifest.version, '3');
       assert.ok(manifest.targets, 'Migrated manifest should have targets');
       assert.ok(manifest.skipped, 'Migrated manifest should have skipped');
     } finally {

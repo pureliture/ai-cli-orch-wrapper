@@ -5,6 +5,7 @@ import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
 import { providerRegistry } from '../providers/registry.js';
+import { isCredentialLikePath, findCredentialEnvKeys } from '../util/credential-guard.js';
 import { sessionStore } from '../session/store.js';
 import type { OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
@@ -40,6 +41,7 @@ interface AskOptions {
   task?: string;
   input?: string;
   inputFile?: string;
+  allowSensitive: boolean;
   preset?: string;
   permissionProfile: PermissionProfile;
   outputMode: OutputMode;
@@ -91,6 +93,15 @@ export async function cmdAsk(args: string[]): Promise<void> {
       ].join('\n')
     );
     process.exit(EXIT_ERROR);
+  }
+
+  const credentialEnvKeys = findCredentialEnvKeys(process.env);
+  if (credentialEnvKeys.length > 0) {
+    process.stderr.write(
+      `[aco] warning: the following environment variables look like credentials and will be ` +
+        `inherited by the provider process: ${credentialEnvKeys.join(', ')}.\n` +
+        `[aco] To suppress this warning, unset these variables before running aco ask.\n`
+    );
   }
 
   const runId = randomUUID();
@@ -228,6 +239,7 @@ function parseAskOptions(args: string[]): AskOptions {
     task: parseFlag(args, '--task'),
     input: parseFlag(args, '--input'),
     inputFile: parseFlag(args, '--input-file'),
+    allowSensitive: args.includes('--allow-sensitive'),
     preset: parseFlag(args, '--preset'),
     permissionProfile: parseFlag<PermissionProfile>(args, '--permission-profile') ?? 'restricted',
     outputMode: parseFlag<OutputMode>(args, '--output-mode') ?? 'brief',
@@ -290,6 +302,19 @@ async function collectInput(options: AskOptions): Promise<string> {
   }
 
   if (options.inputFile) {
+    if (isCredentialLikePath(options.inputFile)) {
+      if (options.allowSensitive) {
+        process.stderr.write(
+          `[aco] warning: --input-file '${options.inputFile}' looks like a credential or secret file. ` +
+            `Proceeding because --allow-sensitive was specified.\n`
+        );
+      } else {
+        fail(
+          `Blocked: --input-file '${options.inputFile}' looks like a credential or secret file. ` +
+            `Pass --allow-sensitive to override.`
+        );
+      }
+    }
     const filePath = resolve(process.cwd(), options.inputFile);
     const fileInput = await readFile(filePath, 'utf8').catch((err: unknown) => {
       const message = err instanceof Error ? err.message : String(err);
@@ -429,7 +454,8 @@ Options:
   --providers <list>              Comma-separated providers (default: mock)
   --task <text>                   Natural language task
   --input <text>                  Inline input
-  --input-file <path>             Input file to include
+  --input-file <path>             Input file to include (credential-like paths blocked by default)
+  --allow-sensitive               Allow credential-like --input-file paths (shows warning)
   --preset <name>                 .claude/aco/tasks/<name>.md
   --permission-profile <profile>  restricted|default|unrestricted (default: restricted)
   --output-mode <mode>            brief|save-only|full (default: brief)

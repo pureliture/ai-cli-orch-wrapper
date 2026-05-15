@@ -1,16 +1,21 @@
 import { readFile, readdir, stat } from 'node:fs/promises';
-import { join, dirname } from 'node:path';
+import { join, relative } from 'node:path';
 import { SyncSource, AssetKind } from './transform-interface.js';
 import { computeHash } from './hash.js';
 
+/**
+ * Discover all sync source files under rootPath.
+ * Returned SyncSource.path values are always repo-relative (e.g. "CLAUDE.md",
+ * ".claude/rules/core.md") so that manifest keys are portable across checkouts.
+ */
 export async function discoverSources(rootPath: string): Promise<SyncSource[]> {
   const sources: SyncSource[] = [];
 
   // 1. CLAUDE.md at repo root
-  await tryAddSource(sources, join(rootPath, 'CLAUDE.md'), 'config');
+  await tryAddSource(sources, rootPath, join(rootPath, 'CLAUDE.md'), 'config');
 
   // 2. .claude/CLAUDE.md (optional)
-  await tryAddSource(sources, join(rootPath, '.claude/CLAUDE.md'), 'config');
+  await tryAddSource(sources, rootPath, join(rootPath, '.claude/CLAUDE.md'), 'config');
 
   // 3. .claude/rules/*.md sorted lexicographically
   const rulesDir = join(rootPath, '.claude/rules');
@@ -18,7 +23,7 @@ export async function discoverSources(rootPath: string): Promise<SyncSource[]> {
     const rules = await readdir(rulesDir);
     const sortedRules = rules.filter((f) => f.endsWith('.md')).sort();
     for (const rule of sortedRules) {
-      await tryAddSource(sources, join(rulesDir, rule), 'rule');
+      await tryAddSource(sources, rootPath, join(rulesDir, rule), 'rule');
     }
   } catch {}
 
@@ -30,7 +35,7 @@ export async function discoverSources(rootPath: string): Promise<SyncSource[]> {
       const skillMdPath = join(skillsDir, skillDir, 'SKILL.md');
       try {
         await stat(skillMdPath); // Check if SKILL.md exists
-        await tryAddSkillSource(sources, skillMdPath);
+        await tryAddSkillSource(sources, rootPath, skillMdPath);
       } catch {}
     }
   } catch {}
@@ -40,21 +45,26 @@ export async function discoverSources(rootPath: string): Promise<SyncSource[]> {
   try {
     const agents = await readdir(agentsDir);
     for (const agent of agents.filter((f) => f.endsWith('.md'))) {
-      await tryAddSource(sources, join(agentsDir, agent), 'agent');
+      await tryAddSource(sources, rootPath, join(agentsDir, agent), 'agent');
     }
   } catch {}
 
   // 6. .claude/settings.json (for hooks)
-  await tryAddSource(sources, join(rootPath, '.claude/settings.json'), 'settings');
+  await tryAddSource(sources, rootPath, join(rootPath, '.claude/settings.json'), 'settings');
 
   return sources;
 }
 
-async function tryAddSource(sources: SyncSource[], path: string, kind: SyncSource['kind']) {
+async function tryAddSource(
+  sources: SyncSource[],
+  rootPath: string,
+  absolutePath: string,
+  kind: SyncSource['kind']
+) {
   try {
-    const content = await readFile(path, 'utf8');
+    const content = await readFile(absolutePath, 'utf8');
     sources.push({
-      path,
+      path: relative(rootPath, absolutePath),
       kind,
       content,
       hash: computeHash(content),
@@ -64,12 +74,12 @@ async function tryAddSource(sources: SyncSource[], path: string, kind: SyncSourc
   }
 }
 
-async function tryAddSkillSource(sources: SyncSource[], path: string) {
+async function tryAddSkillSource(sources: SyncSource[], rootPath: string, absolutePath: string) {
   try {
-    const content = await readFile(path, 'utf8');
+    const content = await readFile(absolutePath, 'utf8');
     const frontmatter = parseSkillFrontmatter(content);
     sources.push({
-      path,
+      path: relative(rootPath, absolutePath),
       kind: 'skill',
       content,
       hash: computeHash(content),
