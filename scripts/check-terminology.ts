@@ -116,8 +116,10 @@ function main(): void {
     const lines = readFileSync(absolutePath, 'utf8').split(/\r?\n/);
 
     lines.forEach((line, lineIndex) => {
+      let lineForMatching = line.toLocaleLowerCase();
       for (const rule of DEFAULT_RULES) {
-        if (!includesDiscouragedTerm(line, rule.discouraged)) {
+        const discouragedLower = rule.discouraged.toLocaleLowerCase();
+        if (!lineForMatching.includes(discouragedLower)) {
           continue;
         }
 
@@ -134,6 +136,8 @@ function main(): void {
             `reason: ${rule.reason}`,
           ].join('\n  ')
         );
+
+        lineForMatching = lineForMatching.split(discouragedLower).join(' '.repeat(discouragedLower.length));
       }
     });
   }
