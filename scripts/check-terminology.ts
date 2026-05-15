@@ -92,7 +92,7 @@ function includesDiscouragedTerm(line: string, term: string): boolean {
 }
 
 function allowedTermsForLine(line: string): string[] {
-  const matches = line.matchAll(/terminology-check allow:\s*([^-><]+)/g);
+  const matches = line.matchAll(/terminology-check allow:\s*(.*?)\s*-->/g);
   return [...matches].map((match) => match[1].trim().toLocaleLowerCase());
 }
 
