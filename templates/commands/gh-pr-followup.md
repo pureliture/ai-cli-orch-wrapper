@@ -48,9 +48,9 @@ Fetch unresolved review threads for a Pull Request, resolve small actionable fee
    ```
 
 4. Categorize each unresolved thread:
-   - **Immediate fix**: Small, localized change that belongs in the current PR.
-   - **Deferred issue**: Larger task, bug, or maintenance follow-up that should be tracked separately.
-   - If unsure, ask whether to fix now or defer.
+   - **Immediate fix**: Change that belongs in the current PR. Default to this.
+   - **Deferred issue**: Defer only when fixing in the current PR would be actively wrong — scope violation, unresolved design decision, or meaningful regression risk.
+   - If unsure, fix it now.
 
 5. For each immediate fix:
    - Make the local code change.
