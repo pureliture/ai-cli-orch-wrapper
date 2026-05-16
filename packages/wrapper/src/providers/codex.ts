@@ -86,6 +86,9 @@ export class CodexProvider implements IProvider {
     if (profile !== 'restricted') {
       args.push('--full-auto');
     }
+    if (options?.model) {
+      args.push('-m', options.model);
+    }
     return args;
   }
 

@@ -27,6 +27,8 @@ export interface ProviderSessionRunOptions {
   killGraceMs?: number;
   /** Called once with the provider's OS PID when available. */
   onPid?: (pid: number) => void;
+  /** Model identifier passed to the provider binary via -m flag. */
+  model?: string;
 }
 
 export interface ProviderSessionRunResult {
@@ -65,6 +67,7 @@ export async function invokeProviderForSession(
         outputBuffer,
         timeoutMs: options.timeoutMs,
         killGraceMs: options.killGraceMs,
+        model: options.model,
         onPid: (pid) => {
           options.onPid?.(pid);
           sessionStore.update(options.sessionId, { pid }).catch((err: unknown) => {

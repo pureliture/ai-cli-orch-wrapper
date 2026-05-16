@@ -41,6 +41,8 @@ export interface InvokeOptions {
   timeoutMs?: number;
   /** Grace period after SIGTERM before SIGKILL. */
   killGraceMs?: number;
+  /** Model identifier passed to the provider binary via -m flag. */
+  model?: string;
 }
 
 export interface IProvider {

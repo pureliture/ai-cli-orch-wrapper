@@ -155,7 +155,7 @@ async function cmdProvider(args: string[]): Promise<void> {
 async function cmdRun(args: string[]): Promise<void> {
   if (args.includes('--help') || args.includes('-h')) {
     console.error(
-      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>]'
+      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>] [--model <model>]'
     );
     process.exit(0);
   }
@@ -165,7 +165,7 @@ async function cmdRun(args: string[]): Promise<void> {
 
   if (!providerKey || !command) {
     console.error(
-      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>]'
+      'Usage: aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>] [--model <model>]'
     );
     process.exit(EXIT_ERROR);
   }
@@ -191,6 +191,7 @@ async function cmdRun(args: string[]): Promise<void> {
     process.exit(EXIT_ERROR);
   }
   const inputFlag = parseFlag(args, '--input') ?? '';
+  const model = parseFlag(args, '--model');
 
   let content = inputFlag;
   if (!content && !process.stdin.isTTY) {
@@ -242,6 +243,7 @@ async function cmdRun(args: string[]): Promise<void> {
     outputBuffer: resolveRunOutputBuffering(),
     timeoutMs: executionControl.timeoutMs,
     killGraceMs: executionControl.killGraceMs,
+    ...(model ? { model } : {}),
     onPid: (pid) => {
       activePid = pid;
     },

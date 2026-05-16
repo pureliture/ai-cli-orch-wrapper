@@ -49,6 +49,7 @@ interface AskOptions {
   dryRun: boolean;
   timeoutSeconds: number;
   executionControl: ProviderExecutionControl;
+  model?: string;
 }
 
 interface AskSessionLedger {
@@ -140,6 +141,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
       timeoutMs: options.executionControl.timeoutMs,
       killGraceMs: options.executionControl.killGraceMs,
+      ...(options.model ? { model: options.model } : {}),
       onChunk:
         options.outputMode === 'full'
           ? (chunk) => {
@@ -247,6 +249,7 @@ function parseAskOptions(args: string[]): AskOptions {
     dryRun: args.includes('--dry-run'),
     timeoutSeconds: resolveProviderTimeoutSeconds(timeoutFlag),
     executionControl: resolveProviderExecutionControl(timeoutFlag),
+    model: parseFlag(args, '--model'),
   };
 }
 
