@@ -51,7 +51,7 @@ function isPathWithinRepo(root: string, target: string, allowed: string[]): bool
  * Convert an absolute target path to a repo-relative manifest key.
  * Manifest keys are always stored as repo-relative paths (no leading slash).
  */
-function resolveManifestKey(repoRoot: string, absolutePath: string): string {
+function toManifestKey(repoRoot: string, absolutePath: string): string {
   return relative(repoRoot, absolutePath);
 }
 
@@ -103,7 +103,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   // 6. Detect conflicts for planned outputs against existing manifest
   if (existingManifest) {
     for (const output of plan.outputs) {
-      const manifestKey = resolveManifestKey(repoRoot, output.targetPath);
+      const manifestKey = toManifestKey(repoRoot, output.targetPath);
       const existingRecord = existingManifest.targets[manifestKey];
       const existingHash = existingRecord?.hash ?? existingManifest.targetHashes[manifestKey];
       if (existingHash && (output.kind === 'file' || output.kind === 'managed-block')) {
@@ -127,7 +127,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     if (output.action === 'conflict') continue;
     if (output.action === 'removed') continue;
 
-    const manifestKey = resolveManifestKey(repoRoot, output.targetPath);
+    const manifestKey = toManifestKey(repoRoot, output.targetPath);
     const existingRecord = existingManifest?.targets[manifestKey];
     const existingHash = existingRecord?.hash ?? existingManifest?.targetHashes[manifestKey];
     if (!existingHash) {
@@ -196,7 +196,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
       const targets = warning.cleanupTargets;
       if (targets && targets.length > 0) {
         for (const targetPath of targets) {
-          const targetKey = resolveManifestKey(repoRoot, targetPath);
+          const targetKey = toManifestKey(repoRoot, targetPath);
           const isOwned = existingManifest?.targets?.[targetKey]?.owner === 'aco';
           if (!dryRun && (isOwned || forceClean)) {
             const allowedDirs = ['.agents/skills', '.codex/skills'];
@@ -237,12 +237,12 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
 
     // Remove cleaned paths from plan.manifest.targets
     for (const path of cleanedOwned) {
-      const key = resolveManifestKey(repoRoot, path);
+      const key = toManifestKey(repoRoot, path);
       delete plan.manifest.targetHashes[key];
       delete plan.manifest.targets[key];
     }
     for (const path of cleanedForced) {
-      const key = resolveManifestKey(repoRoot, path);
+      const key = toManifestKey(repoRoot, path);
       delete plan.manifest.targetHashes[key];
       delete plan.manifest.targets[key];
     }
@@ -361,7 +361,7 @@ async function computeTransformPlan(
       owner: 'aco',
       assetKind: 'config',
     });
-    const agentsMdKey = relative(repoRoot, agentsMdPath);
+    const agentsMdKey = toManifestKey(repoRoot, agentsMdPath);
     targetHashes[agentsMdKey] = agentsHash;
     targets[agentsMdKey] = { hash: agentsHash, owner: 'aco', kind: 'config' };
 
@@ -376,7 +376,7 @@ async function computeTransformPlan(
       owner: 'aco',
       assetKind: 'config',
     });
-    const geminiMdKey = relative(repoRoot, geminiMdPath);
+    const geminiMdKey = toManifestKey(repoRoot, geminiMdPath);
     targetHashes[geminiMdKey] = geminiHash;
     targets[geminiMdKey] = { hash: geminiHash, owner: 'aco', kind: 'config' };
   }
@@ -388,7 +388,7 @@ async function computeTransformPlan(
   skipped.push(...skillResult.skipped);
   for (const o of skillResult.outputs) {
     if (o.hash) {
-      const key = relative(repoRoot, o.targetPath);
+      const key = toManifestKey(repoRoot, o.targetPath);
       targetHashes[key] = o.hash;
       targets[key] = {
         hash: o.hash,
@@ -406,7 +406,7 @@ async function computeTransformPlan(
   warnings.push(...codexAgentResult.warnings);
   for (const o of codexAgentResult.outputs) {
     if (o.hash) {
-      const key = relative(repoRoot, o.targetPath);
+      const key = toManifestKey(repoRoot, o.targetPath);
       targetHashes[key] = o.hash;
       targets[key] = {
         hash: o.hash,
@@ -422,7 +422,7 @@ async function computeTransformPlan(
   warnings.push(...geminiAgentResult.warnings);
   for (const o of geminiAgentResult.outputs) {
     if (o.hash) {
-      const key = relative(repoRoot, o.targetPath);
+      const key = toManifestKey(repoRoot, o.targetPath);
       targetHashes[key] = o.hash;
       targets[key] = {
         hash: o.hash,
@@ -438,7 +438,7 @@ async function computeTransformPlan(
   warnings.push(...codexHookResult.warnings);
   for (const o of codexHookResult.outputs) {
     if (o.hash) {
-      const key = relative(repoRoot, o.targetPath);
+      const key = toManifestKey(repoRoot, o.targetPath);
       targetHashes[key] = o.hash;
       targets[key] = {
         hash: o.hash,
@@ -454,7 +454,7 @@ async function computeTransformPlan(
   warnings.push(...geminiHookResult.warnings);
   for (const o of geminiHookResult.outputs) {
     if (o.hash) {
-      const key = relative(repoRoot, o.targetPath);
+      const key = toManifestKey(repoRoot, o.targetPath);
       targetHashes[key] = o.hash;
       targets[key] = {
         hash: o.hash,
