@@ -59,7 +59,7 @@ export function calculateDrift(current: SyncManifest | null, updated: SyncManife
  *   v2 (absolute sourceHashes) → v3 (repo-relative sourceHashes)
  *   v3 (absolute targetHashes/targets keys) → v4 (repo-relative targetHashes/targets keys)
  */
-function migrateManifest(parsed: Partial<SyncManifest>, rootPath?: string): SyncManifest {
+function migrateManifest(parsed: Partial<SyncManifest>, rootPath: string): SyncManifest {
   const legacy = parsed as Record<string, unknown>;
 
   // v1 → v2: add ownership-aware targets
@@ -93,14 +93,6 @@ function migrateManifest(parsed: Partial<SyncManifest>, rootPath?: string): Sync
     const migratedHashes: Record<string, string> = {};
     for (const [key, hash] of Object.entries(sourceHashes)) {
       if (isAbsolute(key)) {
-        if (!rootPath) {
-          warnings.push({
-            severity: 'warning',
-            source: 'manifest-migration',
-            message: `Cannot migrate absolute sourceHash key "${key}": rootPath unavailable`,
-          });
-          continue;
-        }
         const rel = relative(rootPath, key);
         if (rel.startsWith('..')) {
           warnings.push({
@@ -120,33 +112,34 @@ function migrateManifest(parsed: Partial<SyncManifest>, rootPath?: string): Sync
     legacy.warnings = warnings;
   }
 
-  // → v4: convert absolute targetHashes/targets keys to repo-relative
+  // → v4: convert absolute targetHashes/targets keys to repo-relative.
+  // aco가 생성하는 target은 항상 repoRoot 내부이므로 relative()의 `../` 분기는
+  // 실무상 도달 불가하다. 방어적으로 원본 절대 키를 유지하지만 sourceHashes처럼
+  // drop+warning하지는 않는다.
   if (versionNum < 4) {
-    if (rootPath) {
-      const targetHashes = (legacy.targetHashes as Record<string, string>) || {};
-      const migratedTargetHashes: Record<string, string> = {};
-      for (const [key, hash] of Object.entries(targetHashes)) {
-        if (isAbsolute(key)) {
-          const rel = relative(rootPath, key);
-          migratedTargetHashes[rel.startsWith('..') ? key : rel] = hash;
-        } else {
-          migratedTargetHashes[key] = hash;
-        }
+    const targetHashes = (legacy.targetHashes as Record<string, string>) || {};
+    const migratedTargetHashes: Record<string, string> = {};
+    for (const [key, hash] of Object.entries(targetHashes)) {
+      if (isAbsolute(key)) {
+        const rel = relative(rootPath, key);
+        migratedTargetHashes[rel.startsWith('..') ? key : rel] = hash;
+      } else {
+        migratedTargetHashes[key] = hash;
       }
-      legacy.targetHashes = migratedTargetHashes;
-
-      const targets = (legacy.targets as Record<string, ManifestTargetRecord>) || {};
-      const migratedTargets: Record<string, ManifestTargetRecord> = {};
-      for (const [key, record] of Object.entries(targets)) {
-        if (isAbsolute(key)) {
-          const rel = relative(rootPath, key);
-          migratedTargets[rel.startsWith('..') ? key : rel] = record;
-        } else {
-          migratedTargets[key] = record;
-        }
-      }
-      legacy.targets = migratedTargets;
     }
+    legacy.targetHashes = migratedTargetHashes;
+
+    const targets = (legacy.targets as Record<string, ManifestTargetRecord>) || {};
+    const migratedTargets: Record<string, ManifestTargetRecord> = {};
+    for (const [key, record] of Object.entries(targets)) {
+      if (isAbsolute(key)) {
+        const rel = relative(rootPath, key);
+        migratedTargets[rel.startsWith('..') ? key : rel] = record;
+      } else {
+        migratedTargets[key] = record;
+      }
+    }
+    legacy.targets = migratedTargets;
     legacy.version = '4';
   }
 
