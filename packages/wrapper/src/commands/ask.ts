@@ -49,6 +49,7 @@ interface AskOptions {
   dryRun: boolean;
   timeoutSeconds: number;
   executionControl: ProviderExecutionControl;
+  model?: string;
 }
 
 interface AskSessionLedger {
@@ -65,6 +66,11 @@ export async function cmdAsk(args: string[]): Promise<void> {
   if (args.includes('--help') || args.includes('-h')) {
     printAskUsage();
     return;
+  }
+
+  const rawModel = parseFlag(args, '--model');
+  if (args.includes('--model') && (!rawModel || rawModel.startsWith('-'))) {
+    fail('Error: --model requires a valid value');
   }
 
   let options: AskOptions;
@@ -140,6 +146,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
       timeoutMs: options.executionControl.timeoutMs,
       killGraceMs: options.executionControl.killGraceMs,
+      ...(options.model ? { model: options.model } : {}),
       onChunk:
         options.outputMode === 'full'
           ? (chunk) => {
@@ -247,6 +254,7 @@ function parseAskOptions(args: string[]): AskOptions {
     dryRun: args.includes('--dry-run'),
     timeoutSeconds: resolveProviderTimeoutSeconds(timeoutFlag),
     executionControl: resolveProviderExecutionControl(timeoutFlag),
+    model: parseFlag(args, '--model'),
   };
 }
 
@@ -461,6 +469,7 @@ Options:
   --output-mode <mode>            brief|save-only|full (default: brief)
                                     brief summary bound: ${SUMMARY_CHAR_LIMIT} chars
   --timeout <seconds>             Provider execution timeout (default: 300, env: ACO_TIMEOUT_SECONDS)
+  --model <model>                 Model identifier passed to the provider binary via -m flag
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
 }
