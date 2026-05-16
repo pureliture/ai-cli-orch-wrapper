@@ -68,6 +68,11 @@ export async function cmdAsk(args: string[]): Promise<void> {
     return;
   }
 
+  const rawModel = parseFlag(args, '--model');
+  if (args.includes('--model') && (!rawModel || rawModel.startsWith('-'))) {
+    fail('Error: --model requires a valid value');
+  }
+
   let options: AskOptions;
   try {
     options = parseAskOptions(args);
@@ -464,6 +469,7 @@ Options:
   --output-mode <mode>            brief|save-only|full (default: brief)
                                     brief summary bound: ${SUMMARY_CHAR_LIMIT} chars
   --timeout <seconds>             Provider execution timeout (default: 300, env: ACO_TIMEOUT_SECONDS)
+  --model <model>                 Model identifier passed to the provider binary via -m flag
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
 }

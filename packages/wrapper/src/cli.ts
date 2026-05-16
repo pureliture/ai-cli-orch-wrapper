@@ -192,6 +192,10 @@ async function cmdRun(args: string[]): Promise<void> {
   }
   const inputFlag = parseFlag(args, '--input') ?? '';
   const model = parseFlag(args, '--model');
+  if (args.includes('--model') && (!model || model.startsWith('-'))) {
+    console.error('Error: --model requires a valid value');
+    process.exit(EXIT_ERROR);
+  }
 
   let content = inputFlag;
   if (!content && !process.stdin.isTTY) {
@@ -486,9 +490,9 @@ function printUsage(): void {
   aco --version
   aco --help
   aco sync [--check] [--dry-run] [--force]
-  aco ask --task <text> [--providers codex,gemini,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--dry-run|--yes]
+  aco ask --task <text> [--providers codex,gemini,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--model <model>] [--dry-run|--yes]
   aco doctor
-  aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>]
+  aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>] [--model <model>]
   aco result [--session <id>]
   aco status [--session <id>]
   aco cancel [--session <id>]
