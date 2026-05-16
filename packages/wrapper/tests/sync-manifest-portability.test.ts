@@ -374,25 +374,25 @@ describe('manifest migration: targetHashes/targets absolute → relative', () =>
 // ---------------------------------------------------------------------------
 
 describe('runSync: portable target keys across checkout locations', () => {
-  it('aco sync --check returns no drift when run from a different repoRoot with same content', async () => {
-    // rootA: run full sync, producing a manifest with relative target keys
+  it('aco sync --check returns no drift when the manifest is written in one checkout and checked in another', async () => {
+    // Two independent checkout locations with identical source content.
     const rootA = await realpath(await mkdtemp(join(tmpdir(), 'aco-xchk-a-')));
-    // rootB: same structure/content in a different directory
     const rootB = await realpath(await mkdtemp(join(tmpdir(), 'aco-xchk-b-')));
     try {
+      // 1. Set up the same source tree in both checkouts.
       const claudeContent = '# shared context\n\nSome shared rules.';
       for (const root of [rootA, rootB]) {
         await writeFile(join(root, 'CLAUDE.md'), claudeContent);
       }
 
-      // Run full sync on rootA to produce manifest
+      // 2. Run a full sync in rootA: produces sync outputs (AGENTS.md/GEMINI.md)
+      //    and a manifest with repo-relative target keys.
       await runSync(rootA, { dryRun: false });
 
-      // Read the manifest produced by rootA
       const manifestRaw = await readFile(join(rootA, '.aco', 'sync-manifest.json'), 'utf-8');
       const manifestObj = JSON.parse(manifestRaw) as SyncManifest;
 
-      // Verify that manifest already has relative target keys (spec scenario 1)
+      // Sanity check: the manifest rootA wrote uses relative target keys (spec scenario 1).
       for (const key of Object.keys(manifestObj.targetHashes)) {
         assert.ok(!key.startsWith('/'), `targetHashes key must be relative after sync, got: "${key}"`);
       }
@@ -400,23 +400,21 @@ describe('runSync: portable target keys across checkout locations', () => {
         assert.ok(!key.startsWith('/'), `targets key must be relative after sync, got: "${key}"`);
       }
 
-      // Copy the manifest to rootB (simulating a different checkout with the same manifest)
-      await mkdir(join(rootB, '.aco'), { recursive: true });
-
-      // For the cross-checkout test, we also need to create the same output files in rootB
-      // that the manifest references (AGENTS.md, GEMINI.md), with the same content/hashes
-      // We do this by running full sync on rootB too, then overwriting its manifest with rootA's
-      // (to simulate writing on one machine, checking on another)
+      // 3. Run a full sync in rootB too, so rootB has the same generated output
+      //    files (AGENTS.md/GEMINI.md) on disk, then replace rootB's manifest with
+      //    the one rootA wrote. This is the actual cross-checkout scenario: a
+      //    manifest produced at one absolute path is consumed at a different one.
       await runSync(rootB, { dryRun: false });
+      await writeFile(join(rootB, '.aco', 'sync-manifest.json'), manifestRaw);
 
-      // Now overwrite rootB's manifest with rootA's manifest.
-      // Both manifests should have identical relative-path keys and hashes
-      // since the source content is the same.
-      // Verify aco sync --check on rootB passes (exit 0 = no error)
-      // If target keys were absolute, rootB's check would find different keys than its disk paths.
+      // 4. aco sync --check in rootB against rootA's manifest.
+      //    runSync throws on drift/conflict in check mode and resolves otherwise,
+      //    so a non-rejecting call means "no drift" (exit 0 equivalent).
+      //    With absolute target keys this would mismatch rootB's disk paths and
+      //    report false-positive drift.
       await assert.doesNotReject(
         runSync(rootB, { check: true }),
-        'aco sync --check should not detect drift when manifest has relative target keys'
+        'aco sync --check must not detect drift for a manifest written in a different checkout'
       );
     } finally {
       await rm(rootA, { recursive: true, force: true });
