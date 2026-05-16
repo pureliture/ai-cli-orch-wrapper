@@ -1,10 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discoverSources } from '../src/sync/source-discovery.js';
 import { readManifest, writeManifest, calculateDrift } from '../src/sync/manifest.js';
+import { runSync } from '../src/sync/sync-engine.js';
 import type { SyncManifest } from '../src/sync/transform-interface.js';
 
 // ---------------------------------------------------------------------------
@@ -92,7 +93,7 @@ describe('manifest migration: v2 absolute → v3 relative', () => {
 
       const manifest = await readManifest(rootPath);
       assert.ok(manifest, 'Expected manifest to be read');
-      assert.equal(manifest.version, '3', 'Expected version "3" after migration');
+      assert.equal(manifest.version, '4', 'Expected version "4" after migration');
 
       const keys = Object.keys(manifest.sourceHashes);
       for (const key of keys) {
@@ -135,7 +136,7 @@ describe('manifest migration: v2 absolute → v3 relative', () => {
 
       const manifest = await readManifest(rootPath);
       assert.ok(manifest);
-      assert.equal(manifest.version, '3');
+      assert.equal(manifest.version, '4');
       assert.equal(manifest.sourceHashes['CLAUDE.md'], 'abc123');
     } finally {
       await rm(rootPath, { recursive: true, force: true });
@@ -174,7 +175,7 @@ describe('manifest migration: outside-root path handling', () => {
 
       const manifest = await readManifest(rootPath);
       assert.ok(manifest);
-      assert.equal(manifest.version, '3');
+      assert.equal(manifest.version, '4');
 
       const keys = Object.keys(manifest.sourceHashes);
       assert.ok(
@@ -266,6 +267,158 @@ describe('calculateDrift: portable across relocated checkouts', () => {
       assert.equal(drift, true, 'Different content hashes should trigger drift');
     } finally {
       await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 4.5  manifest: targetHashes/targets key migration — absolute → relative
+// ---------------------------------------------------------------------------
+
+describe('manifest migration: targetHashes/targets absolute → relative', () => {
+  it('migrates absolute targetHashes keys to relative on read', async () => {
+    const rootPath = await mkdtemp(join(tmpdir(), 'aco-tgt-mig-'));
+    try {
+      await mkdir(join(rootPath, '.aco'), { recursive: true });
+
+      const absoluteAgentsMd = `${rootPath}/AGENTS.md`;
+      const absoluteGeminiMd = `${rootPath}/GEMINI.md`;
+
+      const legacyManifest = {
+        version: '3',
+        generatedAt: '2025-01-01T00:00:00.000Z',
+        sourceHashes: { 'CLAUDE.md': 'abc123' },
+        targetHashes: {
+          [absoluteAgentsMd]: 'hash-agents',
+          [absoluteGeminiMd]: 'hash-gemini',
+        },
+        targets: {
+          [absoluteAgentsMd]: { hash: 'hash-agents', owner: 'aco', kind: 'config' },
+          [absoluteGeminiMd]: { hash: 'hash-gemini', owner: 'aco', kind: 'config' },
+        },
+        skipped: [],
+        warnings: [],
+      };
+
+      await writeFile(
+        join(rootPath, '.aco', 'sync-manifest.json'),
+        JSON.stringify(legacyManifest)
+      );
+
+      const manifest = await readManifest(rootPath);
+      assert.ok(manifest, 'Expected manifest to be read');
+
+      // All targetHashes keys must be relative (no leading /)
+      for (const key of Object.keys(manifest.targetHashes)) {
+        assert.ok(!key.startsWith('/'), `targetHashes key must be relative, got: "${key}"`);
+      }
+      // All targets keys must be relative
+      for (const key of Object.keys(manifest.targets)) {
+        assert.ok(!key.startsWith('/'), `targets key must be relative, got: "${key}"`);
+      }
+
+      assert.equal(
+        manifest.targetHashes['AGENTS.md'],
+        'hash-agents',
+        'Expected AGENTS.md relative key in targetHashes'
+      );
+      assert.equal(
+        manifest.targetHashes['GEMINI.md'],
+        'hash-gemini',
+        'Expected GEMINI.md relative key in targetHashes'
+      );
+      assert.ok(manifest.targets['AGENTS.md'], 'Expected AGENTS.md relative key in targets');
+      assert.ok(manifest.targets['GEMINI.md'], 'Expected GEMINI.md relative key in targets');
+      assert.equal(manifest.targets['AGENTS.md'].hash, 'hash-agents');
+    } finally {
+      await rm(rootPath, { recursive: true, force: true });
+    }
+  });
+
+  it('already-relative targetHashes/targets keys pass through unchanged', async () => {
+    const rootPath = await mkdtemp(join(tmpdir(), 'aco-tgt-rel-'));
+    try {
+      await mkdir(join(rootPath, '.aco'), { recursive: true });
+
+      const legacyManifest = {
+        version: '3',
+        generatedAt: '2025-01-01T00:00:00.000Z',
+        sourceHashes: { 'CLAUDE.md': 'abc123' },
+        targetHashes: {
+          'AGENTS.md': 'hash-agents',
+        },
+        targets: {
+          'AGENTS.md': { hash: 'hash-agents', owner: 'aco', kind: 'config' },
+        },
+        skipped: [],
+        warnings: [],
+      };
+
+      await writeFile(
+        join(rootPath, '.aco', 'sync-manifest.json'),
+        JSON.stringify(legacyManifest)
+      );
+
+      const manifest = await readManifest(rootPath);
+      assert.ok(manifest);
+      assert.equal(manifest.targetHashes['AGENTS.md'], 'hash-agents');
+      assert.ok(manifest.targets['AGENTS.md']);
+    } finally {
+      await rm(rootPath, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 4.6  sync-engine: cross-checkout -- no false drift in aco sync --check
+// ---------------------------------------------------------------------------
+
+describe('runSync: portable target keys across checkout locations', () => {
+  it('aco sync --check returns no drift when the manifest is written in one checkout and checked in another', async () => {
+    // Two independent checkout locations with identical source content.
+    const rootA = await realpath(await mkdtemp(join(tmpdir(), 'aco-xchk-a-')));
+    const rootB = await realpath(await mkdtemp(join(tmpdir(), 'aco-xchk-b-')));
+    try {
+      // 1. Set up the same source tree in both checkouts.
+      const claudeContent = '# shared context\n\nSome shared rules.';
+      for (const root of [rootA, rootB]) {
+        await writeFile(join(root, 'CLAUDE.md'), claudeContent);
+      }
+
+      // 2. Run a full sync in rootA: produces sync outputs (AGENTS.md/GEMINI.md)
+      //    and a manifest with repo-relative target keys.
+      await runSync(rootA, { dryRun: false });
+
+      const manifestRaw = await readFile(join(rootA, '.aco', 'sync-manifest.json'), 'utf-8');
+      const manifestObj = JSON.parse(manifestRaw) as SyncManifest;
+
+      // Sanity check: the manifest rootA wrote uses relative target keys (spec scenario 1).
+      for (const key of Object.keys(manifestObj.targetHashes)) {
+        assert.ok(!key.startsWith('/'), `targetHashes key must be relative after sync, got: "${key}"`);
+      }
+      for (const key of Object.keys(manifestObj.targets)) {
+        assert.ok(!key.startsWith('/'), `targets key must be relative after sync, got: "${key}"`);
+      }
+
+      // 3. Run a full sync in rootB too, so rootB has the same generated output
+      //    files (AGENTS.md/GEMINI.md) on disk, then replace rootB's manifest with
+      //    the one rootA wrote. This is the actual cross-checkout scenario: a
+      //    manifest produced at one absolute path is consumed at a different one.
+      await runSync(rootB, { dryRun: false });
+      await writeFile(join(rootB, '.aco', 'sync-manifest.json'), manifestRaw);
+
+      // 4. aco sync --check in rootB against rootA's manifest.
+      //    runSync throws on drift/conflict in check mode and resolves otherwise,
+      //    so a non-rejecting call means "no drift" (exit 0 equivalent).
+      //    With absolute target keys this would mismatch rootB's disk paths and
+      //    report false-positive drift.
+      await assert.doesNotReject(
+        runSync(rootB, { check: true }),
+        'aco sync --check must not detect drift for a manifest written in a different checkout'
+      );
+    } finally {
+      await rm(rootA, { recursive: true, force: true });
+      await rm(rootB, { recursive: true, force: true });
     }
   });
 });
