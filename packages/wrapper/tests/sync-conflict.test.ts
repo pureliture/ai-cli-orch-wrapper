@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { runSync } from '../src/sync/sync-engine.js';
 import { computeHash } from '../src/sync/hash.js';
 import type { SyncManifest } from '../src/sync/transform-interface.js';
@@ -96,11 +96,12 @@ describe('runSync Conflict Detection & Resolution', () => {
       assert.notEqual(finalContent, editedContent);
       assert.ok(finalContent.includes('name = "test-agent"'));
 
-      // Verify manifest was updated with new hash
+      // Verify manifest was updated with new hash (keys are now repo-relative)
       const manifestPath = join(tmpDir, '.aco', 'sync-manifest.json');
       const manifestRaw = await readFile(manifestPath, 'utf-8');
       const manifest = JSON.parse(manifestRaw) as SyncManifest;
-      assert.equal(manifest.targetHashes[targetPath], computeHash(finalContent));
+      const relKey = relative(tmpDir, targetPath);
+      assert.equal(manifest.targetHashes[relKey], computeHash(finalContent));
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
