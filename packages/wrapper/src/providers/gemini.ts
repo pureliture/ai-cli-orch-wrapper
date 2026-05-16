@@ -74,6 +74,9 @@ export class GeminiProvider implements IProvider {
     if (profile !== 'restricted') {
       base.unshift('--yolo');
     }
+    if (options?.model) {
+      base.unshift('-m', options.model);
+    }
     return base;
   }
 
