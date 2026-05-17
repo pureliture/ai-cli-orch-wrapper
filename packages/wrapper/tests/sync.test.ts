@@ -1782,6 +1782,72 @@ describe('Skill Sync', () => {
     }
   });
 
+  it('does not sync project hooks from .claude/settings.json', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-ignore-hooks-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# Project context');
+      await mkdir(join(tmpDir, '.claude'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.claude', 'settings.json'),
+        JSON.stringify({
+          hooks: {
+            Stop: [
+              {
+                hooks: [
+                  {
+                    type: 'command',
+                    command: 'python scripts/stop-hook.py',
+                    timeout: 10,
+                  },
+                ],
+              },
+            ],
+            PostToolUse: [
+              {
+                matcher: 'Bash',
+                hooks: [
+                  {
+                    type: 'command',
+                    command: 'bash scripts/post-tool-use.sh',
+                    timeout: 15,
+                  },
+                ],
+              },
+            ],
+          },
+        })
+      );
+
+      const result = await runSync(tmpDir, { dryRun: false });
+      const targetPaths = result.outputs.map((o) => o.targetPath);
+      assert.equal(
+        targetPaths.some((target) => target.endsWith(join('.codex', 'hooks.json'))),
+        false
+      );
+      assert.equal(
+        targetPaths.some((target) => target.endsWith(join('.gemini', 'settings.json'))),
+        false
+      );
+      assert.equal(
+        targetPaths.some((target) => target.endsWith(join('.codex', 'config.toml'))),
+        false
+      );
+
+      const manifest = JSON.parse(
+        await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
+      );
+      assert.equal('.claude/settings.json' in manifest.sourceHashes, false);
+      assert.equal(
+        manifest.warnings.some((warning: { source?: string }) =>
+          warning.source?.includes('.claude/settings.json')
+        ),
+        false
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('detectDuplicates deduplicates same-path entries to avoid false positives', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dup-dedup-'));
     try {

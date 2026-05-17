@@ -4,8 +4,6 @@ import { getManagedBlockUpdate } from './managed-block.js';
 import { syncSkills } from './skill-transform.js';
 import { syncCodexAgents } from './agent-codex-transform.js';
 import { syncGeminiAgents } from './agent-gemini-transform.js';
-import { syncCodexHooks } from './hook-codex-transform.js';
-import { syncGeminiHooks } from './hook-gemini-transform.js';
 import { readManifest, writeManifest, calculateDrift } from './manifest.js';
 import { computeHash } from './hash.js';
 import { loadSyncConfig } from './sync-config.js';
@@ -86,7 +84,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
 
   if (sources.length === 0) {
     throw new Error(
-      'No sync sources found. Ensure CLAUDE.md, .claude/agents/, or .claude/settings.json exists.'
+      'No sync sources found. Ensure CLAUDE.md, .claude/agents/, or .claude/skills/ exists.'
     );
   }
 
@@ -428,38 +426,6 @@ async function computeTransformPlan(
         hash: o.hash,
         owner: 'aco',
         kind: o.assetKind ?? 'agent',
-      };
-    }
-  }
-
-  // 5. Codex hooks
-  const codexHookResult = await syncCodexHooks(sources, repoRoot);
-  outputs.push(...codexHookResult.outputs);
-  warnings.push(...codexHookResult.warnings);
-  for (const o of codexHookResult.outputs) {
-    if (o.hash) {
-      const key = toManifestKey(repoRoot, o.targetPath);
-      targetHashes[key] = o.hash;
-      targets[key] = {
-        hash: o.hash,
-        owner: 'aco',
-        kind: o.assetKind ?? 'provider-command',
-      };
-    }
-  }
-
-  // 6. Gemini hooks
-  const geminiHookResult = await syncGeminiHooks(sources, repoRoot);
-  outputs.push(...geminiHookResult.outputs);
-  warnings.push(...geminiHookResult.warnings);
-  for (const o of geminiHookResult.outputs) {
-    if (o.hash) {
-      const key = toManifestKey(repoRoot, o.targetPath);
-      targetHashes[key] = o.hash;
-      targets[key] = {
-        hash: o.hash,
-        owner: 'aco',
-        kind: o.assetKind ?? 'provider-command',
       };
     }
   }
