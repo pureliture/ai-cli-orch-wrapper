@@ -522,14 +522,14 @@ PR 머지 전 Gemini와 Codex **양쪽 리뷰**를 받고 싶을 때
 📄 GEMINI.md               # Gemini 프로젝트 지침
 📁 .agents/skills/         # Codex·Gemini 공유 (ACO-owned only)
 📁 .codex/agents/          # Codex custom agent
-📄 .codex/hooks.json       # Codex hook
 📁 .gemini/agents/         # Gemini agent
-📄 .gemini/settings.json   # Gemini settings
 🗂️ .aco/sync-manifest.json  # Drift tracking
 ```
 
 > **`aco sync`가 관리하는 영역**<br/>
 > 수동 편집 시 drift 경고가 발생합니다.
+
+Hook 설정은 provider별 user-level runtime 설정으로 취급하며 `aco sync`가 생성하지 않습니다.
 
 </td>
 </tr>
