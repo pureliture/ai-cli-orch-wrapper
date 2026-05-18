@@ -80,16 +80,14 @@ export async function parseGeminiUsage(sessionId: string): Promise<UsageResult> 
 
         const inputTokens =
           typeof parsed['totalInputTokenCount'] === 'number'
-            ? (parsed['totalInputTokenCount'] as number)
+            ? parsed['totalInputTokenCount']
             : undefined;
         const outputTokens =
           typeof parsed['totalOutputTokenCount'] === 'number'
-            ? (parsed['totalOutputTokenCount'] as number)
+            ? parsed['totalOutputTokenCount']
             : undefined;
         const model =
-          typeof parsed['modelVersion'] === 'string'
-            ? (parsed['modelVersion'] as string)
-            : undefined;
+          typeof parsed['modelVersion'] === 'string' ? parsed['modelVersion'] : undefined;
 
         if (inputTokens === undefined && outputTokens === undefined && model === undefined) {
           return { usageStatus: 'parse_error', nativeSessionPath: filePath };

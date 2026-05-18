@@ -71,7 +71,7 @@ function normalizeOutputBufferPolicy(
   }
 
   if (mode !== 'bounded') {
-    return { mode, maxBytes: maxBytes };
+    return { mode, maxBytes };
   }
 
   if (!Number.isFinite(maxBytes) || !Number.isInteger(maxBytes) || maxBytes < 1) {

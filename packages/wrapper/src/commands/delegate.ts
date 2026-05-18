@@ -78,6 +78,7 @@ export async function cmdDelegate(args: string[]): Promise<void> {
   if (spec.body) parts.push(spec.body);
   if (input) parts.push(input);
 
-  process.stdout.write(parts.join('\n\n'));
-  if (parts.length > 0) process.stdout.write('\n');
+  if (parts.length > 0) {
+    process.stdout.write(parts.join('\n\n') + '\n');
+  }
 }

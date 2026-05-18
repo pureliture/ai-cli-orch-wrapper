@@ -65,25 +65,20 @@ interface AskSessionLedger {
   briefPath: string;
   summary: string;
   error?: string;
-  // 2.4–2.6: usage telemetry
   usageStatus: 'captured' | 'unavailable' | 'parse_error';
   model?: string;
   inputTokens?: number;
   outputTokens?: number;
   nativeSessionPath?: string;
-  // 2.7: result quality
   hasOutput: boolean;
   outputBytes: number;
   stderrBytes: number;
   warningCount: number;
   resultQuality: 'complete' | 'empty' | 'warning_heavy' | 'error';
   stderrArtifactPath?: string;
-  // 4.2: canonical input artifact reference
   canonicalInputPath: string;
   inputHash: string;
-  // 4.3: summary truncation flag
   summaryTruncated: boolean;
-  // 4.4: top findings from provider output
   topFindings?: string[] | null;
 }
 
@@ -138,17 +133,13 @@ export async function cmdAsk(args: string[]): Promise<void> {
   const runDir = join(homedir(), '.aco', 'runs', runId);
   await mkdir(runDir, { recursive: true, mode: 0o700 });
 
-  // 2.1: run 시작 시각 캡처 (provider loop 이전)
   const startedAt = new Date().toISOString();
 
-  // 2.3: git provenance 수집
   const gitProvenance = await collectGitProvenance();
 
-  // 4.1: input을 run 레벨에 한 번만 저장 (세션별 중복 제거)
   const canonicalInputPath = join(runDir, 'input.md');
   await writeFile(canonicalInputPath, input, { mode: 0o600 });
 
-  // 4.2: input hash를 run 레벨에서 한 번 계산 (세션 간 공유)
   const inputHashValue = sha256Hex(input);
 
   const sessions: AskSessionLedger[] = [];
@@ -214,17 +205,14 @@ export async function cmdAsk(args: string[]): Promise<void> {
       }
     }
 
-    // 2.4–2.6: usage telemetry 수집
     const usage = await collectUsage(provider.key, session.id);
 
-    // 2.7: result quality 필드 계산
     const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
     const stderrContent = runResult.stderrContent;
     const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
     const warningCount = countWarnings(runResult.stderrContent);
     const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
 
-    // 2.8: stderr가 있으면 artifact로 저장
     let stderrArtifactPath: string | undefined;
     if (stderrBytes > 0) {
       const stderrPath = join(sessionDir, 'stderr.log');
@@ -254,7 +242,6 @@ export async function cmdAsk(args: string[]): Promise<void> {
       briefPath,
       summary,
       ...(error ? { error } : {}),
-      // 2.4–2.6: usage telemetry
       usageStatus: usage.usageStatus,
       ...(usage.model !== undefined ? { model: usage.model } : {}),
       ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
@@ -262,25 +249,21 @@ export async function cmdAsk(args: string[]): Promise<void> {
       ...(usage.nativeSessionPath !== undefined
         ? { nativeSessionPath: usage.nativeSessionPath }
         : {}),
-      // 2.7: result quality
       hasOutput: runResult.hasOutput,
       outputBytes,
       stderrBytes,
       warningCount,
       resultQuality,
       ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
-      // 4.2: canonical input artifact reference
       canonicalInputPath,
       inputHash: inputHashValue,
-      // 4.3: summary truncation flag — true only when the summarizer applied the
-      // char-limit truncation (not when the provider simply reformats/filters output)
+      // true only when the summarizer applied char-limit truncation,
+      // not when the provider simply reformats/filters output
       summaryTruncated: summary.includes('...[truncated to'),
-      // 4.4: top findings from provider output
       topFindings: extractTopFindings(runResult.fullOutput),
     });
   }
 
-  // 2.1: run 종료 시각 및 duration 계산
   const endedAt = new Date().toISOString();
   const durationMs = new Date(endedAt).getTime() - new Date(startedAt).getTime();
 
@@ -300,24 +283,18 @@ export async function cmdAsk(args: string[]): Promise<void> {
         timeoutSeconds: options.timeoutSeconds,
         advisory: ADVISORY_NOTICE,
         sessions,
-        // 2.1: provenance — timing
         startedAt,
         endedAt,
         durationMs,
-        // 2.1: provenance — cwd
         cwd: process.cwd(),
-        // 2.3: provenance — git
         gitBranch: gitProvenance.gitBranch,
         gitHead: gitProvenance.gitHead,
         gitDirty: gitProvenance.gitDirty,
-        // 2.1: provenance — input
         inputPath: resolveInputPath(options),
         inputBytes: Buffer.byteLength(input, 'utf8'),
         inputHash: sha256Hex(input),
-        // 2.1: provenance — prompt
         promptBytes: Buffer.byteLength(prompt, 'utf8'),
         promptHash: sha256Hex(prompt),
-        // 2.2: permission / env policy
         permissionClass: resolvePermissionClass(options.permissionProfile),
         envPolicy: 'allowlist',
       },
@@ -654,8 +631,7 @@ async function collectUsage(providerKey: string, sessionId: string): Promise<Usa
  * provider output에서 warning 라인 수를 계산한다.
  */
 function countWarnings(output: string): number {
-  const lines = output.split('\n');
-  return lines.filter((line) => /warning:|warn:/i.test(line)).length;
+  return output.split('\n').filter((line) => /warning:|warn:/i.test(line)).length;
 }
 
 /**
