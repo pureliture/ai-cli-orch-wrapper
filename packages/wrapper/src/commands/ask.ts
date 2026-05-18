@@ -78,6 +78,13 @@ interface AskSessionLedger {
   warningCount: number;
   resultQuality: 'complete' | 'empty' | 'warning_heavy' | 'error';
   stderrArtifactPath?: string;
+  // 4.2: canonical input artifact reference
+  canonicalInputPath: string;
+  inputHash: string;
+  // 4.3: summary truncation flag
+  summaryTruncated: boolean;
+  // 4.4: top findings from provider output
+  topFindings?: string[] | null;
 }
 
 export async function cmdAsk(args: string[]): Promise<void> {
@@ -137,6 +144,13 @@ export async function cmdAsk(args: string[]): Promise<void> {
   // 2.3: git provenance 수집
   const gitProvenance = await collectGitProvenance();
 
+  // 4.1: input을 run 레벨에 한 번만 저장 (세션별 중복 제거)
+  const canonicalInputPath = join(runDir, 'input.md');
+  await writeFile(canonicalInputPath, input, { mode: 0o600 });
+
+  // 4.2: input hash를 run 레벨에서 한 번 계산 (세션 간 공유)
+  const inputHashValue = sha256Hex(input);
+
   const sessions: AskSessionLedger[] = [];
   for (const provider of providers) {
     const session = await sessionStore.create(
@@ -146,7 +160,6 @@ export async function cmdAsk(args: string[]): Promise<void> {
       options.permissionProfile
     );
     const sessionDir = sessionStore.sessionDir(session.id);
-    await writeFile(join(sessionDir, 'input.md'), input, { mode: 0o600 });
     await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
 
     const outputLog = sessionStore.outputLogPath(session.id);
@@ -256,6 +269,13 @@ export async function cmdAsk(args: string[]): Promise<void> {
       warningCount,
       resultQuality,
       ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
+      // 4.2: canonical input artifact reference
+      canonicalInputPath,
+      inputHash: inputHashValue,
+      // 4.3: summary truncation flag
+      summaryTruncated: runResult.fullOutput.length > SUMMARY_CHAR_LIMIT,
+      // 4.4: top findings from provider output
+      topFindings: extractTopFindings(runResult.fullOutput),
     });
   }
 
@@ -635,6 +655,41 @@ async function collectUsage(providerKey: string, sessionId: string): Promise<Usa
 function countWarnings(output: string): number {
   const lines = output.split('\n');
   return lines.filter((line) => /warning:|warn:/i.test(line)).length;
+}
+
+/**
+ * provider output에서 상위 목록 항목을 추출한다.
+ * numbered list (1. ), bullet list (-, *, •) 패턴을 인식한다.
+ * 최대 10개 항목을 반환하며, 항목이 없으면 null을 반환한다.
+ */
+export function extractTopFindings(output: string): string[] | null {
+  const results: string[] = [];
+  const lines = output.split('\n');
+  const numberedPattern = /^\s*\d+\.\s+(.*)/;
+  const bulletPattern = /^\s*[-*•]\s+(.*)/;
+
+  for (const line of lines) {
+    if (results.length >= 10) break;
+
+    const numberedMatch = numberedPattern.exec(line);
+    if (numberedMatch) {
+      const content = numberedMatch[1].trim();
+      if (content.length > 0) {
+        results.push(content);
+        continue;
+      }
+    }
+
+    const bulletMatch = bulletPattern.exec(line);
+    if (bulletMatch) {
+      const content = bulletMatch[1].trim();
+      if (content.length > 0) {
+        results.push(content);
+      }
+    }
+  }
+
+  return results.length > 0 ? results : null;
 }
 
 /**
