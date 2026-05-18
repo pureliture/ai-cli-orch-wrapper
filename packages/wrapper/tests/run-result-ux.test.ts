@@ -7,7 +7,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readdir } from 'node:fs/promises';
+import { mkdtemp, readdir, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -64,7 +64,16 @@ async function latestRunId(home: string): Promise<string> {
   const runRoot = join(home, '.aco', 'runs');
   const entries = await readdir(runRoot);
   assert.ok(entries.length >= 1, 'expected at least one run directory');
-  return entries[0];
+  // Sort by mtime descending — same algorithm as production code — to verify the
+  // mtime-sort contract rather than relying on readdir order.
+  const withMtime = await Promise.all(
+    entries.map(async (name) => {
+      const s = await stat(join(runRoot, name)).catch(() => null);
+      return { name, mtime: s?.mtimeMs ?? 0 };
+    })
+  );
+  withMtime.sort((a, b) => b.mtime - a.mtime);
+  return withMtime[0].name;
 }
 
 async function latestSessionId(home: string): Promise<string> {
@@ -136,6 +145,9 @@ describe('run-level result/status UX (3.1–3.5)', () => {
     // run metadata
     assert.ok(result.stdout.includes(`Run: ${runId}`), `missing Run: line, got: ${result.stdout}`);
     assert.ok(result.stdout.includes('Started:'), `missing Started: line`);
+    // 'Duration:' here is the run-level duration from the ledger header.
+    // Per-session timing fields are not stored in the run ledger schema, so
+    // this single run-level Duration: satisfies the spec's duration requirement.
     assert.ok(result.stdout.includes('Duration:'), `missing Duration: line`);
     assert.ok(result.stdout.includes('Providers:'), `missing Providers: line`);
     assert.ok(result.stdout.includes('Permission class:'), `missing Permission class: line`);
@@ -181,6 +193,17 @@ describe('run-level result/status UX (3.1–3.5)', () => {
   it('result --run latest exits 1 when no runs exist', async () => {
     const home = await makeHome();
     const result = await runCli(['result', '--run', 'latest'], { home });
+
+    assert.equal(result.code, 1, `expected exit 1, got: ${result.code}`);
+    assert.ok(
+      result.stderr.includes('No runs found') || result.stderr.includes('no runs'),
+      `expected clear error message, got: ${result.stderr}`
+    );
+  });
+
+  it('status --run latest exits 1 when no runs exist', async () => {
+    const home = await makeHome();
+    const result = await runCli(['status', '--run', 'latest'], { home });
 
     assert.equal(result.code, 1, `expected exit 1, got: ${result.code}`);
     assert.ok(
