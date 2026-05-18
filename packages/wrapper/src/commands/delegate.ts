@@ -45,7 +45,7 @@ export async function cmdDelegate(args: string[]): Promise<void> {
 
   let seedContent = '';
   if (spec.promptSeedFile) {
-    const resolvedSeedPath = resolve(join(dirname(specFilePath), spec.promptSeedFile));
+    const resolvedSeedPath = join(dirname(specFilePath), spec.promptSeedFile);
     if (!existsSync(resolvedSeedPath)) {
       process.stderr.write(`promptSeedFile not found: ${resolvedSeedPath}\n`);
       process.exit(1);
@@ -61,6 +61,10 @@ export async function cmdDelegate(args: string[]): Promise<void> {
     input = args[inputIdx + 1];
   } else if (inputFileIdx !== -1 && args[inputFileIdx + 1] !== undefined) {
     const inputFilePath = resolve(args[inputFileIdx + 1]);
+    if (!existsSync(inputFilePath)) {
+      process.stderr.write(`Input file not found: ${inputFilePath}\n`);
+      process.exit(1);
+    }
     input = await readFile(inputFilePath, 'utf8');
   }
 
