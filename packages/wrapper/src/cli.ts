@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, appendFile } from 'node:fs/promises';
+import { readFile, appendFile, readdir, stat } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
@@ -282,7 +282,123 @@ async function cmdRun(args: string[]): Promise<void> {
   await sessionStore.markDone(session.id);
 }
 
+// ---------------------------------------------------------------------------
+// Run ledger types
+// ---------------------------------------------------------------------------
+interface RunLedgerSession {
+  id: string;
+  provider: string;
+  status: string;
+  outputLog?: string;
+  briefPath?: string;
+  summary?: string;
+  usageStatus?: string;
+  hasOutput?: boolean;
+  outputBytes?: number;
+  stderrBytes?: number;
+  warningCount?: number;
+  resultQuality?: string;
+  stderrArtifactPath?: string;
+  error?: string;
+}
+
+interface RunLedger {
+  runId: string;
+  startedAt: string;
+  endedAt?: string;
+  durationMs?: number;
+  providers?: string[];
+  permissionProfile?: string;
+  permissionClass?: string;
+  envPolicy?: string;
+  cwd?: string;
+  gitBranch?: string | null;
+  gitHead?: string | null;
+  gitDirty?: boolean | null;
+  sessions?: RunLedgerSession[];
+}
+
+async function resolveLatestRunId(runsDir: string): Promise<string | null> {
+  let entries: string[];
+  try {
+    entries = await readdir(runsDir);
+  } catch {
+    return null;
+  }
+  if (entries.length === 0) return null;
+  const withMtime = await Promise.all(
+    entries.map(async (name) => {
+      const s = await stat(join(runsDir, name)).catch(() => null);
+      return { name, mtime: s?.mtimeMs ?? 0 };
+    })
+  );
+  withMtime.sort((a, b) => b.mtime - a.mtime);
+  return withMtime[0].name;
+}
+
+async function readRunLedger(runsDir: string, runId: string): Promise<RunLedger> {
+  const ledgerPath = join(runsDir, runId, 'ledger.json');
+  if (!existsSync(ledgerPath)) {
+    throw new Error(`Run not found: ${runId}`);
+  }
+  const raw = await readFile(ledgerPath, 'utf8');
+  return JSON.parse(raw) as RunLedger;
+}
+
 async function cmdResult(args: string[]): Promise<void> {
+  const runFlag = parseFlag(args, '--run');
+
+  // --run flag takes precedence over --session
+  if (runFlag !== undefined) {
+    const runsDir = join(homedir(), '.aco', 'runs');
+    let runId = runFlag;
+
+    if (runId === 'latest') {
+      const resolved = await resolveLatestRunId(runsDir);
+      if (!resolved) {
+        console.error('No runs found.');
+        process.exit(EXIT_ERROR);
+      }
+      runId = resolved;
+    }
+
+    let ledger: RunLedger;
+    try {
+      ledger = await readRunLedger(runsDir, runId);
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(EXIT_ERROR);
+    }
+
+    console.log(`Run: ${ledger.runId ?? runId}`);
+    console.log(`Started: ${ledger.startedAt}`);
+    console.log(`Duration: ${ledger.durationMs ?? 0}ms`);
+    console.log(`Providers: ${(ledger.providers ?? []).join(',')}`);
+
+    for (const session of ledger.sessions ?? []) {
+      console.log('');
+      console.log(`Provider: ${session.provider}`);
+      console.log(`Session: ${session.id}`);
+      console.log(`Status: ${session.status}`);
+      console.log(`Result quality: ${session.resultQuality ?? 'unknown'}`);
+      console.log(`Warnings: ${session.warningCount ?? 0}`);
+      console.log(`Output bytes: ${session.outputBytes ?? 0}`);
+      console.log(`Output: ${session.outputLog ?? ''}`);
+      console.log(`Brief: ${session.briefPath ?? ''}`);
+      if (session.error) {
+        console.log(`Error: ${session.error}`);
+      }
+      if (session.stderrArtifactPath) {
+        console.log(`Stderr artifact: ${session.stderrArtifactPath}`);
+      }
+      console.log('Summary:');
+      if (session.summary) {
+        console.log(session.summary);
+      }
+    }
+    return;
+  }
+
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
     console.error('No sessions found.');
@@ -300,6 +416,55 @@ async function cmdResult(args: string[]): Promise<void> {
 }
 
 async function cmdStatus(args: string[]): Promise<void> {
+  const runFlag = parseFlag(args, '--run');
+
+  // --run flag takes precedence over --session
+  if (runFlag !== undefined) {
+    const runsDir = join(homedir(), '.aco', 'runs');
+    let runId = runFlag;
+
+    if (runId === 'latest') {
+      const resolved = await resolveLatestRunId(runsDir);
+      if (!resolved) {
+        console.error('No runs found.');
+        process.exit(EXIT_ERROR);
+      }
+      runId = resolved;
+    }
+
+    let ledger: RunLedger;
+    try {
+      ledger = await readRunLedger(runsDir, runId);
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(EXIT_ERROR);
+    }
+
+    console.log(`Run: ${ledger.runId ?? runId}`);
+    console.log(`Started: ${ledger.startedAt}`);
+    console.log(`Duration: ${ledger.durationMs ?? 0}ms`);
+    console.log(`Providers: ${(ledger.providers ?? []).join(',')}`);
+    console.log(`Permission class: ${ledger.permissionClass ?? 'unknown'}`);
+    console.log(`Env policy: ${ledger.envPolicy ?? 'unknown'}`);
+
+    for (const session of ledger.sessions ?? []) {
+      console.log('');
+      console.log(`Provider: ${session.provider}`);
+      console.log(`Session: ${session.id}`);
+      console.log(`Status: ${session.status}`);
+      console.log(`Usage status: ${session.usageStatus ?? 'unknown'}`);
+      console.log(`Warning count: ${session.warningCount ?? 0}`);
+      console.log(`Result quality: ${session.resultQuality ?? 'unknown'}`);
+      console.log(`Output bytes: ${session.outputBytes ?? 0}`);
+      console.log(`Output: ${session.outputLog ?? ''}`);
+      console.log(`Brief: ${session.briefPath ?? ''}`);
+      if (session.stderrArtifactPath) {
+        console.log(`Stderr artifact: ${session.stderrArtifactPath}`);
+      }
+    }
+    return;
+  }
+
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
     console.error('No sessions found.');
