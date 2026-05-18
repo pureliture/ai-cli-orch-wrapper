@@ -133,7 +133,12 @@ export async function* spawnStream(
 
   let stdinFd: number | undefined;
   if (config.stdinFile) {
-    stdinFd = openSync(config.stdinFile, 'r');
+    try {
+      stdinFd = openSync(config.stdinFile, 'r');
+    } catch (err) {
+      await cleanupStdinFile();
+      throw err;
+    }
   }
 
   const stdinValue: 'ignore' | 'pipe' | number =

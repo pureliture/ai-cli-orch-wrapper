@@ -45,7 +45,12 @@ export async function cmdDelegate(args: string[]): Promise<void> {
 
   let seedContent = '';
   if (spec.promptSeedFile) {
-    const resolvedSeedPath = join(dirname(specFilePath), spec.promptSeedFile);
+    const specDir = dirname(specFilePath);
+    const resolvedSeedPath = join(specDir, spec.promptSeedFile);
+    if (!resolvedSeedPath.startsWith(specDir + '/')) {
+      process.stderr.write(`promptSeedFile must be within agent spec directory: ${resolvedSeedPath}\n`);
+      process.exit(1);
+    }
     if (!existsSync(resolvedSeedPath)) {
       process.stderr.write(`promptSeedFile not found: ${resolvedSeedPath}\n`);
       process.exit(1);
