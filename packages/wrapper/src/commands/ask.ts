@@ -76,7 +76,7 @@ interface AskSessionLedger {
   outputBytes: number;
   stderrBytes: number;
   warningCount: number;
-  resultQuality: 'complete' | 'partial' | 'empty' | 'warning_heavy' | 'error';
+  resultQuality: 'complete' | 'empty' | 'warning_heavy' | 'error';
   stderrArtifactPath?: string;
 }
 
@@ -208,7 +208,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
     const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
     const stderrContent = runResult.stderrContent;
     const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
-    const warningCount = countWarnings(runResult.fullOutput);
+    const warningCount = countWarnings(runResult.stderrContent);
     const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
 
     // 2.8: stderr가 있으면 artifact로 저장
@@ -604,10 +604,14 @@ function resolveInputPath(options: AskOptions): string {
 
 /**
  * permissionProfile을 기반으로 permissionClass를 결정한다.
- * restricted → runtime_enforced, 그 외 → prompt_only (단순 휴리스틱).
+ * restricted → runtime_enforced, default → best_effort, unrestricted → prompt_only.
  */
-function resolvePermissionClass(profile: PermissionProfile): 'runtime_enforced' | 'prompt_only' {
-  return profile === 'restricted' ? 'runtime_enforced' : 'prompt_only';
+function resolvePermissionClass(
+  profile: PermissionProfile
+): 'runtime_enforced' | 'best_effort' | 'prompt_only' {
+  if (profile === 'restricted') return 'runtime_enforced';
+  if (profile === 'default') return 'best_effort';
+  return 'prompt_only';
 }
 
 /**
@@ -640,7 +644,7 @@ function resolveResultQuality(
   status: AskSessionLedger['status'],
   hasOutput: boolean,
   warningCount: number
-): AskSessionLedger['resultQuality'] {
+): 'complete' | 'empty' | 'warning_heavy' | 'error' {
   if (status === 'failed' || status === 'cancelled') return 'error';
   if (!hasOutput) return 'empty';
   if (warningCount > 3) return 'warning_heavy';

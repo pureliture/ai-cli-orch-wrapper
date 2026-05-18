@@ -48,7 +48,7 @@ export interface ProviderSessionRunResult {
   /**
    * Full stderr captured from the provider process.
    * Empty string when provider does not expose stderr (e.g. built-in/mock providers).
-   * TODO(2.8): Wire through spawnStream-based providers via onStderrComplete callback.
+   * Populated via onStderrComplete callback for spawnStream-based providers.
    */
   stderrContent: string;
 }
@@ -84,6 +84,7 @@ export async function invokeProviderForSession(
   const outputCapture = maxBuffer > 0 ? createBoundedOutputCapture(maxBuffer) : undefined;
   let hasOutput = false;
   let error: unknown;
+  let capturedStderr = '';
 
   try {
     for await (const chunk of options.provider.invoke(
@@ -97,6 +98,9 @@ export async function invokeProviderForSession(
         timeoutMs: options.timeoutMs,
         killGraceMs: options.killGraceMs,
         model: options.model,
+        onStderrComplete: (stderr) => {
+          capturedStderr = stderr;
+        },
         onPid: (pid) => {
           options.onPid?.(pid);
           store.update(options.sessionId, { pid }).catch((err: unknown) => {
@@ -122,7 +126,7 @@ export async function invokeProviderForSession(
   return {
     fullOutput: outputCapture?.value() ?? '',
     hasOutput,
-    stderrContent: '',
+    stderrContent: capturedStderr,
     ...(error ? { error } : {}),
   };
 }

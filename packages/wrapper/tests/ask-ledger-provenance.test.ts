@@ -4,13 +4,17 @@
  * 2.1–2.9: run ledger provenance 필드, session 품질 필드, stderr artifact 검증
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readdir, readFile, stat } from 'node:fs/promises';
+import { mkdtemp, readdir, readFile, stat, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { writeFile, mkdir } from 'node:fs/promises';
+import { Writable } from 'node:stream';
+import { spawnStream } from '../src/util/spawn-stream.js';
+import { invokeProviderForSession } from '../src/runtime/provider-session-runner.js';
+import type { AuthResult, InvokeOptions, IProvider } from '../src/providers/interface.js';
 
 interface CliResult {
   code: number | null;
@@ -111,8 +115,10 @@ describe('ask ledger provenance (2.1–2.9)', () => {
 
     // permission / env policy
     assert.ok(
-      ledger.permissionClass === 'runtime_enforced' || ledger.permissionClass === 'prompt_only',
-      'permissionClass must be runtime_enforced or prompt_only'
+      ledger.permissionClass === 'runtime_enforced' ||
+        ledger.permissionClass === 'best_effort' ||
+        ledger.permissionClass === 'prompt_only',
+      'permissionClass must be runtime_enforced, best_effort, or prompt_only'
     );
     assert.equal(ledger.envPolicy, 'allowlist', 'envPolicy must be allowlist');
   });
@@ -138,6 +144,52 @@ describe('ask ledger provenance (2.1–2.9)', () => {
       await readFile(join(result.home, '.aco', 'runs', runId, 'ledger.json'), 'utf8')
     );
     assert.equal(ledger.permissionClass, 'runtime_enforced');
+  });
+
+  // 2.2: default profile → permissionClass: best_effort
+  it('permissionClass is best_effort for default profile', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'permission class best_effort test',
+      '--yes',
+      '--output-mode',
+      'save-only',
+      '--permission-profile',
+      'default',
+    ]);
+
+    assert.equal(result.code, 0);
+    const runId = await latestRunId(result.home);
+    const ledger = JSON.parse(
+      await readFile(join(result.home, '.aco', 'runs', runId, 'ledger.json'), 'utf8')
+    );
+    assert.equal(ledger.permissionClass, 'best_effort');
+  });
+
+  // 2.2: unrestricted profile → permissionClass: prompt_only
+  it('permissionClass is prompt_only for unrestricted profile', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'permission class prompt_only test',
+      '--yes',
+      '--output-mode',
+      'save-only',
+      '--permission-profile',
+      'unrestricted',
+    ]);
+
+    assert.equal(result.code, 0);
+    const runId = await latestRunId(result.home);
+    const ledger = JSON.parse(
+      await readFile(join(result.home, '.aco', 'runs', runId, 'ledger.json'), 'utf8')
+    );
+    assert.equal(ledger.permissionClass, 'prompt_only');
   });
 
   // 2.3: git provenance fields (repo 내 실행이므로 gitBranch는 string이어야 함)
@@ -246,7 +298,7 @@ describe('ask ledger provenance (2.1–2.9)', () => {
 
     // resultQuality
     assert.ok(
-      ['complete', 'partial', 'empty', 'warning_heavy', 'error'].includes(session.resultQuality),
+      ['complete', 'empty', 'warning_heavy', 'error'].includes(session.resultQuality),
       `resultQuality must be valid value, got: ${session.resultQuality}`
     );
     // 정상 실행이므로 complete여야 함
@@ -317,6 +369,157 @@ describe('ask ledger provenance (2.1–2.9)', () => {
     assert.ok(
       session.stderrArtifactPath === undefined || session.stderrArtifactPath === null,
       'mock provider should have no stderrArtifactPath'
+    );
+  });
+});
+
+// Fix A & B: onStderrComplete wiring 및 warningCount stderr 기준 검증
+describe('invokeProviderForSession stderr wiring (Fix A & B)', () => {
+  let tmpBin: string;
+
+  before(async () => {
+    tmpBin = await mkdtemp(join(tmpdir(), 'aco-stderr-wire-test-'));
+  });
+
+  after(async () => {
+    await rm(tmpBin, { recursive: true, force: true });
+  });
+
+  // Fix A: onStderrComplete가 invokeProviderForSession을 통해 provider invoke()로 전달된다
+  it('stderrContent is populated when provider invokes spawnStream with stderr output', async () => {
+    // stderr에 경고를 출력하는 fake 바이너리 생성
+    const fakeBinaryPath = join(tmpBin, 'stderr-provider.js');
+    await writeFile(
+      fakeBinaryPath,
+      [
+        '#!/usr/bin/env node',
+        'process.stdout.write("stdout line\\n");',
+        'process.stderr.write("warning: this is a stderr warning\\n");',
+        'process.exit(0);',
+      ].join('\n'),
+      { mode: 0o755 }
+    );
+
+    // spawnStream을 사용하는 커스텀 provider 구현
+    class StderrTestProvider implements IProvider {
+      readonly key = 'stderr-test';
+      readonly installHint = 'test only';
+      isAvailable(): boolean { return true; }
+      async checkAuth(): Promise<AuthResult> {
+        return { ok: true, method: 'cli-fallback' };
+      }
+      buildArgs(_command: string, _options?: InvokeOptions): string[] { return []; }
+      async *invoke(
+        _command: string,
+        _prompt: string,
+        _content: string,
+        options?: InvokeOptions
+      ): AsyncIterable<string> {
+        yield* spawnStream(
+          fakeBinaryPath,
+          [],
+          { processName: 'stderr-test', stdin: 'ignore' },
+          options
+        );
+      }
+    }
+
+    const provider = new StderrTestProvider();
+    const sink = new Writable({ write(_chunk, _enc, cb) { cb(); } });
+
+    const runResult = await invokeProviderForSession({
+      provider,
+      command: 'ask',
+      prompt: 'test prompt',
+      content: '',
+      permissionProfile: 'restricted',
+      sessionId: 'test-session-stderr-wiring',
+      output: sink,
+    });
+
+    // Fix A: stderrContent が実際の stderr を持っている
+    assert.ok(
+      runResult.stderrContent.length > 0,
+      `stderrContent must be non-empty when provider writes to stderr, got: "${runResult.stderrContent}"`
+    );
+    assert.ok(
+      runResult.stderrContent.includes('warning'),
+      `stderrContent must contain the stderr warning text, got: "${runResult.stderrContent}"`
+    );
+  });
+
+  // Fix B: warningCount가 stderrContent 기준으로 계산된다
+  // (invoke 시 warningCount 계산은 ask.ts 내부이므로, ask.ts에서의 변경을 CLI 통합 테스트로 확인)
+  // 여기서는 stderrContent가 fullOutput과 별도로 수집됨을 확인하는 unit 수준 검증
+  it('stderrContent is separate from fullOutput', async () => {
+    const fakeBinaryPath = join(tmpBin, 'stderr-separate.js');
+    await writeFile(
+      fakeBinaryPath,
+      [
+        '#!/usr/bin/env node',
+        'process.stdout.write("stdout only content\\n");',
+        'process.stderr.write("warning: stderr only warning\\n");',
+        'process.exit(0);',
+      ].join('\n'),
+      { mode: 0o755 }
+    );
+
+    class SeparateStderrProvider implements IProvider {
+      readonly key = 'separate-stderr-test';
+      readonly installHint = 'test only';
+      isAvailable(): boolean { return true; }
+      async checkAuth(): Promise<AuthResult> {
+        return { ok: true, method: 'cli-fallback' };
+      }
+      buildArgs(_command: string, _options?: InvokeOptions): string[] { return []; }
+      async *invoke(
+        _command: string,
+        _prompt: string,
+        _content: string,
+        options?: InvokeOptions
+      ): AsyncIterable<string> {
+        yield* spawnStream(
+          fakeBinaryPath,
+          [],
+          { processName: 'separate-stderr-test', stdin: 'ignore' },
+          options
+        );
+      }
+    }
+
+    const provider = new SeparateStderrProvider();
+    const sink = new Writable({ write(_chunk, _enc, cb) { cb(); } });
+
+    const runResult = await invokeProviderForSession({
+      provider,
+      command: 'ask',
+      prompt: 'test prompt',
+      content: '',
+      permissionProfile: 'restricted',
+      sessionId: 'test-session-stderr-separate',
+      output: sink,
+      outputBuffer: { mode: 'bounded' },
+      maxOutputBuffer: 65536,
+    });
+
+    // fullOutput은 stdout만 포함해야 한다
+    assert.ok(
+      runResult.fullOutput.includes('stdout only content'),
+      `fullOutput must contain stdout content, got: "${runResult.fullOutput}"`
+    );
+    assert.ok(
+      !runResult.fullOutput.includes('stderr only warning'),
+      `fullOutput must NOT contain stderr content, got: "${runResult.fullOutput}"`
+    );
+
+    // stderrContent는 stderr만 포함해야 한다
+    assert.ok(
+      runResult.stderrContent.includes('warning'),
+      `stderrContent must contain stderr warning, got: "${runResult.stderrContent}"`
+    );
+    assert.ok(
+      !runResult.stderrContent.includes('stdout only content'),
+      `stderrContent must NOT contain stdout content, got: "${runResult.stderrContent}"`
     );
   });
 });
