@@ -2,7 +2,8 @@ import { stat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { which } from '../util/which.js';
-import { spawnStream } from '../util/spawn-stream.js';
+import { spawnStream, writeTempInput } from '../util/spawn-stream.js';
+import { buildProviderEnv } from '../util/provider-env.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 import { readVersion } from '../util/read-version.js';
 import { defaultSummarizeOutput } from '../util/summarize-output.js';
@@ -89,8 +90,20 @@ export class GeminiProvider implements IProvider {
     const binary = which('gemini');
     if (!binary) throw new Error('gemini CLI not found in PATH');
 
-    const args = [...this.buildArgs(command, options), `${prompt}\n\n${content}`];
-    yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe' }, options);
+    const env = buildProviderEnv([
+      'GEMINI_API_KEY',
+      'GOOGLE_API_KEY',
+      'GOOGLE_APPLICATION_CREDENTIALS',
+    ]);
+
+    if (content) {
+      const stdinFile = await writeTempInput(content);
+      const args = [...this.buildArgs(command, options), prompt];
+      yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe', stdinFile, env }, options);
+    } else {
+      const args = [...this.buildArgs(command, options), prompt];
+      yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe', env }, options);
+    }
   }
 
   summarizeOutput(output: string, maxLength: number): string {

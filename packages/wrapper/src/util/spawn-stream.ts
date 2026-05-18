@@ -1,4 +1,9 @@
 import { spawn } from 'node:child_process';
+import { openSync, closeSync } from 'node:fs';
+import { writeFile, unlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import type { InvokeOptions, OutputBufferMode } from '../providers/interface.js';
 import {
   DEFAULT_OUTPUT_BUFFER_BYTES,
@@ -16,6 +21,30 @@ export interface SpawnStreamConfig {
   processName: string;
   /** Whether to pipe stdin (so it can be closed) or ignore it. */
   stdin: 'pipe' | 'ignore';
+  /**
+   * Path to a temp file whose contents are piped as stdin to the child process.
+   * When set, the file is opened as a ReadStream and connected to the child's stdin.
+   * The file is deleted (unlinked) after the child process exits — even on failure.
+   * If this is set, `stdin` should be 'pipe'.
+   */
+  stdinFile?: string;
+  /**
+   * Explicit env object to pass to the child process.
+   * If omitted, the child inherits process.env (legacy behavior).
+   * Use buildProviderEnv() to construct an allowlist env.
+   */
+  env?: NodeJS.ProcessEnv;
+}
+
+/**
+ * Writes content to a temp file with mode 0o600 and returns its path.
+ * The caller is responsible for cleanup (or use stdinFile in spawnStream which auto-cleans).
+ */
+export async function writeTempInput(content: string): Promise<string> {
+  const name = `aco-input-${randomBytes(8).toString('hex')}`;
+  const filePath = join(tmpdir(), name);
+  await writeFile(filePath, content, { mode: 0o600, encoding: 'utf8' });
+  return filePath;
 }
 
 export interface SpawnStreamOptions extends InvokeOptions {
@@ -85,10 +114,27 @@ export async function* spawnStream(
   const outputBufferSnapshot = options?.outputBuffer?.snapshot;
   const shouldCaptureOutput = outputBufferMode === 'bounded' && outputBufferSnapshot !== undefined;
 
+  // stdinFile이 있으면 openSync로 fd를 열어 stdin에 연결한다.
+  // ReadStream 객체는 spawn stdio에 직접 전달할 수 없으므로 fd를 사용한다.
+  // env가 있으면 해당 allowlist env만 child에게 전달한다.
+  let stdinFd: number | undefined;
+  if (config.stdinFile) {
+    stdinFd = openSync(config.stdinFile, 'r');
+  }
+
+  const stdinValue: 'ignore' | 'pipe' | number =
+    stdinFd !== undefined ? stdinFd : config.stdin;
+
   const child = spawn(binary, args, {
-    stdio: [config.stdin, 'pipe', 'pipe'],
+    stdio: [stdinValue, 'pipe', 'pipe'],
     detached: process.platform !== 'win32',
+    ...(config.env !== undefined && { env: config.env }),
   });
+
+  // fd는 spawn 호출 직후 닫는다 (child process가 상속한 fd를 계속 사용).
+  if (stdinFd !== undefined) {
+    closeSync(stdinFd);
+  }
 
   if (child.pid !== undefined) {
     options?.onPid?.(child.pid);
@@ -123,7 +169,9 @@ export async function* spawnStream(
     }, options.timeoutMs);
   }
 
-  if (config.stdin === 'pipe' && child.stdin) {
+  // stdinFile이 없고 stdin='pipe'인 경우에만 직접 닫는다.
+  // stdinFile이 있으면 ReadStream이 끝날 때 자동으로 닫힌다.
+  if (!config.stdinFile && config.stdin === 'pipe' && child.stdin) {
     child.stdin.end();
   }
 
@@ -151,33 +199,44 @@ export async function* spawnStream(
     throw new Error(`${config.processName}: failed to open stdout pipe`);
   }
 
+  /** stdinFile을 unlink한다. resolve/reject 이전에 await되어 cleanup이 보장된다. */
+  const cleanupStdinFile = (): Promise<void> => {
+    if (config.stdinFile) {
+      return unlink(config.stdinFile).catch(() => {});
+    }
+    return Promise.resolve();
+  };
+
   const closePromise = new Promise<void>((resolve, reject) => {
     child.on('close', (code, signal) => {
       clearExecutionTimers();
-      if (timedOut) {
-        reject(
-          new ProviderExecutionError(
-            'timeout',
-            `${config.processName} timed out after ${Math.ceil((options?.timeoutMs ?? 0) / 1000)}s`
-          )
-        );
-        return;
-      }
+      // cleanup을 완료한 뒤 resolve/reject한다.
+      void cleanupStdinFile().then(() => {
+        if (timedOut) {
+          reject(
+            new ProviderExecutionError(
+              'timeout',
+              `${config.processName} timed out after ${Math.ceil((options?.timeoutMs ?? 0) / 1000)}s`
+            )
+          );
+          return;
+        }
 
-      if (code !== 0 || signal !== null) {
-        const reason =
-          signal === null
-            ? `${config.processName} exited with code ${code}`
-            : `${config.processName} terminated by signal ${signal}`;
-        const detail = stderr.trim();
-        reject(new Error(detail ? `${reason}\n${detail}` : reason));
-      } else {
-        resolve();
-      }
+        if (code !== 0 || signal !== null) {
+          const reason =
+            signal === null
+              ? `${config.processName} exited with code ${code}`
+              : `${config.processName} terminated by signal ${signal}`;
+          const detail = stderr.trim();
+          reject(new Error(detail ? `${reason}\n${detail}` : reason));
+        } else {
+          resolve();
+        }
+      });
     });
     child.on('error', (err) => {
       clearExecutionTimers();
-      reject(err);
+      void cleanupStdinFile().then(() => reject(err));
     });
   });
   closePromise.catch(() => {});

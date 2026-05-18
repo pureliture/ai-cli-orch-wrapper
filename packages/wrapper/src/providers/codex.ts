@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { which } from '../util/which.js';
-import { spawnStream } from '../util/spawn-stream.js';
+import { spawnStream, writeTempInput } from '../util/spawn-stream.js';
+import { buildProviderEnv } from '../util/provider-env.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 import { readVersion } from '../util/read-version.js';
 import { defaultSummarizeOutput } from '../util/summarize-output.js';
@@ -101,9 +102,16 @@ export class CodexProvider implements IProvider {
     const binary = which('codex');
     if (!binary) throw new Error('codex CLI not found in PATH');
 
-    const combined = content ? `${prompt}\n\n${content}` : prompt;
-    const args = [...this.buildArgs(command, options), combined];
-    yield* spawnStream(binary, args, { processName: 'codex', stdin: 'pipe' }, options);
+    const env = buildProviderEnv(['OPENAI_API_KEY']);
+
+    if (content) {
+      const stdinFile = await writeTempInput(content);
+      const args = [...this.buildArgs(command, options), prompt];
+      yield* spawnStream(binary, args, { processName: 'codex', stdin: 'pipe', stdinFile, env }, options);
+    } else {
+      const args = [...this.buildArgs(command, options), prompt];
+      yield* spawnStream(binary, args, { processName: 'codex', stdin: 'pipe', env }, options);
+    }
   }
 
   summarizeOutput(output: string, maxLength: number): string {
