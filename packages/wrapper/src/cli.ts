@@ -248,6 +248,7 @@ async function cmdRun(args: string[]): Promise<void> {
     timeoutMs: executionControl.timeoutMs,
     killGraceMs: executionControl.killGraceMs,
     ...(model ? { model } : {}),
+    envPolicy: 'allowlist',
     onPid: (pid) => {
       activePid = pid;
     },

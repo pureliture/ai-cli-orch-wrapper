@@ -211,10 +211,45 @@ process.stdout.write(process.env.GEMINI_API_KEY ?? 'UNDEFINED');
     }
   });
 
-  // ── 6. envPolicy가 session ledger에 기록된다 ──────────────────────────────
+  // ── 6. stdinFile이 존재하지 않으면 openSync 오류가 전파된다 ───────────────
+
+  it('propagates openSync error when stdinFile does not exist', async () => {
+    const nonExistentFile = join(tmpBin, 'does-not-exist-stdinfile');
+
+    // nonExistentFile이 실제로 없음을 확인
+    await assert.rejects(
+      stat(nonExistentFile),
+      (err: unknown) => {
+        assert.ok(err instanceof Error && 'code' in err);
+        assert.strictEqual((err as NodeJS.ErrnoException).code, 'ENOENT');
+        return true;
+      },
+    );
+
+    // spawnStream은 openSync 실패 오류를 삼키지 않고 전파해야 한다.
+    await assert.rejects(
+      async () => {
+        for await (const _ of spawnStream(
+          process.execPath,
+          ['-e', 'process.exit(0)'],
+          { processName: 'test-proc', stdin: 'pipe', stdinFile: nonExistentFile },
+        )) {
+          // drain
+        }
+      },
+      (err: unknown) => {
+        // ENOENT 오류가 전파되어야 한다
+        assert.ok(err instanceof Error);
+        return true;
+      },
+      'openSync failure must propagate as an error, not be swallowed',
+    );
+  });
+
+  // ── 7. envPolicy가 session ledger에 기록된다 ──────────────────────────────
   //
-  // ask.ts에서 sessionStore.create() 이후 sessionStore.update(id, { envPolicy: 'allowlist' })를
-  // 호출해야 한다. 이 테스트는 fix 전에는 실패한다.
+  // ask.ts에서 invokeProviderForSession에 envPolicy: 'allowlist'를 전달하며,
+  // invokeProviderForSession이 ledger에 기록한다.
 
   it('records envPolicy as "allowlist" in session ledger', async () => {
     const sessionDir = await mkdtemp(join(tmpdir(), 'aco-envpolicy-test-'));

@@ -104,9 +104,8 @@ export async function cmdAsk(args: string[]): Promise<void> {
   const credentialEnvKeys = findCredentialEnvKeys(process.env);
   if (credentialEnvKeys.length > 0) {
     process.stderr.write(
-      `[aco] warning: the following environment variables look like credentials and will be ` +
-        `inherited by the provider process: ${credentialEnvKeys.join(', ')}.\n` +
-        `[aco] To suppress this warning, unset these variables before running aco ask.\n`
+      `[aco] note: the following environment variables look like credentials and are present in your environment: ${credentialEnvKeys.join(', ')}.\n` +
+        `[aco] Provider processes receive only an explicit env allowlist and will NOT inherit these variables.\n`
     );
   }
 

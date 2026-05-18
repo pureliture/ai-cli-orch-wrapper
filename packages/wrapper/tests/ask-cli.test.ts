@@ -667,6 +667,29 @@ describe('aco ask CLI', () => {
     assert.equal(runResult.fullOutput.length, 600);
   });
 
+  it('credential note message says "will NOT inherit" not "will be inherited"', async () => {
+    // OPENAI_API_KEY는 findCredentialEnvKeys가 탐지하는 키다.
+    // envPolicy allowlist 도입 이후 child에게 전달되지 않으므로,
+    // 메시지는 "inherited"가 아니라 "will NOT inherit"를 포함해야 한다.
+    const result = await runCli(
+      [
+        'ask',
+        '--providers',
+        'mock',
+        '--task',
+        'test credential note',
+        '--yes',
+        '--output-mode',
+        'save-only',
+      ],
+      { env: { OPENAI_API_KEY: 'sk-test-fake-key-for-warning-test' } }
+    );
+
+    assert.equal(result.code, 0);
+    assert.match(result.stderr, /will NOT inherit/);
+    assert.doesNotMatch(result.stderr, /will be inherited/);
+  });
+
   it('waits for writable drain even when the sink exposes compatibility flags', async () => {
     let drainCount = 0;
     let sawDrainBeforeSecondChunk = false;

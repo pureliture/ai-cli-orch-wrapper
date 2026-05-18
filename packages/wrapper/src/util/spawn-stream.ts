@@ -117,6 +117,15 @@ export async function* spawnStream(
   // stdinFile이 있으면 openSync로 fd를 열어 stdin에 연결한다.
   // ReadStream 객체는 spawn stdio에 직접 전달할 수 없으므로 fd를 사용한다.
   // env가 있으면 해당 allowlist env만 child에게 전달한다.
+
+  /** stdinFile을 unlink한다. resolve/reject 이전에 await되어 cleanup이 보장된다. */
+  const cleanupStdinFile = (): Promise<void> => {
+    if (config.stdinFile) {
+      return unlink(config.stdinFile).catch(() => {});
+    }
+    return Promise.resolve();
+  };
+
   let stdinFd: number | undefined;
   if (config.stdinFile) {
     stdinFd = openSync(config.stdinFile, 'r');
@@ -196,16 +205,9 @@ export async function* spawnStream(
   });
 
   if (!child.stdout) {
+    await cleanupStdinFile();
     throw new Error(`${config.processName}: failed to open stdout pipe`);
   }
-
-  /** stdinFile을 unlink한다. resolve/reject 이전에 await되어 cleanup이 보장된다. */
-  const cleanupStdinFile = (): Promise<void> => {
-    if (config.stdinFile) {
-      return unlink(config.stdinFile).catch(() => {});
-    }
-    return Promise.resolve();
-  };
 
   const closePromise = new Promise<void>((resolve, reject) => {
     child.on('close', (code, signal) => {
