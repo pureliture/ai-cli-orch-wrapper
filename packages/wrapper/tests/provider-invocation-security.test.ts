@@ -13,6 +13,10 @@ import { join } from 'node:path';
 import { spawnStream } from '../src/util/spawn-stream.js';
 import { buildProviderEnv } from '../src/util/provider-env.js';
 import { writeTempInput } from '../src/util/spawn-stream.js';
+import { SessionStore } from '../src/session/store.js';
+import { MockProvider } from '../src/providers/mock.js';
+import { invokeProviderForSession } from '../src/runtime/provider-session-runner.js';
+import { Writable } from 'node:stream';
 
 // ── 헬퍼: fake binary 작성 ────────────────────────────────────────────────────
 
@@ -205,5 +209,46 @@ process.stdout.write(process.env.GEMINI_API_KEY ?? 'UNDEFINED');
         process.env.GEMINI_API_KEY = savedKey;
       }
     }
+  });
+
+  // ── 6. envPolicy가 session ledger에 기록된다 ──────────────────────────────
+  //
+  // ask.ts에서 sessionStore.create() 이후 sessionStore.update(id, { envPolicy: 'allowlist' })를
+  // 호출해야 한다. 이 테스트는 fix 전에는 실패한다.
+
+  it('records envPolicy as "allowlist" in session ledger', async () => {
+    const sessionDir = await mkdtemp(join(tmpdir(), 'aco-envpolicy-test-'));
+    const store = new SessionStore(sessionDir);
+    const provider = new MockProvider();
+
+    // session 생성 (ask.ts의 sessionStore.create에 해당)
+    const session = await store.create(provider.key, 'ask');
+
+    // sink: 출력을 버리는 Writable
+    const sink = new Writable({ write(_chunk, _enc, cb) { cb(); } });
+
+    // provider 실행 (ask.ts의 invokeProviderForSession에 해당)
+    // ask.ts는 envPolicy: 'allowlist'를 전달하며, invokeProviderForSession이 ledger에 기록한다.
+    await invokeProviderForSession({
+      provider,
+      command: 'ask',
+      prompt: 'test prompt',
+      content: 'test content',
+      permissionProfile: 'restricted',
+      sessionId: session.id,
+      output: sink,
+      envPolicy: 'allowlist',
+      store,
+    });
+
+    // fix: invokeProviderForSession이 envPolicy를 sessionStore.update로 기록해야 한다.
+    const record = await store.read(session.id);
+    assert.strictEqual(
+      record.envPolicy,
+      'allowlist',
+      `ask flow must record envPolicy "allowlist" in session ledger, got: ${String(record.envPolicy)}`,
+    );
+
+    await rm(sessionDir, { recursive: true, force: true });
   });
 });

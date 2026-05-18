@@ -147,6 +147,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       timeoutMs: options.executionControl.timeoutMs,
       killGraceMs: options.executionControl.killGraceMs,
       ...(options.model ? { model: options.model } : {}),
+      envPolicy: 'allowlist',
       onChunk:
         options.outputMode === 'full'
           ? (chunk) => {

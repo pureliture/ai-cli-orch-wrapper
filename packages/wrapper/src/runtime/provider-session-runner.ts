@@ -6,7 +6,7 @@ import {
   type OutputBufferPolicy,
   type PermissionProfile,
 } from '../providers/interface.js';
-import { sessionStore } from '../session/store.js';
+import { sessionStore, SessionStore } from '../session/store.js';
 
 export interface ProviderSessionRunOptions {
   provider: IProvider;
@@ -29,6 +29,16 @@ export interface ProviderSessionRunOptions {
   onPid?: (pid: number) => void;
   /** Model identifier passed to the provider binary via -m flag. */
   model?: string;
+  /**
+   * Child process env policy applied at invocation time.
+   * When set, recorded in the session ledger via sessionStore.update.
+   */
+  envPolicy?: string;
+  /**
+   * Session store to use for ledger updates. Defaults to the global sessionStore.
+   * Primarily used in tests to inject an isolated store instance.
+   */
+  store?: SessionStore;
 }
 
 export interface ProviderSessionRunResult {
@@ -42,6 +52,19 @@ const OMITTED_OUTPUT_MARKER = '\n...[output omitted]...\n';
 export async function invokeProviderForSession(
   options: ProviderSessionRunOptions
 ): Promise<ProviderSessionRunResult> {
+  const store = options.store ?? sessionStore;
+
+  if (options.envPolicy !== undefined) {
+    await store.update(options.sessionId, { envPolicy: options.envPolicy }).catch(
+      (err: unknown) => {
+        console.warn(
+          'Failed to record envPolicy:',
+          err instanceof Error ? err.message : String(err)
+        );
+      }
+    );
+  }
+
   const outputBuffer = options.outputBuffer ?? { mode: 'stream-only' };
   const outputBufferMode = outputBuffer.mode ?? 'stream-only';
   const shouldCaptureOutput =
@@ -70,7 +93,7 @@ export async function invokeProviderForSession(
         model: options.model,
         onPid: (pid) => {
           options.onPid?.(pid);
-          sessionStore.update(options.sessionId, { pid }).catch((err: unknown) => {
+          store.update(options.sessionId, { pid }).catch((err: unknown) => {
             console.warn(
               'Failed to record process PID:',
               err instanceof Error ? err.message : String(err)
