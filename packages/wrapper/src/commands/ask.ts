@@ -272,8 +272,9 @@ export async function cmdAsk(args: string[]): Promise<void> {
       // 4.2: canonical input artifact reference
       canonicalInputPath,
       inputHash: inputHashValue,
-      // 4.3: summary truncation flag
-      summaryTruncated: runResult.fullOutput.length > SUMMARY_CHAR_LIMIT,
+      // 4.3: summary truncation flag — true only when the summarizer applied the
+      // char-limit truncation (not when the provider simply reformats/filters output)
+      summaryTruncated: summary.includes('...[truncated to'),
       // 4.4: top findings from provider output
       topFindings: extractTopFindings(runResult.fullOutput),
     });

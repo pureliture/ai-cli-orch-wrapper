@@ -304,6 +304,10 @@ interface RunLedgerSession {
   inputTokens?: number;
   outputTokens?: number;
   nativeSessionPath?: string;
+  canonicalInputPath?: string;
+  inputHash?: string;
+  summaryTruncated?: boolean;
+  topFindings?: string[] | null;
 }
 
 interface RunLedger {
