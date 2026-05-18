@@ -141,8 +141,7 @@ export async function* spawnStream(
     }
   }
 
-  const stdinValue: 'ignore' | 'pipe' | number =
-    stdinFd !== undefined ? stdinFd : config.stdin;
+  const stdinValue: 'ignore' | 'pipe' | number = stdinFd !== undefined ? stdinFd : config.stdin;
 
   const child = spawn(binary, args, {
     stdio: [stdinValue, 'pipe', 'pipe'],

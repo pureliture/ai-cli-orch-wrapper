@@ -99,7 +99,12 @@ export class GeminiProvider implements IProvider {
     if (content) {
       const stdinFile = await writeTempInput(content);
       const args = [...this.buildArgs(command, options), prompt];
-      yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe', stdinFile, env }, options);
+      yield* spawnStream(
+        binary,
+        args,
+        { processName: 'gemini', stdin: 'pipe', stdinFile, env },
+        options
+      );
     } else {
       const args = [...this.buildArgs(command, options), prompt];
       yield* spawnStream(binary, args, { processName: 'gemini', stdin: 'pipe', env }, options);

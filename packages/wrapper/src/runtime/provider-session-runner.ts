@@ -61,14 +61,14 @@ export async function invokeProviderForSession(
   const store = options.store ?? sessionStore;
 
   if (options.envPolicy !== undefined) {
-    await store.update(options.sessionId, { envPolicy: options.envPolicy }).catch(
-      (err: unknown) => {
+    await store
+      .update(options.sessionId, { envPolicy: options.envPolicy })
+      .catch((err: unknown) => {
         console.warn(
           'Failed to record envPolicy:',
           err instanceof Error ? err.message : String(err)
         );
-      }
-    );
+      });
   }
 
   const outputBuffer = options.outputBuffer ?? { mode: 'stream-only' };
