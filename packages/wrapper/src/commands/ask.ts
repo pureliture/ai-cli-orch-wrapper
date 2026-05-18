@@ -571,9 +571,9 @@ async function collectGitProvenance(): Promise<{
 }> {
   try {
     const [branchResult, headResult, statusResult] = await Promise.all([
-      execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD']),
-      execFileAsync('git', ['rev-parse', 'HEAD']),
-      execFileAsync('git', ['status', '--porcelain']),
+      execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { timeout: 3000 }),
+      execFileAsync('git', ['rev-parse', 'HEAD'], { timeout: 3000 }),
+      execFileAsync('git', ['status', '--porcelain'], { timeout: 3000 }),
     ]);
     return {
       gitBranch: branchResult.stdout.trim() || null,

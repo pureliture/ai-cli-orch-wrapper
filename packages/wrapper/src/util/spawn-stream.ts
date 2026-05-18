@@ -246,6 +246,7 @@ export async function* spawnStream(
     });
     child.on('error', (err) => {
       clearExecutionTimers();
+      options?.onStderrComplete?.(stderr);
       void cleanupStdinFile().then(() => reject(err));
     });
   });

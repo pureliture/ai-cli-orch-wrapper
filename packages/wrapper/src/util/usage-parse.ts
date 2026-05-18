@@ -8,7 +8,7 @@
  * 파싱 실패 또는 파일 미발견 시 unavailable/parse_error를 반환한다.
  */
 
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
@@ -29,6 +29,8 @@ export interface UsageResult {
  *
  * @param sessionId - ACO session ID (Gemini 내부 세션 ID와 매칭 시도)
  */
+const MAX_JSONL_BYTES = 10 * 1024 * 1024; // 10 MB
+
 export async function parseGeminiUsage(sessionId: string): Promise<UsageResult> {
   const geminiTmpDir = join(homedir(), '.gemini', 'tmp');
 
@@ -58,6 +60,10 @@ export async function parseGeminiUsage(sessionId: string): Promise<UsageResult> 
 
       const filePath = join(chatDir, jsonlFile);
       try {
+        const fileStats = await stat(filePath);
+        if (fileStats.size > MAX_JSONL_BYTES) {
+          return { usageStatus: 'unavailable' };
+        }
         const content = await readFile(filePath, 'utf8');
         const lines = content.trim().split('\n').filter(Boolean);
         if (lines.length === 0) {
