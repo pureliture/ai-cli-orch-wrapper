@@ -1,6 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createWriteStream, existsSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
@@ -16,6 +18,9 @@ import {
   type ProviderExecutionControl,
 } from '../runtime/provider-execution-control.js';
 import { defaultSummarizeOutput } from '../util/summarize-output.js';
+import { parseGeminiUsage, parseCodexUsage, type UsageResult } from '../util/usage-parse.js';
+
+const execFileAsync = promisify(execFile);
 
 const EXIT_ERROR = 1;
 const DEFAULT_PROVIDERS = ['mock'];
@@ -60,6 +65,19 @@ interface AskSessionLedger {
   briefPath: string;
   summary: string;
   error?: string;
+  // 2.4–2.6: usage telemetry
+  usageStatus: 'captured' | 'unavailable' | 'parse_error';
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  nativeSessionPath?: string;
+  // 2.7: result quality
+  hasOutput: boolean;
+  outputBytes: number;
+  stderrBytes: number;
+  warningCount: number;
+  resultQuality: 'complete' | 'partial' | 'empty' | 'warning_heavy' | 'error';
+  stderrArtifactPath?: string;
 }
 
 export async function cmdAsk(args: string[]): Promise<void> {
@@ -112,6 +130,12 @@ export async function cmdAsk(args: string[]): Promise<void> {
   const runId = randomUUID();
   const runDir = join(homedir(), '.aco', 'runs', runId);
   await mkdir(runDir, { recursive: true, mode: 0o700 });
+
+  // 2.1: run 시작 시각 캡처 (provider loop 이전)
+  const startedAt = new Date().toISOString();
+
+  // 2.3: git provenance 수집
+  const gitProvenance = await collectGitProvenance();
 
   const sessions: AskSessionLedger[] = [];
   for (const provider of providers) {
@@ -177,6 +201,24 @@ export async function cmdAsk(args: string[]): Promise<void> {
       }
     }
 
+    // 2.4–2.6: usage telemetry 수집
+    const usage = await collectUsage(provider.key, session.id);
+
+    // 2.7: result quality 필드 계산
+    const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
+    const stderrContent = runResult.stderrContent;
+    const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
+    const warningCount = countWarnings(runResult.fullOutput);
+    const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
+
+    // 2.8: stderr가 있으면 artifact로 저장
+    let stderrArtifactPath: string | undefined;
+    if (stderrBytes > 0) {
+      const stderrPath = join(sessionDir, 'stderr.log');
+      await writeFile(stderrPath, stderrContent, { mode: 0o600 });
+      stderrArtifactPath = stderrPath;
+    }
+
     const summary = summarizeProviderOutput(runResult.fullOutput, provider);
     const brief = renderSessionBrief({
       runId,
@@ -199,8 +241,27 @@ export async function cmdAsk(args: string[]): Promise<void> {
       briefPath,
       summary,
       ...(error ? { error } : {}),
+      // 2.4–2.6: usage telemetry
+      usageStatus: usage.usageStatus,
+      ...(usage.model !== undefined ? { model: usage.model } : {}),
+      ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
+      ...(usage.outputTokens !== undefined ? { outputTokens: usage.outputTokens } : {}),
+      ...(usage.nativeSessionPath !== undefined
+        ? { nativeSessionPath: usage.nativeSessionPath }
+        : {}),
+      // 2.7: result quality
+      hasOutput: runResult.hasOutput,
+      outputBytes,
+      stderrBytes,
+      warningCount,
+      resultQuality,
+      ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
     });
   }
+
+  // 2.1: run 종료 시각 및 duration 계산
+  const endedAt = new Date().toISOString();
+  const durationMs = new Date(endedAt).getTime() - new Date(startedAt).getTime();
 
   const runBrief = renderRunBrief(runId, options, sessions);
   await writeFile(join(runDir, 'brief.md'), runBrief, { mode: 0o600 });
@@ -218,6 +279,26 @@ export async function cmdAsk(args: string[]): Promise<void> {
         timeoutSeconds: options.timeoutSeconds,
         advisory: ADVISORY_NOTICE,
         sessions,
+        // 2.1: provenance — timing
+        startedAt,
+        endedAt,
+        durationMs,
+        // 2.1: provenance — cwd
+        cwd: process.cwd(),
+        // 2.3: provenance — git
+        gitBranch: gitProvenance.gitBranch,
+        gitHead: gitProvenance.gitHead,
+        gitDirty: gitProvenance.gitDirty,
+        // 2.1: provenance — input
+        inputPath: resolveInputPath(options),
+        inputBytes: Buffer.byteLength(input, 'utf8'),
+        inputHash: sha256Hex(input),
+        // 2.1: provenance — prompt
+        promptBytes: Buffer.byteLength(prompt, 'utf8'),
+        promptHash: sha256Hex(prompt),
+        // 2.2: permission / env policy
+        permissionClass: resolvePermissionClass(options.permissionProfile),
+        envPolicy: 'allowlist',
       },
       null,
       2
@@ -477,4 +558,91 @@ Options:
 function fail(message: string): never {
   console.error(message);
   process.exit(EXIT_ERROR);
+}
+
+/**
+ * git 저장소 provenance 정보를 수집한다.
+ * git 명령 실패 시 (git 미설치 또는 repo 외부) 모든 필드를 null로 반환한다.
+ */
+async function collectGitProvenance(): Promise<{
+  gitBranch: string | null;
+  gitHead: string | null;
+  gitDirty: boolean | null;
+}> {
+  try {
+    const [branchResult, headResult, statusResult] = await Promise.all([
+      execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD']),
+      execFileAsync('git', ['rev-parse', 'HEAD']),
+      execFileAsync('git', ['status', '--porcelain']),
+    ]);
+    return {
+      gitBranch: branchResult.stdout.trim() || null,
+      gitHead: headResult.stdout.trim() || null,
+      gitDirty: statusResult.stdout.trim().length > 0,
+    };
+  } catch {
+    return { gitBranch: null, gitHead: null, gitDirty: null };
+  }
+}
+
+/**
+ * SHA-256 hex digest를 계산한다.
+ */
+function sha256Hex(content: string): string {
+  return createHash('sha256').update(content, 'utf8').digest('hex');
+}
+
+/**
+ * input 소스 경로를 결정한다.
+ * --input-file이 있으면 해당 경로, inline input이면 "inline", 없으면 "stdin".
+ */
+function resolveInputPath(options: AskOptions): string {
+  if (options.inputFile) return options.inputFile;
+  if (options.input) return 'inline';
+  return 'stdin';
+}
+
+/**
+ * permissionProfile을 기반으로 permissionClass를 결정한다.
+ * restricted → runtime_enforced, 그 외 → prompt_only (단순 휴리스틱).
+ */
+function resolvePermissionClass(profile: PermissionProfile): 'runtime_enforced' | 'prompt_only' {
+  return profile === 'restricted' ? 'runtime_enforced' : 'prompt_only';
+}
+
+/**
+ * provider별 usage telemetry를 파싱한다.
+ */
+async function collectUsage(providerKey: string, sessionId: string): Promise<UsageResult> {
+  switch (providerKey) {
+    case 'gemini':
+      return parseGeminiUsage(sessionId);
+    case 'codex':
+      return parseCodexUsage(sessionId);
+    default:
+      // mock 및 기타 built-in provider는 네이티브 세션 로그 없음
+      return { usageStatus: 'unavailable' };
+  }
+}
+
+/**
+ * provider output에서 warning 라인 수를 계산한다.
+ */
+function countWarnings(output: string): number {
+  const lines = output.split('\n');
+  return lines.filter((line) => /warning:|warn:/i.test(line)).length;
+}
+
+/**
+ * resultQuality를 결정한다.
+ */
+function resolveResultQuality(
+  status: AskSessionLedger['status'],
+  hasOutput: boolean,
+  warningCount: number
+): AskSessionLedger['resultQuality'] {
+  if (status === 'failed' || status === 'cancelled') return 'error';
+  if (!hasOutput) return 'empty';
+  if (warningCount > 3) return 'warning_heavy';
+  return 'complete';
 }

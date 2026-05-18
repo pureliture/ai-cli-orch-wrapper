@@ -50,6 +50,11 @@ export async function writeTempInput(content: string): Promise<string> {
 export interface SpawnStreamOptions extends InvokeOptions {
   /** Callback invoked when a sentinel line is detected. */
   onSentinel?: (meta: SentinelMeta, rid: string) => void;
+  /**
+   * Called once with the full captured stderr after the child process closes.
+   * Receives up to MAX_STDERR_CHARS of stderr content.
+   */
+  onStderrComplete?: (stderr: string) => void;
 }
 
 const MAX_STDERR_CHARS = 4_000;
@@ -214,6 +219,9 @@ export async function* spawnStream(
       clearExecutionTimers();
       // cleanup을 완료한 뒤 resolve/reject한다.
       void cleanupStdinFile().then(() => {
+        // stderr가 완전히 수집된 후 콜백을 호출한다.
+        options?.onStderrComplete?.(stderr);
+
         if (timedOut) {
           reject(
             new ProviderExecutionError(

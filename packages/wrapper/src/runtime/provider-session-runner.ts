@@ -45,6 +45,12 @@ export interface ProviderSessionRunResult {
   fullOutput: string;
   hasOutput: boolean;
   error?: unknown;
+  /**
+   * Full stderr captured from the provider process.
+   * Empty string when provider does not expose stderr (e.g. built-in/mock providers).
+   * TODO(2.8): Wire through spawnStream-based providers via onStderrComplete callback.
+   */
+  stderrContent: string;
 }
 
 const OMITTED_OUTPUT_MARKER = '\n...[output omitted]...\n';
@@ -113,7 +119,12 @@ export async function invokeProviderForSession(
     await endWritable(options.output);
   }
 
-  return { fullOutput: outputCapture?.value() ?? '', hasOutput, ...(error ? { error } : {}) };
+  return {
+    fullOutput: outputCapture?.value() ?? '',
+    hasOutput,
+    stderrContent: '',
+    ...(error ? { error } : {}),
+  };
 }
 
 async function writeChunk(stream: Writable, chunk: string): Promise<void> {
