@@ -347,6 +347,26 @@ aco doctor
 `brief`는 provider별 600자 bounded summary만 stdout에 포함하고, full output은 artifact에 저장합니다.
 `mock` provider는 인증 없는 deterministic demo 전용이며, 실제 AI 품질을 의미하지 않습니다.
 
+### aco ask vs aco delegate
+
+| 커맨드 | 용도 | 방향 |
+|--------|------|------|
+| `aco ask` | 외부 AI provider(Gemini, Codex)에 advisory 작업을 위임 | Claude Code → 외부 AI CLI |
+| `aco delegate` | 명명된 agent spec과 seed 파일로 풍부한 프롬프트를 구성해 stdout에 출력 | Claude Code 세션 내 재사용 |
+
+`aco ask`는 동의 게이트를 통해 외부 provider를 실제로 호출하고 결과를 artifact에 저장합니다.
+`aco delegate`는 외부 호출 없이 `.claude/agents/<agent-id>.md`의 spec과 `promptSeedFile`의 seed
+내용을 결합해 stdout에 출력합니다. `/review`, `/research`, `/execute` 같은 slash command에서
+`aco delegate <agent-id> --input "$PROMPT"` 형태로 호출해 Claude Code 세션 안에서 사용합니다.
+
+```bash
+# agent spec과 seed를 결합한 프롬프트를 stdout에 출력
+aco delegate reviewer --input "$(git diff HEAD)"
+
+# input 내용을 파일에서 읽기
+aco delegate researcher --input-file context.txt
+```
+
 <details>
 <summary>📺 <b>Runtime Session 대시보드 예시</b> (펼치기)</summary>
 

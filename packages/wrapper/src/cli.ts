@@ -14,6 +14,7 @@ import {
   providerSetup,
 } from './commands/pack-install.js';
 import { cmdAsk } from './commands/ask.js';
+import { cmdDelegate } from './commands/delegate.js';
 import { cmdDoctor } from './commands/doctor.js';
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
@@ -65,6 +66,9 @@ async function main(): Promise<void> {
       break;
     case 'ask':
       await cmdAsk(rest);
+      break;
+    case 'delegate':
+      await cmdDelegate(rest);
       break;
     case 'doctor':
       await cmdDoctor(rest);
@@ -672,6 +676,7 @@ function printUsage(): void {
   aco --help
   aco sync [--check] [--dry-run] [--force]
   aco ask --task <text> [--providers codex,gemini,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--model <model>] [--dry-run|--yes]
+  aco delegate <agent-id> [--input <text>] [--input-file <path>]
   aco doctor
   aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>] [--model <model>]
   aco result [--session <id>] [--run <runId|latest>]
