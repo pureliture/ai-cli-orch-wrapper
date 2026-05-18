@@ -300,6 +300,10 @@ interface RunLedgerSession {
   resultQuality?: string;
   stderrArtifactPath?: string;
   error?: string;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  nativeSessionPath?: string;
 }
 
 interface RunLedger {
@@ -342,7 +346,14 @@ async function readRunLedger(runsDir: string, runId: string): Promise<RunLedger>
     throw new Error(`Run not found: ${runId}`);
   }
   const raw = await readFile(ledgerPath, 'utf8');
-  return JSON.parse(raw) as RunLedger;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Corrupted ledger for run ${runId}: ${msg}`);
+  }
+  return parsed as RunLedger;
 }
 
 async function cmdResult(args: string[]): Promise<void> {
@@ -659,8 +670,8 @@ function printUsage(): void {
   aco ask --task <text> [--providers codex,gemini,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--model <model>] [--dry-run|--yes]
   aco doctor
   aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>] [--model <model>]
-  aco result [--session <id>]
-  aco status [--session <id>]
+  aco result [--session <id>] [--run <runId|latest>]
+  aco status [--session <id>] [--run <runId|latest>]
   aco cancel [--session <id>]
   aco pack install [--global] [--force] [--binary-name <name>]
   aco pack uninstall [--global]
