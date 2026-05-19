@@ -15,8 +15,10 @@ import { buildProviderEnv } from '../src/util/provider-env.js';
 import { writeTempInput } from '../src/util/spawn-stream.js';
 import { SessionStore } from '../src/session/store.js';
 import { MockProvider } from '../src/providers/mock.js';
+import { CodexProvider } from '../src/providers/codex.js';
 import { invokeProviderForSession } from '../src/runtime/provider-session-runner.js';
 import { Writable } from 'node:stream';
+import { delimiter } from 'node:path';
 
 // ── 헬퍼: fake binary 작성 ────────────────────────────────────────────────────
 
@@ -244,6 +246,90 @@ process.stdout.write(process.env.GEMINI_API_KEY ?? 'UNDEFINED');
       },
       'openSync failure must propagate as an error, not be swallowed',
     );
+  });
+
+  // ── 6b. CodexProvider.invoke가 prompt+content를 stdin으로 합쳐 보낸다 ─────
+  //
+  // codex exec는 PROMPT positional이 비어 있거나 `-`일 때만 stdin에서 프롬프트를 읽으므로,
+  // content가 있을 때 argv에 prompt만 두고 content를 stdin으로 보내면 codex가 content를
+  // 무시한다. CodexProvider는 prompt+content를 하나로 합쳐 stdin으로 보내고 argv에는
+  // `-`를 두어야 한다.
+
+  it('CodexProvider.invoke routes prompt+content to stdin and uses `-` placeholder in argv', async () => {
+    // fake codex binary: argv와 stdin을 명시적 토큰으로 구분하여 stdout에 출력한다.
+    const binary = await makeBinary(
+      tmpBin,
+      'codex',
+      `
+const chunks = [];
+process.stdin.on('data', (d) => chunks.push(d));
+process.stdin.on('end', () => {
+  const stdin = Buffer.concat(chunks).toString('utf8');
+  const argv = process.argv.slice(2).join('|');
+  process.stdout.write('ARGV=' + argv + '\\n@@SPLIT@@\\n' + 'STDIN=' + stdin);
+});
+`
+    );
+
+    const originalPath = process.env.PATH;
+    process.env.PATH = `${tmpBin}${delimiter}${originalPath ?? ''}`;
+
+    try {
+      const provider = new CodexProvider();
+      const chunks: string[] = [];
+      for await (const chunk of provider.invoke('ask', 'SHORT_PROMPT', 'LARGE_CONTENT_PAYLOAD')) {
+        chunks.push(chunk);
+      }
+      const output = chunks.join('');
+      const [argvPart, stdinPart] = output.split('\n@@SPLIT@@\n');
+
+      // argv에는 content가 들어가지 않아야 한다 (보안 목적).
+      assert.ok(
+        !argvPart.includes('LARGE_CONTENT_PAYLOAD'),
+        `argv must NOT contain content. Got argv: ${argvPart}`
+      );
+      // argv는 `-`로 끝나야 한다 (codex가 stdin에서 prompt를 읽도록).
+      assert.ok(
+        argvPart.endsWith('|-'),
+        `argv must end with '-' placeholder. Got argv: ${argvPart}`
+      );
+      // stdin에는 prompt + content가 모두 포함되어야 한다.
+      assert.ok(
+        stdinPart.includes('SHORT_PROMPT') && stdinPart.includes('LARGE_CONTENT_PAYLOAD'),
+        `stdin must include both prompt and content. Got stdin: ${stdinPart.slice(0, 200)}`
+      );
+    } finally {
+      process.env.PATH = originalPath;
+    }
+  });
+
+  // ── 6c. spawn 동기 throw에서도 stdinFile이 cleanup된다 ────────────────────
+  //
+  // spawn은 일부 invalid option 등으로 동기 throw를 던질 수 있다. 그 경로에서도
+  // 미리 작성된 임시 입력 파일이 누수되지 않아야 한다.
+
+  it('cleans up stdinFile when spawn throws synchronously', async () => {
+    const stdinFile = await writeTempInput('throw-cleanup-payload');
+    await stat(stdinFile); // 존재 확인
+
+    // 존재하지 않는 binary는 비동기 'error' 이벤트로 보고되어 cleanup이
+    // 'close'/'error' 핸들러 경로에서 수행된다. 이 시나리오도 stdinFile이
+    // 사라지는지 확인한다.
+    await assert.rejects(async () => {
+      for await (const _ of spawnStream(
+        '/path/that/does/not/exist/aco-binary',
+        [],
+        { processName: 'nonexistent', stdin: 'pipe', stdinFile }
+      )) {
+        // drain
+      }
+    });
+
+    await assert.rejects(stat(stdinFile), (err: unknown) => {
+      assert.ok(err instanceof Error && 'code' in err);
+      assert.strictEqual((err as NodeJS.ErrnoException).code, 'ENOENT');
+      return true;
+    });
   });
 
   // ── 7. envPolicy가 session ledger에 기록된다 ──────────────────────────────

@@ -105,8 +105,12 @@ export class CodexProvider implements IProvider {
     const env = buildProviderEnv(['OPENAI_API_KEY']);
 
     if (content) {
-      const stdinFile = await writeTempInput(content);
-      const args = [...this.buildArgs(command, options), prompt];
+      // codex exec는 PROMPT positional이 비어 있거나 `-`일 때만 stdin에서 프롬프트를 읽는다.
+      // 보안 목적으로 full input을 argv에 남기지 않기 위해 prompt+content를 합쳐 stdin으로
+      // 보내고, argv에는 `-`만 둔다.
+      const combined = `${prompt}\n\n${content}`;
+      const stdinFile = await writeTempInput(combined);
+      const args = [...this.buildArgs(command, options), '-'];
       yield* spawnStream(
         binary,
         args,

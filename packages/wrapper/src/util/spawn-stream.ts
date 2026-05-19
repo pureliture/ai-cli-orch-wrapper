@@ -143,11 +143,22 @@ export async function* spawnStream(
 
   const stdinValue: 'ignore' | 'pipe' | number = stdinFd !== undefined ? stdinFd : config.stdin;
 
-  const child = spawn(binary, args, {
-    stdio: [stdinValue, 'pipe', 'pipe'],
-    detached: process.platform !== 'win32',
-    ...(config.env !== undefined && { env: config.env }),
-  });
+  // spawn은 옵션 검증 등으로 동기 throw가 가능하므로, 그 경우에도
+  // stdinFd와 임시 파일이 누수되지 않도록 try/catch로 감싼다.
+  let child: ReturnType<typeof spawn>;
+  try {
+    child = spawn(binary, args, {
+      stdio: [stdinValue, 'pipe', 'pipe'],
+      detached: process.platform !== 'win32',
+      ...(config.env !== undefined && { env: config.env }),
+    });
+  } catch (err) {
+    if (stdinFd !== undefined) {
+      closeSync(stdinFd);
+    }
+    await cleanupStdinFile();
+    throw err;
+  }
 
   // fd는 spawn 호출 직후 닫는다 (child process가 상속한 fd를 계속 사용).
   if (stdinFd !== undefined) {

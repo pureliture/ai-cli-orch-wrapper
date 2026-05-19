@@ -115,6 +115,49 @@ describe('aco delegate CLI', () => {
     assert.match(result.stderr, /nonexistent-agent-xyz/);
   });
 
+  it('rejects path-traversal characters in agent-id', async () => {
+    const tmpDir = await makeTemp();
+    const result = await runCli(['delegate', '../etc/passwd', '--input', 'test'], {
+      cwd: tmpDir,
+    });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /agent-id/);
+    // Must not surface a resolved /etc/passwd path or read attempt.
+    assert.doesNotMatch(result.stderr, /\/etc\/passwd/);
+  });
+
+  it('rejects agent-id beginning with a dash', async () => {
+    const tmpDir = await makeTemp();
+    const result = await runCli(['delegate', '-foo', '--input', 'test'], { cwd: tmpDir });
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /agent-id/);
+  });
+
+  it('resolves promptSeedFile relative to cwd when spec-dir candidate is missing', async () => {
+    const tmpDir = await makeTemp();
+    // Repo-root style layout: agent spec under .claude/agents, seed under .aco/prompts.
+    await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
+    await mkdir(join(tmpDir, '.aco', 'prompts'), { recursive: true });
+    await writeFile(
+      join(tmpDir, '.claude', 'agents', 'reviewer.md'),
+      [
+        '---',
+        'id: reviewer',
+        'promptSeedFile: .aco/prompts/reviewer.md',
+        '---',
+        'Reviewer body.',
+      ].join('\n')
+    );
+    await writeFile(join(tmpDir, '.aco', 'prompts', 'reviewer.md'), 'Root-rooted seed content.');
+
+    const result = await runCli(['delegate', 'reviewer', '--input', 'pr diff'], { cwd: tmpDir });
+
+    assert.equal(result.code, 0, `stderr: ${result.stderr}`);
+    assert.match(result.stdout, /Root-rooted seed content\./);
+    assert.match(result.stdout, /Reviewer body\./);
+    assert.match(result.stdout, /pr diff/);
+  });
+
   it('--input-file flag reads content from file', async () => {
     const tmpDir = await makeTemp();
     await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });

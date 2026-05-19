@@ -23,17 +23,23 @@ export async function cmdDelegate(args: string[]): Promise<void> {
     process.exit(0);
   }
 
-  // First positional arg is agent ID
-  const positional = args.filter((a) => !a.startsWith('-'));
-  const agentId = positional[0];
-
-  if (!agentId) {
-    process.stderr.write('Error: agent-id is required\n');
+  // First positional arg is agent ID. Enforce strict whitelist to prevent path traversal:
+  // agent IDs must be alphanumeric/hyphen/underscore so they cannot escape `.claude/agents/`.
+  const agentId = args[0];
+  if (
+    !agentId ||
+    agentId.startsWith('-') ||
+    !/^[a-zA-Z0-9_-]+$/.test(agentId)
+  ) {
+    process.stderr.write(
+      'Error: agent-id is required as the first argument (alphanumeric, hyphen, underscore only)\n'
+    );
     process.stderr.write(USAGE);
     process.exit(1);
   }
 
-  const specFilePath = resolve(join(process.cwd(), '.claude', 'agents', agentId + '.md'));
+  const cwd = process.cwd();
+  const specFilePath = resolve(join(cwd, '.claude', 'agents', agentId + '.md'));
 
   if (!existsSync(specFilePath)) {
     process.stderr.write(`Agent spec not found: ${specFilePath}\n`);
@@ -46,15 +52,28 @@ export async function cmdDelegate(args: string[]): Promise<void> {
   let seedContent = '';
   if (spec.promptSeedFile) {
     const specDir = dirname(specFilePath);
-    const resolvedSeedPath = join(specDir, spec.promptSeedFile);
-    if (!resolvedSeedPath.startsWith(specDir + '/')) {
-      process.stderr.write(
-        `promptSeedFile must be within agent spec directory: ${resolvedSeedPath}\n`
-      );
-      process.exit(1);
+
+    // Resolve promptSeedFile in two stages so both agent-spec-local seeds
+    // (e.g. `seeds/foo.md` next to the spec) and project-rooted seeds
+    // (e.g. `.aco/prompts/reviewer.md` shipped at the repo root) work.
+    const candidates = [resolve(specDir, spec.promptSeedFile), resolve(cwd, spec.promptSeedFile)];
+
+    const cwdPrefix = cwd.endsWith('/') ? cwd : cwd + '/';
+    let resolvedSeedPath: string | undefined;
+    for (const candidate of candidates) {
+      // Path traversal guard: every candidate must stay inside cwd.
+      if (candidate !== cwd && !candidate.startsWith(cwdPrefix)) {
+        continue;
+      }
+      if (existsSync(candidate)) {
+        resolvedSeedPath = candidate;
+        break;
+      }
     }
-    if (!existsSync(resolvedSeedPath)) {
-      process.stderr.write(`promptSeedFile not found: ${resolvedSeedPath}\n`);
+
+    if (!resolvedSeedPath) {
+      // Report the spec-dir-relative candidate so users see the canonical path first.
+      process.stderr.write(`promptSeedFile not found: ${candidates[0]}\n`);
       process.exit(1);
     }
     seedContent = await readFile(resolvedSeedPath, 'utf8');
