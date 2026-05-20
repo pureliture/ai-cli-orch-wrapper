@@ -41,32 +41,32 @@
   <circle cx="197" cy="180" r="9" fill="#3b82f6"></circle>
   <text x="197" y="180" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">2</text>
   <rect x="252" y="158" width="135" height="18" rx="9" fill="white" stroke="#a78bfa" stroke-width="1"></rect>
-  <text x="319" y="167" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">계획 표시, 실행 없음</text>
+  <text x="319" y="167" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">Show plan; no execution</text>
   <line x1="240" y1="180" x2="394" y2="180" stroke="#8b5cf6" stroke-width="1.5" marker-end="url(#arr-p-sl)"></line>
   <circle cx="197" cy="225" r="9" fill="#3b82f6"></circle>
   <text x="197" y="225" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">3</text>
   <rect x="410" y="203" width="220" height="18" rx="9" fill="white" stroke="#2dd4bf" stroke-width="1"></rect>
-  <text x="520" y="212" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">--yes로 실행 + 세션 생성</text>
+  <text x="520" y="212" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">--yes creates session</text>
   <line x1="240" y1="225" x2="676" y2="225" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-t-sl)"></line>
   <circle cx="197" cy="270" r="9" fill="#3b82f6"></circle>
   <text x="197" y="270" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">4</text>
   <rect x="330" y="248" width="180" height="18" rx="9" fill="white" stroke="#34d399" stroke-width="1"></rect>
-  <text x="420" y="257" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">어드바이저리 프로바이더 호출</text>
+  <text x="420" y="257" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">Invoke advisory provider</text>
   <line x1="240" y1="270" x2="544" y2="270" stroke="#10b981" stroke-width="1.5" marker-end="url(#arr-g-sl)"></line>
   <circle cx="595" cy="315" r="9" fill="#10b981"></circle>
   <text x="595" y="315" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">5</text>
   <rect x="270" y="293" width="160" height="18" rx="9" fill="white" stroke="#34d399" stroke-width="1"></rect>
-  <text x="350" y="302" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">전체 출력 스트리밍</text>
+  <text x="350" y="302" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">Stream full output</text>
   <line x1="550" y1="315" x2="246" y2="315" stroke="#10b981" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-g-sl)"></line>
   <circle cx="197" cy="360" r="9" fill="#3b82f6"></circle>
   <text x="197" y="360" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">6</text>
   <rect x="410" y="338" width="220" height="18" rx="9" fill="white" stroke="#2dd4bf" stroke-width="1"></rect>
-  <text x="520" y="347" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">레저 + 요약 + 로그 기록</text>
+  <text x="520" y="347" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">Write ledger + brief + logs</text>
   <line x1="240" y1="360" x2="676" y2="360" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-t-sl)"></line>
   <circle cx="285" cy="405" r="9" fill="#3b82f6"></circle>
   <text x="285" y="405" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">7</text>
   <rect x="100" y="383" width="135" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"></rect>
-  <text x="167" y="392" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">요약 / 경로 반환</text>
+  <text x="167" y="392" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="500" fill="#1e293b">Return summary / paths</text>
   <line x1="240" y1="405" x2="91" y2="405" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-b-sl)"></line>
   <line x1="40" y1="445" x2="80" y2="445" stroke="#3b82f6" stroke-width="1.5"></line>
   <text x="88" y="445" dominant-baseline="middle" font-size="10" fill="#475569">solid: request</text>
