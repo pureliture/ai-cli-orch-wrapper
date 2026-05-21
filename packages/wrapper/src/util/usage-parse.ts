@@ -60,13 +60,27 @@ async function readLastJsonlLine(filePath: string): Promise<string | null | type
     // tail 쪽으로 누적해 가는 버퍼. 가장 오른쪽 바이트가 파일 끝이다.
     let tail: Buffer = Buffer.alloc(0);
     let position = size;
+    // 본문(non-newline) byte가 한 번이라도 관찰되었는지. newline-only 파일을
+    // 기존 readFile 구현과 동일하게 unavailable로 매핑하기 위한 추적값이다.
+    let hasContent = false;
 
     while (position > 0) {
-      const readLen = Math.min(TAIL_BLOCK_BYTES, position);
-      position -= readLen;
-      const block = Buffer.alloc(readLen);
-      await handle.read(block, 0, readLen, position);
-      tail = Buffer.concat([block, tail]);
+      const desiredLen = Math.min(TAIL_BLOCK_BYTES, position);
+      // allocUnsafe: 직후 read()가 [0, bytesRead) 영역을 채우고, 우리는 정확히
+      // 그 영역만 subarray로 사용하므로 uninitialized 메모리가 새지 않는다.
+      const block = Buffer.allocUnsafe(desiredLen);
+      const { bytesRead } = await handle.read(block, 0, desiredLen, position - desiredLen);
+      if (bytesRead === 0) {
+        // 더 이상 읽어들일 바이트가 없다. 부분 읽기 또는 동시 truncation으로
+        // 도달 가능. 누적된 tail을 그대로 사용하여 종료한다.
+        break;
+      }
+      position -= bytesRead;
+      const actualBlock = bytesRead === desiredLen ? block : block.subarray(0, bytesRead);
+      if (!hasContent && containsNonNewline(actualBlock)) {
+        hasContent = true;
+      }
+      tail = Buffer.concat([actualBlock, tail]);
 
       const lineStart = findLastLineStart(tail);
       if (lineStart !== -1) {
@@ -77,12 +91,19 @@ async function readLastJsonlLine(filePath: string): Promise<string | null | type
       }
 
       if (tail.length > MAX_LAST_LINE_BYTES) {
-        return null;
+        // 본문 newline을 아직 못 만났는데 누적 tail이 안전 상한을 넘었다.
+        // - 본문이 없었다면(newline-only) 기존 readFile 구현과 동일하게 '' →
+        //   unavailable로 매핑한다.
+        // - 본문이 있었다면 진짜로 단일 라인이 1 MB를 초과한 것으로 parse_error.
+        return hasContent ? null : '';
       }
     }
 
     // 파일 앞까지 도달했고 본문 newline을 만나지 못했다.
-    // tail 전체가 한 줄(또는 newline-only로 본문이 비어 있어 decodeLineRange가 빈 문자열을 반환하는 경우).
+    if (!hasContent) {
+      // newline-only 또는 빈 본문 — unavailable로 매핑.
+      return '';
+    }
     if (tail.length > MAX_LAST_LINE_BYTES) {
       return null;
     }
@@ -90,6 +111,16 @@ async function readLastJsonlLine(filePath: string): Promise<string | null | type
   } finally {
     await handle.close();
   }
+}
+
+/** Buffer에 newline(0x0a)이 아닌 byte가 하나라도 존재하는지. */
+function containsNonNewline(buf: Buffer): boolean {
+  for (let i = 0; i < buf.length; i++) {
+    if (buf[i] !== 0x0a) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**

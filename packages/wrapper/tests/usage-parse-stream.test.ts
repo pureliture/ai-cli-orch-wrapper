@@ -116,6 +116,26 @@ describe('parseGeminiUsage last-line stream contract', () => {
     assert.equal(result.usageStatus, 'unavailable');
   });
 
+  // ── newline-only가 MAX_LAST_LINE_BYTES를 초과해도 unavailable ────────────
+  //
+  // 기존 readFile 구현은 `content.trim().split('\n').filter(Boolean)` 후
+  // lines.length === 0 → unavailable로 매핑했다. tail-block reverse read 구현
+  // 도입 이후 1 MB 초과 newline-only 파일이 parse_error로 오분류되어 분기
+  // 호환성이 깨졌다(PR #138 review r3274272924). 이 회귀 케이스는 본 contract을
+  // 다시 보장한다. 파일 자체는 10 MB 미만(MAX_JSONL_BYTES 통과)이어야 한다.
+  it('returns unavailable for a newline-only file larger than MAX_LAST_LINE_BYTES (1 MB)', async () => {
+    // 2 MB의 \n. MAX_LAST_LINE_BYTES(1 MB) 초과, MAX_JSONL_BYTES(10 MB) 미만.
+    const content = '\n'.repeat(2 * 1024 * 1024);
+    await makeSessionFile({ fakeHome, content });
+
+    const result = await parseGeminiUsage('test');
+    assert.equal(
+      result.usageStatus,
+      'unavailable',
+      `newline-only 파일은 크기와 무관하게 unavailable. 실제: ${result.usageStatus}`
+    );
+  });
+
   // ── malformed JSON last line → parse_error + nativeSessionPath ───────────
   it('returns parse_error when the last JSONL line is not valid JSON', async () => {
     const filePath = await makeSessionFile({

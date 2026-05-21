@@ -42,7 +42,7 @@
 
 ## 7. PR — stacked on #135
 
-- [ ] 7.1 첫 push: `git push -u origin chore/137-stream-read-last-line-in-parsegeminiusage`. force-push/amend 사용 금지.
-- [ ] 7.2 `/gh-pr` 워크플로우로 PR을 생성한다. **base=`feat/134-harden-aco-runtime-evidence-artifacts-and-delegate-surface`, head=`chore/137-stream-read-last-line-in-parsegeminiusage`**. 본문에 `Closes #137`과 PR #135와의 stacked 관계, 회귀 테스트 결과를 명시한다.
-- [ ] 7.3 PR 생성 후 Project `Status=In Review`, 라벨 동기화(`type:chore`, `area:wrapper`, `origin:review`) 결과를 확인한다.
-- [ ] 7.4 PR #135가 main에 머지되면 GitHub가 base를 main으로 자동 redirect함을 확인하고, conflict가 있으면 별도 follow-up commit으로 해결한다 (force-push 없이).
+- [x] 7.1 첫 push 완료 (`git push -u origin chore/137-...`, force-push/amend 없음). HEAD: `5aa4588 perf(usage-parse): stream-read last JSONL line in parseGeminiUsage`.
+- [x] 7.2 PR #138 생성: base=PR #135 브랜치, head=`chore/137-...`, 본문에 `Closes #137`·stacked 관계·검증 결과 명시. URL: https://github.com/pureliture/ai-cli-orch-wrapper/pull/138
+- [x] 7.3 Project `Status=In Review` 설정(PR + Issue #137 모두), 라벨 동기화 완료(`type:chore`, `area:wrapper`, `origin:review`).
+- [ ] 7.4 PR #135가 main에 머지되면 GitHub가 base를 main으로 자동 redirect함을 확인하고, conflict가 있으면 별도 follow-up commit으로 해결한다 (force-push 없이). — PR #135 머지 후 처리.
