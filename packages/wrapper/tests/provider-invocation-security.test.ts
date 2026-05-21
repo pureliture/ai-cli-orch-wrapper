@@ -213,6 +213,49 @@ process.stdout.write(process.env.GEMINI_API_KEY ?? 'UNDEFINED');
     }
   });
 
+  // ── 5b. base allowlist에 USERPROFILE이 포함되어 전달된다 ──────────────────
+  //
+  // HOME이 비어 있는 환경에서도 child CLI가 home 기반 경로(provider OAuth/session
+  // 파일)를 해석할 수 있도록 USERPROFILE을 base allowlist에 포함한다. process.env에
+  // 값이 있으면 child로 전달되어야 한다.
+
+  it('passes USERPROFILE through the base env allowlist when present', async () => {
+    const savedProfile = process.env.USERPROFILE;
+    process.env.USERPROFILE = '/home/test-user-profile';
+
+    try {
+      const env = buildProviderEnv([]);
+      assert.equal(
+        env.USERPROFILE,
+        '/home/test-user-profile',
+        `USERPROFILE must be allowlisted in base env. Got: ${String(env.USERPROFILE)}`
+      );
+    } finally {
+      if (savedProfile === undefined) {
+        delete process.env.USERPROFILE;
+      } else {
+        process.env.USERPROFILE = savedProfile;
+      }
+    }
+  });
+
+  it('omits USERPROFILE from env when it is not set on the parent', async () => {
+    const savedProfile = process.env.USERPROFILE;
+    delete process.env.USERPROFILE;
+
+    try {
+      const env = buildProviderEnv([]);
+      assert.ok(
+        !('USERPROFILE' in env),
+        `USERPROFILE must be absent when parent has none. Got keys: ${Object.keys(env).join(',')}`
+      );
+    } finally {
+      if (savedProfile !== undefined) {
+        process.env.USERPROFILE = savedProfile;
+      }
+    }
+  });
+
   // ── 6. stdinFile이 존재하지 않으면 openSync 오류가 전파된다 ───────────────
 
   it('propagates openSync error when stdinFile does not exist', async () => {

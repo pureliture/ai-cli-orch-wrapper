@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
-import { join, dirname, resolve } from 'node:path';
+import { join, dirname, resolve, relative, isAbsolute, sep } from 'node:path';
 import process from 'node:process';
 import { parseAgentSpec } from '../sync/agent-parse.js';
 
@@ -54,11 +54,15 @@ export async function cmdDelegate(args: string[]): Promise<void> {
     // (e.g. `.aco/prompts/reviewer.md` shipped at the repo root) work.
     const candidates = [resolve(specDir, spec.promptSeedFile), resolve(cwd, spec.promptSeedFile)];
 
-    const cwdPrefix = cwd.endsWith('/') ? cwd : cwd + '/';
     let resolvedSeedPath: string | undefined;
     for (const candidate of candidates) {
-      // Path traversal guard: every candidate must stay inside cwd.
-      if (candidate !== cwd && !candidate.startsWith(cwdPrefix)) {
+      // Path traversal guard: every candidate must stay inside cwd. Use
+      // path.relative + normalized separator instead of raw string-prefix
+      // matching so that `..` segments are resolved (more robust on POSIX,
+      // and incidentally correct across separators).
+      const rel = relative(cwd, candidate);
+      const escapesCwd = rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel);
+      if (escapesCwd) {
         continue;
       }
       if (existsSync(candidate)) {

@@ -158,6 +158,30 @@ describe('aco delegate CLI', () => {
     assert.match(result.stdout, /pr diff/);
   });
 
+  it('rejects a promptSeedFile that escapes cwd via .. segments', async () => {
+    const tmpDir = await makeTemp();
+    await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
+    await writeFile(
+      join(tmpDir, '.claude', 'agents', 'escaping-agent.md'),
+      [
+        '---',
+        'id: escaping-agent',
+        // .. 세그먼트로 cwd 밖(tmpDir 상위)의 파일을 가리키려는 시도.
+        'promptSeedFile: ../../../../../../../../etc/hosts',
+        '---',
+        'Body.',
+      ].join('\n')
+    );
+
+    const result = await runCli(['delegate', 'escaping-agent', '--input', 'x'], { cwd: tmpDir });
+
+    // 경계 밖 후보는 모두 건너뛰므로 seed를 찾지 못해 not found로 종료한다.
+    assert.equal(result.code, 1);
+    assert.match(result.stderr, /not found/i);
+    // /etc/hosts 같은 cwd 밖 파일을 읽어 출력해서는 안 된다.
+    assert.doesNotMatch(result.stdout, /localhost/);
+  });
+
   it('--input-file flag reads content from file', async () => {
     const tmpDir = await makeTemp();
     await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
