@@ -190,8 +190,8 @@ export async function parseGeminiUsage(sessionId: string): Promise<UsageResult> 
 
     const jsonlFiles = chatFiles.filter((f) => f.endsWith('.jsonl'));
     for (const jsonlFile of jsonlFiles) {
-      // session ID와 파일명 매칭 시도
-      if (!jsonlFile.includes(sessionId) && jsonlFiles.length > 1) {
+      // session ID와 파일명 매칭
+      if (!jsonlFile.includes(sessionId)) {
         continue;
       }
 
@@ -234,8 +234,7 @@ export async function parseGeminiUsage(sessionId: string): Promise<UsageResult> 
         typeof parsed['totalOutputTokenCount'] === 'number'
           ? parsed['totalOutputTokenCount']
           : undefined;
-      const model =
-        typeof parsed['modelVersion'] === 'string' ? parsed['modelVersion'] : undefined;
+      const model = typeof parsed['modelVersion'] === 'string' ? parsed['modelVersion'] : undefined;
 
       if (inputTokens === undefined && outputTokens === undefined && model === undefined) {
         return { usageStatus: 'parse_error', nativeSessionPath: filePath };

@@ -52,7 +52,7 @@ describe('parseGeminiUsage file size guard', () => {
       `파일 크기 ${fileStats.size}가 10MB를 초과해야 함`
     );
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'unavailable');
   });
 });
@@ -88,7 +88,7 @@ describe('parseGeminiUsage valid content within size limit', () => {
     const filePath = join(chatDir, 'session-small.jsonl');
     await writeFile(filePath, validLine + '\n', { encoding: 'utf8' });
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'captured');
     assert.equal(result.inputTokens, 100);
     assert.equal(result.outputTokens, 50);

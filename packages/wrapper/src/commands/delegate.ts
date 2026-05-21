@@ -26,11 +26,7 @@ export async function cmdDelegate(args: string[]): Promise<void> {
   // First positional arg is agent ID. Enforce strict whitelist to prevent path traversal:
   // agent IDs must be alphanumeric/hyphen/underscore so they cannot escape `.claude/agents/`.
   const agentId = args[0];
-  if (
-    !agentId ||
-    agentId.startsWith('-') ||
-    !/^[a-zA-Z0-9_-]+$/.test(agentId)
-  ) {
+  if (!agentId || agentId.startsWith('-') || !/^[a-zA-Z0-9_-]+$/.test(agentId)) {
     process.stderr.write(
       'Error: agent-id is required as the first argument (alphanumeric, hyphen, underscore only)\n'
     );

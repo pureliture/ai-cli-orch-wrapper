@@ -63,7 +63,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
   // ── tmp 디렉토리 미존재 → unavailable ─────────────────────────────────────
   it('returns unavailable when ~/.gemini/tmp does not exist at all', async () => {
     // fakeHome은 mkdtemp로 만들었지만 .gemini/tmp는 아직 없음.
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'unavailable');
   });
 
@@ -78,7 +78,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
     });
     await makeSessionFile({ fakeHome, content: `${earlier}\n${middle}\n${last}\n` });
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'captured');
     assert.equal(result.inputTokens, 999);
     assert.equal(result.outputTokens, 333);
@@ -95,7 +95,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
     });
     await makeSessionFile({ fakeHome, content: `${earlier}\n${last}` });
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'captured');
     assert.equal(result.inputTokens, 42);
     assert.equal(result.outputTokens, 21);
@@ -105,14 +105,14 @@ describe('parseGeminiUsage last-line stream contract', () => {
   // ── 빈 파일 → unavailable ─────────────────────────────────────────────────
   it('returns unavailable for an empty JSONL file', async () => {
     await makeSessionFile({ fakeHome, content: '' });
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'unavailable');
   });
 
   // ── 모두 newline만 있는 파일 → unavailable ────────────────────────────────
   it('returns unavailable for a JSONL file containing only newlines', async () => {
     await makeSessionFile({ fakeHome, content: '\n\n\n' });
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'unavailable');
   });
 
@@ -128,7 +128,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
     const content = '\n'.repeat(2 * 1024 * 1024);
     await makeSessionFile({ fakeHome, content });
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(
       result.usageStatus,
       'unavailable',
@@ -142,7 +142,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
       fakeHome,
       content: '{"totalInputTokenCount":1,"totalOutputTokenCount":1,"modelVersion":"a"}\nNOT_JSON\n',
     });
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'parse_error');
     assert.equal(result.nativeSessionPath, filePath);
   });
@@ -153,7 +153,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
       fakeHome,
       content: '{"unrelated":"payload"}\n',
     });
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'parse_error');
     assert.equal(result.nativeSessionPath, filePath);
   });
@@ -177,7 +177,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
     const earlier = JSON.stringify({ totalInputTokenCount: 1, totalOutputTokenCount: 1, modelVersion: 'a' });
     const filePath = await makeSessionFile({ fakeHome, content: `${earlier}\n${huge}\n` });
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(
       result.usageStatus,
       'parse_error',
@@ -205,7 +205,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
     });
     await makeSessionFile({ fakeHome, content: `${fatEarlier}\n${last}\n` });
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'captured');
     assert.equal(result.inputTokens, 88);
     assert.equal(result.outputTokens, 99);
@@ -227,7 +227,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
     });
     await makeSessionFile({ fakeHome, content: `${big}\n` });
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'captured');
     assert.equal(result.inputTokens, 7);
     assert.equal(result.outputTokens, 7);
@@ -250,7 +250,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
     });
     await chmod(filePath, 0o000);
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'parse_error');
     assert.equal(result.nativeSessionPath, filePath);
 
@@ -275,7 +275,7 @@ describe('parseGeminiUsage last-line stream contract', () => {
     const content = `${(shortLine + '\n').repeat(padRepeat)}${lastLine}\n`;
     await makeSessionFile({ fakeHome, content });
 
-    const result = await parseGeminiUsage('test');
+    const result = await parseGeminiUsage('session');
     assert.equal(result.usageStatus, 'captured');
     assert.equal(result.inputTokens, 123);
     assert.equal(result.outputTokens, 456);
