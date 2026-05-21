@@ -1,181 +1,129 @@
-<svg viewBox="0 0 760 460" xmlns="http://www.w3.org/2000/svg"
-     font-family="'Segoe UI',system-ui,-apple-system,BlinkMacSystemFont,sans-serif">
+<svg viewBox="0 0 760 460" xmlns="http://www.w3.org/2000/svg" font-family="&#39;Helvetica Neue&#39;,Helvetica,Arial,sans-serif">
   <defs>
-    <!-- Background gradient -->
-    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fdf4ff"/>
-      <stop offset="50%" stop-color="#eef2ff"/>
-      <stop offset="100%" stop-color="#f0fdfa"/>
-    </linearGradient>
-
-    <!-- Component gradients -->
-    <linearGradient id="root-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1e293b"/>
-      <stop offset="100%" stop-color="#0f172a"/>
-    </linearGradient>
-    <linearGradient id="purple-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#a78bfa"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
-    </linearGradient>
-    <linearGradient id="blue-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#60a5fa"/>
-      <stop offset="100%" stop-color="#2563eb"/>
-    </linearGradient>
-    <linearGradient id="cyan-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#22d3ee"/>
-      <stop offset="100%" stop-color="#0891b2"/>
-    </linearGradient>
-    <linearGradient id="orange-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fbbf24"/>
-      <stop offset="100%" stop-color="#d97706"/>
-    </linearGradient>
-    <linearGradient id="rose-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fb7185"/>
-      <stop offset="100%" stop-color="#e11d48"/>
-    </linearGradient>
-
-    <!-- Drop shadow -->
-    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="2.5"/>
-      <feOffset dx="0" dy="2" result="offset-blur"/>
-      <feFlood flood-color="#1e1b4b" flood-opacity="0.15"/>
-      <feComposite in2="offset-blur" operator="in"/>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
+    <linearGradient id="bg-g-rs" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fdf4ff"></stop><stop offset="50%" stop-color="#eef2ff"></stop><stop offset="100%" stop-color="#f0fdfa"></stop></linearGradient>
+    <linearGradient id="root-g-rs" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#1e293b"></stop><stop offset="100%" stop-color="#0f172a"></stop></linearGradient>
+    <linearGradient id="blu-g-rs" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#60a5fa"></stop><stop offset="100%" stop-color="#2563eb"></stop></linearGradient>
+    <linearGradient id="cya-g-rs" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#22d3ee"></stop><stop offset="100%" stop-color="#0891b2"></stop></linearGradient>
+    <linearGradient id="ora-g-rs" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fbbf24"></stop><stop offset="100%" stop-color="#d97706"></stop></linearGradient>
+    <linearGradient id="pur-g-rs" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a78bfa"></stop><stop offset="100%" stop-color="#7c3aed"></stop></linearGradient>
+    <linearGradient id="ros-g-rs" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#fb7185"></stop><stop offset="100%" stop-color="#e11d48"></stop></linearGradient>
+    <linearGradient id="sla-g-rs" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#64748b"></stop><stop offset="100%" stop-color="#334155"></stop></linearGradient>
+    <linearGradient id="gm-rs" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ea4335"></stop><stop offset="33%" stop-color="#fbbc04"></stop><stop offset="66%" stop-color="#34a853"></stop><stop offset="100%" stop-color="#4285f4"></stop></linearGradient>
+    <filter id="sh-rs" x="-10%" y="-10%" width="120%" height="130%"><feGaussianBlur in="SourceAlpha" stdDeviation="2.5"></feGaussianBlur><feOffset dx="0" dy="2" result="ob"></feOffset><feFlood flood-color="#1e1b4b" flood-opacity="0.12"></feFlood><feComposite in2="ob" operator="in"></feComposite><feMerge><feMergeNode></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter>
   </defs>
 
-  <!-- Background -->
-  <rect width="760" height="460" rx="16" fill="url(#bg-grad)"/>
+  <rect width="760" height="460" rx="16" fill="url(#bg-g-rs)"></rect>
+  <circle cx="20" cy="20" r="2.5" fill="#8b5cf6" opacity="0.4"></circle><circle cx="740" cy="20" r="2.5" fill="#22d3ee" opacity="0.4"></circle>
+  <circle cx="20" cy="440" r="2.5" fill="#fb7185" opacity="0.4"></circle><circle cx="740" cy="440" r="2.5" fill="#fbbf24" opacity="0.4"></circle>
 
-  <!-- Decorative dots -->
-  <circle cx="20" cy="20" r="2.5" fill="#8b5cf6" opacity="0.4"/>
-  <circle cx="740" cy="20" r="2.5" fill="#22d3ee" opacity="0.4"/>
-  <circle cx="20" cy="440" r="2.5" fill="#fb7185" opacity="0.4"/>
-  <circle cx="740" cy="440" r="2.5" fill="#fbbf24" opacity="0.4"/>
+  <text x="380" y="28" text-anchor="middle" dominant-baseline="middle" font-size="15" font-weight="700" fill="#1e293b" letter-spacing="0.3">Repository Structure</text>
+  <line x1="290" y1="46" x2="340" y2="46" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"></line>
+  <line x1="420" y1="46" x2="470" y2="46" stroke="#22d3ee" stroke-width="2" stroke-linecap="round"></line>
+  <circle cx="380" cy="46" r="3" fill="#3b82f6"></circle>
 
-  <!-- Title -->
-  <text x="380" y="28" text-anchor="middle" dominant-baseline="middle"
-        font-size="15" font-weight="700" fill="#1e293b" letter-spacing="0.3">Repository Structure</text>
-  <line x1="290" y1="46" x2="340" y2="46" stroke="#a78bfa" stroke-width="2" stroke-linecap="round"/>
-  <line x1="420" y1="46" x2="470" y2="46" stroke="#22d3ee" stroke-width="2" stroke-linecap="round"/>
-  <circle cx="380" cy="46" r="3" fill="#3b82f6"/>
+  
+  <g filter="url(#sh-rs)"><rect x="305" y="62" width="150" height="44" rx="10" fill="url(#root-g-rs)"></rect></g>
+  <text x="380" y="76" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="#94a3b8" letter-spacing="0.5">REPOSITORY</text>
+  <text x="380" y="93" text-anchor="middle" dominant-baseline="middle" font-size="13" font-weight="700" fill="white">/ (root)</text>
 
-  <!-- ─── ROOT ─── -->
-  <g filter="url(#shadow)">
-    <rect x="305" y="65" width="150" height="44" rx="10" fill="url(#root-grad)"/>
+  
+  <path d="M 380 106 Q 380 126 85 142" stroke="#94a3b8" stroke-width="1.5" fill="none"></path>
+  <path d="M 380 106 Q 380 126 229 142" stroke="#94a3b8" stroke-width="1.5" fill="none"></path>
+  <path d="M 380 106 Q 380 126 373 142" stroke="#94a3b8" stroke-width="1.5" fill="none"></path>
+  <path d="M 380 106 Q 380 126 517 142" stroke="#94a3b8" stroke-width="1.5" fill="none"></path>
+  <path d="M 380 106 Q 380 126 661 142" stroke="#94a3b8" stroke-width="1.5" fill="none"></path>
+
+  
+  <g filter="url(#sh-rs)">
+    <rect x="16" y="142" width="138" height="122" rx="10" fill="white" stroke="#60a5fa" stroke-width="1.5"></rect>
+    <rect x="16" y="142" width="138" height="30" rx="10" fill="url(#blu-g-rs)"></rect>
+    <rect x="16" y="157" width="138" height="15" fill="url(#blu-g-rs)"></rect>
   </g>
-  <text x="380" y="79" text-anchor="middle" dominant-baseline="middle"
-        font-size="11" font-weight="700" fill="#94a3b8" letter-spacing="0.5">REPOSITORY</text>
-  <text x="380" y="96" text-anchor="middle" dominant-baseline="middle"
-        font-size="14" font-weight="700" fill="white">📂  /</text>
+  <text x="85" y="157" text-anchor="middle" dominant-baseline="middle" font-size="10.5" font-weight="700" fill="white">packages/</text>
+  <text x="24" y="187" font-size="9" fill="#1e293b" font-weight="600">wrapper/</text>
+  <text x="30" y="201" font-size="8.5" fill="#64748b">aco CLI · runtime</text>
+  <text x="30" y="214" font-size="8.5" fill="#64748b">ask · run · sync</text>
+  <text x="24" y="230" font-size="9" fill="#1e293b" font-weight="600">installer/</text>
+  <text x="30" y="244" font-size="8.5" fill="#64748b">entrypoints</text>
 
-  <!-- ─── BRANCHES (curved lines from root) ─── -->
-  <path d="M 380 109 Q 380 130 100 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
-  <path d="M 380 109 Q 380 130 240 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
-  <path d="M 380 109 Q 380 130 380 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
-  <path d="M 380 109 Q 380 130 520 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
-  <path d="M 380 109 Q 380 130 660 145" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
-
-  <!-- ───── BRANCH 1: packages/ (Node.js) ───── -->
-  <g filter="url(#shadow)">
-    <rect x="35" y="145" width="170" height="125" rx="10" fill="white" stroke="#60a5fa" stroke-width="1.5"/>
-    <rect x="35" y="145" width="170" height="32" rx="10" fill="url(#blue-grad)"/>
-    <rect x="35" y="161" width="170" height="16" fill="url(#blue-grad)"/>
+  
+  <g filter="url(#sh-rs)">
+    <rect x="160" y="142" width="138" height="122" rx="10" fill="white" stroke="#22d3ee" stroke-width="1.5"></rect>
+    <rect x="160" y="142" width="138" height="30" rx="10" fill="url(#cya-g-rs)"></rect>
+    <rect x="160" y="157" width="138" height="15" fill="url(#cya-g-rs)"></rect>
   </g>
-  <text x="120" y="161" text-anchor="middle" dominant-baseline="middle"
-        font-size="12" font-weight="700" fill="white">📦  packages/</text>
-  <text x="48" y="196" font-size="10" fill="#1e293b" font-weight="600">wrapper/</text>
-  <text x="58" y="212" font-size="9.5" fill="#64748b">aco CLI · provider runtime</text>
-  <text x="58" y="226" font-size="9.5" fill="#64748b">ask · doctor · run · sync · pack</text>
-  <text x="48" y="246" font-size="10" fill="#1e293b" font-weight="600">installer/</text>
-  <text x="58" y="262" font-size="9.5" fill="#64748b">install-time entrypoints</text>
+  <text x="229" y="157" text-anchor="middle" dominant-baseline="middle" font-size="10.5" font-weight="700" fill="white">Go runtime</text>
+  <text x="168" y="187" font-size="9" fill="#1e293b" font-weight="600">cmd/aco/</text>
+  <text x="174" y="201" font-size="8.5" fill="#64748b">CLI entrypoint</text>
+  <text x="174" y="214" font-size="8.5" fill="#64748b">delegate · run</text>
+  <text x="168" y="230" font-size="9" fill="#1e293b" font-weight="600">internal/</text>
+  <text x="174" y="244" font-size="8.5" fill="#64748b">provider · runner</text>
 
-  <!-- ───── BRANCH 2: cmd + internal (Go) ───── -->
-  <g filter="url(#shadow)">
-    <rect x="225" y="145" width="170" height="125" rx="10" fill="white" stroke="#22d3ee" stroke-width="1.5"/>
-    <rect x="225" y="145" width="170" height="32" rx="10" fill="url(#cyan-grad)"/>
-    <rect x="225" y="161" width="170" height="16" fill="url(#cyan-grad)"/>
+  
+  <g filter="url(#sh-rs)">
+    <rect x="304" y="142" width="138" height="122" rx="10" fill="white" stroke="#fbbf24" stroke-width="1.5"></rect>
+    <rect x="304" y="142" width="138" height="30" rx="10" fill="url(#ora-g-rs)"></rect>
+    <rect x="304" y="157" width="138" height="15" fill="url(#ora-g-rs)"></rect>
   </g>
-  <text x="310" y="161" text-anchor="middle" dominant-baseline="middle"
-        font-size="12" font-weight="700" fill="white">🐹  Go runtime</text>
-  <text x="238" y="196" font-size="10" fill="#1e293b" font-weight="600">cmd/aco/</text>
-  <text x="248" y="212" font-size="9.5" fill="#64748b">Go CLI entrypoint</text>
-  <text x="248" y="226" font-size="9.5" fill="#64748b">aco delegate · run</text>
-  <text x="238" y="246" font-size="10" fill="#1e293b" font-weight="600">internal/</text>
-  <text x="248" y="262" font-size="9.5" fill="#64748b">provider · runner</text>
+  <text x="373" y="157" text-anchor="middle" dominant-baseline="middle" font-size="10.5" font-weight="700" fill="white">templates/</text>
+  <text x="312" y="187" font-size="9" fill="#1e293b" font-weight="600">commands/</text>
+  <text x="318" y="201" font-size="8.5" fill="#64748b">slash cmd templates</text>
+  <text x="312" y="220" font-size="9" fill="#1e293b" font-weight="600">aco.md</text>
+  <text x="318" y="234" font-size="8.5" fill="#64748b">generic /aco</text>
 
-  <!-- ───── BRANCH 3: templates/ ───── -->
-  <g filter="url(#shadow)">
-    <rect x="305" y="145" width="150" height="125" rx="10" fill="white" stroke="#fbbf24" stroke-width="1.5"/>
-    <rect x="305" y="145" width="150" height="32" rx="10" fill="url(#orange-grad)"/>
-    <rect x="305" y="161" width="150" height="16" fill="url(#orange-grad)"/>
+  
+  <g filter="url(#sh-rs)">
+    <rect x="448" y="142" width="138" height="122" rx="10" fill="white" stroke="#a78bfa" stroke-width="1.5"></rect>
+    <rect x="448" y="142" width="138" height="30" rx="10" fill="url(#pur-g-rs)"></rect>
+    <rect x="448" y="157" width="138" height="15" fill="url(#pur-g-rs)"></rect>
   </g>
-  <text x="380" y="161" text-anchor="middle" dominant-baseline="middle"
-        font-size="12" font-weight="700" fill="white">📋  templates/</text>
-  <text x="318" y="196" font-size="10" fill="#1e293b" font-weight="600">commands/</text>
-  <text x="328" y="212" font-size="9.5" fill="#64748b">slash command</text>
-  <text x="328" y="226" font-size="9.5" fill="#64748b">templates</text>
-  <text x="318" y="246" font-size="10" fill="#1e293b" font-weight="600">commands/aco.md</text>
-  <text x="328" y="262" font-size="9.5" fill="#64748b">generic /aco only</text>
+  <text x="517" y="157" text-anchor="middle" dominant-baseline="middle" font-size="10.5" font-weight="700" fill="white">docs/</text>
+  <text x="456" y="187" font-size="8.5" fill="#1e293b">architecture.md</text>
+  <text x="456" y="202" font-size="8.5" fill="#1e293b">security.md</text>
+  <text x="456" y="217" font-size="8.5" fill="#1e293b">session-artifacts</text>
+  <text x="456" y="232" font-size="8.5" fill="#1e293b">guides/</text>
+  <text x="456" y="247" font-size="8.5" fill="#1e293b">reference/</text>
 
-  <!-- ───── BRANCH 4: docs/ ───── -->
-  <g filter="url(#shadow)">
-    <rect x="465" y="145" width="130" height="125" rx="10" fill="white" stroke="#a78bfa" stroke-width="1.5"/>
-    <rect x="465" y="145" width="130" height="32" rx="10" fill="url(#purple-grad)"/>
-    <rect x="465" y="161" width="130" height="16" fill="url(#purple-grad)"/>
+  
+  <g filter="url(#sh-rs)">
+    <rect x="592" y="142" width="138" height="122" rx="10" fill="white" stroke="#fb7185" stroke-width="1.5"></rect>
+    <rect x="592" y="142" width="138" height="30" rx="10" fill="url(#ros-g-rs)"></rect>
+    <rect x="592" y="157" width="138" height="15" fill="url(#ros-g-rs)"></rect>
   </g>
-  <text x="530" y="161" text-anchor="middle" dominant-baseline="middle"
-        font-size="12" font-weight="700" fill="white">📚  docs/</text>
-  <text x="478" y="196" font-size="9.5" fill="#1e293b">architecture.md</text>
-  <text x="478" y="212" font-size="9.5" fill="#1e293b">security.md</text>
-  <text x="478" y="228" font-size="9.5" fill="#1e293b">session-artifacts.md</text>
-  <text x="478" y="244" font-size="9.5" fill="#1e293b">guides/</text>
-  <text x="478" y="260" font-size="9.5" fill="#1e293b">reference/</text>
+  <text x="661" y="157" text-anchor="middle" dominant-baseline="middle" font-size="10.5" font-weight="700" fill="white">.github/</text>
+  <text x="600" y="187" font-size="9" fill="#1e293b" font-weight="600">workflows/</text>
+  <text x="606" y="201" font-size="8.5" fill="#64748b">ci.yml</text>
+  <text x="606" y="214" font-size="8.5" fill="#64748b">release.yml</text>
+  <text x="606" y="228" font-size="8.5" fill="#64748b">project sync</text>
 
-  <!-- ───── BRANCH 5: .github/workflows ───── -->
-  <g filter="url(#shadow)">
-    <rect x="605" y="145" width="120" height="125" rx="10" fill="white" stroke="#fb7185" stroke-width="1.5"/>
-    <rect x="605" y="145" width="120" height="32" rx="10" fill="url(#rose-grad)"/>
-    <rect x="605" y="161" width="120" height="16" fill="url(#rose-grad)"/>
+  
+  <line x1="30" y1="284" x2="730" y2="284" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"></line>
+  <text x="380" y="298" text-anchor="middle" dominant-baseline="middle" font-size="11" font-weight="700" fill="#475569" letter-spacing="0.3">Harness Surface</text>
+
+  
+  <g filter="url(#sh-rs)">
+    <rect x="20" y="314" width="346" height="118" rx="10" fill="white" stroke="#a78bfa" stroke-width="1.5"></rect>
+    <rect x="20" y="314" width="346" height="32" rx="10" fill="url(#pur-g-rs)"></rect>
+    <rect x="20" y="330" width="346" height="16" fill="url(#pur-g-rs)"></rect>
   </g>
-  <text x="665" y="161" text-anchor="middle" dominant-baseline="middle"
-        font-size="11" font-weight="700" fill="white">🚦  .github/</text>
-  <text x="615" y="196" font-size="9.5" fill="#1e293b" font-weight="600">workflows/</text>
-  <text x="625" y="212" font-size="9" fill="#64748b">ci.yml</text>
-  <text x="625" y="226" font-size="9" fill="#64748b">release.yml</text>
-  <text x="625" y="244" font-size="9" fill="#64748b">project sync</text>
+  <rect x="36.2" y="321" width="3.6" height="18" rx="1.8" fill="#D97757" transform="rotate(0 38 330)"></rect><rect x="36.2" y="321" width="3.6" height="18" rx="1.8" fill="#D97757" transform="rotate(30 38 330)"></rect><rect x="36.2" y="321" width="3.6" height="18" rx="1.8" fill="#D97757" transform="rotate(60 38 330)"></rect><rect x="36.2" y="321" width="3.6" height="18" rx="1.8" fill="#D97757" transform="rotate(90 38 330)"></rect><rect x="36.2" y="321" width="3.6" height="18" rx="1.8" fill="#D97757" transform="rotate(120 38 330)"></rect><rect x="36.2" y="321" width="3.6" height="18" rx="1.8" fill="#D97757" transform="rotate(150 38 330)"></rect>
+  <text x="193" y="330" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="700" fill="white">.claude/  —  Source of Truth</text>
+  <text x="35" y="364" font-size="9.5" fill="#1e293b">commands/aco.md · no /aco:* explosion</text>
+  <text x="35" y="381" font-size="9.5" fill="#1e293b">skills/aco-delegation/ · aco/tasks/</text>
+  <text x="35" y="398" font-size="9.5" fill="#1e293b">settings.json · aco/prompts/ legacy</text>
+  <text x="35" y="416" font-size="9.5" fill="#94a3b8" font-style="italic">hand-maintained · task-specific behavior</text>
 
-  <!-- ─── HARNESS LAYER (Source vs Generated) ─── -->
-  <line x1="40" y1="290" x2="720" y2="290" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4,3"/>
-  <text x="380" y="305" text-anchor="middle" dominant-baseline="middle"
-        font-size="11" font-weight="700" fill="#475569" letter-spacing="0.3">Harness Surface</text>
-
-  <!-- Source: .claude/ -->
-  <g filter="url(#shadow)">
-    <rect x="50" y="320" width="320" height="115" rx="10" fill="white" stroke="#a78bfa" stroke-width="1.5"/>
-    <rect x="50" y="320" width="320" height="32" rx="10" fill="url(#purple-grad)"/>
-    <rect x="50" y="336" width="320" height="16" fill="url(#purple-grad)"/>
+  
+  <g filter="url(#sh-rs)">
+    <rect x="394" y="314" width="346" height="118" rx="10" fill="white" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3"></rect>
+    <rect x="394" y="314" width="346" height="32" rx="10" fill="url(#sla-g-rs)"></rect>
+    <rect x="394" y="330" width="346" height="16" fill="url(#sla-g-rs)"></rect>
   </g>
-  <text x="210" y="336" text-anchor="middle" dominant-baseline="middle"
-        font-size="12" font-weight="700" fill="white">🟣  .claude/  —  Source of Truth</text>
-  <text x="65" y="370" font-size="10" fill="#1e293b">📄 commands/aco.md · no /aco:* explosion</text>
-  <text x="65" y="388" font-size="10" fill="#1e293b">📁 skills/aco-delegation/ · aco/tasks/</text>
-  <text x="65" y="406" font-size="10" fill="#1e293b">⚙️ settings.json · aco/prompts/ legacy</text>
-  <text x="65" y="424" font-size="10" fill="#94a3b8" font-style="italic">hand-maintained · task-specific behavior via presets</text>
-
-  <!-- Generated targets -->
-  <g filter="url(#shadow)">
-    <rect x="390" y="320" width="320" height="115" rx="10" fill="white" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="6,3"/>
-    <rect x="390" y="320" width="320" height="32" rx="10" fill="#475569"/>
-    <rect x="390" y="336" width="320" height="16" fill="#475569"/>
-  </g>
-  <text x="550" y="336" text-anchor="middle" dominant-baseline="middle"
-        font-size="12" font-weight="700" fill="white">⚪  Generated  —  managed by aco sync</text>
-  <text x="405" y="370" font-size="10" fill="#1e293b">📄 AGENTS.md · GEMINI.md</text>
-  <text x="405" y="388" font-size="10" fill="#1e293b">📁 .agents/skills/ (ACO-owned only)</text>
-  <text x="405" y="406" font-size="10" fill="#1e293b">📁 .codex/agents/ · .gemini/agents/</text>
-  <text x="405" y="424" font-size="10" fill="#94a3b8" font-style="italic">auto-generated · .aco/sync-manifest.json tracks drift</text>
+  <text x="567" y="330" text-anchor="middle" dominant-baseline="middle" font-size="12" font-weight="700" fill="white">Generated  —  managed by aco sync</text>
+  <text x="410" y="364" font-size="9.5" fill="#1e293b">AGENTS.md · GEMINI.md</text>
+  <text x="410" y="381" font-size="9.5" fill="#1e293b">.agents/skills/ (ACO-owned only)</text>
+  <svg x="410" y="390" width="13" height="13" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="cx-rs2" gradientUnits="userSpaceOnUse" x1="12" x2="12" y1="3" y2="21"><stop stop-color="#B1A7FF"></stop><stop offset=".5" stop-color="#7A9DFF"></stop><stop offset="1" stop-color="#3941FF"></stop></linearGradient></defs><path d="M19.503 0H4.496A4.496 4.496 0 000 4.496v15.007A4.496 4.496 0 004.496 24h15.007A4.496 4.496 0 0024 19.503V4.496A4.496 4.496 0 0019.503 0z" fill="#fff"></path><path d="M9.064 3.344a4.578 4.578 0 012.285-.312c1 .115 1.891.54 2.673 1.275.01.01.024.017.037.021a.09.09 0 00.043 0 4.55 4.55 0 013.046.275l.047.022.116.057a4.581 4.581 0 012.188 2.399c.209.51.313 1.041.315 1.595a4.24 4.24 0 01-.134 1.223.123.123 0 00.03.115c.594.607.988 1.33 1.183 2.17.289 1.425-.007 2.71-.887 3.854l-.136.166a4.548 4.548 0 01-2.201 1.388.123.123 0 00-.081.076c-.191.551-.383 1.023-.74 1.494-.9 1.187-2.222 1.846-3.711 1.838-1.187-.006-2.239-.44-3.157-1.302a.107.107 0 00-.105-.024c-.388.125-.78.143-1.204.138a4.441 4.441 0 01-1.945-.466 4.544 4.544 0 01-1.61-1.335c-.152-.202-.303-.392-.414-.617a5.81 5.81 0 01-.37-.961 4.582 4.582 0 01-.014-2.298.124.124 0 00.006-.056.085.085 0 00-.027-.048 4.467 4.467 0 01-1.034-1.651 3.896 3.896 0 01-.251-1.192 5.189 5.189 0 01.141-1.6c.337-1.112.982-1.985 1.933-2.618.212-.141.413-.251.601-.33.215-.089.43-.164.646-.227a.098.098 0 00.065-.066 4.51 4.51 0 01.829-1.615 4.535 4.535 0 011.837-1.388zm3.482 10.565a.637.637 0 000 1.272h3.636a.637.637 0 100-1.272h-3.636zM8.462 9.23a.637.637 0 00-1.106.631l1.272 2.224-1.266 2.136a.636.636 0 101.095.649l1.454-2.455a.636.636 0 00.005-.64L8.462 9.23z" fill="url(#cx-rs2)"></path></svg>
+  <path d="M426,391 C427.32,395.68 427.32,395.68 432,397 C427.32,398.32 427.32,398.32 426,403 C424.68,398.32 424.68,398.32 420,397 C424.68,395.68 424.68,395.68 426,391 Z" fill="url(#gm-rs)"></path>
+  <text x="440" y="398" font-size="9.5" fill="#1e293b">.codex/agents/ · .gemini/agents/</text>
+  <text x="410" y="416" font-size="9.5" fill="#94a3b8" font-style="italic">auto-generated · .aco/sync-manifest.json tracks drift</text>
 </svg>
