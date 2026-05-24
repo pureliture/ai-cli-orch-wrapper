@@ -27,6 +27,10 @@ tmp/
 temp/
 *.tmp
 
+# Generated analysis/package staging output
+graphify-out/
+packages/wrapper/templates/
+
 # Local agent/runtime state
 .omc/
 .omx/
