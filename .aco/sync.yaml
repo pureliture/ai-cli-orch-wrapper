@@ -1,6 +1,7 @@
 skills:
   include:
     - github-kanban-ops
+    - improve-codebase-architecture
   exclude:
     - openspec-*
     - superpowers-*
