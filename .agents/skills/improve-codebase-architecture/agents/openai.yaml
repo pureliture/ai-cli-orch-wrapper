@@ -1,0 +1,4 @@
+interface:
+  display_name: "Improve Codebase Architecture"
+  short_description: "Find architecture deepening opportunities in this repository."
+  default_prompt: "Review this repository for architecture deepening opportunities and produce a temp HTML report with candidate refactors."
