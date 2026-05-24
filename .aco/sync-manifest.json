@@ -1,14 +1,15 @@
 {
-  "version": "3",
-  "generatedAt": "2026-05-15T05:02:27.588Z",
+  "version": "4",
+  "generatedAt": "2026-05-24T09:01:40.772Z",
   "sourceHashes": {
-    "CLAUDE.md": "557f8f73eaf2b069959b741e343ea6ec416f0307140de80cd7a3b0a4cf5bdc68",
+    "CLAUDE.md": "e01eb0111bdd39f95b524d5f2a3af8cfe4de3a56c53a97b9b4bc4bc6347b7fbd",
     ".claude/skills/aco-delegation/SKILL.md": "10b37c0e3489ac5d68ea253cb8d52c2188facaa097b03aa2329deda27bdf3997",
     ".claude/skills/gh-issue/SKILL.md": "16eab5668a5520c3cf20864dd635b85a418e957f90c803f75cde1ee3006261ca",
     ".claude/skills/gh-pr/SKILL.md": "cff001a7c0735dcb6572ed12e3b5738878fbb3279418064c07f6165e56544e3f",
     ".claude/skills/gh-pr-followup/SKILL.md": "d7cdc4509550a6c73411e306c92e5e76b76e768be895a62014a2beb6b178541f",
     ".claude/skills/gh-start/SKILL.md": "5b1bbb6dbae9ec49fae6f868020348bfc59f7ba710e494a075716e12e8a42b37",
-    ".claude/skills/github-kanban-ops/SKILL.md": "c39313254eb05ede630995778635198c5727f04c8f427f685c2f96a1f04955d9",
+    ".claude/skills/github-kanban-ops/SKILL.md": "de66a63bb9d1efc83ea468c7be019169854047411556db1ebb738eed294448e2",
+    ".claude/skills/improve-codebase-architecture/SKILL.md": "771ed284d4b0ec3118f549cdaa6fa468651c429affb0a4d9ebe429c56778bc19",
     ".claude/skills/openspec-apply-change/SKILL.md": "c30999a1477d6a8377d7aaa02a82ad322206ffa0cca1ddf7d95618c4577ba10f",
     ".claude/skills/openspec-archive-change/SKILL.md": "dd8783f590c0488b2026bee9aae2adbc3cda1d7152ab04e9b9cf2ff3924fce50",
     ".claude/skills/openspec-bulk-archive-change/SKILL.md": "f1636af350b977d465a2361dec5104d487883e8ca6dbaefdf438f59e4b65051d",
@@ -34,220 +35,227 @@
     ".claude/agents/researcher.md": "6c8b1ec034e574b546396503a843261418722f8f83dc84e817d28f35ec29fba3",
     ".claude/agents/reviewer.md": "e96f310278c514207ae5b1af363fdbfe2550cc4c901983ec395542c3e473db0a",
     ".claude/agents/tdd-guide.md": "de339a6158d7708000ef796f8bd5e6d7ed45fe744f443d2d84739470ba4c5f2c",
-    ".claude/agents/typescript-reviewer.md": "fd60a12dc5b804ebac6849942e4f08f7063e869ac9fde8576ebda188deefa061",
-    ".claude/settings.json": "42db338ea119564b19ced4ffe9c647201d5197c638e485c059ef80953b335aef"
+    ".claude/agents/typescript-reviewer.md": "fd60a12dc5b804ebac6849942e4f08f7063e869ac9fde8576ebda188deefa061"
   },
   "targetHashes": {
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/AGENTS.md": "b9b2cf4d0996d92e22035e3330ccc265aa654da1bb2f58a45609ea5949c22774",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/GEMINI.md": "f43d898af68e78823b70252b90f464365a915307a69de0ddf5c584477f6ffabf",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.agents/skills/github-kanban-ops": "9796d525aaf891ba1a5d030466e3c370274d3e638ff889da0eaee7b83af13482",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/architect.toml": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/chief-of-staff.toml": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/code-reviewer.toml": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/doc-updater.toml": "9777056bfb4c9554d5a9179a8e6ac20f8b9dd2b051191b32bed4d4e4e3f4c849",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/docs-lookup.toml": "b453bc451481376e497cf503c823bc2d70fee9f5c0c4b7a109f971267b6d4e88",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/executor.toml": "8a52944e0bb23bb0a7a3f1f7d569950a03400a54acd780ff9eab4dba953bd788",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/go-build-resolver.toml": "923ccc942758f496a792f7f64a21b5fa05d18d778f45b6949679196c14a71432",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/go-reviewer.toml": "dd3a916e0f3ebeee6ffee235314a8b88d651d08c0670bf0f8051c75e11c84b98",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/harness-optimizer.toml": "bfcd41d46634782588a69d188f8ebde881c852a52f4488a6498ca47dd47c123b",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/planner.toml": "93dd1db5cb2e3037cb5088553ebede1af33388fdbc6ce94d660dba67a859e428",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/python-reviewer.toml": "3fcaee94269d55e386e8e9f9df414de3ad6bce922f8c26cd15879c8da68a8d34",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/pytorch-build-resolver.toml": "c8bf2ca9dad8e5815c74131fa2588a42e42a9337201911cdaf5c436ed309b648",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/researcher.toml": "fe0bc4cc5a5b3792d1e875998c91a3d4d1b1a9a1441ead35210c3fefed9f4521",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/reviewer.toml": "0a321de5a768646d1710fde4c91c33e9c30057a41780386605d39528d8023b9d",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/tdd-guide.toml": "f7a0b7a5be0bb90baf445e52a1bd558aa9787fb43d0e434b700ce5d0cae9fc2e",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/typescript-reviewer.toml": "77a6debda380ce64745047f6215865614064c849169087475487acb24b0155ee",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/architect.md": "a717fb721175cf3f43257a267920b90d7ce4e3ea02b15f2f156fc382ef218190",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/chief-of-staff.md": "f8c86abd50041cfd86f8bd79fca3bc679e90ce2f8712b63eb5cca3bf8f01f37b",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/code-reviewer.md": "84f7197044e3e305b3b3a77f032029ddded80ee2d7aaa53d9bc458720131de0a",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/doc-updater.md": "507c850ef719d5d6e720f3ea660bbe8c3791c76fc199f6d90598a6b85524a6d0",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/docs-lookup.md": "261cbb5c373a62bd95bb2631cdf60a0cf4b90cfbda422623fe7d4756558344f9",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/executor.md": "e8263c7c0152bda69ae0f093ad980bdeeca0fa5cb3333a324c2712345192f4ff",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/go-build-resolver.md": "bab4d0d36ab0cc515d6f6d5223084f6ba09530717db5402969f3dbc0d7922a1b",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/go-reviewer.md": "fd11ce3ca3148ad14919b44980a6fd435cb6ff90eeaf3ba36cee5f6237ddeed4",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/harness-optimizer.md": "b881c0593d897eb800c01513ba494b0f92fa121fef42a98f547fb8090f23c6f3",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/planner.md": "315ccfc559f67c655a17108bd01a51cd37aa0ee05fc87b3c2bc4d188abee166d",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/python-reviewer.md": "2465e88f464251d103ac32e6c17634cf175ae1d315abf52e6b4a692547a89be5",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/pytorch-build-resolver.md": "13711587b74364269767a9d8e9d8fef57f5cd0e79a5e837b5ea257e04a18719f",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/researcher.md": "4e9be519fea7308c65f330bf6ff6275689bde18babc40c3957877fcf6718bfca",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/reviewer.md": "4600aab909eac6cf7da40e80de8a089922f3f98bbe83e2cf2d1140a8b65655e8",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/tdd-guide.md": "f00dd6a09e5b68fc2a79e3528354ba7d30b9f779d88d11f9f4ed6fb7eaec10fb",
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/typescript-reviewer.md": "3dd4c43280a7de2264e9c4e517dc7e857a58014f2c3efdb98b990bb978a5dfaf"
+    "AGENTS.md": "4086e72a909ef0bec87a85020057f5588cd09d70fd540a63dd2e40f04c696e42",
+    "GEMINI.md": "c1abcfac0d2323ad2323c527539c70edebaa79dd048c4811050b6c504d87b292",
+    ".agents/skills/github-kanban-ops": "8a715728d245786eaad5f0dc7122c9746d8c566df3ebd3f35c838aa64c74cdcd",
+    ".agents/skills/improve-codebase-architecture": "f20573560a8c5b4e2703a74b12f2f30ee0113fbf99a3edd058c4f4d9cce28ad2",
+    ".codex/agents/architect.toml": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
+    ".codex/agents/chief-of-staff.toml": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
+    ".codex/agents/code-reviewer.toml": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
+    ".codex/agents/doc-updater.toml": "9777056bfb4c9554d5a9179a8e6ac20f8b9dd2b051191b32bed4d4e4e3f4c849",
+    ".codex/agents/docs-lookup.toml": "b453bc451481376e497cf503c823bc2d70fee9f5c0c4b7a109f971267b6d4e88",
+    ".codex/agents/executor.toml": "8a52944e0bb23bb0a7a3f1f7d569950a03400a54acd780ff9eab4dba953bd788",
+    ".codex/agents/go-build-resolver.toml": "923ccc942758f496a792f7f64a21b5fa05d18d778f45b6949679196c14a71432",
+    ".codex/agents/go-reviewer.toml": "dd3a916e0f3ebeee6ffee235314a8b88d651d08c0670bf0f8051c75e11c84b98",
+    ".codex/agents/harness-optimizer.toml": "bfcd41d46634782588a69d188f8ebde881c852a52f4488a6498ca47dd47c123b",
+    ".codex/agents/planner.toml": "93dd1db5cb2e3037cb5088553ebede1af33388fdbc6ce94d660dba67a859e428",
+    ".codex/agents/python-reviewer.toml": "3fcaee94269d55e386e8e9f9df414de3ad6bce922f8c26cd15879c8da68a8d34",
+    ".codex/agents/pytorch-build-resolver.toml": "c8bf2ca9dad8e5815c74131fa2588a42e42a9337201911cdaf5c436ed309b648",
+    ".codex/agents/researcher.toml": "fe0bc4cc5a5b3792d1e875998c91a3d4d1b1a9a1441ead35210c3fefed9f4521",
+    ".codex/agents/reviewer.toml": "0a321de5a768646d1710fde4c91c33e9c30057a41780386605d39528d8023b9d",
+    ".codex/agents/tdd-guide.toml": "f7a0b7a5be0bb90baf445e52a1bd558aa9787fb43d0e434b700ce5d0cae9fc2e",
+    ".codex/agents/typescript-reviewer.toml": "77a6debda380ce64745047f6215865614064c849169087475487acb24b0155ee",
+    ".gemini/agents/architect.md": "a717fb721175cf3f43257a267920b90d7ce4e3ea02b15f2f156fc382ef218190",
+    ".gemini/agents/chief-of-staff.md": "f8c86abd50041cfd86f8bd79fca3bc679e90ce2f8712b63eb5cca3bf8f01f37b",
+    ".gemini/agents/code-reviewer.md": "84f7197044e3e305b3b3a77f032029ddded80ee2d7aaa53d9bc458720131de0a",
+    ".gemini/agents/doc-updater.md": "507c850ef719d5d6e720f3ea660bbe8c3791c76fc199f6d90598a6b85524a6d0",
+    ".gemini/agents/docs-lookup.md": "261cbb5c373a62bd95bb2631cdf60a0cf4b90cfbda422623fe7d4756558344f9",
+    ".gemini/agents/executor.md": "e8263c7c0152bda69ae0f093ad980bdeeca0fa5cb3333a324c2712345192f4ff",
+    ".gemini/agents/go-build-resolver.md": "bab4d0d36ab0cc515d6f6d5223084f6ba09530717db5402969f3dbc0d7922a1b",
+    ".gemini/agents/go-reviewer.md": "fd11ce3ca3148ad14919b44980a6fd435cb6ff90eeaf3ba36cee5f6237ddeed4",
+    ".gemini/agents/harness-optimizer.md": "b881c0593d897eb800c01513ba494b0f92fa121fef42a98f547fb8090f23c6f3",
+    ".gemini/agents/planner.md": "315ccfc559f67c655a17108bd01a51cd37aa0ee05fc87b3c2bc4d188abee166d",
+    ".gemini/agents/python-reviewer.md": "2465e88f464251d103ac32e6c17634cf175ae1d315abf52e6b4a692547a89be5",
+    ".gemini/agents/pytorch-build-resolver.md": "13711587b74364269767a9d8e9d8fef57f5cd0e79a5e837b5ea257e04a18719f",
+    ".gemini/agents/researcher.md": "4e9be519fea7308c65f330bf6ff6275689bde18babc40c3957877fcf6718bfca",
+    ".gemini/agents/reviewer.md": "4600aab909eac6cf7da40e80de8a089922f3f98bbe83e2cf2d1140a8b65655e8",
+    ".gemini/agents/tdd-guide.md": "f00dd6a09e5b68fc2a79e3528354ba7d30b9f779d88d11f9f4ed6fb7eaec10fb",
+    ".gemini/agents/typescript-reviewer.md": "3dd4c43280a7de2264e9c4e517dc7e857a58014f2c3efdb98b990bb978a5dfaf"
   },
   "targets": {
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/AGENTS.md": {
-      "hash": "b9b2cf4d0996d92e22035e3330ccc265aa654da1bb2f58a45609ea5949c22774",
+    "AGENTS.md": {
+      "hash": "4086e72a909ef0bec87a85020057f5588cd09d70fd540a63dd2e40f04c696e42",
       "owner": "aco",
       "kind": "config"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/GEMINI.md": {
-      "hash": "f43d898af68e78823b70252b90f464365a915307a69de0ddf5c584477f6ffabf",
+    "GEMINI.md": {
+      "hash": "c1abcfac0d2323ad2323c527539c70edebaa79dd048c4811050b6c504d87b292",
       "owner": "aco",
       "kind": "config"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.agents/skills/github-kanban-ops": {
-      "hash": "9796d525aaf891ba1a5d030466e3c370274d3e638ff889da0eaee7b83af13482",
+    ".agents/skills/github-kanban-ops": {
+      "hash": "8a715728d245786eaad5f0dc7122c9746d8c566df3ebd3f35c838aa64c74cdcd",
       "owner": "aco",
       "kind": "shared-skill",
-      "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.claude/skills/github-kanban-ops",
+      "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.worktrees/import-security-scanner-skills/.claude/skills/github-kanban-ops",
       "hashFormat": "directory"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/architect.toml": {
+    ".agents/skills/improve-codebase-architecture": {
+      "hash": "f20573560a8c5b4e2703a74b12f2f30ee0113fbf99a3edd058c4f4d9cce28ad2",
+      "owner": "aco",
+      "kind": "shared-skill",
+      "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.worktrees/import-security-scanner-skills/.claude/skills/improve-codebase-architecture",
+      "hashFormat": "directory"
+    },
+    ".codex/agents/architect.toml": {
       "hash": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/chief-of-staff.toml": {
+    ".codex/agents/chief-of-staff.toml": {
       "hash": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/code-reviewer.toml": {
+    ".codex/agents/code-reviewer.toml": {
       "hash": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/doc-updater.toml": {
+    ".codex/agents/doc-updater.toml": {
       "hash": "9777056bfb4c9554d5a9179a8e6ac20f8b9dd2b051191b32bed4d4e4e3f4c849",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/docs-lookup.toml": {
+    ".codex/agents/docs-lookup.toml": {
       "hash": "b453bc451481376e497cf503c823bc2d70fee9f5c0c4b7a109f971267b6d4e88",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/executor.toml": {
+    ".codex/agents/executor.toml": {
       "hash": "8a52944e0bb23bb0a7a3f1f7d569950a03400a54acd780ff9eab4dba953bd788",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/go-build-resolver.toml": {
+    ".codex/agents/go-build-resolver.toml": {
       "hash": "923ccc942758f496a792f7f64a21b5fa05d18d778f45b6949679196c14a71432",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/go-reviewer.toml": {
+    ".codex/agents/go-reviewer.toml": {
       "hash": "dd3a916e0f3ebeee6ffee235314a8b88d651d08c0670bf0f8051c75e11c84b98",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/harness-optimizer.toml": {
+    ".codex/agents/harness-optimizer.toml": {
       "hash": "bfcd41d46634782588a69d188f8ebde881c852a52f4488a6498ca47dd47c123b",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/planner.toml": {
+    ".codex/agents/planner.toml": {
       "hash": "93dd1db5cb2e3037cb5088553ebede1af33388fdbc6ce94d660dba67a859e428",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/python-reviewer.toml": {
+    ".codex/agents/python-reviewer.toml": {
       "hash": "3fcaee94269d55e386e8e9f9df414de3ad6bce922f8c26cd15879c8da68a8d34",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/pytorch-build-resolver.toml": {
+    ".codex/agents/pytorch-build-resolver.toml": {
       "hash": "c8bf2ca9dad8e5815c74131fa2588a42e42a9337201911cdaf5c436ed309b648",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/researcher.toml": {
+    ".codex/agents/researcher.toml": {
       "hash": "fe0bc4cc5a5b3792d1e875998c91a3d4d1b1a9a1441ead35210c3fefed9f4521",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/reviewer.toml": {
+    ".codex/agents/reviewer.toml": {
       "hash": "0a321de5a768646d1710fde4c91c33e9c30057a41780386605d39528d8023b9d",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/tdd-guide.toml": {
+    ".codex/agents/tdd-guide.toml": {
       "hash": "f7a0b7a5be0bb90baf445e52a1bd558aa9787fb43d0e434b700ce5d0cae9fc2e",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.codex/agents/typescript-reviewer.toml": {
+    ".codex/agents/typescript-reviewer.toml": {
       "hash": "77a6debda380ce64745047f6215865614064c849169087475487acb24b0155ee",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/architect.md": {
+    ".gemini/agents/architect.md": {
       "hash": "a717fb721175cf3f43257a267920b90d7ce4e3ea02b15f2f156fc382ef218190",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/chief-of-staff.md": {
+    ".gemini/agents/chief-of-staff.md": {
       "hash": "f8c86abd50041cfd86f8bd79fca3bc679e90ce2f8712b63eb5cca3bf8f01f37b",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/code-reviewer.md": {
+    ".gemini/agents/code-reviewer.md": {
       "hash": "84f7197044e3e305b3b3a77f032029ddded80ee2d7aaa53d9bc458720131de0a",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/doc-updater.md": {
+    ".gemini/agents/doc-updater.md": {
       "hash": "507c850ef719d5d6e720f3ea660bbe8c3791c76fc199f6d90598a6b85524a6d0",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/docs-lookup.md": {
+    ".gemini/agents/docs-lookup.md": {
       "hash": "261cbb5c373a62bd95bb2631cdf60a0cf4b90cfbda422623fe7d4756558344f9",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/executor.md": {
+    ".gemini/agents/executor.md": {
       "hash": "e8263c7c0152bda69ae0f093ad980bdeeca0fa5cb3333a324c2712345192f4ff",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/go-build-resolver.md": {
+    ".gemini/agents/go-build-resolver.md": {
       "hash": "bab4d0d36ab0cc515d6f6d5223084f6ba09530717db5402969f3dbc0d7922a1b",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/go-reviewer.md": {
+    ".gemini/agents/go-reviewer.md": {
       "hash": "fd11ce3ca3148ad14919b44980a6fd435cb6ff90eeaf3ba36cee5f6237ddeed4",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/harness-optimizer.md": {
+    ".gemini/agents/harness-optimizer.md": {
       "hash": "b881c0593d897eb800c01513ba494b0f92fa121fef42a98f547fb8090f23c6f3",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/planner.md": {
+    ".gemini/agents/planner.md": {
       "hash": "315ccfc559f67c655a17108bd01a51cd37aa0ee05fc87b3c2bc4d188abee166d",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/python-reviewer.md": {
+    ".gemini/agents/python-reviewer.md": {
       "hash": "2465e88f464251d103ac32e6c17634cf175ae1d315abf52e6b4a692547a89be5",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/pytorch-build-resolver.md": {
+    ".gemini/agents/pytorch-build-resolver.md": {
       "hash": "13711587b74364269767a9d8e9d8fef57f5cd0e79a5e837b5ea257e04a18719f",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/researcher.md": {
+    ".gemini/agents/researcher.md": {
       "hash": "4e9be519fea7308c65f330bf6ff6275689bde18babc40c3957877fcf6718bfca",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/reviewer.md": {
+    ".gemini/agents/reviewer.md": {
       "hash": "4600aab909eac6cf7da40e80de8a089922f3f98bbe83e2cf2d1140a8b65655e8",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/tdd-guide.md": {
+    ".gemini/agents/tdd-guide.md": {
       "hash": "f00dd6a09e5b68fc2a79e3528354ba7d30b9f779d88d11f9f4ed6fb7eaec10fb",
       "owner": "aco",
       "kind": "agent"
     },
-    "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-106/.gemini/agents/typescript-reviewer.md": {
+    ".gemini/agents/typescript-reviewer.md": {
       "hash": "3dd4c43280a7de2264e9c4e517dc7e857a58014f2c3efdb98b990bb978a5dfaf",
       "owner": "aco",
       "kind": "agent"
