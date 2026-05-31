@@ -5,9 +5,10 @@
 **Author:** Synthesized from brainstorm sessions 1 & 2 + frontmatter spec
 **Version:** 0.2
 
-> **Migration note (2026-05-31):** Gemini CLI가 Antigravity CLI로 명칭 변경되었습니다.
+> **Migration note (2026-05-31):** Gemini CLI provider가 제거되고 `antigravity`(binary `agy`) provider로 대체되었습니다.
 > 이 PRD 전체에서 `gemini`/`gemini_cli`/`Gemini` 참조는 `antigravity`/`Antigravity`로 마이그레이션되었습니다.
 > 바이너리는 `agy`, 설치는 `curl -fsSL https://antigravity.google/cli/install.sh | bash`, 인증은 OS Keyring입니다.
+> **agy는 per-call 모델 플래그(`-m`/`--model`)가 없어 formatter의 `model` 필드를 무시하며, 모델은 `/model`로 out-of-band 선택되어 persist됩니다.** 따라서 antigravity 예시에는 구체적 모델 id를 명시하지 않습니다.
 
 ---
 
@@ -238,11 +239,9 @@ modelAliasMap:
     provider: codex
     model: gpt-5.4
   opus:
-    provider: antigravity
-    model: antigravity-2.5-pro
+    provider: antigravity       # agy는 모델 플래그 미지원. model 필드는 무시되고 /model로 선택됨
   haiku:
-    provider: antigravity
-    model: antigravity-2.5-flash
+    provider: antigravity       # agy는 모델 플래그 미지원. model 필드는 무시되고 /model로 선택됨
 
 effortMap:
   codex:
@@ -508,7 +507,7 @@ aco delegate researcher --input "..."
   ├── formatter.roleHintRules 조회 (override 적용)
   │   └── research → preferredProvider: antigravity
   │
-  └── 최종: antigravity + antigravity-2.5-pro 실행
+  └── 최종: antigravity 실행 (agy는 모델 플래그 미지원. model 필드 무시, /model로 선택)
 ```
 
 ### 파일 구조 변화

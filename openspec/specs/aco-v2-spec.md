@@ -5,9 +5,10 @@
 **Source:** openspec/prd-aco-v2-native-agent-architecture.md v0.2
 **Scope:** Phase 1 (delegate CLI + frontmatter routing) + Phase 2 (context marshaling) + Phase 3 (sentinel output, cleanup)
 
-> **Migration note (2026-05-31):** `gemini_cli` provider 이름이 `antigravity`로, `gemini-2.5-*` 모델명이 `antigravity-2.5-*`로 변경되었습니다.
-> 바이너리는 `gemini` → `agy`, 설치는 `curl -fsSL https://antigravity.google/cli/install.sh | bash`입니다.
-> 이 spec 전체에서 `gemini_cli`/`gemini` 참조는 `antigravity`/`agy`로 마이그레이션되었습니다.
+> **Migration note (2026-05-31):** Gemini CLI provider가 제거되고 `antigravity`(binary `agy`) provider로 대체되었습니다.
+> 설치는 `curl -fsSL https://antigravity.google/cli/install.sh | bash`이고, 인증은 OS Keyring을 사용합니다.
+> **agy는 per-call 모델 플래그(`-m`/`--model`)가 없어 formatter의 `model` 필드를 무시하며, 모델은 `/model`로 out-of-band 선택되어 persist됩니다.**
+> 따라서 antigravity 예시에는 구체적 모델 id를 명시하지 않습니다. 이 spec 전체에서 `gemini_cli`/`gemini` 참조는 `antigravity`/`agy`로 마이그레이션되었습니다.
 
 ---
 
@@ -95,11 +96,9 @@ modelAliasMap:                # modelAlias → provider + model
     provider: codex
     model: gpt-5.4
   opus:
-    provider: antigravity
-    model: antigravity-2.5-pro
+    provider: antigravity       # agy는 모델 플래그 미지원. model 필드는 무시되고 /model로 선택됨
   haiku:
-    provider: antigravity
-    model: antigravity-2.5-flash
+    provider: antigravity       # agy는 모델 플래그 미지원. model 필드는 무시되고 /model로 선택됨
 
 effortMap:                    # reasoningEffort → provider별 값
   codex:
@@ -220,12 +219,13 @@ ACO_META_<rid>: {"agent":"<agent-id>","provider":"<provider>","model":"<model>",
 - sentinel이 없으면 caller가 비정상 종료로 판단해도 됨
 - `--no-meta` 플래그로 생략 가능
 - crypto/rand 실패 시 sentinel 없이 종료 (stderr 경고)
+- antigravity는 per-call 모델 플래그가 없으므로 `model` 값이 빈 문자열일 수 있다 (모델은 `/model`로 persist되어 aco가 알지 못함)
 
 **예시**:
 ```
 이 코드에서 다음과 같은 문제를 발견했습니다...
 (provider raw output 계속)
-ACO_META_a3f2b1c4d5e6f789: {"agent":"reviewer","provider":"antigravity","model":"antigravity-2.5-pro","exit_code":0,"duration_ms":3812}
+ACO_META_a3f2b1c4d5e6f789: {"agent":"reviewer","provider":"antigravity","model":"","exit_code":0,"duration_ms":3812}
 ```
 
 ---
