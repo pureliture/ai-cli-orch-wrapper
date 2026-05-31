@@ -4,7 +4,7 @@
 자체의 참조 정보는 [reference/project-board.md](../reference/project-board.md)
 를 참고한다.
 
-문서 기준 주요 provider는 **gemini**와 **codex**다.
+문서 기준 주요 provider는 **antigravity**와 **codex**다.
 
 ## Claude Code 하네스 구조
 
@@ -28,15 +28,14 @@
 
 ```text
 AGENTS.md
-GEMINI.md
 .codex/agents/
 .codex/hooks.json
-.gemini/agents/
-.gemini/settings.json
 .aco/sync-manifest.json
 ```
 
-생성된 Codex/Gemini context를 사용하기 전에 `aco sync --check`를 실행한다. 관리 대상 파일을 갱신하려면
+> `GEMINI.md`와 `.gemini/agents/`는 Phases 1-3 마이그레이션으로 더 이상 생성 대상이 아니다.
+
+생성된 Codex context를 사용하기 전에 `aco sync --check`를 실행한다. 관리 대상 파일을 갱신하려면
 `aco sync`를 실행하고, manifest 소유 drift를 의도적으로 덮어써도 되는 경우에만 `aco sync --force`를 사용한다.
 
 ## 명령 구조
@@ -309,7 +308,7 @@ reasoningEffort: high
 3. 설정되어 있으면 `roleHint` provider preference를 적용한다.
 4. formatter fallback route로 폴백한다.
 
-현재 문서화된 provider는 `codex`와 `gemini`다. Go 런타임은 delegation 호환성을 위해 `gemini_cli`도 등록한다.
+현재 문서화된 provider는 `codex`와 `antigravity`다. Go 런타임은 `antigravity` (`agy` 바이너리)를 등록한다.
 
 ## CI/CD Workflow
 

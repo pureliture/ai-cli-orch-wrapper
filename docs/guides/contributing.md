@@ -21,7 +21,7 @@ packages/
   wrapper/           — 공개 패키지: @pureliture/ai-cli-orch-wrapper
     src/cli.ts       — aco 진입점
     src/commands/    — pack/provider setup 명령
-    src/providers/   — gemini, codex, registry
+    src/providers/   — antigravity, codex, registry
     src/session/     — 세션 생명주기
   installer/         — 내부 전환용 workspace
 templates/           — `aco pack install`로 복사되는 slash command와 prompt

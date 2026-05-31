@@ -6,7 +6,7 @@
 ## 현재 상태 요약
 
 `ai-cli-orch-wrapper`는 Claude Code 세션 안에서 사용자의 명시적 동의를 받은 뒤
-Codex/Gemini 같은 외부 AI CLI에 작업을 위임하고, 결과는 session/run artifact로 저장하며,
+Codex/Antigravity 같은 외부 AI CLI에 작업을 위임하고, 결과는 session/run artifact로 저장하며,
 Claude Code에는 bounded brief만 반환해 토큰 사용량을 줄이는 generic external AI delegation
 wrapper다. Claude Code는 supervisor이자 final synthesizer로 남고, 외부 provider 출력은
 advisory로 취급한다.
@@ -14,7 +14,7 @@ advisory로 취급한다.
 현재 구현된 표면은 Node wrapper CLI의 pack/provider setup, `aco sync`, high-level `aco ask`,
 low-level `aco run`, `aco status`, `aco result`, `aco cancel`과 Go delegate runtime의 blocking
 provider 실행 실험으로 나뉜다. MVP에서 `aco ask`는 기본 provider를 no-auth `mock`으로 두며,
-real Codex/Gemini provider는 `--providers codex,gemini`처럼 명시했을 때만 실행한다.
+real Codex/Antigravity provider는 `--providers codex,antigravity`처럼 명시했을 때만 실행한다.
 
 현재 문서는 프로젝트의 재포지셔닝과 개선 계획도 함께 담고 있다. 현재 Goal 2 hardening의
 구현 기준과 검증 증거는 [plans/consent-gated-delegation-hardening/](plans/consent-gated-delegation-hardening/)에
@@ -29,12 +29,12 @@ spec/plan/review/validation ledger, `pr-implementation-plan.md`는 이전 PR별 
 
 ## 빠른 시작
 
-패키지를 설치해서 Claude Code command pack과 provider prompt를 배치한다. 아래는 Gemini를
+패키지를 설치해서 Claude Code command pack과 provider prompt를 배치한다. 아래는 Antigravity를
 예시 provider로 사용한다. Codex도 주요 provider로 지원한다.
 
 ```bash
 npx @pureliture/ai-cli-orch-wrapper pack setup
-npx @pureliture/ai-cli-orch-wrapper provider setup gemini
+npx @pureliture/ai-cli-orch-wrapper provider setup antigravity
 npx @pureliture/ai-cli-orch-wrapper provider setup codex
 ```
 
@@ -44,7 +44,7 @@ npx @pureliture/ai-cli-orch-wrapper provider setup codex
 npm install
 npm run build
 node packages/wrapper/dist/cli.js pack setup
-node packages/wrapper/dist/cli.js provider setup gemini
+node packages/wrapper/dist/cli.js provider setup antigravity
 node packages/wrapper/dist/cli.js provider setup codex
 node packages/wrapper/dist/cli.js sync --check
 ```
@@ -58,7 +58,7 @@ aco ask --providers mock --task "review this demo input" --input "demo" --dry-ru
 aco ask --providers mock --task "review this demo input" --input "demo" --yes --output-mode brief
 aco result
 aco doctor
-aco run gemini review
+aco run antigravity review
 aco status
 aco result
 ```
