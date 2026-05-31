@@ -1,7 +1,7 @@
 {
   "name": "ai-cli-orch-wrapper",
   "version": "0.4.0",
-  "description": "Consent-gated external AI delegation wrapper for Claude Code, Codex, Gemini, and mock provider workflows.",
+  "description": "Consent-gated external AI delegation wrapper for Claude Code, Codex, Antigravity, and mock provider workflows.",
   "private": true,
   "workspaces": [
     "packages/*"
@@ -21,7 +21,7 @@
   "keywords": [
     "claude-code",
     "codex-cli",
-    "gemini-cli",
+    "antigravity-cli",
     "ai-delegation",
     "slash-commands",
     "consent-gate"

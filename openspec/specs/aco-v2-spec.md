@@ -5,6 +5,10 @@
 **Source:** openspec/prd-aco-v2-native-agent-architecture.md v0.2
 **Scope:** Phase 1 (delegate CLI + frontmatter routing) + Phase 2 (context marshaling) + Phase 3 (sentinel output, cleanup)
 
+> **Migration note (2026-05-31):** `gemini_cli` provider 이름이 `antigravity`로, `gemini-2.5-*` 모델명이 `antigravity-2.5-*`로 변경되었습니다.
+> 바이너리는 `gemini` → `agy`, 설치는 `curl -fsSL https://antigravity.google/cli/install.sh | bash`입니다.
+> 이 spec 전체에서 `gemini_cli`/`gemini` 참조는 `antigravity`/`agy`로 마이그레이션되었습니다.
+
 ---
 
 ## Actors
@@ -16,7 +20,7 @@
 | **aco binary** | Go 바이너리. frontmatter 파싱 + formatter routing + provider 실행을 담당. role을 소유하지 않음 |
 | **Formatter** | `.aco/formatter.yaml`. vendor-specific 변환 규칙 집합. aco가 읽는 설정 파일 |
 | **Agent Spec** | `.claude/agents/<id>.md`. CC와 aco가 공유하는 canonical agent 정의 파일 |
-| **Provider CLI** | `gemini` 또는 `codex` 바이너리. aco가 exec하는 외부 프로세스 |
+| **Provider CLI** | `agy` (Antigravity) 또는 `codex` 바이너리. aco가 exec하는 외부 프로세스 |
 
 ---
 
@@ -83,7 +87,7 @@ version: 1                    # 필수
 providerDefaults:             # provider별 기본 launchArgs
   codex:
     launchArgs: []
-  gemini_cli:
+  antigravity:
     launchArgs: []
 
 modelAliasMap:                # modelAlias → provider + model
@@ -91,11 +95,11 @@ modelAliasMap:                # modelAlias → provider + model
     provider: codex
     model: gpt-5.4
   opus:
-    provider: gemini_cli
-    model: gemini-2.5-pro
+    provider: antigravity
+    model: antigravity-2.5-pro
   haiku:
-    provider: gemini_cli
-    model: gemini-2.5-flash
+    provider: antigravity
+    model: antigravity-2.5-flash
 
 effortMap:                    # reasoningEffort → provider별 값
   codex:
@@ -103,7 +107,7 @@ effortMap:                    # reasoningEffort → provider별 값
     medium: medium
     high: high
     max: xhigh
-  gemini_cli:
+  antigravity:
     low: low
     medium: medium
     high: high
@@ -111,7 +115,7 @@ effortMap:                    # reasoningEffort → provider별 값
 
 roleHintRules:                # roleHint → preferredProvider (override)
   research:
-    preferredProvider: gemini_cli
+    preferredProvider: antigravity
   execute:
     preferredProvider: codex
   review:
@@ -176,7 +180,7 @@ fallback:                     # 필수. 최종 해석 실패 시 사용
 3. provider 종료 대기
 4. exit 1 반환
 
-**Node.js 계열 provider (codex, gemini)**:
+**Node.js 계열 provider (codex, antigravity)**:
 - `cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}` 설정
 - SIGTERM을 process group 전체에 전달하여 child process tree 처리
 
@@ -221,7 +225,7 @@ ACO_META_<rid>: {"agent":"<agent-id>","provider":"<provider>","model":"<model>",
 ```
 이 코드에서 다음과 같은 문제를 발견했습니다...
 (provider raw output 계속)
-ACO_META_a3f2b1c4d5e6f789: {"agent":"reviewer","provider":"gemini_cli","model":"gemini-2.5-pro","exit_code":0,"duration_ms":3812}
+ACO_META_a3f2b1c4d5e6f789: {"agent":"reviewer","provider":"antigravity","model":"antigravity-2.5-pro","exit_code":0,"duration_ms":3812}
 ```
 
 ---
@@ -296,7 +300,7 @@ aco delegate reviewer --input "$PROMPT"
 | C-07 | stdout은 provider stdout + sentinel 1줄만. tee 없음. output.log 없음 |
 | C-08 | Ghost Worktree는 aco 종료 시 즉시 삭제. CC가 삭제를 지시할 때까지 유지하지 않음 |
 | C-09 | `.aco/formatter.yaml`의 `version` 필드는 현재 `1`만 지원. 다른 값이면 에러 |
-| C-10 | provider는 codex + gemini_cli만. copilot 제거 |
+| C-10 | provider는 codex + antigravity만. copilot 제거 |
 
 ---
 
@@ -345,9 +349,9 @@ Then:  codex CLI 실행됨
 ```
 Given: researcher.md의 modelAlias: sonnet-4.6 (codex로 매핑됨)
        researcher.md의 roleHint: research
-       formatter.roleHintRules.research.preferredProvider: gemini_cli
+       formatter.roleHintRules.research.preferredProvider: antigravity
 When:  aco delegate researcher --input "..."
-Then:  gemini_cli CLI 실행됨 (roleHint가 codex를 override)
+Then:  antigravity CLI 실행됨 (roleHint가 codex를 override)
 ```
 
 ### AC-04: formatter fallback
@@ -399,7 +403,7 @@ Then:  마지막 줄이 "ACO_META: " 로 시작하는 JSON
 
 ```
 Given: .claude/agents/researcher.md
-When:  grep -i "gemini\|codex\|gpt\|claude" .claude/agents/researcher.md
+When:  grep -i "antigravity\|codex\|gpt\|claude" .claude/agents/researcher.md
 Then:  0 results (provider 이름 없음)
 ```
 
