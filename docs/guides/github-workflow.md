@@ -328,4 +328,4 @@ reasoningEffort: high
 | `smoke`     | `npm pack`, local install, `aco --version`, `aco run --help`                                      | 배포 패키지 smoke 경로                            |
 | `fixtures`  | `npm run test:fixtures -- --binary ./aco`                                                         | Go 바이너리에 대한 cross-runtime fixture suite    |
 
-Release publish는 CI와 분리되어 있다. `.github/workflows/release.yml`은 수동으로 실행되거나 merge된 PR에 `release` label이 있을 때 실행되며, versioning/publish 동작은 Changesets에 위임한다.
+Release publish는 CI와 분리되어 있다. `.github/workflows/release.yml`은 merge된 PR에 `release` label이 있을 때 실행되며, versioning/publish 동작은 Changesets에 위임한다. Changesets가 version PR을 생성하거나 업데이트하면 workflow가 해당 PR에 `release` label을 자동으로 붙여, version PR merge 시 publish 단계가 다시 label 조건을 만족하도록 한다.

@@ -1,23 +1,23 @@
 name: Release
 
 on:
-  workflow_dispatch:
   # Auto-run only when a PR with the `release` label is merged into main.
-  # To trigger: add `release` label to PR and merge, or click "Run workflow" on Actions tab.
+  # To trigger: add `release` label to PR and merge.
   pull_request:
     types: [closed]
     branches: [main]
 
 permissions:
   contents: write
+  issues: write
   pull-requests: write
 
 jobs:
   release:
     name: release
     runs-on: ubuntu-latest
-    # Only run when triggered manually or when a PR with `release` label is merged to main
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release'))
+    # Only run when a PR with `release` label is merged to main
+    if: github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'release')
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,6 +33,7 @@ jobs:
       - run: npm ci
 
       - name: Create Release Pull Request or Publish
+        id: changesets
         uses: changesets/action@v1
         with:
           publish: npm run release
@@ -42,3 +43,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Add release label to generated release PR
+        if: steps.changesets.outputs.pullRequestNumber != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_PR_NUMBER: ${{ steps.changesets.outputs.pullRequestNumber }}
+        run: gh pr edit "$RELEASE_PR_NUMBER" --add-label release
