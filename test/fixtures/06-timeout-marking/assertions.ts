@@ -16,9 +16,9 @@ registerFixture({
   knownNodeGap: true,
   async fn(runner) {
     const { writeFile } = await import('node:fs/promises');
-    const mockGemini = runner.providerPath('gemini');
+    const mockAgy = runner.providerPath('agy');
     // Provider hangs forever
-    await writeFile(mockGemini, [
+    await writeFile(mockAgy, [
       '#!/usr/bin/env bash',
       'sleep 999',
     ].join('\n') + '\n', { mode: 0o755 });
@@ -26,7 +26,7 @@ registerFixture({
     const start = Date.now();
     // Run with a 2-second timeout
     const result = await runner.run(
-      ['run', 'gemini', 'review', '--input', 'test', '--timeout', '2'],
+      ['run', 'antigravity', 'review', '--input', 'test', '--timeout', '2'],
       { timeoutMs: 10_000 }, // harness timeout (must not be the one that fires)
     );
     const elapsed = Date.now() - start;
