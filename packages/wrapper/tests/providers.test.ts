@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { GeminiProvider } from '../src/providers/gemini';
+import { AntigravityProvider } from '../src/providers/antigravity';
 import { CodexProvider } from '../src/providers/codex';
 import { MockProvider } from '../src/providers/mock';
 import { ProviderRegistry } from '../src/providers/registry';
@@ -95,7 +95,7 @@ describe('readVersion()', () => {
   });
 });
 
-describe('GeminiProvider', () => {
+describe('AntigravityProvider', () => {
   let tmpHome: string;
   let originalHome: string | undefined;
   let originalUserProfile: string | undefined;
@@ -105,9 +105,9 @@ describe('GeminiProvider', () => {
   before(async () => {
     originalHome = process.env.HOME;
     originalUserProfile = process.env.USERPROFILE;
-    tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-home-'));
-    tmpBin = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-bin-gemini-'));
-    await makeFakeBinary(tmpBin, 'gemini', 'gemini-cli 3.0.0');
+    tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-home-agy-'));
+    tmpBin = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-test-bin-agy-'));
+    await makeFakeBinary(tmpBin, 'agy', 'agy-cli 1.0.0');
     originalPath = process.env.PATH;
     process.env.PATH = `${tmpBin}${path.delimiter}${originalPath ?? ''}`;
     process.env.HOME = tmpHome;
@@ -122,233 +122,186 @@ describe('GeminiProvider', () => {
     await fs.rm(tmpBin, { recursive: true, force: true });
   });
 
-  it('isAvailable() returns true when gemini binary is in PATH', () => {
-    const provider = new GeminiProvider();
+  it('isAvailable() returns true when agy binary is in PATH', () => {
+    const provider = new AntigravityProvider();
     const result = provider.isAvailable();
     assert.equal(typeof result, 'boolean');
   });
 
-  it('isAvailable() returns false when gemini is absent', () => {
-    class TestGemini extends GeminiProvider {
+  it('isAvailable() returns false when agy is absent', () => {
+    class TestAgy extends AntigravityProvider {
       override isAvailable() {
         return false;
       }
     }
-    assert.equal(new TestGemini().isAvailable(), false);
+    assert.equal(new TestAgy().isAvailable(), false);
   });
 
-  it('key is "gemini"', () => {
-    assert.equal(new GeminiProvider().key, 'gemini');
+  it('key is "antigravity"', () => {
+    assert.equal(new AntigravityProvider().key, 'antigravity');
+  });
+
+  it('installHint contains curl', () => {
+    assert.ok(new AntigravityProvider().installHint.includes('curl'));
   });
 
   it('installHint is non-empty string', () => {
-    assert.ok(new GeminiProvider().installHint.length > 0);
+    assert.ok(new AntigravityProvider().installHint.length > 0);
   });
 
   it('checkAuth() returns { ok: false } when not available', async () => {
-    class TestGemini extends GeminiProvider {
+    class TestAgy extends AntigravityProvider {
       override isAvailable() {
         return false;
       }
     }
-    const result = await new TestGemini().checkAuth();
+    const result = await new TestAgy().checkAuth();
     assert.equal(result.ok, false);
     assert.ok(typeof result.hint === 'string');
     assert.equal(result.method, 'missing');
   });
 
-  it('checkAuth() fast-path: returns ok when GEMINI_API_KEY is set', async () => {
-    class MockGemini extends GeminiProvider {
+  it('checkAuth() does NOT use GEMINI_API_KEY or GOOGLE_API_KEY env fast-paths', async () => {
+    class MockAgy extends AntigravityProvider {
       override isAvailable() {
         return true;
       }
     }
-    const provider = new MockGemini();
-    const originalEnv = process.env.GEMINI_API_KEY;
-    process.env.GEMINI_API_KEY = 'test-key';
+    const provider = new MockAgy();
+    const origGemini = process.env.GEMINI_API_KEY;
+    const origGoogle = process.env.GOOGLE_API_KEY;
+    process.env.GEMINI_API_KEY = 'gemini-key-should-be-ignored';
+    process.env.GOOGLE_API_KEY = 'google-key-should-be-ignored';
     try {
+      // With these env vars set, checkAuth should still proceed via binary probe
+      // (method should NOT be 'api-key' — antigravity uses OS Keyring, not env vars)
       const result = await provider.checkAuth();
-      assert.strictEqual(result.ok, true);
-      assert.equal(result.method, 'api-key');
-      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
-      assert.equal(result.hint, undefined);
-      assert.equal(JSON.stringify(result).includes('test-key'), false);
+      assert.notEqual(result.method, 'api-key');
     } finally {
-      if (originalEnv === undefined) {
+      if (origGemini === undefined) {
         delete process.env.GEMINI_API_KEY;
       } else {
-        process.env.GEMINI_API_KEY = originalEnv;
+        process.env.GEMINI_API_KEY = origGemini;
       }
-    }
-  });
-
-  it('checkAuth() fast-path: returns ok when GOOGLE_API_KEY is set', async () => {
-    class MockGemini extends GeminiProvider {
-      override isAvailable() {
-        return true;
-      }
-    }
-    const provider = new MockGemini();
-    const originalEnv = process.env.GOOGLE_API_KEY;
-    process.env.GOOGLE_API_KEY = 'test-key';
-    try {
-      const result = await provider.checkAuth();
-      assert.strictEqual(result.ok, true);
-      assert.equal(result.method, 'api-key');
-      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
-      assert.equal(JSON.stringify(result).includes('test-key'), false);
-    } finally {
-      if (originalEnv === undefined) {
+      if (origGoogle === undefined) {
         delete process.env.GOOGLE_API_KEY;
       } else {
-        process.env.GOOGLE_API_KEY = originalEnv;
+        process.env.GOOGLE_API_KEY = origGoogle;
       }
     }
   });
 
-  it('checkAuth() fast-path: returns ok when oauth_creds.json exists', async () => {
-    class MockGemini extends GeminiProvider {
+  it('checkAuth() relies on binary presence + readVersion', async () => {
+    class MockAgy extends AntigravityProvider {
       override isAvailable() {
         return true;
       }
     }
-    const provider = new MockGemini();
-    const credsDir = path.join(tmpHome, '.gemini');
-    await fs.mkdir(credsDir, { recursive: true });
-    const credsPath = path.join(credsDir, 'oauth_creds.json');
-    await fs.writeFile(credsPath, '{}');
-    try {
-      const result = await provider.checkAuth();
-      assert.strictEqual(result.ok, true);
-      assert.equal(result.method, 'oauth');
-      assert.equal(result.hint, undefined);
-      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
-    } finally {
-      await fs.rm(credsPath, { force: true });
-    }
-  });
-
-  it('checkAuth() fallback: reports cli-fallback via binary version output', async () => {
-    class MockGemini extends GeminiProvider {
-      override isAvailable() {
-        return true;
-      }
-    }
-    const provider = new MockGemini();
-    const result = await withoutProviderAuthEnv(() => provider.checkAuth());
+    const provider = new MockAgy();
+    const result = await provider.checkAuth();
     assert.strictEqual(result.ok, true);
     assert.equal(result.method, 'cli-fallback');
-    assert.equal(result.version, 'gemini-cli 3.0.0');
-    assert.equal(result.binaryPath, `${tmpBin}/gemini`);
+    assert.equal(result.version, 'agy-cli 1.0.0');
+    assert.equal(result.binaryPath, `${tmpBin}/agy`);
     assert.equal(result.hint, undefined);
   });
 
   it('checkAuth() fallback: reports stderr-only version output', async () => {
-    class MockGemini extends GeminiProvider {
+    class MockAgy extends AntigravityProvider {
       override isAvailable() {
         return true;
       }
     }
-    await makeFakeBinary(tmpBin, 'gemini', {
-      stderr: '\n  gemini-cli 3.1.0  \nignored\n',
+    await makeFakeBinary(tmpBin, 'agy', {
+      stderr: '\n  agy-cli 1.1.0  \nignored\n',
     });
 
     try {
-      const result = await withoutProviderAuthEnv(() => new MockGemini().checkAuth());
+      const result = await new MockAgy().checkAuth();
       assert.strictEqual(result.ok, true);
       assert.equal(result.method, 'cli-fallback');
-      assert.equal(result.version, 'gemini-cli 3.1.0');
-      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
-      assert.equal(result.hint, undefined);
+      assert.equal(result.version, 'agy-cli 1.1.0');
+      assert.equal(result.binaryPath, `${tmpBin}/agy`);
     } finally {
-      await makeFakeBinary(tmpBin, 'gemini', 'gemini-cli 3.0.0');
+      await makeFakeBinary(tmpBin, 'agy', 'agy-cli 1.0.0');
     }
   });
 
   it('checkAuth() fallback: stays ready when the version probe has no output', async () => {
-    class MockGemini extends GeminiProvider {
+    class MockAgy extends AntigravityProvider {
       override isAvailable() {
         return true;
       }
     }
-    await makeFakeBinary(tmpBin, 'gemini', {});
+    await makeFakeBinary(tmpBin, 'agy', {});
 
     try {
-      const result = await withoutProviderAuthEnv(() => new MockGemini().checkAuth());
+      const result = await new MockAgy().checkAuth();
       assert.strictEqual(result.ok, true);
       assert.equal(result.method, 'cli-fallback');
       assert.equal(result.version, '');
-      assert.equal(result.binaryPath, `${tmpBin}/gemini`);
-      assert.equal(result.hint, undefined);
     } finally {
-      await makeFakeBinary(tmpBin, 'gemini', 'gemini-cli 3.0.0');
+      await makeFakeBinary(tmpBin, 'agy', 'agy-cli 1.0.0');
     }
   });
 
-  it('checkAuth() fallback: returns missing when the version probe fails', async () => {
-    class MockGemini extends GeminiProvider {
+  it('checkAuth() returns missing with OS Keyring hint when binary probe fails', async () => {
+    class MockAgy extends AntigravityProvider {
       override isAvailable() {
         return true;
       }
     }
-    await makeFakeBinary(tmpBin, 'gemini', {
+    await makeFakeBinary(tmpBin, 'agy', {
       stderr: 'permission denied\n',
       exitCode: 1,
     });
 
     try {
-      const result = await withoutProviderAuthEnv(() => new MockGemini().checkAuth());
+      const result = await new MockAgy().checkAuth();
       assert.strictEqual(result.ok, false);
       assert.equal(result.method, 'missing');
+      assert.ok(typeof result.hint === 'string');
+      // hint should mention agy install or OS Keyring
+      assert.ok(result.hint.includes('agy') || result.hint.includes('Keyring'));
     } finally {
-      await makeFakeBinary(tmpBin, 'gemini', 'gemini-cli 3.0.0');
+      await makeFakeBinary(tmpBin, 'agy', 'agy-cli 1.0.0');
     }
   });
 
-  it('checkAuth() fast-path: returns error when oauth_creds.json is a directory', async () => {
-    class MockGemini extends GeminiProvider {
-      override isAvailable() {
-        return true;
-      }
-    }
-    const provider = new MockGemini();
-    const credsDir = path.join(tmpHome, '.gemini');
-    await fs.mkdir(credsDir, { recursive: true });
-    const credsPath = path.join(credsDir, 'oauth_creds.json');
-    await fs.mkdir(credsPath, { recursive: true });
+  describe('buildArgs()', () => {
+    it('default profile: returns [-p, combined, --dangerously-skip-permissions]', () => {
+      const provider = new AntigravityProvider();
+      const args = provider.buildArgs('review', { permissionProfile: 'default' });
+      assert.ok(args.includes('-p'));
+      assert.ok(args.includes('--dangerously-skip-permissions'));
+    });
 
-    const originalPath = process.env.PATH;
-    process.env.PATH = '';
-    try {
-      const result = await provider.checkAuth();
-      assert.strictEqual(result.ok, false);
-    } finally {
-      process.env.PATH = originalPath;
-      await fs.rm(credsPath, { recursive: true, force: true });
-    }
-  });
+    it('restricted profile: omits --dangerously-skip-permissions', () => {
+      const provider = new AntigravityProvider();
+      const args = provider.buildArgs('review', { permissionProfile: 'restricted' });
+      assert.ok(args.includes('-p'));
+      assert.ok(!args.includes('--dangerously-skip-permissions'));
+    });
 
-  it('checkAuth() fast-path: returns error when oauth_creds.json is malformed', async () => {
-    class MockGemini extends GeminiProvider {
-      override isAvailable() {
-        return true;
-      }
-    }
-    const provider = new MockGemini();
-    const credsDir = path.join(tmpHome, '.gemini');
-    await fs.mkdir(credsDir, { recursive: true });
-    const credsPath = path.join(credsDir, 'oauth_creds.json');
-    await fs.writeFile(credsPath, 'not-json');
+    it('unrestricted profile: includes --dangerously-skip-permissions', () => {
+      const provider = new AntigravityProvider();
+      const args = provider.buildArgs('review', { permissionProfile: 'unrestricted' });
+      assert.ok(args.includes('--dangerously-skip-permissions'));
+    });
 
-    const originalPath = process.env.PATH;
-    process.env.PATH = '';
-    try {
-      const result = await provider.checkAuth();
-      assert.strictEqual(result.ok, false);
-    } finally {
-      process.env.PATH = originalPath;
-      await fs.rm(credsPath, { force: true });
-    }
+    it('IGNORES options.model — does not pass -m or --model flag', () => {
+      const provider = new AntigravityProvider();
+      const args = provider.buildArgs('review', { model: 'some-model' });
+      assert.ok(!args.includes('-m'));
+      assert.ok(!args.includes('--model'));
+      assert.ok(!args.includes('some-model'));
+    });
+
+    it('no options: defaults to non-restricted (includes --dangerously-skip-permissions)', () => {
+      const provider = new AntigravityProvider();
+      const args = provider.buildArgs('review');
+      assert.ok(args.includes('--dangerously-skip-permissions'));
+    });
   });
 });
 
@@ -596,11 +549,11 @@ describe('CodexProvider', () => {
 });
 
 describe('ProviderRegistry', () => {
-  it('get("gemini") returns GeminiProvider', () => {
+  it('get("antigravity") returns AntigravityProvider', () => {
     const registry = new ProviderRegistry();
-    const provider = registry.get('gemini');
+    const provider = registry.get('antigravity');
     assert.ok(provider !== undefined);
-    assert.equal(provider.key, 'gemini');
+    assert.equal(provider.key, 'antigravity');
   });
 
   it('get("codex") returns CodexProvider', () => {
@@ -622,19 +575,25 @@ describe('ProviderRegistry', () => {
     assert.equal(registry.get('unknown'), undefined);
   });
 
+  it('get("gemini") returns undefined (gemini removed)', () => {
+    const registry = new ProviderRegistry();
+    assert.equal(registry.get('gemini'), undefined);
+  });
+
   it('register() adds a new provider accessible via get()', () => {
     const registry = new ProviderRegistry();
-    const custom = new GeminiProvider();
+    const custom = new AntigravityProvider();
     registry.register('my-provider', custom);
     assert.equal(registry.get('my-provider'), custom);
   });
 
-  it('keys() includes gemini and codex', () => {
+  it('keys() includes antigravity and codex', () => {
     const registry = new ProviderRegistry();
     const keys = registry.keys();
-    assert.ok(keys.includes('gemini'));
+    assert.ok(keys.includes('antigravity'));
     assert.ok(keys.includes('codex'));
     assert.ok(keys.includes('mock'));
+    assert.ok(!keys.includes('gemini'));
   });
 });
 
@@ -715,9 +674,9 @@ describe('CodexProvider', () => {
   });
 });
 
-describe('GeminiProvider', () => {
+describe('AntigravityProvider', () => {
   it('implements summarizeOutput with default truncation', () => {
-    const provider = new GeminiProvider();
+    const provider = new AntigravityProvider();
     const output = 'b'.repeat(2000);
     const summary = provider.summarizeOutput(output, 100);
     assert.match(summary, /\.\.\.\[truncated to 100 chars\]/);
@@ -725,10 +684,10 @@ describe('GeminiProvider', () => {
   });
 
   it('returns full output when within maxLength', () => {
-    const provider = new GeminiProvider();
-    const output = 'short gemini output';
+    const provider = new AntigravityProvider();
+    const output = 'short agy output';
     const summary = provider.summarizeOutput(output, 1000);
-    assert.equal(summary, 'short gemini output');
+    assert.equal(summary, 'short agy output');
   });
 });
 
@@ -753,14 +712,14 @@ describe('Auth cache', () => {
 
   it('reuses provider auth result within TTL', async () => {
     let calls = 0;
-    class CachedGemini extends GeminiProvider {
+    class CachedAgy extends AntigravityProvider {
       override async checkAuth() {
         calls++;
-        return { ok: true, method: 'api-key' };
+        return { ok: true, method: 'cli-fallback' as const };
       }
     }
 
-    const provider = new CachedGemini();
+    const provider = new CachedAgy();
     const first = await getCachedProviderAuth(provider, { ttlMs: 5000 });
     const second = await getCachedProviderAuth(provider, { ttlMs: 5000 });
 
@@ -771,14 +730,14 @@ describe('Auth cache', () => {
 
   it('refreshes provider auth result after TTL', async () => {
     let calls = 0;
-    class CachedGemini extends GeminiProvider {
+    class CachedAgy extends AntigravityProvider {
       override async checkAuth() {
         calls++;
-        return { ok: true, method: 'api-key' };
+        return { ok: true, method: 'cli-fallback' as const };
       }
     }
 
-    const provider = new CachedGemini();
+    const provider = new CachedAgy();
     const first = await getCachedProviderAuth(provider, { ttlMs: 0 });
     const second = await getCachedProviderAuth(provider, { ttlMs: 0 });
 

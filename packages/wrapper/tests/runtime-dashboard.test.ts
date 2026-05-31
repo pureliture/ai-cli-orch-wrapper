@@ -6,15 +6,15 @@ import type { RuntimeContext } from '../src/runtime/types.js';
 function buildContext(overrides: Partial<RuntimeContext> = {}): RuntimeContext {
   return {
     active: {
-      provider: 'gemini',
+      provider: 'antigravity',
       command: 'review',
       sessionId: 'session-1234',
       permissionProfile: 'default',
       cwd: '/tmp/project',
-      promptTemplatePath: '/tmp/project/.claude/aco/prompts/gemini/review.md',
+      promptTemplatePath: '/tmp/project/.claude/aco/prompts/antigravity/review.md',
       auth: {
         ok: true,
-        method: 'oauth',
+        method: 'cli-fallback',
       },
       ...overrides.active,
     },
@@ -23,7 +23,7 @@ function buildContext(overrides: Partial<RuntimeContext> = {}): RuntimeContext {
       providerAgents: ['planner', 'reviewer'],
       providerHooks: ['PreToolUse', 'PostToolUse'],
       providerConfigFiles: ['settings.json'],
-      provider: 'gemini',
+      provider: 'antigravity',
       ...overrides.exposed,
     },
   };
@@ -38,7 +38,7 @@ describe('runtime dashboard rendering', () => {
     assert.ok(output.includes('✨ Active'));
     assert.ok(output.includes('🧩 Exposed'));
     assert.ok(/Auth/.test(output));
-    assert.ok(output.includes('oauth'));
+    assert.ok(output.includes('cli-fallback'));
     assert.ok(output.includes('Session ID'));
     assert.ok(output.includes('Providers'));
   });

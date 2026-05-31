@@ -19,7 +19,6 @@ const CREDENTIAL_PATTERNS: RegExp[] = [
  */
 const CREDENTIAL_PATHS: RegExp[] = [
   /(?:^|\/)\.codex\/auth\.json$/,
-  /(?:^|\/)\.gemini\/oauth_creds\.json$/,
 ];
 
 /**

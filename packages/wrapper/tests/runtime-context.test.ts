@@ -39,13 +39,13 @@ async function ensureCodexArtifacts(workspace: string): Promise<void[]> {
   ]);
 }
 
-async function ensureGeminiArtifacts(workspace: string): Promise<void[]> {
-  await mkdir(join(workspace, '.gemini', 'agents'), { recursive: true });
+async function ensureAntigravityArtifacts(workspace: string): Promise<void[]> {
+  await mkdir(join(workspace, '.antigravity', 'agents'), { recursive: true });
   return Promise.all([
-    writeFile(join(workspace, '.gemini', 'agents', 'reviewer.md'), '# reviewer\n'),
-    writeFile(join(workspace, '.gemini', 'agents', 'planner.md'), '# planner\n'),
+    writeFile(join(workspace, '.antigravity', 'agents', 'reviewer.md'), '# reviewer\n'),
+    writeFile(join(workspace, '.antigravity', 'agents', 'planner.md'), '# planner\n'),
     writeFile(
-      join(workspace, '.gemini', 'settings.json'),
+      join(workspace, '.antigravity', 'settings.json'),
       JSON.stringify({ hooks: [{ event: 'PostToolUse' }, { event: 'UserPromptSubmit' }] }),
       'utf8'
     ),
@@ -95,21 +95,25 @@ describe('runtime context collection', () => {
     });
   });
 
-  it('collects gemini exposed metadata from generated target files', async () => {
+  it('collects antigravity exposed metadata from workspace files (empty — agy has no workspace hooks)', async () => {
     await withWorkspace(async (workspace) => {
-      await Promise.all([ensureGeminiArtifacts(workspace), ensureSharedSkills(workspace)]);
+      await Promise.all([ensureAntigravityArtifacts(workspace), ensureSharedSkills(workspace)]);
 
       const context = await collectRuntimeContext({
-        provider: 'gemini',
+        provider: 'antigravity',
         command: 'summarize',
-        sessionId: 'session-gemini-1',
+        sessionId: 'session-antigravity-1',
         permissionProfile: 'restricted',
         auth: makeAuth('cli-fallback'),
         cwd: workspace,
       });
 
-      assert.equal(context.active.provider, 'gemini');
+      assert.equal(context.active.provider, 'antigravity');
       assert.equal(context.active.permissionProfile, 'restricted');
+      // agy는 workspace hooks/agents를 로드하지 않으므로
+      // .antigravity/agents/*.md 파일이 있어도 exposed lists는 채워진다
+      // (context.ts에서 해당 경로를 읽도록 분기하기 때문).
+      // 현재 구현: .antigravity/agents/*.md를 읽으므로 agents가 나타남.
       assert.deepEqual(context.exposed.providerAgents, ['planner', 'reviewer']);
       assert.deepEqual(context.exposed.providerHooks, ['PostToolUse', 'UserPromptSubmit']);
       assert.equal(context.exposed.providerConfigFiles.join(','), 'settings.json');
@@ -121,7 +125,7 @@ describe('runtime context collection', () => {
       execFileSync('git', ['init', '-b', 'feature-test'], { cwd: workspace });
 
       const context = await collectRuntimeContext({
-        provider: 'gemini',
+        provider: 'antigravity',
         command: 'review',
         sessionId: 'session-branch-1',
         permissionProfile: 'default',

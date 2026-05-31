@@ -47,7 +47,7 @@ function testProvider(key: string): void {
   }
 }
 
-if (target === 'gemini' || target === 'all') testProvider('gemini');
+if (target === 'antigravity' || target === 'all') testProvider('antigravity');
 if (target === 'mock' || target === 'all') testProvider('mock');
 
 if (target === 'mock' || target === 'all') {

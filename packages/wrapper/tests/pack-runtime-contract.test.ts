@@ -249,16 +249,6 @@ describe('pack template runtime contract', () => {
     await withWorkspace(async (workspace) => {
       process.env.PATH = `${binDir}${delimiter}${process.env.PATH ?? ''}`;
       await setupPack();
-      const geminiReview = await resolveRunPromptTemplate({
-        cwd: workspace,
-        home: workspace,
-        providerKey: 'gemini',
-        command: 'review',
-      });
-      assert.equal(
-        geminiReview.promptTemplatePath,
-        join(workspace, '.claude', 'aco', 'prompts', 'gemini', 'review.md')
-      );
 
       const codexReview = await resolveRunPromptTemplate({
         cwd: workspace,
@@ -284,10 +274,12 @@ describe('pack template runtime contract', () => {
         join(workspace, '.claude', 'aco', 'prompts', 'codex', 'review.md')
       );
 
+      // antigravity:review는 Phase 3에서 프롬프트 파일이 추가될 예정이므로
+      // 현재는 unknown command와 동일하게 generic fallback을 반환한다.
       const unknown = await resolveRunPromptTemplate({
         cwd: workspace,
         home: workspace,
-        providerKey: 'gemini',
+        providerKey: 'codex',
         command: 'unknown-command',
       });
       assert.equal(unknown.promptTemplatePath, undefined);
@@ -300,10 +292,10 @@ describe('pack template runtime contract', () => {
       resolveRunPromptTemplate({
         cwd: await mkdtemp(join(tmpdir(), 'aco-missing-review-cwd-')),
         home: await mkdtemp(join(tmpdir(), 'aco-missing-review-home-')),
-        providerKey: 'gemini',
+        providerKey: 'antigravity',
         command: 'review',
       }),
-      /Missing prompt template.*gemini.*review/
+      /Missing prompt template.*antigravity.*review/
     );
   });
 
@@ -312,7 +304,7 @@ describe('pack template runtime contract', () => {
       resolveRunPromptTemplate({
         cwd: await mkdtemp(join(tmpdir(), 'aco-invalid-command-cwd-')),
         home: await mkdtemp(join(tmpdir(), 'aco-invalid-command-home-')),
-        providerKey: 'gemini',
+        providerKey: 'antigravity',
         command: '../review',
       }),
       /Invalid command name/
@@ -322,7 +314,7 @@ describe('pack template runtime contract', () => {
       resolveRunPromptTemplate({
         cwd: await mkdtemp(join(tmpdir(), 'aco-invalid-provider-cwd-')),
         home: await mkdtemp(join(tmpdir(), 'aco-invalid-provider-home-')),
-        providerKey: '../gemini',
+        providerKey: '../antigravity',
         command: 'review',
       }),
       /Invalid provider key/

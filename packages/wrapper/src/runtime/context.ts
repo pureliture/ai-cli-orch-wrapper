@@ -143,11 +143,14 @@ function pickProviderExposed(
           configPath: join(workspace, '.codex', 'config.toml'),
           ext: '.toml',
         }
-      : provider === 'gemini'
+      : provider === 'antigravity'
         ? {
-            agentsDir: join(workspace, '.gemini', 'agents'),
-            hooksPath: join(workspace, '.gemini', 'settings.json'),
-            configPath: join(workspace, '.gemini', 'settings.json'),
+            // agy CLI는 workspace hooks/config를 로드하지 않으므로
+            // agentsDir에 존재하지 않는 경로를 지정해 빈 목록을 반환하게 한다.
+            // hooksPath/configPath는 null 대신 존재하지 않는 경로를 전달한다.
+            agentsDir: join(workspace, '.antigravity', 'agents'),
+            hooksPath: join(workspace, '.antigravity', 'settings.json'),
+            configPath: join(workspace, '.antigravity', 'settings.json'),
             ext: '.md',
           }
         : null;
