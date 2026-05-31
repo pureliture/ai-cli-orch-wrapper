@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { chmod, mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { delimiter, join, resolve } from 'node:path';
@@ -12,6 +12,10 @@ interface CliResult {
   stderr: string;
   home: string;
 }
+
+const packageJson = JSON.parse(readFileSync(resolve(__dirname, '..', 'package.json'), 'utf8')) as {
+  version: string;
+};
 
 async function makeHome(): Promise<string> {
   return mkdtemp(join(tmpdir(), 'aco-doctor-home-'));
@@ -104,7 +108,10 @@ describe('aco doctor CLI', () => {
     assert.equal(result.code, 0);
     assert.match(result.stdout, /aco doctor/);
     assert.match(result.stdout, /Node:/);
-    assert.match(result.stdout, /aco version: 0\.4\.0/);
+    assert.match(
+      result.stdout,
+      new RegExp(`aco version: ${packageJson.version.replace(/\./g, '\\.')}`)
+    );
     assert.match(result.stdout, /Git repository:/);
     assert.match(result.stdout, /\.claude harness:/);
     assert.match(result.stdout, /\/aco command:/);
