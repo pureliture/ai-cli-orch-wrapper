@@ -39,19 +39,6 @@ async function ensureCodexArtifacts(workspace: string): Promise<void[]> {
   ]);
 }
 
-async function ensureAntigravityArtifacts(workspace: string): Promise<void[]> {
-  await mkdir(join(workspace, '.antigravity', 'agents'), { recursive: true });
-  return Promise.all([
-    writeFile(join(workspace, '.antigravity', 'agents', 'reviewer.md'), '# reviewer\n'),
-    writeFile(join(workspace, '.antigravity', 'agents', 'planner.md'), '# planner\n'),
-    writeFile(
-      join(workspace, '.antigravity', 'settings.json'),
-      JSON.stringify({ hooks: [{ event: 'PostToolUse' }, { event: 'UserPromptSubmit' }] }),
-      'utf8'
-    ),
-  ]);
-}
-
 async function ensureSharedSkills(workspace: string): Promise<void[]> {
   return Promise.all([
     mkdir(join(workspace, '.agents', 'skills', 'review-skill'), { recursive: true })
@@ -95,9 +82,9 @@ describe('runtime context collection', () => {
     });
   });
 
-  it('collects antigravity exposed metadata from workspace files (empty — agy has no workspace hooks)', async () => {
+  it('exposes empty provider surface for antigravity (agy has no workspace agents/hooks/config)', async () => {
     await withWorkspace(async (workspace) => {
-      await Promise.all([ensureAntigravityArtifacts(workspace), ensureSharedSkills(workspace)]);
+      await ensureSharedSkills(workspace);
 
       const context = await collectRuntimeContext({
         provider: 'antigravity',
@@ -110,13 +97,12 @@ describe('runtime context collection', () => {
 
       assert.equal(context.active.provider, 'antigravity');
       assert.equal(context.active.permissionProfile, 'restricted');
-      // agy는 workspace hooks/agents를 로드하지 않으므로
-      // .antigravity/agents/*.md 파일이 있어도 exposed lists는 채워진다
-      // (context.ts에서 해당 경로를 읽도록 분기하기 때문).
-      // 현재 구현: .antigravity/agents/*.md를 읽으므로 agents가 나타남.
-      assert.deepEqual(context.exposed.providerAgents, ['planner', 'reviewer']);
-      assert.deepEqual(context.exposed.providerHooks, ['PostToolUse', 'UserPromptSubmit']);
-      assert.equal(context.exposed.providerConfigFiles.join(','), 'settings.json');
+      // agy는 workspace custom-agent 등록 표면이 없고 hooks/config도 읽지 않으므로
+      // provider-specific 노출 표면이 전부 비어 있다. shared skills만 노출된다.
+      assert.deepEqual(context.exposed.providerAgents, []);
+      assert.deepEqual(context.exposed.providerHooks, []);
+      assert.deepEqual(context.exposed.providerConfigFiles, []);
+      assert.deepEqual(context.exposed.sharedSkills, ['planner-skill', 'review-skill']);
     });
   });
 

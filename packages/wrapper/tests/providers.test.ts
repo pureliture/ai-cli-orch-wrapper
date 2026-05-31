@@ -31,8 +31,13 @@ async function makeFakeBinary(
   return full;
 }
 
-async function withoutProviderAuthEnv<T>(fn: () => Promise<T>): Promise<T> {
-  const keys = ['GEMINI_API_KEY', 'GOOGLE_API_KEY', 'OPENAI_API_KEY'];
+/**
+ * Codex checkAuth() cli-fallback 경로를 격리하기 위한 helper.
+ * Codex의 env fast-path(OPENAI_API_KEY)만 제거한다.
+ * (antigravity는 env fast-path를 참조하지 않으므로 여기 포함하지 않는다.)
+ */
+async function withoutCodexAuthEnv<T>(fn: () => Promise<T>): Promise<T> {
+  const keys = ['OPENAI_API_KEY'];
   const original: Record<string, string | undefined> = {};
   for (const key of keys) {
     original[key] = process.env[key];
@@ -269,17 +274,18 @@ describe('AntigravityProvider', () => {
   });
 
   describe('buildArgs()', () => {
-    it('default profile: returns [-p, combined, --dangerously-skip-permissions]', () => {
+    it('default profile: returns [--dangerously-skip-permissions, -p] with -p last', () => {
       const provider = new AntigravityProvider();
       const args = provider.buildArgs('review', { permissionProfile: 'default' });
-      assert.ok(args.includes('-p'));
-      assert.ok(args.includes('--dangerously-skip-permissions'));
+      assert.deepEqual(args, ['--dangerously-skip-permissions', '-p']);
+      // -p가 마지막이어야 invoke()가 combined를 그 뒤에 append할 수 있다.
+      assert.equal(args[args.length - 1], '-p');
     });
 
-    it('restricted profile: omits --dangerously-skip-permissions', () => {
+    it('restricted profile: returns [-p] only (omits --dangerously-skip-permissions)', () => {
       const provider = new AntigravityProvider();
       const args = provider.buildArgs('review', { permissionProfile: 'restricted' });
-      assert.ok(args.includes('-p'));
+      assert.deepEqual(args, ['-p']);
       assert.ok(!args.includes('--dangerously-skip-permissions'));
     });
 
@@ -287,6 +293,7 @@ describe('AntigravityProvider', () => {
       const provider = new AntigravityProvider();
       const args = provider.buildArgs('review', { permissionProfile: 'unrestricted' });
       assert.ok(args.includes('--dangerously-skip-permissions'));
+      assert.equal(args[args.length - 1], '-p');
     });
 
     it('IGNORES options.model — does not pass -m or --model flag', () => {
@@ -301,6 +308,7 @@ describe('AntigravityProvider', () => {
       const provider = new AntigravityProvider();
       const args = provider.buildArgs('review');
       assert.ok(args.includes('--dangerously-skip-permissions'));
+      assert.equal(args[args.length - 1], '-p');
     });
   });
 });
@@ -465,7 +473,7 @@ describe('CodexProvider', () => {
       }
     }
 
-    const result = await withoutProviderAuthEnv(() => new MockCodex().checkAuth());
+    const result = await withoutCodexAuthEnv(() => new MockCodex().checkAuth());
     assert.strictEqual(result.ok, true);
     assert.equal(result.method, 'cli-fallback');
     assert.equal(result.version, 'codex-cli 1.0.0');
@@ -482,7 +490,7 @@ describe('CodexProvider', () => {
     await makeFakeBinary(tmpBin, 'codex', {});
 
     try {
-      const result = await withoutProviderAuthEnv(() => new MockCodex().checkAuth());
+      const result = await withoutCodexAuthEnv(() => new MockCodex().checkAuth());
       assert.strictEqual(result.ok, true);
       assert.equal(result.method, 'cli-fallback');
       assert.equal(result.version, '');

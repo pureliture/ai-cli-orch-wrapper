@@ -39,8 +39,8 @@ export class AntigravityProvider implements IProvider {
   /**
    * agy CLI flag 빌더.
    *
-   * 인수 형식: `agy -p "<combined>"`
-   * combined = `${prompt}\n\n${content}` (invoke() 에서 조합)
+   * 인수 형식: `agy [--dangerously-skip-permissions] -p "<combined>"`
+   * combined는 invoke()에서 buildArgs 결과 끝에 append된다 (`-p`가 마지막 flag).
    *
    * - non-restricted → `--dangerously-skip-permissions` 추가
    * - restricted → 생략
@@ -49,11 +49,11 @@ export class AntigravityProvider implements IProvider {
    */
   buildArgs(command: string, options?: InvokeOptions): string[] {
     const profile: PermissionProfile = options?.permissionProfile ?? 'default';
-    const args = ['-p'];
+    const base = ['-p'];
     if (profile !== 'restricted') {
-      args.push('--dangerously-skip-permissions');
+      base.unshift('--dangerously-skip-permissions');
     }
-    return args;
+    return base;
   }
 
   async *invoke(
@@ -65,19 +65,9 @@ export class AntigravityProvider implements IProvider {
     const binary = which('agy');
     if (!binary) throw new Error('agy CLI not found in PATH');
 
-    const combined = `${prompt}\n\n${content}`;
-    const baseArgs = this.buildArgs(command, options);
-    // -p <combined> の並び: [-p, --dangerously-skip-permissions?, combined]
-    // flag 순서는 flexible하므로 combined은 항상 -p 바로 뒤에 배치한다.
-    // ['-p', ...rest] → ['-p', combined, ...rest-without-'-p']
-    const flagIdx = baseArgs.indexOf('-p');
-    const argsWithCombined = [
-      ...baseArgs.slice(0, flagIdx + 1),
-      combined,
-      ...baseArgs.slice(flagIdx + 1),
-    ];
-
-    yield* spawnStream(binary, argsWithCombined, { processName: 'agy', stdin: 'pipe' }, options);
+    const combined = content ? `${prompt}\n\n${content}` : prompt;
+    const args = [...this.buildArgs(command, options), combined];
+    yield* spawnStream(binary, args, { processName: 'agy', stdin: 'pipe' }, options);
   }
 
   summarizeOutput(output: string, maxLength: number): string {
