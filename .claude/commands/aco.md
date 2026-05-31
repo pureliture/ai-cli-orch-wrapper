@@ -22,3 +22,12 @@ the Claude Code session. By default, aco ask saves full output as artifacts and
 returns a bounded brief.
 EOF
 ```
+
+Alternatively, for directing a task to a specific named agent spec:
+
+  aco delegate <agent-id> --input "<task and context>"
+
+This reads the agent spec from `.claude/agents/<agent-id>.md`, combines its
+seed prompt with the supplied input, and prints the result to stdout.
+`aco delegate` does NOT auto-intercept Agent tool calls — it must be invoked
+explicitly.

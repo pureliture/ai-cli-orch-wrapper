@@ -26,6 +26,11 @@ export interface TaskRecord {
   /** Execution duration in milliseconds from sentinel metadata. */
   durationMs?: number;
   runtimeContext?: RuntimeContext;
+  /**
+   * Child process env policy applied at invocation time.
+   * "allowlist" means only explicit keys were passed (not full parent env inheritance).
+   */
+  envPolicy?: string;
 }
 
 export class SessionStore {
