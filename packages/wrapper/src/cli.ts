@@ -341,11 +341,13 @@ async function resolveLatestRunId(runsDir: string): Promise<string | null> {
   const withMtime = await Promise.all(
     entries.map(async (name) => {
       const s = await stat(join(runsDir, name)).catch(() => null);
-      return { name, mtime: s?.mtimeMs ?? 0 };
+      return { name, isDirectory: s?.isDirectory() ?? false, mtime: s?.mtimeMs ?? 0 };
     })
   );
-  withMtime.sort((a, b) => b.mtime - a.mtime);
-  return withMtime[0].name;
+  const runDirs = withMtime.filter((entry) => entry.isDirectory);
+  if (runDirs.length === 0) return null;
+  runDirs.sort((a, b) => b.mtime - a.mtime);
+  return runDirs[0].name;
 }
 
 async function readRunLedger(runsDir: string, runId: string): Promise<RunLedger> {

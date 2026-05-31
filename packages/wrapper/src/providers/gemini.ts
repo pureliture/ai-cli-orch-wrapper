@@ -71,13 +71,17 @@ export class GeminiProvider implements IProvider {
 
   buildArgs(command: string, options?: InvokeOptions): string[] {
     const profile: PermissionProfile = options?.permissionProfile ?? 'default';
-    const base = ['-p'];
+    const base: string[] = [];
     if (profile !== 'restricted') {
-      base.unshift('--yolo');
+      base.push('--yolo');
     }
     if (options?.model) {
-      base.unshift('-m', options.model);
+      base.push('-m', options.model);
     }
+    if (options?.sessionId) {
+      base.push('--session-id', options.sessionId);
+    }
+    base.push('-p');
     return base;
   }
 

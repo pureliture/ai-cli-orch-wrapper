@@ -7,7 +7,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readdir, stat } from 'node:fs/promises';
+import { mkdtemp, readdir, stat, utimes, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
@@ -63,17 +63,18 @@ async function runCli(
 async function latestRunId(home: string): Promise<string> {
   const runRoot = join(home, '.aco', 'runs');
   const entries = await readdir(runRoot);
-  assert.ok(entries.length >= 1, 'expected at least one run directory');
-  // Sort by mtime descending — same algorithm as production code — to verify the
-  // mtime-sort contract rather than relying on readdir order.
   const withMtime = await Promise.all(
     entries.map(async (name) => {
       const s = await stat(join(runRoot, name)).catch(() => null);
-      return { name, mtime: s?.mtimeMs ?? 0 };
+      return { name, isDirectory: s?.isDirectory() ?? false, mtime: s?.mtimeMs ?? 0 };
     })
   );
-  withMtime.sort((a, b) => b.mtime - a.mtime);
-  return withMtime[0].name;
+  const runDirs = withMtime.filter((entry) => entry.isDirectory);
+  assert.ok(runDirs.length >= 1, 'expected at least one run directory');
+  // Sort by mtime descending — same algorithm as production code — to verify the
+  // mtime-sort contract rather than relying on readdir order.
+  runDirs.sort((a, b) => b.mtime - a.mtime);
+  return runDirs[0].name;
 }
 
 async function latestSessionId(home: string): Promise<string> {
@@ -188,6 +189,26 @@ describe('run-level result/status UX (3.1–3.5)', () => {
 
     assert.equal(result.code, 0, `aco status --run latest failed: ${result.stderr}`);
     assert.ok(result.stdout.includes(`Run: ${runId}`), `expected Run: ${runId} in output, got: ${result.stdout}`);
+  });
+
+  it('result --run latest ignores newer non-directory entries in the runs root', async () => {
+    const home = await makeHome();
+    const askResult = await runAskMock(home);
+    assert.equal(askResult.code, 0, `aco ask failed: ${askResult.stderr}`);
+
+    const runId = await latestRunId(home);
+    const strayFile = join(home, '.aco', 'runs', '.DS_Store');
+    await writeFile(strayFile, 'not a run directory', 'utf8');
+    const future = new Date(Date.now() + 60_000);
+    await utimes(strayFile, future, future);
+
+    const result = await runCli(['result', '--run', 'latest'], { home });
+
+    assert.equal(result.code, 0, `aco result --run latest failed: ${result.stderr}`);
+    assert.ok(
+      result.stdout.includes(`Run: ${runId}`),
+      `expected Run: ${runId} in output, got: ${result.stdout}`
+    );
   });
 
   it('result --run latest exits 1 when no runs exist', async () => {
