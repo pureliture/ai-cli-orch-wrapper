@@ -5,12 +5,44 @@ import type { SyncManifest, SyncWarning, ManifestTargetRecord } from './transfor
 const MANIFEST_DIR = '.aco';
 const MANIFEST_FILE = 'sync-manifest.json';
 
+/**
+ * Identify legacy aco-owned Gemini surface targets that v5 no longer emits.
+ * Operates on repo-relative manifest keys (e.g. "GEMINI.md", ".gemini/agents/foo.md").
+ * Shared by the v4→v5 manifest migration and the sync-engine legacy cleanup so the
+ * predicate has a single definition.
+ */
+export function isLegacyGeminiTarget(manifestKey: string): boolean {
+  return manifestKey === 'GEMINI.md' || manifestKey.startsWith('.gemini/agents/');
+}
+
 export async function readManifest(rootPath: string): Promise<SyncManifest | null> {
   try {
     const path = join(rootPath, MANIFEST_DIR, MANIFEST_FILE);
     const content = await readFile(path, 'utf-8');
     const parsed = JSON.parse(content) as Partial<SyncManifest>;
     return migrateManifest(parsed, rootPath);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read the persisted manifest, migrating key formats up to v4 (repo-relative
+ * normalization) but WITHOUT applying the v5 step that drops legacy Gemini targets.
+ *
+ * The sync engine needs the pre-v5 view to plan on-disk removal of aco-owned
+ * GEMINI.md / .gemini/agents/* files: the v5 migration intentionally strips those
+ * manifest entries, so reading the fully-migrated manifest would hide the targets
+ * that still exist on disk and need cleanup.
+ */
+export async function readManifestForLegacyCleanup(
+  rootPath: string
+): Promise<SyncManifest | null> {
+  try {
+    const path = join(rootPath, MANIFEST_DIR, MANIFEST_FILE);
+    const content = await readFile(path, 'utf-8');
+    const parsed = JSON.parse(content) as Partial<SyncManifest>;
+    return migrateManifest(parsed, rootPath, { stopBeforeV5: true });
   } catch {
     return null;
   }
@@ -60,7 +92,11 @@ export function calculateDrift(current: SyncManifest | null, updated: SyncManife
  *   v3 (absolute targetHashes/targets keys) → v4 (repo-relative targetHashes/targets keys)
  *   v4 (includes GEMINI.md / .gemini/agents/* targets) → v5 (Gemini targets removed)
  */
-export function migrateManifest(parsed: Partial<SyncManifest>, rootPath: string): SyncManifest {
+export function migrateManifest(
+  parsed: Partial<SyncManifest>,
+  rootPath: string,
+  options: { stopBeforeV5?: boolean } = {}
+): SyncManifest {
   const legacy = parsed as Record<string, unknown>;
 
   // v1 → v2: add ownership-aware targets
@@ -146,16 +182,17 @@ export function migrateManifest(parsed: Partial<SyncManifest>, rootPath: string)
 
   // → v5: drop aco-owned GEMINI.md and .gemini/agents/* targets that are no longer
   // emitted by the sync engine. External/unknown-owned entries are preserved.
-  const legacyVersionNum = Number.parseInt((legacy.version as string) || '4', 10) || 0;
-  if (legacyVersionNum < 5) {
+  // sourceHashes is untouched here, so this step is idempotent on already-v5 input.
+  //
+  // When options.stopBeforeV5 is set, the caller wants the pre-v5 view (legacy
+  // Gemini targets preserved) so it can plan on-disk cleanup before the entries are
+  // stripped. In that mode we skip the drop and report the version as '4'.
+  if (!options.stopBeforeV5 && versionNum < 5) {
     const targetHashes = (legacy.targetHashes as Record<string, string>) || {};
     const targets = (legacy.targets as Record<string, ManifestTargetRecord>) || {};
 
-    const isGeminiTarget = (key: string): boolean =>
-      key === 'GEMINI.md' || key.startsWith('.gemini/agents/');
-
     for (const key of Object.keys(targetHashes)) {
-      if (!isGeminiTarget(key)) continue;
+      if (!isLegacyGeminiTarget(key)) continue;
       const record = targets[key];
       // Only remove aco-owned entries; preserve external/unknown ownership
       if (!record || record.owner === 'aco') {
@@ -163,7 +200,7 @@ export function migrateManifest(parsed: Partial<SyncManifest>, rootPath: string)
       }
     }
     for (const key of Object.keys(targets)) {
-      if (!isGeminiTarget(key)) continue;
+      if (!isLegacyGeminiTarget(key)) continue;
       if (targets[key].owner === 'aco') {
         delete targets[key];
       }
@@ -174,8 +211,10 @@ export function migrateManifest(parsed: Partial<SyncManifest>, rootPath: string)
     legacy.version = '5';
   }
 
+  const resolvedVersion = options.stopBeforeV5 ? ((legacy.version as string) || '4') : '5';
+
   return {
-    version: '5',
+    version: resolvedVersion,
     generatedAt: (legacy.generatedAt as string) || new Date().toISOString(),
     sourceHashes: (legacy.sourceHashes as Record<string, string>) || {},
     targetHashes: (legacy.targetHashes as Record<string, string>) || {},

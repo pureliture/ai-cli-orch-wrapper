@@ -4,7 +4,13 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discoverSources } from '../src/sync/source-discovery.js';
-import { readManifest, writeManifest, calculateDrift, migrateManifest } from '../src/sync/manifest.js';
+import {
+  readManifest,
+  readManifestForLegacyCleanup,
+  writeManifest,
+  calculateDrift,
+  migrateManifest,
+} from '../src/sync/manifest.js';
 import { runSync } from '../src/sync/sync-engine.js';
 import type { SyncManifest } from '../src/sync/transform-interface.js';
 
@@ -535,6 +541,50 @@ describe('manifest migration: v4 → v5 (drop GEMINI.md and .gemini/agents/*)', 
       assert.equal(manifest.version, '5', 'readManifest must return version "5" after migration');
       assert.equal('GEMINI.md' in manifest.targets, false, 'GEMINI.md must be removed after migration');
       assert.equal('.gemini/agents/helper.md' in manifest.targets, false, '.gemini/agents/*.md must be removed');
+      assert.ok('AGENTS.md' in manifest.targets, 'AGENTS.md must be preserved');
+    } finally {
+      await rm(rootPath, { recursive: true, force: true });
+    }
+  });
+
+  it('readManifestForLegacyCleanup preserves legacy Gemini targets (pre-v5 view)', async () => {
+    const rootPath = await mkdtemp(join(tmpdir(), 'aco-pre-v5-'));
+    try {
+      await mkdir(join(rootPath, '.aco'), { recursive: true });
+
+      const v4ManifestOnDisk = {
+        version: '4',
+        generatedAt: '2025-01-01T00:00:00.000Z',
+        sourceHashes: { 'CLAUDE.md': 'abc123' },
+        targetHashes: {
+          'AGENTS.md': 'hash-agents',
+          'GEMINI.md': 'hash-gemini',
+          '.gemini/agents/helper.md': 'hash-helper',
+        },
+        targets: {
+          'AGENTS.md': { hash: 'hash-agents', owner: 'aco', kind: 'config' },
+          'GEMINI.md': { hash: 'hash-gemini', owner: 'aco', kind: 'config' },
+          '.gemini/agents/helper.md': { hash: 'hash-helper', owner: 'aco', kind: 'agent' },
+        },
+        skipped: [],
+        warnings: [],
+      };
+
+      await writeFile(
+        join(rootPath, '.aco', 'sync-manifest.json'),
+        JSON.stringify(v4ManifestOnDisk)
+      );
+
+      const manifest = await readManifestForLegacyCleanup(rootPath);
+      assert.ok(manifest, 'manifest must be read');
+      // Pre-v5 view: legacy Gemini entries are still present so the engine can plan
+      // their on-disk removal before the v5 migration strips them.
+      assert.equal(manifest.version, '4', 'pre-v5 view must report version "4"');
+      assert.ok('GEMINI.md' in manifest.targets, 'GEMINI.md must be preserved in pre-v5 view');
+      assert.ok(
+        '.gemini/agents/helper.md' in manifest.targets,
+        '.gemini/agents/*.md must be preserved in pre-v5 view'
+      );
       assert.ok('AGENTS.md' in manifest.targets, 'AGENTS.md must be preserved');
     } finally {
       await rm(rootPath, { recursive: true, force: true });

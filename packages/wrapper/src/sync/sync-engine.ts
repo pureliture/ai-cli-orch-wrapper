@@ -3,7 +3,13 @@ import { aggregateContext } from './context-transform.js';
 import { getManagedBlockUpdate } from './managed-block.js';
 import { syncSkills } from './skill-transform.js';
 import { syncCodexAgents } from './agent-codex-transform.js';
-import { readManifest, writeManifest, calculateDrift } from './manifest.js';
+import {
+  readManifest,
+  readManifestForLegacyCleanup,
+  writeManifest,
+  calculateDrift,
+  isLegacyGeminiTarget,
+} from './manifest.js';
 import { computeHash } from './hash.js';
 import { loadSyncConfig } from './sync-config.js';
 import { detectDuplicates } from './duplicate-detector.js';
@@ -177,9 +183,6 @@ async function planLegacyGeminiCleanup(
 ): Promise<void> {
   if (!existingManifest) return;
 
-  const isLegacyGeminiTarget = (key: string): boolean =>
-    key === 'GEMINI.md' || key.startsWith('.gemini/agents/');
-
   const seen = new Set<string>();
   const records = new Map<string, ManifestTargetRecord>();
 
@@ -201,6 +204,24 @@ async function planLegacyGeminiCleanup(
     if (record.owner !== 'aco') continue;
 
     const targetPath = join(repoRoot, targetKey);
+
+    // Normalize-and-re-derive defense: ensure the manifest key did not contain
+    // any `..` traversal that resolves outside its declared repo-relative form.
+    // We re-derive the repo-relative key from the joined path and require it to
+    // match the original key exactly. This keeps the path-safety check in one
+    // place (plan stage) so the execution stage does not depend on a separate
+    // isPathWithinRepo guard for legacy Gemini removals.
+    if (toManifestKey(repoRoot, targetPath) !== targetKey) {
+      warnings.push({
+        source: targetKey,
+        message:
+          'Legacy Gemini target key does not round-trip through repo-relative ' +
+          `normalization (possible path traversal); skipping auto-removal: "${targetKey}".`,
+        severity: 'warning',
+      });
+      continue;
+    }
+
     let diskContent: string | undefined;
     try {
       diskContent = await readFile(targetPath, 'utf8');
@@ -321,11 +342,19 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     );
   }
 
-  // 3. Read existing manifest
+  // 3. Read existing manifest (fully migrated) plus a pre-v5 view used only to plan
+  //    on-disk cleanup of legacy aco-owned Gemini targets that the v5 migration drops.
   const existingManifest = await readManifest(repoRoot);
+  const legacyCleanupManifest = await readManifestForLegacyCleanup(repoRoot);
 
   // 4. Compute transform plan (pure planning pass)
-  const plan = await computeTransformPlan(sources, repoRoot, existingManifest, config);
+  const plan = await computeTransformPlan(
+    sources,
+    repoRoot,
+    existingManifest,
+    config,
+    legacyCleanupManifest
+  );
 
   // 5. Detect duplicates
   const duplicateWarnings = await detectDuplicates(repoRoot, plan.outputs);
@@ -529,10 +558,10 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
           continue;
         }
 
-        const manifestKey = toManifestKey(repoRoot, output.targetPath);
-        const isLegacyGeminiOutput =
-          manifestKey === 'GEMINI.md' || manifestKey.startsWith('.gemini/agents/');
-        if (!isLegacyGeminiOutput) {
+        // Legacy Gemini removals are already path-validated in planLegacyGeminiCleanup
+        // (normalize-and-re-derive round-trip check), so they bypass the
+        // .agents/skills-only guard below without re-deriving the defense here.
+        if (!isLegacyGeminiTarget(toManifestKey(repoRoot, output.targetPath))) {
           const allowedDirs = ['.agents/skills'];
           if (!isPathWithinRepo(repoRoot, output.targetPath, allowedDirs)) {
             plan.warnings.push({
@@ -589,7 +618,8 @@ async function computeTransformPlan(
   sources: SyncSource[],
   repoRoot: string,
   existingManifest: SyncManifest | null,
-  config: SyncConfig
+  config: SyncConfig,
+  legacyCleanupManifest: SyncManifest | null = existingManifest
 ): Promise<TransformPlan> {
   const outputs: SyncOutput[] = [];
   const warnings: SyncWarning[] = [];
@@ -604,7 +634,10 @@ async function computeTransformPlan(
   }
 
   await planLegacyHookCleanup(repoRoot, existingManifest, outputs, warnings);
-  await planLegacyGeminiCleanup(repoRoot, existingManifest, outputs, warnings);
+  // Use the pre-v5 manifest view: the v5 migration strips legacy aco-owned Gemini
+  // entries, so the fully-migrated existingManifest no longer lists the on-disk
+  // GEMINI.md / .gemini/agents/* files that still need removal.
+  await planLegacyGeminiCleanup(repoRoot, legacyCleanupManifest, outputs, warnings);
 
   // 1. Context -> AGENTS.md (only; GEMINI.md is retired in Phase 2)
   const contextContent = aggregateContext(sources);

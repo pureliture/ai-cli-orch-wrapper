@@ -275,13 +275,15 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
       const geminiAgentPath = join(tmpDir, '.gemini', 'agents', 'helper.md');
       await writeFile(geminiAgentPath, '---\nname: helper\nkind: local\n---\nBody.');
 
-      // Write a v4 manifest that owns both GEMINI.md and .gemini/agents/helper.md
+      // Write a genuine v4 manifest that owns both GEMINI.md and .gemini/agents/helper.md.
+      // runSync reads it via readManifest (which migrates v4→v5) and the engine's
+      // legacy cleanup plans the on-disk removals.
       await mkdir(join(tmpDir, '.aco'), { recursive: true });
       const geminiHash = computeHash(geminiContent);
       const geminiAgentContent = '---\nname: helper\nkind: local\n---\nBody.';
       const geminiAgentHash = computeHash(geminiAgentContent);
       const v4Manifest = {
-        version: '5',
+        version: '4',
         generatedAt: new Date().toISOString(),
         sourceHashes: { 'CLAUDE.md': computeHash('# context') },
         targetHashes: {
@@ -310,6 +312,21 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
         (o) => o.targetPath.includes('.gemini') && o.targetPath.includes('agents') && o.action === 'removed'
       );
       assert.ok(geminiAgentRemoved, 'aco-owned .gemini/agents/* from v4 manifest must be removed');
+
+      // The legacy files must actually be gone from disk (not just planned)
+      const { existsSync } = await import('node:fs');
+      assert.equal(existsSync(geminiMdPath), false, 'GEMINI.md must be deleted from disk');
+      assert.equal(existsSync(geminiAgentPath), false, '.gemini/agents/helper.md must be deleted from disk');
+
+      // The regenerated v5 manifest must not list the legacy Gemini targets
+      const updatedManifest = JSON.parse(
+        await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
+      );
+      assert.equal(updatedManifest.version, '5', 'regenerated manifest must be v5');
+      assert.equal('GEMINI.md' in updatedManifest.targets, false);
+      assert.equal('GEMINI.md' in updatedManifest.targetHashes, false);
+      assert.equal('.gemini/agents/helper.md' in updatedManifest.targets, false);
+      assert.equal('.gemini/agents/helper.md' in updatedManifest.targetHashes, false);
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -1124,17 +1141,19 @@ describe('Skill Sync', () => {
     }
   });
 
-  it('detectDuplicates warns on disk skill + planned skill output collision', async () => {
+  it('detectDuplicates does NOT warn when disk skill and planned output share the same path', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dup-'));
     try {
-      // Create an on-disk .agents/skills/gh-issue/ (will be indexed as provider:'agents')
+      // Create an on-disk .agents/skills/gh-issue/ (indexed as provider:'agents',
+      // path .agents/skills/gh-issue/SKILL.md)
       await mkdir(join(tmpDir, '.agents', 'skills', 'gh-issue'), { recursive: true });
       await writeFile(
         join(tmpDir, '.agents', 'skills', 'gh-issue', 'SKILL.md'),
         '---\nname: gh-issue\n---\n\n# GH Issue'
       );
 
-      // Simulate a planned output pointing to the same path (also provider:'agents')
+      // Planned output pointing to the SAME directory → planned path resolves to the
+      // same .agents/skills/gh-issue/SKILL.md (provider:'agents', name:'gh-issue').
       const outputs: SyncOutput[] = [
         {
           targetPath: join(tmpDir, '.agents', 'skills', 'gh-issue'),
@@ -1146,13 +1165,15 @@ describe('Skill Sync', () => {
       ];
 
       const warnings = await detectDuplicates(tmpDir, outputs);
-      // Both on-disk and planned output share provider:'agents' + name:'gh-issue'
-      // After dedup by path they collapse, so no duplicate warning is expected
-      // (same path = same logical entry)
-      // The real duplicate scenario is disk + different-path planned output:
-      assert.ok(
-        typeof warnings === 'object',
-        'detectDuplicates should return a warnings array'
+      // Same provider + name + path collapses in the dedup step, so the disk entry
+      // and the planned output must NOT be reported as a duplicate (false positive guard).
+      const ghIssueDupes = warnings.filter((w) => w.message.includes('gh-issue'));
+      assert.equal(
+        ghIssueDupes.length,
+        0,
+        `Same-path disk+planned entries must not produce a duplicate warning, got: ${JSON.stringify(
+          ghIssueDupes.map((w) => w.message)
+        )}`
       );
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
@@ -1223,15 +1244,17 @@ describe('Skill Sync', () => {
   it('detectDuplicates includes planned shared-skill outputs in index', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-dup-plan-'));
     try {
-      // Create an on-disk .agents/skills/my-skill to serve as existing entry (provider:'agents')
+      // On-disk .agents/skills/my-skill (indexed as provider:'agents',
+      // path .agents/skills/my-skill/SKILL.md)
       await mkdir(join(tmpDir, '.agents', 'skills', 'my-skill'), { recursive: true });
       await writeFile(
         join(tmpDir, '.agents', 'skills', 'my-skill', 'SKILL.md'),
         '---\nname: my-skill\n---\n\n# My Skill'
       );
 
-      // Simulate a planned shared-skill output that would write to a DIFFERENT path
-      // but same name (edge case: shouldn't happen in normal use, but tests the index step)
+      // Planned shared-skill output at a DIFFERENT path but the same name.
+      // Planned outputs are always indexed as provider:'agents', so this produces a
+      // second provider:'agents' + name:'my-skill' entry at a distinct path → duplicate.
       const alternateSkillPath = join(tmpDir, '.codex', 'skills', 'my-skill');
       const outputs: SyncOutput[] = [
         {
@@ -1244,12 +1267,23 @@ describe('Skill Sync', () => {
       ];
 
       const warnings = await detectDuplicates(tmpDir, outputs);
-      // planned output goes to provider:'agents' (same as .agents/skills scan)
-      // .agents/skills/my-skill (disk) + planned output (also agents:my-skill)
-      // but different paths → should detect duplicate if paths differ
+      // The planned output must be present in the index, so it collides with the
+      // on-disk entry and yields a 'my-skill' duplicate warning.
+      const mySkillDupes = warnings.filter((w) => w.message.includes('my-skill'));
       assert.ok(
-        typeof warnings === 'object',
-        'detectDuplicates should return a warnings array without throwing'
+        mySkillDupes.length > 0,
+        'Planned shared-skill output must be indexed and reported as a duplicate against the on-disk skill'
+      );
+      // The warning should name both surfaces (disk + planned target path).
+      assert.ok(
+        mySkillDupes.some(
+          (w) =>
+            w.message.includes('.agents/skills/my-skill') &&
+            w.message.includes('.codex/skills/my-skill')
+        ),
+        `Duplicate warning should reference both the disk and planned paths, got: ${JSON.stringify(
+          mySkillDupes.map((w) => w.message)
+        )}`
       );
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
