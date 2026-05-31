@@ -141,6 +141,16 @@ describe('GeminiProvider', () => {
     assert.equal(new GeminiProvider().key, 'gemini');
   });
 
+  it('passes the ACO session id to Gemini CLI as --session-id', () => {
+    const provider = new GeminiProvider();
+    const sessionId = 'f2f20f6e-42b4-49dd-9e15-30aaf97f9a63';
+    const args = provider.buildArgs('ask', { permissionProfile: 'restricted', sessionId });
+
+    const flagIndex = args.indexOf('--session-id');
+    assert.notEqual(flagIndex, -1, `expected --session-id in args: ${args.join(' ')}`);
+    assert.equal(args[flagIndex + 1], sessionId);
+  });
+
   it('installHint is non-empty string', () => {
     assert.ok(new GeminiProvider().installHint.length > 0);
   });

@@ -119,6 +119,13 @@ if (target === 'mock' || target === 'all') {
       encoding: 'utf8',
     });
     check('aco doctor reports local diagnostics', doctor.includes('aco doctor'));
+
+    const delegateHelp = execFileSync(
+      process.execPath,
+      ['--require', tsxRegister, cliPath, 'delegate', '--help'],
+      { cwd: cliRoot, env, encoding: 'utf8' }
+    );
+    check('aco delegate --help exits 0', delegateHelp.includes('delegate'));
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
     check('mock demo command sequence', false);
