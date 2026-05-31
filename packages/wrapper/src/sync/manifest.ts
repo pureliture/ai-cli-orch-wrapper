@@ -58,8 +58,9 @@ export function calculateDrift(current: SyncManifest | null, updated: SyncManife
  *   v1 (targetHashes only) → v2 (ownership-aware targets)
  *   v2 (absolute sourceHashes) → v3 (repo-relative sourceHashes)
  *   v3 (absolute targetHashes/targets keys) → v4 (repo-relative targetHashes/targets keys)
+ *   v4 (includes GEMINI.md / .gemini/agents/* targets) → v5 (Gemini targets removed)
  */
-function migrateManifest(parsed: Partial<SyncManifest>, rootPath: string): SyncManifest {
+export function migrateManifest(parsed: Partial<SyncManifest>, rootPath: string): SyncManifest {
   const legacy = parsed as Record<string, unknown>;
 
   // v1 → v2: add ownership-aware targets
@@ -143,8 +144,38 @@ function migrateManifest(parsed: Partial<SyncManifest>, rootPath: string): SyncM
     legacy.version = '4';
   }
 
+  // → v5: drop aco-owned GEMINI.md and .gemini/agents/* targets that are no longer
+  // emitted by the sync engine. External/unknown-owned entries are preserved.
+  const legacyVersionNum = Number.parseInt((legacy.version as string) || '4', 10) || 0;
+  if (legacyVersionNum < 5) {
+    const targetHashes = (legacy.targetHashes as Record<string, string>) || {};
+    const targets = (legacy.targets as Record<string, ManifestTargetRecord>) || {};
+
+    const isGeminiTarget = (key: string): boolean =>
+      key === 'GEMINI.md' || key.startsWith('.gemini/agents/');
+
+    for (const key of Object.keys(targetHashes)) {
+      if (!isGeminiTarget(key)) continue;
+      const record = targets[key];
+      // Only remove aco-owned entries; preserve external/unknown ownership
+      if (!record || record.owner === 'aco') {
+        delete targetHashes[key];
+      }
+    }
+    for (const key of Object.keys(targets)) {
+      if (!isGeminiTarget(key)) continue;
+      if (targets[key].owner === 'aco') {
+        delete targets[key];
+      }
+    }
+
+    legacy.targetHashes = targetHashes;
+    legacy.targets = targets;
+    legacy.version = '5';
+  }
+
   return {
-    version: '4',
+    version: '5',
     generatedAt: (legacy.generatedAt as string) || new Date().toISOString(),
     sourceHashes: (legacy.sourceHashes as Record<string, string>) || {},
     targetHashes: (legacy.targetHashes as Record<string, string>) || {},
@@ -158,6 +189,6 @@ function inferKindFromPath(path: string): ManifestTargetRecord['kind'] {
   if (path.includes('/skills/')) return 'shared-skill';
   if (path.includes('/agents/')) return 'agent';
   if (path.includes('/hooks/')) return 'provider-command';
-  if (path.endsWith('AGENTS.md') || path.endsWith('GEMINI.md')) return 'config';
+  if (path.endsWith('AGENTS.md')) return 'config';
   return 'shared-skill';
 }

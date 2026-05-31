@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, realpath } from 'node:fs/promi
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { discoverSources } from '../src/sync/source-discovery.js';
-import { readManifest, writeManifest, calculateDrift } from '../src/sync/manifest.js';
+import { readManifest, writeManifest, calculateDrift, migrateManifest } from '../src/sync/manifest.js';
 import { runSync } from '../src/sync/sync-engine.js';
 import type { SyncManifest } from '../src/sync/transform-interface.js';
 
@@ -93,7 +93,7 @@ describe('manifest migration: v2 absolute → v3 relative', () => {
 
       const manifest = await readManifest(rootPath);
       assert.ok(manifest, 'Expected manifest to be read');
-      assert.equal(manifest.version, '4', 'Expected version "4" after migration');
+      assert.equal(manifest.version, '5', 'Expected version "5" after migration');
 
       const keys = Object.keys(manifest.sourceHashes);
       for (const key of keys) {
@@ -136,7 +136,7 @@ describe('manifest migration: v2 absolute → v3 relative', () => {
 
       const manifest = await readManifest(rootPath);
       assert.ok(manifest);
-      assert.equal(manifest.version, '4');
+      assert.equal(manifest.version, '5');
       assert.equal(manifest.sourceHashes['CLAUDE.md'], 'abc123');
     } finally {
       await rm(rootPath, { recursive: true, force: true });
@@ -175,7 +175,7 @@ describe('manifest migration: outside-root path handling', () => {
 
       const manifest = await readManifest(rootPath);
       assert.ok(manifest);
-      assert.equal(manifest.version, '4');
+      assert.equal(manifest.version, '5');
 
       const keys = Object.keys(manifest.sourceHashes);
       assert.ok(
@@ -322,13 +322,14 @@ describe('manifest migration: targetHashes/targets absolute → relative', () =>
         'hash-agents',
         'Expected AGENTS.md relative key in targetHashes'
       );
+      // GEMINI.md is dropped in the v4→v5 migration step (aco-owned)
       assert.equal(
         manifest.targetHashes['GEMINI.md'],
-        'hash-gemini',
-        'Expected GEMINI.md relative key in targetHashes'
+        undefined,
+        'GEMINI.md must be removed during v4→v5 migration'
       );
       assert.ok(manifest.targets['AGENTS.md'], 'Expected AGENTS.md relative key in targets');
-      assert.ok(manifest.targets['GEMINI.md'], 'Expected GEMINI.md relative key in targets');
+      assert.equal(manifest.targets['GEMINI.md'], undefined, 'GEMINI.md must be removed from targets');
       assert.equal(manifest.targets['AGENTS.md'].hash, 'hash-agents');
     } finally {
       await rm(rootPath, { recursive: true, force: true });
@@ -385,7 +386,7 @@ describe('runSync: portable target keys across checkout locations', () => {
         await writeFile(join(root, 'CLAUDE.md'), claudeContent);
       }
 
-      // 2. Run a full sync in rootA: produces sync outputs (AGENTS.md/GEMINI.md)
+      // 2. Run a full sync in rootA: produces sync outputs (AGENTS.md only, no GEMINI.md)
       //    and a manifest with repo-relative target keys.
       await runSync(rootA, { dryRun: false });
 
@@ -400,8 +401,11 @@ describe('runSync: portable target keys across checkout locations', () => {
         assert.ok(!key.startsWith('/'), `targets key must be relative after sync, got: "${key}"`);
       }
 
+      // Sanity check: GEMINI.md should not be in targets (Phase 2 requirement)
+      assert.equal('GEMINI.md' in manifestObj.targets, false, 'GEMINI.md must not be in manifest targets');
+
       // 3. Run a full sync in rootB too, so rootB has the same generated output
-      //    files (AGENTS.md/GEMINI.md) on disk, then replace rootB's manifest with
+      //    files (AGENTS.md only) on disk, then replace rootB's manifest with
       //    the one rootA wrote. This is the actual cross-checkout scenario: a
       //    manifest produced at one absolute path is consumed at a different one.
       await runSync(rootB, { dryRun: false });
@@ -419,6 +423,121 @@ describe('runSync: portable target keys across checkout locations', () => {
     } finally {
       await rm(rootA, { recursive: true, force: true });
       await rm(rootB, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Phase 2 (Task 3): v4 → v5 manifest migration
+// ---------------------------------------------------------------------------
+
+describe('manifest migration: v4 → v5 (drop GEMINI.md and .gemini/agents/*)', () => {
+  it('migrateManifest drops GEMINI.md and .gemini/agents/* from targets/targetHashes', () => {
+    const rootPath = '/fake/root';
+    const v4Manifest = {
+      version: '4',
+      generatedAt: '2025-01-01T00:00:00.000Z',
+      sourceHashes: { 'CLAUDE.md': 'abc123' },
+      targetHashes: {
+        'AGENTS.md': 'hash-agents',
+        'GEMINI.md': 'hash-gemini',
+        '.gemini/agents/helper.md': 'hash-gemini-agent',
+        '.codex/agents/helper.toml': 'hash-codex-agent',
+      },
+      targets: {
+        'AGENTS.md': { hash: 'hash-agents', owner: 'aco', kind: 'config' },
+        'GEMINI.md': { hash: 'hash-gemini', owner: 'aco', kind: 'config' },
+        '.gemini/agents/helper.md': { hash: 'hash-gemini-agent', owner: 'aco', kind: 'agent' },
+        '.codex/agents/helper.toml': { hash: 'hash-codex-agent', owner: 'aco', kind: 'agent' },
+      },
+      skipped: [],
+      warnings: [],
+    };
+
+    const migrated = migrateManifest(v4Manifest, rootPath);
+
+    // Version must be '5'
+    assert.equal(migrated.version, '5', 'migrated manifest version must be "5"');
+
+    // GEMINI.md must be removed from targets and targetHashes
+    assert.equal('GEMINI.md' in migrated.targets, false, 'GEMINI.md must be dropped from targets');
+    assert.equal('GEMINI.md' in migrated.targetHashes, false, 'GEMINI.md must be dropped from targetHashes');
+
+    // .gemini/agents/* must be removed from targets and targetHashes
+    assert.equal('.gemini/agents/helper.md' in migrated.targets, false, '.gemini/agents/helper.md must be dropped from targets');
+    assert.equal('.gemini/agents/helper.md' in migrated.targetHashes, false, '.gemini/agents/helper.md must be dropped from targetHashes');
+
+    // AGENTS.md and codex surfaces must be preserved
+    assert.ok('AGENTS.md' in migrated.targets, 'AGENTS.md must be preserved in targets');
+    assert.ok('.codex/agents/helper.toml' in migrated.targets, '.codex/agents/helper.toml must be preserved');
+
+    // sourceHashes must be preserved
+    assert.equal(migrated.sourceHashes['CLAUDE.md'], 'abc123', 'sourceHashes must be preserved');
+  });
+
+  it('migrateManifest v4→v5 only removes aco-owned gemini targets (not external)', () => {
+    const rootPath = '/fake/root';
+    const v4Manifest = {
+      version: '4',
+      generatedAt: '2025-01-01T00:00:00.000Z',
+      sourceHashes: {},
+      targetHashes: {
+        'GEMINI.md': 'hash-gemini-aco',
+        '.gemini/agents/external.md': 'hash-ext',
+      },
+      targets: {
+        'GEMINI.md': { hash: 'hash-gemini-aco', owner: 'aco', kind: 'config' },
+        '.gemini/agents/external.md': { hash: 'hash-ext', owner: 'external', kind: 'agent' },
+      },
+      skipped: [],
+      warnings: [],
+    };
+
+    const migrated = migrateManifest(v4Manifest, rootPath);
+
+    // aco-owned GEMINI.md must be removed
+    assert.equal('GEMINI.md' in migrated.targets, false, 'aco-owned GEMINI.md must be dropped');
+
+    // external-owned .gemini/agents/* must be preserved (not aco's to remove)
+    assert.ok('.gemini/agents/external.md' in migrated.targets, 'external-owned .gemini/agents/* must be preserved');
+  });
+
+  it('readManifest returns version "5" after reading a v4 manifest file', async () => {
+    const rootPath = await mkdtemp(join(tmpdir(), 'aco-v4tov5-'));
+    try {
+      await mkdir(join(rootPath, '.aco'), { recursive: true });
+
+      const v4ManifestOnDisk = {
+        version: '4',
+        generatedAt: '2025-01-01T00:00:00.000Z',
+        sourceHashes: { 'CLAUDE.md': 'abc123' },
+        targetHashes: {
+          'AGENTS.md': 'hash-agents',
+          'GEMINI.md': 'hash-gemini',
+          '.gemini/agents/helper.md': 'hash-helper',
+        },
+        targets: {
+          'AGENTS.md': { hash: 'hash-agents', owner: 'aco', kind: 'config' },
+          'GEMINI.md': { hash: 'hash-gemini', owner: 'aco', kind: 'config' },
+          '.gemini/agents/helper.md': { hash: 'hash-helper', owner: 'aco', kind: 'agent' },
+        },
+        skipped: [],
+        warnings: [],
+      };
+
+      await writeFile(
+        join(rootPath, '.aco', 'sync-manifest.json'),
+        JSON.stringify(v4ManifestOnDisk)
+      );
+
+      const manifest = await readManifest(rootPath);
+      assert.ok(manifest, 'manifest must be read');
+      assert.equal(manifest.version, '5', 'readManifest must return version "5" after migration');
+      assert.equal('GEMINI.md' in manifest.targets, false, 'GEMINI.md must be removed after migration');
+      assert.equal('.gemini/agents/helper.md' in manifest.targets, false, '.gemini/agents/*.md must be removed');
+      assert.ok('AGENTS.md' in manifest.targets, 'AGENTS.md must be preserved');
+    } finally {
+      await rm(rootPath, { recursive: true, force: true });
     }
   });
 });

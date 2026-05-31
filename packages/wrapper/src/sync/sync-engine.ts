@@ -3,7 +3,6 @@ import { aggregateContext } from './context-transform.js';
 import { getManagedBlockUpdate } from './managed-block.js';
 import { syncSkills } from './skill-transform.js';
 import { syncCodexAgents } from './agent-codex-transform.js';
-import { syncGeminiAgents } from './agent-gemini-transform.js';
 import { readManifest, writeManifest, calculateDrift } from './manifest.js';
 import { computeHash } from './hash.js';
 import { loadSyncConfig } from './sync-config.js';
@@ -161,6 +160,79 @@ async function planLegacyHookCleanup(
       hash: expectedHash,
       owner: 'aco',
       assetKind: 'provider-command',
+    });
+  }
+}
+
+/**
+ * Plan removal of aco-owned legacy Gemini targets (GEMINI.md and .gemini/agents/*)
+ * that were emitted by older sync versions but are no longer produced in v5.
+ * Only removes entries where owner is 'aco'; external/unknown-owned entries are left alone.
+ */
+async function planLegacyGeminiCleanup(
+  repoRoot: string,
+  existingManifest: SyncManifest | null,
+  outputs: SyncOutput[],
+  warnings: SyncWarning[]
+): Promise<void> {
+  if (!existingManifest) return;
+
+  const isLegacyGeminiTarget = (key: string): boolean =>
+    key === 'GEMINI.md' || key.startsWith('.gemini/agents/');
+
+  const seen = new Set<string>();
+  const records = new Map<string, ManifestTargetRecord>();
+
+  for (const [targetKey, record] of Object.entries(existingManifest.targets ?? {})) {
+    records.set(targetKey, record);
+  }
+  // Fall back to targetHashes for old manifests that pre-date targets
+  for (const [targetKey, hash] of Object.entries(existingManifest.targetHashes ?? {})) {
+    if (!records.has(targetKey)) {
+      records.set(targetKey, { hash, owner: 'aco', kind: 'agent' });
+    }
+  }
+
+  for (const [targetKey, record] of records) {
+    if (seen.has(targetKey) || !isLegacyGeminiTarget(targetKey)) continue;
+    seen.add(targetKey);
+
+    // Only auto-remove aco-owned entries
+    if (record.owner !== 'aco') continue;
+
+    const targetPath = join(repoRoot, targetKey);
+    let diskContent: string | undefined;
+    try {
+      diskContent = await readFile(targetPath, 'utf8');
+    } catch (err: unknown) {
+      if (isErrorWithCode(err) && err.code === 'ENOENT') {
+        // File already gone — still plan a remove so the manifest entry gets cleared
+      } else {
+        throw err;
+      }
+    }
+
+    if (diskContent !== undefined) {
+      const expectedHash = record.hash ?? existingManifest.targetHashes?.[targetKey];
+      if (expectedHash && computeHash(diskContent) !== expectedHash) {
+        warnings.push({
+          source: targetKey,
+          message:
+            'Stale Gemini target hash does not match manifest; skipping auto-removal. ' +
+            `Review ${targetKey} before deleting.`,
+          severity: 'warning',
+        });
+        continue;
+      }
+    }
+
+    outputs.push({
+      targetPath,
+      kind: 'file',
+      action: 'removed',
+      hash: record.hash,
+      owner: 'aco',
+      assetKind: 'config',
     });
   }
 }
@@ -455,7 +527,12 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
             }
           }
           continue;
-        } else {
+        }
+
+        const manifestKey = toManifestKey(repoRoot, output.targetPath);
+        const isLegacyGeminiOutput =
+          manifestKey === 'GEMINI.md' || manifestKey.startsWith('.gemini/agents/');
+        if (!isLegacyGeminiOutput) {
           const allowedDirs = ['.agents/skills'];
           if (!isPathWithinRepo(repoRoot, output.targetPath, allowedDirs)) {
             plan.warnings.push({
@@ -527,12 +604,12 @@ async function computeTransformPlan(
   }
 
   await planLegacyHookCleanup(repoRoot, existingManifest, outputs, warnings);
+  await planLegacyGeminiCleanup(repoRoot, existingManifest, outputs, warnings);
 
-  // 1. Context -> AGENTS.md and GEMINI.md
+  // 1. Context -> AGENTS.md (only; GEMINI.md is retired in Phase 2)
   const contextContent = aggregateContext(sources);
   if (contextContent) {
     const agentsMdPath = `${repoRoot}/AGENTS.md`;
-    const geminiMdPath = `${repoRoot}/GEMINI.md`;
 
     const updatedAgents = await getManagedBlockUpdate(agentsMdPath, contextContent);
     const agentsHash = computeHash(updatedAgents);
@@ -548,21 +625,6 @@ async function computeTransformPlan(
     const agentsMdKey = toManifestKey(repoRoot, agentsMdPath);
     targetHashes[agentsMdKey] = agentsHash;
     targets[agentsMdKey] = { hash: agentsHash, owner: 'aco', kind: 'config' };
-
-    const updatedGemini = await getManagedBlockUpdate(geminiMdPath, contextContent);
-    const geminiHash = computeHash(updatedGemini);
-    outputs.push({
-      targetPath: geminiMdPath,
-      kind: 'managed-block',
-      action: 'updated',
-      content: updatedGemini,
-      hash: geminiHash,
-      owner: 'aco',
-      assetKind: 'config',
-    });
-    const geminiMdKey = toManifestKey(repoRoot, geminiMdPath);
-    targetHashes[geminiMdKey] = geminiHash;
-    targets[geminiMdKey] = { hash: geminiHash, owner: 'aco', kind: 'config' };
   }
 
   // 2. Skills
@@ -600,24 +662,8 @@ async function computeTransformPlan(
     }
   }
 
-  // 4. Gemini agents
-  const geminiAgentResult = await syncGeminiAgents(sources, repoRoot);
-  outputs.push(...geminiAgentResult.outputs);
-  warnings.push(...geminiAgentResult.warnings);
-  for (const o of geminiAgentResult.outputs) {
-    if (o.hash) {
-      const key = toManifestKey(repoRoot, o.targetPath);
-      targetHashes[key] = o.hash;
-      targets[key] = {
-        hash: o.hash,
-        owner: 'aco',
-        kind: o.assetKind ?? 'agent',
-      };
-    }
-  }
-
   const manifest: SyncManifest = {
-    version: '4',
+    version: '5',
     generatedAt: new Date().toISOString(),
     sourceHashes,
     targetHashes,

@@ -21,7 +21,7 @@ export async function loadFormatterConfig(repoRoot: string): Promise<FormatterCo
 export function resolveModelForProvider(
   config: FormatterConfig | null,
   modelAlias: string,
-  targetProvider: 'codex' | 'gemini_cli'
+  targetProvider: 'codex' | 'antigravity'
 ): string | undefined {
   if (!config) return undefined;
 

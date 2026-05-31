@@ -83,9 +83,6 @@ function normalizeHooks(raw: Record<string, unknown>): ClaudeHooks {
 // Codex supported hook events
 const CODEX_SUPPORTED_EVENTS = new Set(['PostToolUse']);
 
-// Gemini supported hook events
-const GEMINI_SUPPORTED_EVENTS = new Set(['PostToolUse']);
-
 export function toCodexHooks(hooks: ClaudeHooks): {
   hooks: Array<{ event: string; command: string; matcher?: string; timeout?: number }>;
   warnings: string[];
@@ -125,43 +122,3 @@ export function toCodexHooks(hooks: ClaudeHooks): {
   return { hooks: result, warnings };
 }
 
-export function toGeminiHooks(hooks: ClaudeHooks): {
-  hooks: Record<string, { command: string; matcher?: string; timeout?: number }>;
-  warnings: string[];
-} {
-  const result: Record<string, { command: string; matcher?: string; timeout?: number }> = {};
-  const warnings: string[] = [];
-
-  for (const [event, eventConfig] of Object.entries(hooks)) {
-    if (!GEMINI_SUPPORTED_EVENTS.has(event)) {
-      warnings.push(`Event "${event}" is not supported by Gemini hooks`);
-      continue;
-    }
-
-    // Gemini takes one command per event (simplified)
-    const cmd = eventConfig.commands?.[0];
-    if (!cmd) continue;
-
-    const hook: { command: string; matcher?: string; timeout?: number } = {
-      command: cmd.command,
-    };
-
-    if (cmd.matcher) {
-      hook.matcher = cmd.matcher;
-    }
-    if (cmd.timeout) {
-      // Convert seconds to milliseconds for Gemini
-      hook.timeout = cmd.timeout * 1000;
-    }
-
-    if (cmd.async) {
-      warnings.push(
-        `Hook "${event}" has async: true — Gemini hooks are synchronous, async semantics will be lost`
-      );
-    }
-
-    result[event] = hook;
-  }
-
-  return { hooks: result, warnings };
-}
