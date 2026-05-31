@@ -9,7 +9,7 @@
 <a href="https://www.npmjs.com/package/@pureliture/ai-cli-orch-wrapper">
   <img src="https://img.shields.io/npm/v/@pureliture/ai-cli-orch-wrapper?style=for-the-badge&logo=npm&logoColor=white&color=CB3837&label=npm" alt="npm" />
 </a>
-<img src="https://img.shields.io/badge/license-ISC-3b82f6?style=for-the-badge" alt="license" />
+<img src="https://img.shields.io/badge/license-MIT-3b82f6?style=for-the-badge" alt="license" />
 <img src="https://img.shields.io/badge/node-%E2%89%A518-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="node" />
 <img src="https://img.shields.io/badge/PRs-welcome-10b981?style=for-the-badge" alt="prs" />
 <img src="https://img.shields.io/badge/OpenSpec-driven-8b5cf6?style=for-the-badge" alt="openspec" />
@@ -41,6 +41,7 @@
   <a href="#-아키텍처-개요"><img src="https://img.shields.io/badge/🏛️_Architecture-1e293b?style=for-the-badge" alt="Architecture" /></a>
   <a href="#-사용자-가이드"><img src="https://img.shields.io/badge/📖_User_Guide-1e293b?style=for-the-badge" alt="User Guide" /></a>
   <a href="#-사용-시나리오"><img src="https://img.shields.io/badge/🎯_Use_Cases-1e293b?style=for-the-badge" alt="Use Cases" /></a>
+  <a href="#-저장소-구조"><img src="https://img.shields.io/badge/🗂️_Repo_Layout-1e293b?style=for-the-badge" alt="Repo Layout" /></a>
   <a href="#%EF%B8%8F-하네스-구성"><img src="https://img.shields.io/badge/🛠️_Harness-1e293b?style=for-the-badge" alt="Harness" /></a>
 </p>
 
@@ -328,6 +329,13 @@ sync drift 상태를 확인하지만 real provider execution이나 remote auth v
 `aco ask`는 Claude Code 세션 안에서 외부 AI CLI에 advisory 작업을 맡기기 위한 high-level
 wrapper입니다. provider 실행은 명시적 동의 없이는 시작되지 않습니다.
 
+<p align="center">
+  <img src="docs/images/session-lifecycle.svg" alt="Delegation Lifecycle" width="100%" />
+</p>
+
+> 💡 `--dry-run`은 실행 계획만 표시하고 provider를 호출하지 않습니다. 실제 위임은 `--yes`로
+> 명시 동의했을 때만 시작되며, 그 시점에 session이 생성되고 ledger·brief·output이 기록됩니다.
+
 ```bash
 # 실행 계획만 확인하고 provider는 호출하지 않음
 aco ask --providers mock --task "review this demo input" --input "demo" --dry-run
@@ -346,6 +354,26 @@ aco doctor
 사용자가 현재 Claude Code 세션에 provider raw output을 직접 넣고 싶을 때만 명시적으로 사용합니다.
 `brief`는 provider별 600자 bounded summary만 stdout에 포함하고, full output은 artifact에 저장합니다.
 `mock` provider는 인증 없는 deterministic demo 전용이며, 실제 AI 품질을 의미하지 않습니다.
+
+### aco ask vs aco delegate
+
+| 커맨드 | 용도 | 방향 |
+|--------|------|------|
+| `aco ask` | 외부 AI provider(Gemini, Codex)에 advisory 작업을 위임 | Claude Code → 외부 AI CLI |
+| `aco delegate` | 명명된 agent spec과 seed 파일로 풍부한 프롬프트를 구성해 stdout에 출력 | Claude Code 세션 내 재사용 |
+
+`aco ask`는 동의 게이트를 통해 외부 provider를 실제로 호출하고 결과를 artifact에 저장합니다.
+`aco delegate`는 외부 호출 없이 `.claude/agents/<agent-id>.md`의 spec과 `promptSeedFile`의 seed
+내용을 결합해 stdout에 출력합니다. `/review`, `/research`, `/execute` 같은 slash command에서
+`aco delegate <agent-id> --input "$PROMPT"` 형태로 호출해 Claude Code 세션 안에서 사용합니다.
+
+```bash
+# agent spec과 seed를 결합한 프롬프트를 stdout에 출력
+aco delegate reviewer --input "$(git diff HEAD)"
+
+# input 내용을 파일에서 읽기
+aco delegate researcher --input-file context.txt
+```
 
 <details>
 <summary>📺 <b>Runtime Session 대시보드 예시</b> (펼치기)</summary>
@@ -488,6 +516,60 @@ PR 머지 전 Gemini와 Codex **양쪽 리뷰**를 받고 싶을 때
 
 <br/>
 
+## 🗂️ 저장소 구조
+
+이 저장소는 npm workspace이며, Node wrapper와 Go runtime이 한 트리에 공존합니다.
+
+<p align="center">
+  <img src="docs/images/repository-structure.svg" alt="Repository Structure" width="100%" />
+</p>
+
+<table>
+<thead>
+<tr><th>경로</th><th>역할</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>packages/wrapper/</code></td>
+<td><code>@pureliture/ai-cli-orch-wrapper</code> 런타임 — <code>aco</code> CLI, provider interface·구현·registry, sync engine, session/task/output lifecycle</td>
+</tr>
+<tr>
+<td><code>packages/installer/</code></td>
+<td>install-time entrypoint와 setup flow</td>
+</tr>
+<tr>
+<td><code>cmd/aco/</code> · <code>internal/</code></td>
+<td>Go runtime — blocking provider 실행 실험(<code>delegate</code> · <code>run</code>)과 provider·runner 내부 구현</td>
+</tr>
+<tr>
+<td><code>templates/commands/</code> · <code>templates/prompts/</code> · <code>templates/tasks/</code></td>
+<td>command pack에 포함되어 배포되는 slash command·prompt·task preset 소스</td>
+</tr>
+<tr>
+<td><code>docs/</code></td>
+<td>architecture, contract, guides, reference, phase plan, archive 문서</td>
+</tr>
+<tr>
+<td><code>openspec/</code></td>
+<td>OpenSpec proposal·spec·design·task 목록</td>
+</tr>
+<tr>
+<td><code>.github/workflows/</code></td>
+<td><code>ci.yml</code> · <code>release.yml</code> 등 CI/릴리스 워크플로우</td>
+</tr>
+</tbody>
+</table>
+
+> 💡 `Go runtime`은 별도 디렉터리가 아니라 root의 <code>cmd/aco/</code>와 <code>internal/</code>을 묶은
+> 개념적 그룹입니다. Node/Go 책임 경계는 [docs/contract/go-node-boundary.md](docs/contract/go-node-boundary.md)에 정의되어 있습니다.
+
+<br/>
+
+<!-- ────────────── SECTION DIVIDER ────────────── -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&customColorList=12&height=3" width="100%" />
+
+<br/>
+
 ## 🛠️ 하네스 구성
 
 이 저장소는 repo-local `.claude/`를 **harness 기준**으로 사용합니다.
@@ -522,14 +604,14 @@ PR 머지 전 Gemini와 Codex **양쪽 리뷰**를 받고 싶을 때
 📄 GEMINI.md               # Gemini 프로젝트 지침
 📁 .agents/skills/         # Codex·Gemini 공유 (ACO-owned only)
 📁 .codex/agents/          # Codex custom agent
-📄 .codex/hooks.json       # Codex hook
 📁 .gemini/agents/         # Gemini agent
-📄 .gemini/settings.json   # Gemini settings
 🗂️ .aco/sync-manifest.json  # Drift tracking
 ```
 
 > **`aco sync`가 관리하는 영역**<br/>
 > 수동 편집 시 drift 경고가 발생합니다.
+
+Hook 설정은 provider별 user-level runtime 설정으로 취급하며 `aco sync`가 생성하지 않습니다.
 
 </td>
 </tr>

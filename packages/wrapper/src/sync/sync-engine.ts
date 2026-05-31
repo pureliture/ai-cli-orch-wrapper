@@ -4,8 +4,6 @@ import { getManagedBlockUpdate } from './managed-block.js';
 import { syncSkills } from './skill-transform.js';
 import { syncCodexAgents } from './agent-codex-transform.js';
 import { syncGeminiAgents } from './agent-gemini-transform.js';
-import { syncCodexHooks } from './hook-codex-transform.js';
-import { syncGeminiHooks } from './hook-gemini-transform.js';
 import { readManifest, writeManifest, calculateDrift } from './manifest.js';
 import { computeHash } from './hash.js';
 import { loadSyncConfig } from './sync-config.js';
@@ -28,6 +26,12 @@ interface ErrorWithCode extends Error {
   code?: string;
 }
 
+const LEGACY_HOOK_TARGETS = new Set([
+  '.codex/hooks.json',
+  '.codex/config.toml',
+  '.gemini/settings.json',
+]);
+
 function isErrorWithCode(err: unknown): err is ErrorWithCode {
   return err instanceof Error && 'code' in err;
 }
@@ -44,6 +48,169 @@ function isPathWithinRepo(root: string, target: string, allowed: string[]): bool
       return true;
     }
   }
+  return false;
+}
+
+/**
+ * Convert an absolute target path to a repo-relative manifest key.
+ * Manifest keys are always stored as repo-relative paths (no leading slash).
+ */
+function toManifestKey(repoRoot: string, absolutePath: string): string {
+  return relative(repoRoot, absolutePath);
+}
+
+function isLegacyHookTarget(manifestKey: string): boolean {
+  return LEGACY_HOOK_TARGETS.has(manifestKey);
+}
+
+async function legacyHookCleanupReady(
+  targetKey: string,
+  targetPath: string,
+  expectedHash: string,
+  warnings: SyncWarning[]
+): Promise<boolean> {
+  let diskContent: string;
+  try {
+    diskContent = await readFile(targetPath, 'utf8');
+  } catch (err: unknown) {
+    if (isErrorWithCode(err) && err.code === 'ENOENT') return true;
+    throw err;
+  }
+
+  if (computeHash(diskContent) !== expectedHash) {
+    warnings.push({
+      source: targetKey,
+      message:
+        'Stale hook target hash does not match manifest; skipping auto-removal. Review user-level hook setup before deleting.',
+      severity: 'warning',
+    });
+    return false;
+  }
+
+  if (targetKey === '.codex/config.toml' && stripCodexManagedHookBlock(diskContent) === null) {
+    warnings.push({
+      source: targetKey,
+      message:
+        'Stale Codex hook config does not contain an ACO managed block; skipping auto-removal.',
+      severity: 'warning',
+    });
+    return false;
+  }
+
+  if (targetKey === '.gemini/settings.json') {
+    try {
+      const parsed = JSON.parse(diskContent) as unknown;
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new Error('settings JSON must be an object');
+      }
+    } catch (err: unknown) {
+      const e = err as Error;
+      warnings.push({
+        source: targetKey,
+        message: `Stale Gemini hook settings are not safely editable JSON; skipping auto-removal. ${e.message}`,
+        severity: 'warning',
+      });
+      return false;
+    }
+  }
+
+  return true;
+}
+
+async function planLegacyHookCleanup(
+  repoRoot: string,
+  existingManifest: SyncManifest | null,
+  outputs: SyncOutput[],
+  warnings: SyncWarning[]
+): Promise<void> {
+  if (!existingManifest) return;
+
+  const seen = new Set<string>();
+  const records = new Map<string, ManifestTargetRecord>();
+  for (const [targetKey, record] of Object.entries(existingManifest.targets ?? {})) {
+    records.set(targetKey, record);
+  }
+
+  for (const [targetKey, hash] of Object.entries(existingManifest.targetHashes ?? {})) {
+    if (!records.has(targetKey)) {
+      records.set(targetKey, {
+        hash,
+        owner: 'aco',
+        kind: 'provider-command',
+      });
+    }
+  }
+
+  for (const [targetKey, record] of records) {
+    if (seen.has(targetKey) || !isLegacyHookTarget(targetKey)) continue;
+    seen.add(targetKey);
+
+    if (record.owner !== 'aco') continue;
+
+    const expectedHash = record.hash ?? existingManifest.targetHashes?.[targetKey];
+    if (!expectedHash) continue;
+
+    const targetPath = join(repoRoot, targetKey);
+    const canClean = await legacyHookCleanupReady(targetKey, targetPath, expectedHash, warnings);
+    if (!canClean) continue;
+
+    outputs.push({
+      targetPath,
+      kind: 'file',
+      action: 'removed',
+      hash: expectedHash,
+      owner: 'aco',
+      assetKind: 'provider-command',
+    });
+  }
+}
+
+function stripCodexManagedHookBlock(content: string): string | null {
+  const begin = '# BEGIN ACO GENERATED';
+  const end = '# END ACO GENERATED';
+  const beginIdx = content.indexOf(begin);
+  const endIdx = content.indexOf(end);
+  if (beginIdx === -1 || endIdx === -1 || endIdx < beginIdx) return null;
+
+  const afterEnd = endIdx + end.length;
+  const updated = `${content.slice(0, beginIdx)}${content.slice(afterEnd)}`
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
+  return updated ? `${updated}\n` : '';
+}
+
+async function removeLegacyHookTarget(repoRoot: string, targetPath: string): Promise<boolean> {
+  const targetKey = toManifestKey(repoRoot, targetPath);
+
+  if (targetKey === '.codex/config.toml') {
+    const content = await readFile(targetPath, 'utf8');
+    const updated = stripCodexManagedHookBlock(content);
+    if (updated === null) return false;
+    if (updated === '') {
+      await rm(targetPath, { recursive: true, force: true });
+    } else {
+      await writeFile(targetPath, updated, 'utf8');
+    }
+    return true;
+  }
+
+  if (targetKey === '.gemini/settings.json') {
+    const content = await readFile(targetPath, 'utf8');
+    const settings = JSON.parse(content) as Record<string, unknown>;
+    delete settings.hooks;
+    if (Object.keys(settings).length === 0) {
+      await rm(targetPath, { recursive: true, force: true });
+    } else {
+      await writeFile(targetPath, `${JSON.stringify(settings, null, 2)}\n`, 'utf8');
+    }
+    return true;
+  }
+
+  if (targetKey === '.codex/hooks.json') {
+    await rm(targetPath, { recursive: true, force: true });
+    return true;
+  }
+
   return false;
 }
 
@@ -78,7 +245,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
 
   if (sources.length === 0) {
     throw new Error(
-      'No sync sources found. Ensure CLAUDE.md, .claude/agents/, or .claude/settings.json exists.'
+      'No sync sources found. Ensure CLAUDE.md, .claude/rules/, .claude/agents/, or .claude/skills/ exists.'
     );
   }
 
@@ -95,8 +262,9 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   // 6. Detect conflicts for planned outputs against existing manifest
   if (existingManifest) {
     for (const output of plan.outputs) {
-      const existingRecord = existingManifest.targets[output.targetPath];
-      const existingHash = existingRecord?.hash ?? existingManifest.targetHashes[output.targetPath];
+      const manifestKey = toManifestKey(repoRoot, output.targetPath);
+      const existingRecord = existingManifest.targets[manifestKey];
+      const existingHash = existingRecord?.hash ?? existingManifest.targetHashes[manifestKey];
       if (existingHash && (output.kind === 'file' || output.kind === 'managed-block')) {
         try {
           const diskContent = await readFile(output.targetPath, 'utf8');
@@ -118,8 +286,9 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
     if (output.action === 'conflict') continue;
     if (output.action === 'removed') continue;
 
-    const existingRecord = existingManifest?.targets[output.targetPath];
-    const existingHash = existingRecord?.hash ?? existingManifest?.targetHashes[output.targetPath];
+    const manifestKey = toManifestKey(repoRoot, output.targetPath);
+    const existingRecord = existingManifest?.targets[manifestKey];
+    const existingHash = existingRecord?.hash ?? existingManifest?.targetHashes[manifestKey];
     if (!existingHash) {
       output.action = 'created';
     } else if (existingHash === output.hash) {
@@ -186,7 +355,8 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
       const targets = warning.cleanupTargets;
       if (targets && targets.length > 0) {
         for (const targetPath of targets) {
-          const isOwned = existingManifest?.targets?.[targetPath]?.owner === 'aco';
+          const targetKey = toManifestKey(repoRoot, targetPath);
+          const isOwned = existingManifest?.targets?.[targetKey]?.owner === 'aco';
           if (!dryRun && (isOwned || forceClean)) {
             const allowedDirs = ['.agents/skills', '.codex/skills'];
             if (!isPathWithinRepo(repoRoot, targetPath, allowedDirs)) {
@@ -226,12 +396,14 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
 
     // Remove cleaned paths from plan.manifest.targets
     for (const path of cleanedOwned) {
-      delete plan.manifest.targetHashes[path];
-      delete plan.manifest.targets[path];
+      const key = toManifestKey(repoRoot, path);
+      delete plan.manifest.targetHashes[key];
+      delete plan.manifest.targets[key];
     }
     for (const path of cleanedForced) {
-      delete plan.manifest.targetHashes[path];
-      delete plan.manifest.targets[path];
+      const key = toManifestKey(repoRoot, path);
+      delete plan.manifest.targetHashes[key];
+      delete plan.manifest.targets[key];
     }
     if (cleanedPaths.size > 0) {
       plan.outputs = plan.outputs.filter(
@@ -262,14 +434,37 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
       if (output.action === 'skipped') continue;
 
       if (output.action === 'removed') {
-        const allowedDirs = ['.agents/skills'];
-        if (!isPathWithinRepo(repoRoot, output.targetPath, allowedDirs)) {
-          plan.warnings.push({
-            source: relative(repoRoot, output.targetPath) || output.targetPath,
-            message: `Refusing to delete outside allowed directories: ${output.targetPath}`,
-            severity: 'warning',
-          });
+        if (isLegacyHookTarget(toManifestKey(repoRoot, output.targetPath))) {
+          try {
+            const handled = await removeLegacyHookTarget(repoRoot, output.targetPath);
+            if (!handled) {
+              plan.warnings.push({
+                source: relative(repoRoot, output.targetPath) || output.targetPath,
+                message: `Failed to remove legacy hook target safely: ${output.targetPath}`,
+                severity: 'warning',
+              });
+            }
+          } catch (err: unknown) {
+            const e = err as Error & { code?: string };
+            if (e.code !== 'ENOENT') {
+              plan.warnings.push({
+                source: relative(repoRoot, output.targetPath) || output.targetPath,
+                message: `Failed to remove legacy hook target ${output.targetPath}: ${e.message}`,
+                severity: 'warning',
+              });
+            }
+          }
           continue;
+        } else {
+          const allowedDirs = ['.agents/skills'];
+          if (!isPathWithinRepo(repoRoot, output.targetPath, allowedDirs)) {
+            plan.warnings.push({
+              source: relative(repoRoot, output.targetPath) || output.targetPath,
+              message: `Refusing to delete outside allowed directories: ${output.targetPath}`,
+              severity: 'warning',
+            });
+            continue;
+          }
         }
         try {
           await rm(output.targetPath, { recursive: true, force: true });
@@ -331,6 +526,8 @@ async function computeTransformPlan(
     sourceHashes[source.path] = source.hash;
   }
 
+  await planLegacyHookCleanup(repoRoot, existingManifest, outputs, warnings);
+
   // 1. Context -> AGENTS.md and GEMINI.md
   const contextContent = aggregateContext(sources);
   if (contextContent) {
@@ -348,8 +545,9 @@ async function computeTransformPlan(
       owner: 'aco',
       assetKind: 'config',
     });
-    targetHashes[agentsMdPath] = agentsHash;
-    targets[agentsMdPath] = { hash: agentsHash, owner: 'aco', kind: 'config' };
+    const agentsMdKey = toManifestKey(repoRoot, agentsMdPath);
+    targetHashes[agentsMdKey] = agentsHash;
+    targets[agentsMdKey] = { hash: agentsHash, owner: 'aco', kind: 'config' };
 
     const updatedGemini = await getManagedBlockUpdate(geminiMdPath, contextContent);
     const geminiHash = computeHash(updatedGemini);
@@ -362,8 +560,9 @@ async function computeTransformPlan(
       owner: 'aco',
       assetKind: 'config',
     });
-    targetHashes[geminiMdPath] = geminiHash;
-    targets[geminiMdPath] = { hash: geminiHash, owner: 'aco', kind: 'config' };
+    const geminiMdKey = toManifestKey(repoRoot, geminiMdPath);
+    targetHashes[geminiMdKey] = geminiHash;
+    targets[geminiMdKey] = { hash: geminiHash, owner: 'aco', kind: 'config' };
   }
 
   // 2. Skills
@@ -373,8 +572,9 @@ async function computeTransformPlan(
   skipped.push(...skillResult.skipped);
   for (const o of skillResult.outputs) {
     if (o.hash) {
-      targetHashes[o.targetPath] = o.hash;
-      targets[o.targetPath] = {
+      const key = toManifestKey(repoRoot, o.targetPath);
+      targetHashes[key] = o.hash;
+      targets[key] = {
         hash: o.hash,
         owner: o.owner ?? 'aco',
         kind: o.assetKind ?? 'shared-skill',
@@ -390,8 +590,9 @@ async function computeTransformPlan(
   warnings.push(...codexAgentResult.warnings);
   for (const o of codexAgentResult.outputs) {
     if (o.hash) {
-      targetHashes[o.targetPath] = o.hash;
-      targets[o.targetPath] = {
+      const key = toManifestKey(repoRoot, o.targetPath);
+      targetHashes[key] = o.hash;
+      targets[key] = {
         hash: o.hash,
         owner: 'aco',
         kind: o.assetKind ?? 'agent',
@@ -405,8 +606,9 @@ async function computeTransformPlan(
   warnings.push(...geminiAgentResult.warnings);
   for (const o of geminiAgentResult.outputs) {
     if (o.hash) {
-      targetHashes[o.targetPath] = o.hash;
-      targets[o.targetPath] = {
+      const key = toManifestKey(repoRoot, o.targetPath);
+      targetHashes[key] = o.hash;
+      targets[key] = {
         hash: o.hash,
         owner: 'aco',
         kind: o.assetKind ?? 'agent',
@@ -414,38 +616,8 @@ async function computeTransformPlan(
     }
   }
 
-  // 5. Codex hooks
-  const codexHookResult = await syncCodexHooks(sources, repoRoot);
-  outputs.push(...codexHookResult.outputs);
-  warnings.push(...codexHookResult.warnings);
-  for (const o of codexHookResult.outputs) {
-    if (o.hash) {
-      targetHashes[o.targetPath] = o.hash;
-      targets[o.targetPath] = {
-        hash: o.hash,
-        owner: 'aco',
-        kind: o.assetKind ?? 'provider-command',
-      };
-    }
-  }
-
-  // 6. Gemini hooks
-  const geminiHookResult = await syncGeminiHooks(sources, repoRoot);
-  outputs.push(...geminiHookResult.outputs);
-  warnings.push(...geminiHookResult.warnings);
-  for (const o of geminiHookResult.outputs) {
-    if (o.hash) {
-      targetHashes[o.targetPath] = o.hash;
-      targets[o.targetPath] = {
-        hash: o.hash,
-        owner: 'aco',
-        kind: o.assetKind ?? 'provider-command',
-      };
-    }
-  }
-
   const manifest: SyncManifest = {
-    version: '3',
+    version: '4',
     generatedAt: new Date().toISOString(),
     sourceHashes,
     targetHashes,

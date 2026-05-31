@@ -76,8 +76,13 @@ export async function syncSkills(
   // Determine which skills to remove: previously synced but source no longer exists or is no longer eligible
   const staleTargets: string[] = [];
 
+  // Manifest target keys are repo-relative; resolve them to absolute filesystem
+  // paths for hash checks and removal. Tolerate legacy absolute keys defensively.
+  const toAbsoluteTarget = (key: string): string => (isAbsolute(key) ? key : join(repoRoot, key));
+
   if (manifest) {
-    for (const [targetPath, record] of Object.entries(manifest.targets ?? {})) {
+    for (const [targetKey, record] of Object.entries(manifest.targets ?? {})) {
+      const targetPath = toAbsoluteTarget(targetKey);
       if (!targetPath.startsWith(targetBase)) continue;
       // Find if this target corresponds to a skill that still exists and is still eligible
       const skillName = basename(targetPath);
@@ -111,16 +116,17 @@ export async function syncSkills(
     }
 
     // Also check legacy targetHashes
-    for (const [targetPath] of Object.entries(manifest.targetHashes)) {
+    for (const [targetKey] of Object.entries(manifest.targetHashes)) {
+      const targetPath = toAbsoluteTarget(targetKey);
       if (!targetPath.startsWith(targetBase)) continue;
-      if (manifest.targets?.[targetPath]) continue; // already handled above
+      if (manifest.targets?.[targetKey]) continue; // already handled above
       const skillName = basename(targetPath);
       const stillExistsAndEligible = classifiedSkills.some(
         (c) => c.skillName === skillName && c.owner === 'aco'
       );
       if (!stillExistsAndEligible) {
         // Legacy: assume it was ACO-owned; check hash
-        const legacyHash = manifest.targetHashes[targetPath];
+        const legacyHash = manifest.targetHashes[targetKey];
         const match = await legacySkillHashMatches(targetPath, legacyHash);
         if (match) {
           const stat = await lstat(targetPath);

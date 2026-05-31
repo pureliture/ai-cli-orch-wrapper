@@ -41,6 +41,13 @@ export interface InvokeOptions {
   timeoutMs?: number;
   /** Grace period after SIGTERM before SIGKILL. */
   killGraceMs?: number;
+  /** Model identifier passed to the provider binary via -m flag. */
+  model?: string;
+  /**
+   * Called once with the full captured stderr after the provider process closes.
+   * Only invoked by spawnStream-based providers; built-in/mock providers do not call this.
+   */
+  onStderrComplete?: (stderr: string) => void;
 }
 
 export interface IProvider {

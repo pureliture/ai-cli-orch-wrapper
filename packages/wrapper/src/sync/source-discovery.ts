@@ -49,9 +49,6 @@ export async function discoverSources(rootPath: string): Promise<SyncSource[]> {
     }
   } catch {}
 
-  // 6. .claude/settings.json (for hooks)
-  await tryAddSource(sources, rootPath, join(rootPath, '.claude/settings.json'), 'settings');
-
   return sources;
 }
 

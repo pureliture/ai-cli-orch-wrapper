@@ -737,9 +737,9 @@ describe('Skill Sync', () => {
         await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
       );
 
-      assert.equal(manifest.version, '3');
-      const targetPath = join(tmpDir, '.agents', 'skills', 'github-kanban-ops');
-      const record = manifest.targets[targetPath];
+      assert.equal(manifest.version, '4');
+      const targetKey = join('.agents', 'skills', 'github-kanban-ops');
+      const record = manifest.targets[targetKey];
       assert.ok(record, 'Manifest should record the target');
       assert.equal(record.owner, 'aco');
       assert.equal(record.kind, 'shared-skill');
@@ -769,7 +769,7 @@ describe('Skill Sync', () => {
       await runSync(tmpDir, { dryRun: false });
       const manifest = JSON.parse(await readFile(join(acoDir, 'sync-manifest.json'), 'utf-8'));
 
-      assert.equal(manifest.version, '3');
+      assert.equal(manifest.version, '4');
       assert.ok(manifest.targets, 'Migrated manifest should have targets');
       assert.ok(manifest.skipped, 'Migrated manifest should have skipped');
     } finally {
@@ -1777,6 +1777,170 @@ describe('Skill Sync', () => {
       );
 
       assert.ok(Array.isArray(manifest.warnings), 'manifest should have warnings array');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not sync project hooks from .claude/settings.json', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-ignore-hooks-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# Project context');
+      await mkdir(join(tmpDir, '.claude'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.claude', 'settings.json'),
+        JSON.stringify({
+          hooks: {
+            Stop: [
+              {
+                hooks: [
+                  {
+                    type: 'command',
+                    command: 'python scripts/stop-hook.py',
+                    timeout: 10,
+                  },
+                ],
+              },
+            ],
+            PostToolUse: [
+              {
+                matcher: 'Bash',
+                hooks: [
+                  {
+                    type: 'command',
+                    command: 'bash scripts/post-tool-use.sh',
+                    timeout: 15,
+                  },
+                ],
+              },
+            ],
+          },
+        })
+      );
+
+      const result = await runSync(tmpDir, { dryRun: false });
+      const targetPaths = result.outputs.map((o) => o.targetPath);
+      assert.equal(
+        targetPaths.some((target) => target.endsWith(join('.codex', 'hooks.json'))),
+        false
+      );
+      assert.equal(
+        targetPaths.some((target) => target.endsWith(join('.gemini', 'settings.json'))),
+        false
+      );
+      assert.equal(
+        targetPaths.some((target) => target.endsWith(join('.codex', 'config.toml'))),
+        false
+      );
+
+      const manifest = JSON.parse(
+        await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
+      );
+      assert.equal('.claude/settings.json' in manifest.sourceHashes, false);
+      assert.equal(
+        manifest.warnings.some((warning: { source?: string }) =>
+          warning.source?.includes('.claude/settings.json')
+        ),
+        false
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('cleans legacy manifest-owned hook outputs when hook sync is disabled', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-stale-hooks-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# Project context');
+
+      const codexHooksPath = join(tmpDir, '.codex', 'hooks.json');
+      const codexConfigPath = join(tmpDir, '.codex', 'config.toml');
+      const geminiSettingsPath = join(tmpDir, '.gemini', 'settings.json');
+      await mkdir(join(tmpDir, '.codex'), { recursive: true });
+      await mkdir(join(tmpDir, '.gemini'), { recursive: true });
+
+      const codexHooksContent = '[{"event":"PostToolUse","command":"bash scripts/hook.sh"}]\n';
+      const codexConfigContent =
+        'model = "gpt-5.5"\n\n# BEGIN ACO GENERATED\n[features]\ncodex_hooks = true\n# END ACO GENERATED\n';
+      const geminiSettingsContent = JSON.stringify(
+        {
+          theme: 'dark',
+          hooks: {
+            PostToolUse: [{ command: 'bash scripts/hook.sh' }],
+          },
+        },
+        null,
+        2
+      ) + '\n';
+
+      await writeFile(codexHooksPath, codexHooksContent);
+      await writeFile(codexConfigPath, codexConfigContent);
+      await writeFile(geminiSettingsPath, geminiSettingsContent);
+
+      const acoDir = join(tmpDir, '.aco');
+      await mkdir(acoDir, { recursive: true });
+      const manifest = {
+        version: '4',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {
+          '.claude/settings.json': 'legacy-settings-hash',
+        },
+        targetHashes: {
+          '.codex/hooks.json': computeHash(codexHooksContent),
+          '.codex/config.toml': computeHash(codexConfigContent),
+          '.gemini/settings.json': computeHash(geminiSettingsContent),
+        },
+        targets: {
+          '.codex/hooks.json': {
+            hash: computeHash(codexHooksContent),
+            owner: 'aco',
+            kind: 'provider-command',
+          },
+          '.codex/config.toml': {
+            hash: computeHash(codexConfigContent),
+            owner: 'aco',
+            kind: 'provider-command',
+          },
+          '.gemini/settings.json': {
+            hash: computeHash(geminiSettingsContent),
+            owner: 'aco',
+            kind: 'provider-command',
+          },
+        },
+        skipped: [],
+        warnings: [],
+      };
+      await writeFile(join(acoDir, 'sync-manifest.json'), JSON.stringify(manifest, null, 2));
+
+      const result = await runSync(tmpDir, { dryRun: false });
+      const removedPaths = result.outputs
+        .filter((o) => o.action === 'removed')
+        .map((o) => o.targetPath);
+
+      assert.ok(removedPaths.includes(codexHooksPath));
+      assert.ok(removedPaths.includes(codexConfigPath));
+      assert.ok(removedPaths.includes(geminiSettingsPath));
+
+      const { existsSync } = await import('node:fs');
+      assert.equal(existsSync(codexHooksPath), false);
+
+      const updatedCodexConfig = await readFile(codexConfigPath, 'utf-8');
+      assert.equal(updatedCodexConfig.trim(), 'model = "gpt-5.5"');
+
+      const updatedGeminiSettings = JSON.parse(await readFile(geminiSettingsPath, 'utf-8')) as {
+        theme?: string;
+        hooks?: unknown;
+      };
+      assert.equal(updatedGeminiSettings.theme, 'dark');
+      assert.equal('hooks' in updatedGeminiSettings, false);
+
+      const updatedManifest = JSON.parse(
+        await readFile(join(acoDir, 'sync-manifest.json'), 'utf-8')
+      );
+      assert.equal('.claude/settings.json' in updatedManifest.sourceHashes, false);
+      assert.equal('.codex/hooks.json' in updatedManifest.targets, false);
+      assert.equal('.codex/config.toml' in updatedManifest.targets, false);
+      assert.equal('.gemini/settings.json' in updatedManifest.targets, false);
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
