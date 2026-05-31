@@ -153,7 +153,7 @@ export async function packSetup(options: PackInstallOptions = {}): Promise<void>
       console.log(`  ${key}: installed ✓`);
     }
   }
-  console.log('\nNext step: aco provider setup gemini');
+  console.log('\nNext step: aco provider setup antigravity');
 }
 
 export async function providerSetup(name: string): Promise<void> {

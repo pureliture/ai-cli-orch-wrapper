@@ -158,7 +158,7 @@ describe('pack template runtime contract', () => {
       await setupPack();
 
       await stat(join(workspace, '.claude', 'commands', 'aco.md'));
-      await stat(join(workspace, '.claude', 'aco', 'prompts', 'gemini', 'review.md'));
+      await stat(join(workspace, '.claude', 'aco', 'prompts', 'antigravity', 'review.md'));
       await stat(join(workspace, '.claude', 'aco', 'prompts', 'codex', 'review.md'));
       await stat(join(workspace, '.claude', 'aco', 'tasks', 'spec-critique.md'));
       await stat(join(workspace, '.claude', 'aco', 'tasks', 'plan-critique.md'));
@@ -274,8 +274,18 @@ describe('pack template runtime contract', () => {
         join(workspace, '.claude', 'aco', 'prompts', 'codex', 'review.md')
       );
 
-      // antigravity:review는 Phase 3에서 프롬프트 파일이 추가될 예정이므로
-      // 현재는 unknown command와 동일하게 generic fallback을 반환한다.
+      // antigravity:review는 pack setup 후 .claude/aco/prompts/antigravity/review.md에서 해소된다.
+      const antigravityReview = await resolveRunPromptTemplate({
+        cwd: workspace,
+        home: workspace,
+        providerKey: 'antigravity',
+        command: 'review',
+      });
+      assert.equal(
+        antigravityReview.promptTemplatePath,
+        join(workspace, '.claude', 'aco', 'prompts', 'antigravity', 'review.md')
+      );
+
       const unknown = await resolveRunPromptTemplate({
         cwd: workspace,
         home: workspace,

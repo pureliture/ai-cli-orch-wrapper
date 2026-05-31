@@ -1,12 +1,12 @@
 ---
-name: gemini:adversarial
-description: Adversarial code review via Gemini CLI — assumes bugs exist, finds them. Use --focus to scope.
+name: antigravity:adversarial
+description: Adversarial code review via Antigravity CLI — assumes bugs exist, finds them. Use --focus to scope.
 argument-hint: "[--focus security|performance|correctness|all] [path/to/file.ts]"
 allowed-tools:
   - Bash
 ---
 
-Adversarial code review via Gemini CLI. More aggressive than `:review` — starts from the assumption that bugs exist. Optionally scope with `--focus security`, `--focus performance`, `--focus correctness`, or `--focus all` (default). Without a file argument, reviews `git diff HEAD`.
+Adversarial code review via Antigravity CLI. More aggressive than `:review` — starts from the assumption that bugs exist. Optionally scope with `--focus security`, `--focus performance`, `--focus correctness`, or `--focus all` (default). Without a file argument, reviews `git diff HEAD`.
 
 ```bash
 #!/usr/bin/env bash
@@ -35,5 +35,5 @@ else
   if [[ -z "$CONTENT" ]]; then CONTENT=$(git diff HEAD~1 2>/dev/null || true); fi
   if [[ -z "$CONTENT" ]]; then echo "No changes detected"; exit 0; fi
 fi
-printf '%s' "$CONTENT" | aco run gemini adversarial --focus "$FOCUS"
+printf '%s' "$CONTENT" | aco run antigravity adversarial --focus "$FOCUS"
 ```

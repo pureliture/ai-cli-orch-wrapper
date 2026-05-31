@@ -3,7 +3,8 @@ version: 1
 providerDefaults:
   codex:
     launchArgs: []
-  gemini_cli:
+  antigravity:
+    # agy supports --sandbox (Terminal Sandbox isolation) — keep this flag.
     launchArgs:
       - --sandbox
 
@@ -12,18 +13,20 @@ modelAliasMap:
     provider: codex
     model: gpt-5.4
   opus:
-    provider: gemini_cli
-    model: gemini-2.5-pro
+    provider: antigravity
+    # TODO: agy has no --model CLI flag; model is chosen out-of-band via /model in the session.
+    model: ~
   haiku:
-    provider: gemini_cli
-    model: gemini-2.5-flash
+    provider: antigravity
+    # TODO: agy has no --model CLI flag; model is chosen out-of-band via /model in the session.
+    model: ~
 
 providerModels:
   codex:
     - gpt-5.4
-  gemini_cli:
-    - gemini-2.5-pro
-    - gemini-2.5-flash
+  antigravity:
+    # TODO: agy has no --model CLI flag; model is chosen out-of-band via /model in the session.
+    # Concrete model IDs are not passable at launch time.
 
 effortMap:
   codex:
@@ -31,7 +34,7 @@ effortMap:
     medium: medium
     high: high
     max: xhigh
-  gemini_cli:
+  antigravity:
     low: low
     medium: medium
     high: high
@@ -39,7 +42,7 @@ effortMap:
 
 roleHintRules:
   research:
-    preferredProvider: gemini_cli
+    preferredProvider: antigravity
   execute:
     preferredProvider: codex
   review:

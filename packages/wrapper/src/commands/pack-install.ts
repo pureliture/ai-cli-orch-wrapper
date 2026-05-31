@@ -231,10 +231,6 @@ export async function packStatus(options: { global?: boolean } = {}): Promise<vo
 
   // Report external integration observations separately
   const externalObservations: string[] = [];
-  const geminiOpsxDir = join(repoRoot, '.gemini', 'commands', 'opsx');
-  if (existsSync(geminiOpsxDir)) {
-    externalObservations.push(`Gemini opsx commands at ${geminiOpsxDir}`);
-  }
   const codexOpenspecDir = join(repoRoot, '.codex', 'skills');
   if (existsSync(codexOpenspecDir)) {
     try {

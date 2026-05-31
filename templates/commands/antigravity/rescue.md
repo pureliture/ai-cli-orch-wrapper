@@ -1,12 +1,12 @@
 ---
-name: gemini:rescue
-description: Get unstuck with a second-opinion from Gemini CLI. Accepts --from <file>, --error <message>, stdin, or positional description.
+name: antigravity:rescue
+description: Get unstuck with a second-opinion from Antigravity CLI. Accepts --from <file>, --error <message>, stdin, or positional description.
 argument-hint: "[--from path/to/file] [--error 'error message'] [problem description]"
 allowed-tools:
   - Bash
 ---
 
-Get a fresh perspective from Gemini CLI when you're stuck. Accepts a problem description via `--from <file>`, `--error <message>`, piped stdin, or positional text. Automatically injects recent git history as context.
+Get a fresh perspective from Antigravity CLI when you're stuck. Accepts a problem description via `--from <file>`, `--error <message>`, piped stdin, or positional text. Automatically injects recent git history as context.
 
 ```bash
 #!/usr/bin/env bash
@@ -43,5 +43,5 @@ if [[ -z "$PROBLEM_CONTENT" ]]; then
   exit 1
 fi
 
-printf '%s' "$PROBLEM_CONTENT" | aco run gemini rescue
+printf '%s' "$PROBLEM_CONTENT" | aco run antigravity rescue
 ```
