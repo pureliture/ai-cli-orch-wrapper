@@ -28,7 +28,7 @@ func (a *AntigravityProvider) Binary() string { return "agy" }
 
 // IsAvailable reports whether the agy binary is present in PATH.
 func (a *AntigravityProvider) IsAvailable() bool {
-	_, err := exec.LookPath("agy")
+	_, err := exec.LookPath(a.Binary())
 	return err == nil
 }
 
@@ -71,7 +71,6 @@ func (a *AntigravityProvider) BuildArgs(command, prompt, content string, opts In
 //
 //  1. exit code 126 → auth failure (POSIX permission-denied sentinel)
 //  2. stderr contains "unauthenticated" or "please run" (case-insensitive)
-//  3. exit code 1 AND stderr contains "unauthenticated"
 func (a *AntigravityProvider) IsAuthFailure(exitCode int, stderr string) bool {
 	lower := strings.ToLower(stderr)
 
@@ -81,16 +80,13 @@ func (a *AntigravityProvider) IsAuthFailure(exitCode int, stderr string) bool {
 	if strings.Contains(lower, "unauthenticated") || strings.Contains(lower, "please run") {
 		return true
 	}
-	if exitCode == 1 && strings.Contains(lower, "unauthenticated") {
-		return true
-	}
 	return false
 }
 
 // AuthHint returns the fix instruction for an Antigravity auth failure.
 // Auth model: OS Keyring login via the agy binary itself.
 func (a *AntigravityProvider) AuthHint() string {
-	return "Run: agy  (OS Keyring/login)"
+	return "Run: agy (OS Keyring/login)"
 }
 
 // CheckAuth performs a lightweight auth check by running "agy --version".
