@@ -13,7 +13,7 @@
     "test:fixtures": "go build -o aco ./cmd/aco && npx tsx test/fixtures/harness.ts --binary ./aco",
     "test:fixtures:node": "npm run build --workspace=packages/wrapper && chmod +x packages/wrapper/dist/cli.js && npx tsx test/fixtures/harness.ts --binary packages/wrapper/dist/cli.js",
     "test:e2e": "npx tsx test/e2e/antigravity-e2e.ts",
-    "test:scripts": "bash test/scripts/project-id-validation.test.sh && bash test/scripts/terminology-check.test.sh && npm run check:terminology",
+    "test:scripts": "bash test/scripts/project-id-validation.test.sh && bash test/scripts/terminology-check.test.sh && bash test/scripts/release-workflow.test.sh && npm run check:terminology",
     "check:terminology": "tsx scripts/check-terminology.ts",
     "typecheck": "npm run typecheck --workspace=packages/wrapper",
     "format:check": "prettier --check \"packages/*/src/**/*.ts\"",

@@ -183,12 +183,13 @@ describe('aco ask CLI', () => {
     assert.match(output, /Findings:/);
     assert.match(output, /demo/);
 
-    await stat(join(sessionDir, 'input.md'));
     await stat(join(sessionDir, 'prompt.md'));
     await stat(join(sessionDir, 'brief.md'));
 
     const runId = await latestRunId(result.home);
     const runDir = join(result.home, '.aco', 'runs', runId);
+    // input.md is now stored at run level (Task 4.1: canonical run-level input)
+    await stat(join(runDir, 'input.md'));
     const ledger = JSON.parse(await readFile(join(runDir, 'ledger.json'), 'utf8'));
     assert.equal(ledger.runId, runId);
     assert.deepEqual(ledger.providers, ['mock']);
@@ -215,9 +216,10 @@ describe('aco ask CLI', () => {
     ]);
 
     assert.equal(result.code, 0);
-    const sessionId = await latestSessionId(result.home);
+    // input.md is now stored at run level (Task 4.1: canonical run-level input)
+    const runId = await latestRunId(result.home);
     const savedInput = await readFile(
-      join(result.home, '.aco', 'sessions', sessionId, 'input.md'),
+      join(result.home, '.aco', 'runs', runId, 'input.md'),
       'utf8'
     );
 
@@ -247,9 +249,10 @@ describe('aco ask CLI', () => {
     );
 
     assert.equal(result.code, 0);
-    const sessionId = await latestSessionId(home);
+    // input.md is now stored at run level (Task 4.1: canonical run-level input)
+    const runId = await latestRunId(home);
     const savedInput = await readFile(
-      join(home, '.aco', 'sessions', sessionId, 'input.md'),
+      join(home, '.aco', 'runs', runId, 'input.md'),
       'utf8'
     );
 
@@ -282,9 +285,10 @@ describe('aco ask CLI', () => {
     );
 
     assert.equal(result.code, 0);
-    const sessionId = await latestSessionId(home);
+    // input.md is now stored at run level (Task 4.1: canonical run-level input)
+    const runId = await latestRunId(home);
     const savedInput = await readFile(
-      join(home, '.aco', 'sessions', sessionId, 'input.md'),
+      join(home, '.aco', 'runs', runId, 'input.md'),
       'utf8'
     );
 
@@ -481,9 +485,12 @@ describe('aco ask CLI', () => {
     assert.equal(result.code, 0);
     const sessionId = await latestSessionId(home);
     const sessionDir = join(home, '.aco', 'sessions', sessionId);
+    // input.md is now stored at run level (Task 4.1: canonical run-level input)
+    const runId = await latestRunId(home);
+    const runDir = join(home, '.aco', 'runs', runId);
 
     const prompt = await readFile(join(sessionDir, 'prompt.md'), 'utf8');
-    const input = await readFile(join(sessionDir, 'input.md'), 'utf8');
+    const input = await readFile(join(runDir, 'input.md'), 'utf8');
     assert.match(prompt, /Preset: review from workspace/);
     assert.match(prompt, /Never modify files/);
     assert.match(input, /inline demo/);
@@ -714,6 +721,29 @@ describe('aco ask CLI', () => {
 
     assert.equal(result.code, 0);
     assert.doesNotMatch(result.stderr, /antigravity\(agy\) ignores --model/);
+  });
+
+  it('credential note message says "will NOT inherit" not "will be inherited"', async () => {
+    // OPENAI_API_KEY는 findCredentialEnvKeys가 탐지하는 키다.
+    // envPolicy allowlist 도입 이후 child에게 전달되지 않으므로,
+    // 메시지는 "inherited"가 아니라 "will NOT inherit"를 포함해야 한다.
+    const result = await runCli(
+      [
+        'ask',
+        '--providers',
+        'mock',
+        '--task',
+        'test credential note',
+        '--yes',
+        '--output-mode',
+        'save-only',
+      ],
+      { env: { OPENAI_API_KEY: 'sk-test-fake-key-for-warning-test' } }
+    );
+
+    assert.equal(result.code, 0);
+    assert.match(result.stderr, /will NOT inherit/);
+    assert.doesNotMatch(result.stderr, /will be inherited/);
   });
 
   it('waits for writable drain even when the sink exposes compatibility flags', async () => {

@@ -40,8 +40,7 @@ var envAllowlist = map[string]bool{
 	"LANG":                true,
 	"LC_ALL":              true,
 	// Provider auth variables for CI/headless operation
-	"GEMINI_API_KEY":  true,
-	"GITHUB_TOKEN":    true,
+	"GITHUB_TOKEN":      true,
 	"ANTHROPIC_API_KEY": true,
 }
 
@@ -96,7 +95,7 @@ type ProcessRunner struct{}
 //
 // No cmd.WaitDelay — reference executor.go does not use it.
 // Setpgid is used to place the provider and all its children in a new process group.
-// This is a necessary deviation from ccg-workflow to ensure Node.js CLIs (Gemini, Copilot)
+// This is a necessary deviation from ccg-workflow to ensure provider CLIs (agy, codex)
 // and their spawned workers are properly terminated without orphaning pipes.
 // No session files — blocking model, stdout streams inline.
 func (ProcessRunner) Run(ctx context.Context, opts RunOpts) (RunResult, error) {

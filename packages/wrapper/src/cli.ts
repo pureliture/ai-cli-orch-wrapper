@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, appendFile } from 'node:fs/promises';
+import { readFile, appendFile, readdir, stat } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
@@ -14,6 +14,7 @@ import {
   providerSetup,
 } from './commands/pack-install.js';
 import { cmdAsk } from './commands/ask.js';
+import { cmdDelegate } from './commands/delegate.js';
 import { cmdDoctor } from './commands/doctor.js';
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
@@ -65,6 +66,9 @@ async function main(): Promise<void> {
       break;
     case 'ask':
       await cmdAsk(rest);
+      break;
+    case 'delegate':
+      await cmdDelegate(rest);
       break;
     case 'doctor':
       await cmdDoctor(rest);
@@ -248,6 +252,7 @@ async function cmdRun(args: string[]): Promise<void> {
     timeoutMs: executionControl.timeoutMs,
     killGraceMs: executionControl.killGraceMs,
     ...(model ? { model } : {}),
+    envPolicy: 'allowlist',
     onPid: (pid) => {
       activePid = pid;
     },
@@ -281,7 +286,140 @@ async function cmdRun(args: string[]): Promise<void> {
   await sessionStore.markDone(session.id);
 }
 
+// ---------------------------------------------------------------------------
+// Run ledger types
+// ---------------------------------------------------------------------------
+interface RunLedgerSession {
+  id: string;
+  provider: string;
+  status: string;
+  outputLog?: string;
+  briefPath?: string;
+  summary?: string;
+  usageStatus?: string;
+  hasOutput?: boolean;
+  outputBytes?: number;
+  stderrBytes?: number;
+  warningCount?: number;
+  resultQuality?: string;
+  stderrArtifactPath?: string;
+  error?: string;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  nativeSessionPath?: string;
+  canonicalInputPath?: string;
+  inputHash?: string;
+  summaryTruncated?: boolean;
+  topFindings?: string[] | null;
+}
+
+interface RunLedger {
+  runId: string;
+  startedAt: string;
+  endedAt?: string;
+  durationMs?: number;
+  providers?: string[];
+  permissionProfile?: string;
+  permissionClass?: string;
+  envPolicy?: string;
+  cwd?: string;
+  gitBranch?: string | null;
+  gitHead?: string | null;
+  gitDirty?: boolean | null;
+  sessions?: RunLedgerSession[];
+}
+
+async function resolveLatestRunId(runsDir: string): Promise<string | null> {
+  let entries: string[];
+  try {
+    entries = await readdir(runsDir);
+  } catch {
+    return null;
+  }
+  if (entries.length === 0) return null;
+  const withMtime = await Promise.all(
+    entries.map(async (name) => {
+      const s = await stat(join(runsDir, name)).catch(() => null);
+      return { name, isDirectory: s?.isDirectory() ?? false, mtime: s?.mtimeMs ?? 0 };
+    })
+  );
+  const runDirs = withMtime.filter((entry) => entry.isDirectory);
+  if (runDirs.length === 0) return null;
+  runDirs.sort((a, b) => b.mtime - a.mtime);
+  return runDirs[0].name;
+}
+
+async function readRunLedger(runsDir: string, runId: string): Promise<RunLedger> {
+  const ledgerPath = join(runsDir, runId, 'ledger.json');
+  if (!existsSync(ledgerPath)) {
+    throw new Error(`Run not found: ${runId}`);
+  }
+  const raw = await readFile(ledgerPath, 'utf8');
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Corrupted ledger for run ${runId}: ${msg}`);
+  }
+  return parsed as RunLedger;
+}
+
 async function cmdResult(args: string[]): Promise<void> {
+  const runFlag = parseFlag(args, '--run');
+
+  // --run flag takes precedence over --session
+  if (runFlag !== undefined) {
+    const runsDir = join(homedir(), '.aco', 'runs');
+    let runId = runFlag;
+
+    if (runId === 'latest') {
+      const resolved = await resolveLatestRunId(runsDir);
+      if (!resolved) {
+        console.error('No runs found.');
+        process.exit(EXIT_ERROR);
+      }
+      runId = resolved;
+    }
+
+    let ledger: RunLedger;
+    try {
+      ledger = await readRunLedger(runsDir, runId);
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(EXIT_ERROR);
+    }
+
+    console.log(`Run: ${ledger.runId ?? runId}`);
+    console.log(`Started: ${ledger.startedAt}`);
+    console.log(`Duration: ${ledger.durationMs ?? 0}ms`);
+    console.log(`Providers: ${(ledger.providers ?? []).join(',')}`);
+
+    for (const session of ledger.sessions ?? []) {
+      console.log('');
+      console.log(`Provider: ${session.provider}`);
+      console.log(`Session: ${session.id}`);
+      console.log(`Status: ${session.status}`);
+      console.log(`Result quality: ${session.resultQuality ?? 'unknown'}`);
+      console.log(`Warnings: ${session.warningCount ?? 0}`);
+      console.log(`Output bytes: ${session.outputBytes ?? 0}`);
+      console.log(`Output: ${session.outputLog ?? ''}`);
+      console.log(`Brief: ${session.briefPath ?? ''}`);
+      if (session.error) {
+        console.log(`Error: ${session.error}`);
+      }
+      if (session.stderrArtifactPath) {
+        console.log(`Stderr artifact: ${session.stderrArtifactPath}`);
+      }
+      console.log('Summary:');
+      if (session.summary) {
+        console.log(session.summary);
+      }
+    }
+    return;
+  }
+
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
     console.error('No sessions found.');
@@ -299,6 +437,55 @@ async function cmdResult(args: string[]): Promise<void> {
 }
 
 async function cmdStatus(args: string[]): Promise<void> {
+  const runFlag = parseFlag(args, '--run');
+
+  // --run flag takes precedence over --session
+  if (runFlag !== undefined) {
+    const runsDir = join(homedir(), '.aco', 'runs');
+    let runId = runFlag;
+
+    if (runId === 'latest') {
+      const resolved = await resolveLatestRunId(runsDir);
+      if (!resolved) {
+        console.error('No runs found.');
+        process.exit(EXIT_ERROR);
+      }
+      runId = resolved;
+    }
+
+    let ledger: RunLedger;
+    try {
+      ledger = await readRunLedger(runsDir, runId);
+    } catch (err) {
+      console.error(err instanceof Error ? err.message : String(err));
+      process.exit(EXIT_ERROR);
+    }
+
+    console.log(`Run: ${ledger.runId ?? runId}`);
+    console.log(`Started: ${ledger.startedAt}`);
+    console.log(`Duration: ${ledger.durationMs ?? 0}ms`);
+    console.log(`Providers: ${(ledger.providers ?? []).join(',')}`);
+    console.log(`Permission class: ${ledger.permissionClass ?? 'unknown'}`);
+    console.log(`Env policy: ${ledger.envPolicy ?? 'unknown'}`);
+
+    for (const session of ledger.sessions ?? []) {
+      console.log('');
+      console.log(`Provider: ${session.provider}`);
+      console.log(`Session: ${session.id}`);
+      console.log(`Status: ${session.status}`);
+      console.log(`Usage status: ${session.usageStatus ?? 'unknown'}`);
+      console.log(`Warning count: ${session.warningCount ?? 0}`);
+      console.log(`Result quality: ${session.resultQuality ?? 'unknown'}`);
+      console.log(`Output bytes: ${session.outputBytes ?? 0}`);
+      console.log(`Output: ${session.outputLog ?? ''}`);
+      console.log(`Brief: ${session.briefPath ?? ''}`);
+      if (session.stderrArtifactPath) {
+        console.log(`Stderr artifact: ${session.stderrArtifactPath}`);
+      }
+    }
+    return;
+  }
+
   const sessionId = parseFlag(args, '--session') ?? sessionStore.latestId();
   if (!sessionId) {
     console.error('No sessions found.');
@@ -491,10 +678,11 @@ function printUsage(): void {
   aco --help
   aco sync [--check] [--dry-run] [--force]
   aco ask --task <text> [--providers codex,antigravity,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--model <model>] [--dry-run|--yes]
+  aco delegate <agent-id> [--input <text>] [--input-file <path>]
   aco doctor
   aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>] [--model <model>]
-  aco result [--session <id>]
-  aco status [--session <id>]
+  aco result [--session <id>] [--run <runId|latest>]
+  aco status [--session <id>] [--run <runId|latest>]
   aco cancel [--session <id>]
   aco pack install [--global] [--force] [--binary-name <name>]
   aco pack uninstall [--global]

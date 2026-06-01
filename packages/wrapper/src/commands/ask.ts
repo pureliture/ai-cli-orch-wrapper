@@ -1,6 +1,8 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createWriteStream, existsSync } from 'node:fs';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import process from 'node:process';
@@ -16,6 +18,9 @@ import {
   type ProviderExecutionControl,
 } from '../runtime/provider-execution-control.js';
 import { defaultSummarizeOutput } from '../util/summarize-output.js';
+import { parseGeminiUsage, parseCodexUsage, type UsageResult } from '../util/usage-parse.js';
+
+const execFileAsync = promisify(execFile);
 
 const EXIT_ERROR = 1;
 const DEFAULT_PROVIDERS = ['mock'];
@@ -60,6 +65,21 @@ interface AskSessionLedger {
   briefPath: string;
   summary: string;
   error?: string;
+  usageStatus: 'captured' | 'unavailable' | 'parse_error';
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  nativeSessionPath?: string;
+  hasOutput: boolean;
+  outputBytes: number;
+  stderrBytes: number;
+  warningCount: number;
+  resultQuality: 'complete' | 'empty' | 'warning_heavy' | 'error';
+  stderrArtifactPath?: string;
+  canonicalInputPath: string;
+  inputHash: string;
+  summaryTruncated: boolean;
+  topFindings?: string[] | null;
 }
 
 export async function cmdAsk(args: string[]): Promise<void> {
@@ -117,15 +137,23 @@ export async function cmdAsk(args: string[]): Promise<void> {
   const credentialEnvKeys = findCredentialEnvKeys(process.env);
   if (credentialEnvKeys.length > 0) {
     process.stderr.write(
-      `[aco] warning: the following environment variables look like credentials and will be ` +
-        `inherited by the provider process: ${credentialEnvKeys.join(', ')}.\n` +
-        `[aco] To suppress this warning, unset these variables before running aco ask.\n`
+      `[aco] note: the following environment variables look like credentials and are present in your environment: ${credentialEnvKeys.join(', ')}.\n` +
+        `[aco] Provider processes receive only an explicit env allowlist and will NOT inherit these variables.\n`
     );
   }
 
   const runId = randomUUID();
   const runDir = join(homedir(), '.aco', 'runs', runId);
   await mkdir(runDir, { recursive: true, mode: 0o700 });
+
+  const startedAt = new Date().toISOString();
+
+  const gitProvenance = await collectGitProvenance();
+
+  const canonicalInputPath = join(runDir, 'input.md');
+  await writeFile(canonicalInputPath, input, { mode: 0o600 });
+
+  const inputHashValue = sha256Hex(input);
 
   const sessions: AskSessionLedger[] = [];
   for (const provider of providers) {
@@ -136,7 +164,6 @@ export async function cmdAsk(args: string[]): Promise<void> {
       options.permissionProfile
     );
     const sessionDir = sessionStore.sessionDir(session.id);
-    await writeFile(join(sessionDir, 'input.md'), input, { mode: 0o600 });
     await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
 
     const outputLog = sessionStore.outputLogPath(session.id);
@@ -160,6 +187,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       timeoutMs: options.executionControl.timeoutMs,
       killGraceMs: options.executionControl.killGraceMs,
       ...(options.model ? { model: options.model } : {}),
+      envPolicy: 'allowlist',
       onChunk:
         options.outputMode === 'full'
           ? (chunk) => {
@@ -190,6 +218,21 @@ export async function cmdAsk(args: string[]): Promise<void> {
       }
     }
 
+    const usage = await collectUsage(provider.key, session.id);
+
+    const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
+    const stderrContent = runResult.stderrContent;
+    const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
+    const warningCount = countWarnings(runResult.stderrContent);
+    const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
+
+    let stderrArtifactPath: string | undefined;
+    if (stderrBytes > 0) {
+      const stderrPath = join(sessionDir, 'stderr.log');
+      await writeFile(stderrPath, stderrContent, { mode: 0o600 });
+      stderrArtifactPath = stderrPath;
+    }
+
     const summary = summarizeProviderOutput(runResult.fullOutput, provider);
     const brief = renderSessionBrief({
       runId,
@@ -212,8 +255,30 @@ export async function cmdAsk(args: string[]): Promise<void> {
       briefPath,
       summary,
       ...(error ? { error } : {}),
+      usageStatus: usage.usageStatus,
+      ...(usage.model !== undefined ? { model: usage.model } : {}),
+      ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
+      ...(usage.outputTokens !== undefined ? { outputTokens: usage.outputTokens } : {}),
+      ...(usage.nativeSessionPath !== undefined
+        ? { nativeSessionPath: usage.nativeSessionPath }
+        : {}),
+      hasOutput: runResult.hasOutput,
+      outputBytes,
+      stderrBytes,
+      warningCount,
+      resultQuality,
+      ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
+      canonicalInputPath,
+      inputHash: inputHashValue,
+      // true only when the summarizer applied char-limit truncation,
+      // not when the provider simply reformats/filters output
+      summaryTruncated: summary.includes('...[truncated to'),
+      topFindings: extractTopFindings(runResult.fullOutput),
     });
   }
+
+  const endedAt = new Date().toISOString();
+  const durationMs = new Date(endedAt).getTime() - new Date(startedAt).getTime();
 
   const runBrief = renderRunBrief(runId, options, sessions);
   await writeFile(join(runDir, 'brief.md'), runBrief, { mode: 0o600 });
@@ -231,6 +296,20 @@ export async function cmdAsk(args: string[]): Promise<void> {
         timeoutSeconds: options.timeoutSeconds,
         advisory: ADVISORY_NOTICE,
         sessions,
+        startedAt,
+        endedAt,
+        durationMs,
+        cwd: process.cwd(),
+        gitBranch: gitProvenance.gitBranch,
+        gitHead: gitProvenance.gitHead,
+        gitDirty: gitProvenance.gitDirty,
+        inputPath: resolveInputPath(options),
+        inputBytes: Buffer.byteLength(input, 'utf8'),
+        inputHash: sha256Hex(input),
+        promptBytes: Buffer.byteLength(prompt, 'utf8'),
+        promptHash: sha256Hex(prompt),
+        permissionClass: resolvePermissionClass(options.permissionProfile),
+        envPolicy: 'allowlist',
       },
       null,
       2
@@ -490,4 +569,129 @@ Options:
 function fail(message: string): never {
   console.error(message);
   process.exit(EXIT_ERROR);
+}
+
+/**
+ * git 저장소 provenance 정보를 수집한다.
+ * git 명령 실패 시 (git 미설치 또는 repo 외부) 모든 필드를 null로 반환한다.
+ */
+async function collectGitProvenance(): Promise<{
+  gitBranch: string | null;
+  gitHead: string | null;
+  gitDirty: boolean | null;
+}> {
+  try {
+    const [branchResult, headResult, statusResult] = await Promise.all([
+      execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { timeout: 3000 }),
+      execFileAsync('git', ['rev-parse', 'HEAD'], { timeout: 3000 }),
+      execFileAsync('git', ['status', '--porcelain'], { timeout: 3000 }),
+    ]);
+    return {
+      gitBranch: branchResult.stdout.trim() || null,
+      gitHead: headResult.stdout.trim() || null,
+      gitDirty: statusResult.stdout.trim().length > 0,
+    };
+  } catch {
+    return { gitBranch: null, gitHead: null, gitDirty: null };
+  }
+}
+
+/**
+ * SHA-256 hex digest를 계산한다.
+ */
+function sha256Hex(content: string): string {
+  return createHash('sha256').update(content, 'utf8').digest('hex');
+}
+
+/**
+ * input 소스 경로를 결정한다.
+ * --input-file이 있으면 해당 경로, inline input이면 "inline", 없으면 "stdin".
+ */
+function resolveInputPath(options: AskOptions): string {
+  if (options.inputFile) return options.inputFile;
+  if (options.input) return 'inline';
+  return 'stdin';
+}
+
+/**
+ * permissionProfile을 기반으로 permissionClass를 결정한다.
+ * restricted → runtime_enforced, default → best_effort, unrestricted → prompt_only.
+ */
+function resolvePermissionClass(
+  profile: PermissionProfile
+): 'runtime_enforced' | 'best_effort' | 'prompt_only' {
+  if (profile === 'restricted') return 'runtime_enforced';
+  if (profile === 'default') return 'best_effort';
+  return 'prompt_only';
+}
+
+/**
+ * provider별 usage telemetry를 파싱한다.
+ */
+async function collectUsage(providerKey: string, sessionId: string): Promise<UsageResult> {
+  switch (providerKey) {
+    case 'gemini':
+      return parseGeminiUsage(sessionId);
+    case 'codex':
+      return parseCodexUsage(sessionId);
+    default:
+      // mock 및 기타 built-in provider는 네이티브 세션 로그 없음
+      return { usageStatus: 'unavailable' };
+  }
+}
+
+/**
+ * provider output에서 warning 라인 수를 계산한다.
+ */
+function countWarnings(output: string): number {
+  return output.split('\n').filter((line) => /warning:|warn:/i.test(line)).length;
+}
+
+/**
+ * provider output에서 상위 목록 항목을 추출한다.
+ * numbered list (1. ), bullet list (-, *, •) 패턴을 인식한다.
+ * 최대 10개 항목을 반환하며, 항목이 없으면 null을 반환한다.
+ */
+export function extractTopFindings(output: string): string[] | null {
+  const results: string[] = [];
+  const lines = output.split('\n');
+  const numberedPattern = /^\s*\d+\.\s+(.*)/;
+  const bulletPattern = /^\s*[-*•]\s+(.*)/;
+
+  for (const line of lines) {
+    if (results.length >= 10) break;
+
+    const numberedMatch = numberedPattern.exec(line);
+    if (numberedMatch) {
+      const content = numberedMatch[1].trim();
+      if (content.length > 0) {
+        results.push(content);
+        continue;
+      }
+    }
+
+    const bulletMatch = bulletPattern.exec(line);
+    if (bulletMatch) {
+      const content = bulletMatch[1].trim();
+      if (content.length > 0) {
+        results.push(content);
+      }
+    }
+  }
+
+  return results.length > 0 ? results : null;
+}
+
+/**
+ * resultQuality를 결정한다.
+ */
+function resolveResultQuality(
+  status: AskSessionLedger['status'],
+  hasOutput: boolean,
+  warningCount: number
+): 'complete' | 'empty' | 'warning_heavy' | 'error' {
+  if (status === 'failed' || status === 'cancelled') return 'error';
+  if (!hasOutput) return 'empty';
+  if (warningCount > 3) return 'warning_heavy';
+  return 'complete';
 }
