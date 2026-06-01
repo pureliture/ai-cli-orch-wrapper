@@ -86,6 +86,19 @@ export async function cmdAsk(args: string[]): Promise<void> {
   const preset = options.preset ? await loadPreset(options.preset) : undefined;
   const prompt = buildPrompt(options, preset);
 
+  // F-c: --model이 설정되어 있고 antigravity provider가 포함된 경우 경고 출력.
+  // agy는 per-call model flag가 없으며, --model은 codex에만 적용된다.
+  if (options.model) {
+    for (const provider of providers) {
+      if (provider.key === 'antigravity') {
+        process.stderr.write(
+          `[aco] warning: antigravity(agy) ignores --model; the agy persisted /model default is used. --model applies to codex only.\n`
+        );
+        break;
+      }
+    }
+  }
+
   if (options.dryRun) {
     printDryRun(options, input, preset);
     return;

@@ -27,8 +27,8 @@ providerModels:
   antigravity:
     # agy는 per-call 모델 미지원; agy `/model`로 선택된 persisted 디폴트 사용; aco `--model`은 antigravity에서 무시.
     # 아래는 참고용 모델 목록 (aco로 선택 불가, agy 세션 내부에서만 /model로 변경 가능):
-    # - gemini-2.5-pro
-    # - gemini-2.5-flash
+    # - gemini-3.1-pro
+    # - gemini-3.5-flash
     # - claude-sonnet-4.6
     # - claude-opus-4.6
     # - gpt-oss-120b

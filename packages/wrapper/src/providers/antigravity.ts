@@ -12,6 +12,11 @@ export class AntigravityProvider implements IProvider {
     return which('agy') !== null;
   }
 
+  /**
+   * Limitation: checkAuth only verifies binary availability via `agy --version`;
+   * it cannot validate the OS Keyring session (agy has no non-interactive
+   * auth-status command); a stale session surfaces only at invoke time.
+   */
   async checkAuth(): Promise<AuthResult> {
     const available = this.isAvailable();
     const binaryPath = which('agy');

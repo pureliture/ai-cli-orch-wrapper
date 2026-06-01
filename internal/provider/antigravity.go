@@ -53,7 +53,7 @@ func (a *AntigravityProvider) InstallHint() string {
 func (a *AntigravityProvider) BuildArgs(command, prompt, content string, opts InvokeOpts) []string {
 	combined := prompt
 	if content != "" {
-		combined = fmt.Sprintf("%s\n%s", prompt, content)
+		combined = fmt.Sprintf("%s\n\n%s", prompt, content)
 	}
 
 	args := []string{"-p", combined}
@@ -92,6 +92,10 @@ func (a *AntigravityProvider) AuthHint() string {
 // CheckAuth performs a lightweight auth check by running "agy --version".
 // Returns nil if the binary exits 0; returns *AuthError otherwise.
 // Called by aco-install provider setup, NOT by aco run (R-AUTH-03).
+//
+// Limitation: CheckAuth only verifies binary availability via `agy --version`;
+// it cannot validate the OS Keyring session (agy has no non-interactive
+// auth-status command); a stale session surfaces only at invoke time.
 func (a *AntigravityProvider) CheckAuth(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()

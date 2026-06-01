@@ -105,6 +105,19 @@ func TestAntigravityProvider_BuildArgs_EmptyContent(t *testing.T) {
 	}
 }
 
+// TestAntigravityProvider_BuildArgs_SeparatorDoubleNewline는 prompt와 content가 "\n\n"(double newline)으로
+// 결합되는지 검증한다 (Node 구현과 동일한 동작: F-a parity fix).
+func TestAntigravityProvider_BuildArgs_SeparatorDoubleNewline(t *testing.T) {
+	p := provider.NewAntigravity()
+	opts := provider.InvokeOpts{PermissionProfile: provider.ProfileDefault}
+	args := p.BuildArgs("explain", "the prompt", "the content", opts)
+
+	const want = "the prompt\n\nthe content"
+	if args[1] != want {
+		t.Errorf("BuildArgs() combined = %q, want %q (separator must be \\n\\n not \\n)", args[1], want)
+	}
+}
+
 func TestAntigravityProvider_BuildArgs_ModelIgnored(t *testing.T) {
 	// agy에는 --model/-m 플래그가 없다. opts.Model 값을 지정해도 CLI 인수로 변환되지 않아야 한다.
 	p := provider.NewAntigravity()

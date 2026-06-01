@@ -95,7 +95,9 @@ function formatCodexReadiness(): string {
 function formatAntigravityReadiness(): string {
   // antigravity는 OS Keyring을 사용하므로 env var나 credential 파일 fast-path가 없음.
   // binary가 있으면 ready로 표시한다.
-  return 'available; authentication via OS Keyring (agy)';
+  // 복구 힌트: binary 설치 → curl -fsSL https://antigravity.google/cli/install.sh | bash
+  //   인증 → 첫 실행 시 브라우저 로그인으로 OS Keyring에 세션 저장.
+  return 'available; authentication via OS Keyring (agy); first-run browser login stores session in OS Keyring';
 }
 
 interface CredentialReadinessOptions {
