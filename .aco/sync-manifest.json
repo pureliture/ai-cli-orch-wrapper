@@ -1,6 +1,6 @@
 {
   "version": "5",
-  "generatedAt": "2026-05-31T19:06:07.446Z",
+  "generatedAt": "2026-06-01T13:56:58.996Z",
   "sourceHashes": {
     "CLAUDE.md": "618e8a246574cbbe5f5965cc71828e20ec7f543b967f6457b8c85e605b740d9a",
     ".claude/skills/aco-delegation/SKILL.md": "25e6e8f42f60183232d51e5eb9945148cf1d68fd5b29c59c8289e12f2c095f39",
@@ -9,7 +9,7 @@
     ".claude/skills/gh-pr-followup/SKILL.md": "d7cdc4509550a6c73411e306c92e5e76b76e768be895a62014a2beb6b178541f",
     ".claude/skills/gh-start/SKILL.md": "5b1bbb6dbae9ec49fae6f868020348bfc59f7ba710e494a075716e12e8a42b37",
     ".claude/skills/github-kanban-ops/SKILL.md": "de66a63bb9d1efc83ea468c7be019169854047411556db1ebb738eed294448e2",
-    ".claude/skills/improve-codebase-architecture/SKILL.md": "67201c4f7404e0413c162d180e18d10a008bbeb90b3a599ce0f7d99dfd412567",
+    ".claude/skills/improve-codebase-architecture/SKILL.md": "438bc374ac2480d959b6a80345f2b4a6f5ffd7125528d2d121e4b15569eec502",
     ".claude/skills/openspec-apply-change/SKILL.md": "c30999a1477d6a8377d7aaa02a82ad322206ffa0cca1ddf7d95618c4577ba10f",
     ".claude/skills/openspec-archive-change/SKILL.md": "dd8783f590c0488b2026bee9aae2adbc3cda1d7152ab04e9b9cf2ff3924fce50",
     ".claude/skills/openspec-bulk-archive-change/SKILL.md": "f1636af350b977d465a2361dec5104d487883e8ca6dbaefdf438f59e4b65051d",
@@ -40,7 +40,7 @@
   "targetHashes": {
     "AGENTS.md": "47e34cffa6e565387496c147028e0590c455e7cf9cd0139ae3c759c99782ae14",
     ".agents/skills/github-kanban-ops": "8a715728d245786eaad5f0dc7122c9746d8c566df3ebd3f35c838aa64c74cdcd",
-    ".agents/skills/improve-codebase-architecture": "2be14d194815ed6896a126f0f628c12728114f11cdf4dd69738ea864965d3125",
+    ".agents/skills/improve-codebase-architecture": "0a631ec35d893d9b1ff6d67b64de36649212d4014a30fa83baf6e957a444aa3f",
     ".codex/agents/architect.toml": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
     ".codex/agents/chief-of-staff.toml": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
     ".codex/agents/code-reviewer.toml": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
@@ -72,7 +72,7 @@
       "hashFormat": "directory"
     },
     ".agents/skills/improve-codebase-architecture": {
-      "hash": "2be14d194815ed6896a126f0f628c12728114f11cdf4dd69738ea864965d3125",
+      "hash": "0a631ec35d893d9b1ff6d67b64de36649212d4014a30fa83baf6e957a444aa3f",
       "owner": "aco",
       "kind": "shared-skill",
       "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.claude/worktrees/antigravity-migration-plan/.claude/skills/improve-codebase-architecture",
