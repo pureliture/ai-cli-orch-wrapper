@@ -35,9 +35,7 @@ export async function readManifest(rootPath: string): Promise<SyncManifest | nul
  * manifest entries, so reading the fully-migrated manifest would hide the targets
  * that still exist on disk and need cleanup.
  */
-export async function readManifestForLegacyCleanup(
-  rootPath: string
-): Promise<SyncManifest | null> {
+export async function readManifestForLegacyCleanup(rootPath: string): Promise<SyncManifest | null> {
   try {
     const path = join(rootPath, MANIFEST_DIR, MANIFEST_FILE);
     const content = await readFile(path, 'utf-8');
@@ -211,7 +209,7 @@ export function migrateManifest(
     legacy.version = '5';
   }
 
-  const resolvedVersion = options.stopBeforeV5 ? ((legacy.version as string) || '4') : '5';
+  const resolvedVersion = options.stopBeforeV5 ? (legacy.version as string) || '4' : '5';
 
   return {
     version: resolvedVersion,

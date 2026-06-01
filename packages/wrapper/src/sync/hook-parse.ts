@@ -121,4 +121,3 @@ export function toCodexHooks(hooks: ClaudeHooks): {
 
   return { hooks: result, warnings };
 }
-
