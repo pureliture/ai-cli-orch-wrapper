@@ -311,6 +311,72 @@ describe('AntigravityProvider', () => {
       assert.equal(args[args.length - 1], '-p');
     });
   });
+
+  describe('invoke()', () => {
+    it('does NOT leak OPENAI_API_KEY or GITHUB_TOKEN to child process (OS Keyring env allowlist)', async () => {
+      // fake agy binary: 감시 대상 env 키를 JSON으로 출력한다.
+      const envScript = [
+        '#!/usr/bin/env node',
+        'const out = {',
+        '  OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? "__ABSENT__",',
+        '  GITHUB_TOKEN: process.env.GITHUB_TOKEN ?? "__ABSENT__",',
+        '  PATH: process.env.PATH ?? "__ABSENT__",',
+        '};',
+        'process.stdout.write(JSON.stringify(out));',
+      ].join('\n');
+      await fs.writeFile(path.join(tmpBin, 'agy'), envScript, { mode: 0o755 });
+
+      const savedOpenAI = process.env.OPENAI_API_KEY;
+      const savedGitHub = process.env.GITHUB_TOKEN;
+      process.env.OPENAI_API_KEY = 'sentinel-openai-key';
+      process.env.GITHUB_TOKEN = 'sentinel-github-token';
+
+      try {
+        const provider = new AntigravityProvider();
+        const chunks: string[] = [];
+        for await (const chunk of provider.invoke('ask', 'test prompt', '')) {
+          chunks.push(chunk);
+        }
+        const result = JSON.parse(chunks.join('')) as {
+          OPENAI_API_KEY: string;
+          GITHUB_TOKEN: string;
+          PATH: string;
+        };
+
+        // OPENAI_API_KEY는 child에게 전달되어서는 안 된다 (allowlist에 없음).
+        assert.strictEqual(
+          result.OPENAI_API_KEY,
+          '__ABSENT__',
+          `OPENAI_API_KEY must NOT reach agy child process. Got: ${result.OPENAI_API_KEY}`
+        );
+        // GITHUB_TOKEN도 전달되어서는 안 된다.
+        assert.strictEqual(
+          result.GITHUB_TOKEN,
+          '__ABSENT__',
+          `GITHUB_TOKEN must NOT reach agy child process. Got: ${result.GITHUB_TOKEN}`
+        );
+        // PATH는 base allowlist에 포함되므로 전달되어야 한다.
+        assert.notStrictEqual(
+          result.PATH,
+          '__ABSENT__',
+          'PATH must be present in child env (base allowlist key)'
+        );
+      } finally {
+        if (savedOpenAI === undefined) {
+          delete process.env.OPENAI_API_KEY;
+        } else {
+          process.env.OPENAI_API_KEY = savedOpenAI;
+        }
+        if (savedGitHub === undefined) {
+          delete process.env.GITHUB_TOKEN;
+        } else {
+          process.env.GITHUB_TOKEN = savedGitHub;
+        }
+        // agy binary를 원래대로 복원한다.
+        await makeFakeBinary(tmpBin, 'agy', 'agy-cli 1.0.0');
+      }
+    });
+  });
 });
 
 describe('CodexProvider', () => {

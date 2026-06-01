@@ -1,5 +1,6 @@
 import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
+import { buildProviderEnv } from '../util/provider-env.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 import { readVersion } from '../util/read-version.js';
 import { defaultSummarizeOutput } from '../util/summarize-output.js';
@@ -70,9 +71,13 @@ export class AntigravityProvider implements IProvider {
     const binary = which('agy');
     if (!binary) throw new Error('agy CLI not found in PATH');
 
+    // agy는 OS Keyring 인증 방식을 사용하므로 auth env var가 필요 없다.
+    // buildProviderEnv([])는 BASE_ENV_KEYS(PATH, HOME 등 기반 키)만 전달하고
+    // OPENAI_API_KEY, GITHUB_TOKEN 등 민감 env를 child에 전달하지 않는다.
+    const env = buildProviderEnv([]);
     const combined = content ? `${prompt}\n\n${content}` : prompt;
     const args = [...this.buildArgs(command, options), combined];
-    yield* spawnStream(binary, args, { processName: 'agy', stdin: 'pipe' }, options);
+    yield* spawnStream(binary, args, { processName: 'agy', stdin: 'pipe', env }, options);
   }
 
   summarizeOutput(output: string, maxLength: number): string {
