@@ -41,18 +41,24 @@ func TestAntigravityProvider_BuildArgs_DefaultProfile(t *testing.T) {
 	opts := provider.InvokeOpts{PermissionProfile: provider.ProfileDefault}
 	args := p.BuildArgs("explain", "explain this", "some content", opts)
 
-	// 최소한 -p 플래그와 값이 있어야 한다.
-	if len(args) < 2 {
-		t.Fatalf("BuildArgs() returned too few args: %v", args)
+	// -p 플래그의 위치를 동적으로 탐색
+	pIdx := -1
+	for i, arg := range args {
+		if arg == "-p" {
+			pIdx = i
+			break
+		}
 	}
-	if args[0] != "-p" {
-		t.Errorf("args[0] = %q, want %q", args[0], "-p")
+	if pIdx == -1 || pIdx+1 >= len(args) {
+		t.Fatalf("BuildArgs() missing -p flag or its value: %v", args)
 	}
-	if !strings.Contains(args[1], "explain this") {
-		t.Errorf("args[1] = %q, expected it to contain the prompt", args[1])
+	value := args[pIdx+1]
+
+	if !strings.Contains(value, "explain this") {
+		t.Errorf("BuildArgs() -p value = %q, expected it to contain the prompt", value)
 	}
-	if !strings.Contains(args[1], "some content") {
-		t.Errorf("args[1] = %q, expected it to contain the content", args[1])
+	if !strings.Contains(value, "some content") {
+		t.Errorf("BuildArgs() -p value = %q, expected it to contain the content", value)
 	}
 
 	// default profile: --dangerously-skip-permissions 가 있어야 한다.
@@ -100,8 +106,21 @@ func TestAntigravityProvider_BuildArgs_EmptyContent(t *testing.T) {
 	opts := provider.InvokeOpts{PermissionProfile: provider.ProfileDefault}
 	args := p.BuildArgs("explain", "just the prompt", "", opts)
 
-	if args[1] != "just the prompt" {
-		t.Errorf("args[1] = %q, want %q (no trailing newline when content is empty)", args[1], "just the prompt")
+	// -p 플래그의 위치를 동적으로 탐색
+	pIdx := -1
+	for i, arg := range args {
+		if arg == "-p" {
+			pIdx = i
+			break
+		}
+	}
+	if pIdx == -1 || pIdx+1 >= len(args) {
+		t.Fatalf("BuildArgs() missing -p flag or its value: %v", args)
+	}
+	value := args[pIdx+1]
+
+	if value != "just the prompt" {
+		t.Errorf("BuildArgs() -p value = %q, want %q (no trailing newline when content is empty)", value, "just the prompt")
 	}
 }
 
@@ -112,9 +131,22 @@ func TestAntigravityProvider_BuildArgs_SeparatorDoubleNewline(t *testing.T) {
 	opts := provider.InvokeOpts{PermissionProfile: provider.ProfileDefault}
 	args := p.BuildArgs("explain", "the prompt", "the content", opts)
 
+	// -p 플래그의 위치를 동적으로 탐색
+	pIdx := -1
+	for i, arg := range args {
+		if arg == "-p" {
+			pIdx = i
+			break
+		}
+	}
+	if pIdx == -1 || pIdx+1 >= len(args) {
+		t.Fatalf("BuildArgs() missing -p flag or its value: %v", args)
+	}
+	value := args[pIdx+1]
+
 	const want = "the prompt\n\nthe content"
-	if args[1] != want {
-		t.Errorf("BuildArgs() combined = %q, want %q (separator must be \\n\\n not \\n)", args[1], want)
+	if value != want {
+		t.Errorf("BuildArgs() combined = %q, want %q (separator must be \\n\\n not \\n)", value, want)
 	}
 }
 
@@ -183,5 +215,123 @@ func TestAntigravityProvider_AuthHint(t *testing.T) {
 	hint := p.AuthHint()
 	if !strings.Contains(hint, "agy") {
 		t.Errorf("AuthHint() = %q, expected it to mention agy", hint)
+	}
+}
+
+// TestAntigravityProvider_BuildArgs_FlagOrderParity는 Node의 antigravity.ts와 argv 순서가 일치하는지 검증한다.
+// Node 구현: ['--dangerously-skip-permissions', '-p', combined]
+// Go 구현도 --dangerously-skip-permissions가 -p보다 앞에 와야 하며, combined이 마지막 인자여야 한다.
+func TestAntigravityProvider_BuildArgs_FlagOrderParity(t *testing.T) {
+	p := provider.NewAntigravity()
+	opts := provider.InvokeOpts{PermissionProfile: provider.ProfileDefault}
+	args := p.BuildArgs("explain", "the prompt", "the content", opts)
+
+	// -p 플래그의 위치를 동적으로 탐색
+	pIdx := -1
+	for i, arg := range args {
+		if arg == "-p" {
+			pIdx = i
+			break
+		}
+	}
+	if pIdx == -1 || pIdx+1 >= len(args) {
+		t.Fatalf("BuildArgs() missing -p flag or its value: %v", args)
+	}
+
+	// combined 값이 -p 바로 다음 원소여야 한다
+	value := args[pIdx+1]
+	if !strings.Contains(value, "the prompt") {
+		t.Errorf("BuildArgs() -p value = %q, expected to contain prompt", value)
+	}
+	if !strings.Contains(value, "the content") {
+		t.Errorf("BuildArgs() -p value = %q, expected to contain content", value)
+	}
+
+	// combined(pIdx+1)이 마지막 원소여야 한다 (Node parity)
+	if pIdx+1 != len(args)-1 {
+		t.Errorf("BuildArgs() -p value is at index %d but last index is %d: args=%v (combined must be the LAST arg)", pIdx+1, len(args)-1, args)
+	}
+
+	// --dangerously-skip-permissions가 -p보다 앞에 와야 한다
+	dspIdx := -1
+	for i, arg := range args {
+		if arg == "--dangerously-skip-permissions" {
+			dspIdx = i
+			break
+		}
+	}
+	if dspIdx == -1 {
+		t.Fatalf("BuildArgs() missing --dangerously-skip-permissions: %v", args)
+	}
+	if dspIdx >= pIdx {
+		t.Errorf("BuildArgs() --dangerously-skip-permissions at index %d must come BEFORE -p at index %d: args=%v", dspIdx, pIdx, args)
+	}
+}
+
+// TestAntigravityProvider_BuildArgs_ExtraArgsPassThrough는 opts.ExtraArgs(LaunchArgs)가
+// filterUnsupportedArgs를 거쳐 args에 포함되는지 검증한다. Codex 패턴과 동일.
+func TestAntigravityProvider_BuildArgs_ExtraArgsPassThrough(t *testing.T) {
+	p := provider.NewAntigravity()
+	opts := provider.InvokeOpts{
+		PermissionProfile: provider.ProfileDefault,
+		ExtraArgs:         []string{"--sandbox"},
+	}
+	args := p.BuildArgs("explain", "explain this", "", opts)
+
+	// --sandbox가 args에 있어야 한다
+	hasSandbox := false
+	sandboxIdx := -1
+	for i, a := range args {
+		if a == "--sandbox" {
+			hasSandbox = true
+			sandboxIdx = i
+		}
+	}
+	if !hasSandbox {
+		t.Errorf("BuildArgs() with ExtraArgs=[--sandbox]: expected --sandbox in args, got %v", args)
+	}
+
+	// --sandbox는 -p보다 앞에 와야 한다
+	pIdx := -1
+	for i, arg := range args {
+		if arg == "-p" {
+			pIdx = i
+			break
+		}
+	}
+	if pIdx == -1 {
+		t.Fatalf("BuildArgs() missing -p flag: %v", args)
+	}
+	if sandboxIdx >= pIdx {
+		t.Errorf("BuildArgs() --sandbox at index %d must come BEFORE -p at index %d: args=%v", sandboxIdx, pIdx, args)
+	}
+}
+
+// TestAntigravityProvider_BuildArgs_ExtraArgs_UnsupportedFiltered는 unsupported 플래그가
+// filterUnsupportedArgs를 통해 제거되는지 검증한다. Codex 패턴과 동일.
+func TestAntigravityProvider_BuildArgs_ExtraArgs_UnsupportedFiltered(t *testing.T) {
+	p := provider.NewAntigravity()
+	opts := provider.InvokeOpts{
+		PermissionProfile: provider.ProfileDefault,
+		ExtraArgs:         []string{"--sandbox", "--reasoning-effort", "high"},
+	}
+	args := p.BuildArgs("explain", "explain this", "", opts)
+
+	// --reasoning-effort는 필터링되어야 한다
+	for _, a := range args {
+		if a == "--reasoning-effort" {
+			t.Errorf("BuildArgs() with ExtraArgs containing --reasoning-effort: flag must be filtered out, got %v", args)
+		}
+	}
+
+	// --sandbox는 살아남아야 한다
+	hasSandbox := false
+	for _, a := range args {
+		if a == "--sandbox" {
+			hasSandbox = true
+		}
+	}
+	if !hasSandbox {
+		t.Errorf("BuildArgs() with ExtraArgs=[--sandbox, --reasoning-effort, high]: expected --sandbox to survive filtering, got %v", args)
 	}
 }

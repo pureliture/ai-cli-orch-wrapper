@@ -41,7 +41,13 @@ func (a *AntigravityProvider) InstallHint() string {
 //
 // The agy CLI accepts:
 //
-//	agy -p "<prompt>\n<content>" [--dangerously-skip-permissions]
+//	agy [--dangerously-skip-permissions] [<extra-args>...] -p "<prompt>\n\n<content>"
+//
+// Arg order (mirrors Node antigravity.ts):
+//  1. --dangerously-skip-permissions (unless ProfileRestricted)
+//  2. extra/launch args from opts.ExtraArgs (e.g. --sandbox from formatter providerDefaults),
+//     filtered through filterUnsupportedArgs — mirrors CodexProvider.
+//  3. -p <combined>  — MUST be last so the prompt value is unambiguous.
 //
 // --dangerously-skip-permissions enables auto-approval of tool use. It is omitted
 // when the permission profile is "restricted" (R-RUN-11, R-SPAWN-02).
@@ -56,12 +62,17 @@ func (a *AntigravityProvider) BuildArgs(command, prompt, content string, opts In
 		combined = fmt.Sprintf("%s\n\n%s", prompt, content)
 	}
 
-	args := []string{"-p", combined}
-
+	var args []string
 	// Auto-approve tool use unless the caller requested a restricted profile.
 	if opts.PermissionProfile != ProfileRestricted {
 		args = append(args, "--dangerously-skip-permissions")
 	}
+	// Forward launch/extra args (e.g. --sandbox from formatter providerDefaults),
+	// filtering known-unsupported flags. Mirrors CodexProvider.
+	args = append(args, filterUnsupportedArgs(opts.ExtraArgs)...)
+	// -p and its value (the combined prompt) MUST be last so the prompt is
+	// unambiguously the value of -p and matches the Node argv order.
+	args = append(args, "-p", combined)
 
 	return args
 }
