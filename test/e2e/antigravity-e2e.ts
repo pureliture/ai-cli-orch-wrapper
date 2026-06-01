@@ -30,7 +30,7 @@ import {
   cp,
   stat,
 } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir, homedir } from 'node:os';
 
@@ -598,7 +598,6 @@ function getLatestSessionId(): string | undefined {
   let latestTime = '';
 
   try {
-    const { readdirSync, readFileSync } = require('node:fs') as typeof import('node:fs');
     for (const name of readdirSync(ACO_SESSIONS_DIR)) {
       const taskFile = join(ACO_SESSIONS_DIR, name, 'task.json');
       try {

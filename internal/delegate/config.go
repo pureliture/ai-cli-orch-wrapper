@@ -36,7 +36,7 @@ type Formatter struct {
 	Version          int                        `yaml:"version"`
 	ProviderDefaults map[string]ProviderDefault `yaml:"providerDefaults"`
 	ModelAliasMap    map[string]Route           `yaml:"modelAliasMap"`
-	RoleHintRules    map[string]RoleHintRule   `yaml:"roleHintRules"`
+	RoleHintRules    map[string]RoleHintRule    `yaml:"roleHintRules"`
 	Fallback         Route                      `yaml:"fallback"`
 	ProviderModels   map[string][]string        `yaml:"providerModels"`
 }
@@ -200,11 +200,12 @@ func Resolve(spec AgentSpec, formatter Formatter) (Resolution, error) {
 }
 
 // requiresModel reports whether a provider needs a non-empty per-call model.
-// A provider configured in providerModels with an EMPTY list is a "no-model"
-// provider (e.g. antigravity/agy, which selects its model out-of-band via /model);
-// such providers resolve with an empty model instead of falling back. Unknown
-// providers (absent from providerModels) still require a model, so misconfigured
-// routes fall back safely.
+// A provider configured in providerModels with an empty or nil list is a
+// "no-model" provider (e.g. antigravity/agy, which selects its model out-of-band
+// via /model); such providers resolve with an empty model instead of falling
+// back. A YAML key whose body is only comments parses to a nil slice, which
+// len()==0 treats identically to an empty list. Unknown providers (absent from
+// providerModels) still require a model, so misconfigured routes fall back safely.
 func (f Formatter) requiresModel(provider string) bool {
 	if models, ok := f.ProviderModels[provider]; ok && len(models) == 0 {
 		return false

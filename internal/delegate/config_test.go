@@ -5,12 +5,13 @@ import (
 )
 
 // baseFormatterForNoModelTests constructs a Formatter that mirrors .aco/formatter.yaml:
-// - opus/haiku alias → {antigravity, ""} (no-model provider)
-// - research roleHint → preferredProvider antigravity
-// - providerModels.antigravity = present with empty slice (agy is a no-model provider)
-// - providerModels.codex = ["gpt-5.4"]
-// - providerDefaults.antigravity.launchArgs = ["--sandbox"]
-// - fallback = {codex, gpt-5.4}
+//   - opus/haiku alias → {antigravity, ""} (no-model provider)
+//   - research roleHint → preferredProvider antigravity
+//   - providerModels.antigravity = present with nil slice, mirroring the real YAML key
+//     (body is comments only → nil; len()==0 → treated as a no-model provider)
+//   - providerModels.codex = ["gpt-5.4"]
+//   - providerDefaults.antigravity.launchArgs = ["--sandbox"]
+//   - fallback = {codex, gpt-5.4}
 func baseFormatterForNoModelTests() Formatter {
 	return Formatter{
 		Version: 1,
@@ -23,8 +24,8 @@ func baseFormatterForNoModelTests() Formatter {
 			"execute":  {PreferredProvider: "codex"},
 		},
 		ProviderModels: map[string][]string{
-			"codex":        {"gpt-5.4"},
-			"antigravity":  {}, // present key with empty slice — no-model provider
+			"codex":       {"gpt-5.4"},
+			"antigravity": nil, // present key with nil slice (mirrors real YAML: comments-only → nil; len()==0 → no-model)
 		},
 		ProviderDefaults: map[string]ProviderDefault{
 			"antigravity": {LaunchArgs: []string{"--sandbox"}},
