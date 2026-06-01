@@ -2,7 +2,7 @@
  * Smoke test: verify aco providers and no-auth mock demo commands are available at runtime.
  * Migrated from .claude/aco/tests/smoke-adapters.sh
  *
- * Run: npx tsx tests/smoke.ts [gemini|all]
+ * Run: npx tsx tests/smoke.ts [antigravity|all]
  */
 import { ProviderRegistry } from '../src/providers/registry.js';
 import { execFileSync } from 'node:child_process';

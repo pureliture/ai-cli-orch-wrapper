@@ -17,7 +17,7 @@ This skill is read-only during the initial review. Produce candidates first; do 
 
 - Preserve provider-neutral behavior in `packages/wrapper/src/`. Put provider-specific behavior behind the provider abstraction.
 - Respect the context-sync contract. Treat root `CLAUDE.md` as the Claude source, `AGENTS.md` as the generated target surface, and `.agents/skills/` as an allow-listed shared skill target.
-- Do not hand-maintain `.codex/skills/` or `.gemini/skills/` copies unless runtime evidence proves they are required.
+- Do not hand-maintain `.codex/skills/` copies unless runtime evidence proves they are required.
 - Keep `.claude/commands/gh-*.md` and `templates/commands/gh-*.md` aligned when command behavior changes.
 - Keep `.agents/skills/github-kanban-ops/` and `.claude/skills/github-kanban-ops/` aligned when changing shared GitHub PM policy or scripts.
 - Do not reintroduce sprint, story, spike, status-label, priority-label, or broad label-taxonomy concepts into the GitHub PM harness.
