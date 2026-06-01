@@ -14,11 +14,11 @@ modelAliasMap:
     model: gpt-5.4
   opus:
     provider: antigravity
-    # TODO: agy has no --model CLI flag; model is chosen out-of-band via /model in the session.
+    # agy는 per-call --model 플래그 없음; resolver가 providerModels 빈 목록으로 no-model provider를 인식해 codex fallback 없이 통과.
     model: ~
   haiku:
     provider: antigravity
-    # TODO: agy has no --model CLI flag; model is chosen out-of-band via /model in the session.
+    # agy는 per-call --model 플래그 없음; resolver가 providerModels 빈 목록으로 no-model provider를 인식해 codex fallback 없이 통과.
     model: ~
 
 providerModels:

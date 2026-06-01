@@ -181,10 +181,10 @@ func Resolve(spec AgentSpec, formatter Formatter) (Resolution, error) {
 			}
 		}
 	}
-	if route.Provider == "" || route.Model == "" {
+	if route.Provider == "" || (route.Model == "" && formatter.requiresModel(route.Provider)) {
 		route = formatter.Fallback
 	}
-	if route.Provider == "" || route.Model == "" {
+	if route.Provider == "" || (route.Model == "" && formatter.requiresModel(route.Provider)) {
 		return Resolution{}, errors.New("unable to resolve provider/model")
 	}
 
@@ -197,6 +197,19 @@ func Resolve(spec AgentSpec, formatter Formatter) (Resolution, error) {
 		resolution.ReasoningEffort = spec.ReasoningEffort
 	}
 	return resolution, nil
+}
+
+// requiresModel reports whether a provider needs a non-empty per-call model.
+// A provider configured in providerModels with an EMPTY list is a "no-model"
+// provider (e.g. antigravity/agy, which selects its model out-of-band via /model);
+// such providers resolve with an empty model instead of falling back. Unknown
+// providers (absent from providerModels) still require a model, so misconfigured
+// routes fall back safely.
+func (f Formatter) requiresModel(provider string) bool {
+	if models, ok := f.ProviderModels[provider]; ok && len(models) == 0 {
+		return false
+	}
+	return true
 }
 
 func (f Formatter) supportsModel(providerName, model string) bool {
