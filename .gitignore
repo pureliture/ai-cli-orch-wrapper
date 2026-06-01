@@ -77,3 +77,7 @@ packages/wrapper/templates/
 
 # Go build artifacts
 /bin/
+
+# agy per-project config directory (symlink created by agy when run from cwd)
+# Known agy behavior: agy creates .antigravitycli/ symlink in cwd pointing to ~/.gemini/config/projects/<id>.json
+.antigravitycli/
