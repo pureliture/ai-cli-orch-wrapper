@@ -412,7 +412,9 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
         messages.push(`Stale outputs: ${staleOutputs.map((o) => o.targetPath).join(', ')}`);
       }
       if (removedOutputs.length > 0) {
-        messages.push(`Pending removals (legacy cleanup): ${removedOutputs.map((o) => o.targetPath).join(', ')}`);
+        messages.push(
+          `Pending removals (legacy cleanup): ${removedOutputs.map((o) => o.targetPath).join(', ')}`
+        );
       }
       if (conflicts.length > 0) {
         messages.push(`Conflicts: ${conflicts.map((o) => o.targetPath).join(', ')}`);
