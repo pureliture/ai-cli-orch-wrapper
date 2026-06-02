@@ -17,7 +17,11 @@
     "check:terminology": "tsx scripts/check-terminology.ts",
     "typecheck": "npm run typecheck --workspace=packages/wrapper",
     "format:check": "prettier --check \"packages/*/src/**/*.ts\"",
-    "release": "npm run build && changeset publish"
+    "format": "prettier --write \"packages/*/src/**/*.ts\"",
+    "verify": "bash scripts/verify.sh",
+    "verify:fast": "bash scripts/verify.sh --fast",
+    "release": "npm run build && changeset publish",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "keywords": [
     "claude-code",

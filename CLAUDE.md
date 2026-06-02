@@ -128,9 +128,35 @@ GitHub 코드 리뷰에서는 P0/P1 위주로 flag한다. P2/P3는 정말 의미
 
 ## Validation
 
-Common checks:
+Before pushing, run the local CI mirror:
 
 ```bash
+npm run verify        # FULL  — lint + contract + typecheck + test + go build/test + fixtures + smoke
+npm run verify:fast   # FAST  — deterministic gates only: lint + contract + typecheck + go build
+```
+
+A `pre-push` git hook (`.githooks/pre-push`, wired by the `prepare` script via
+`core.hooksPath`) runs `npm run verify:fast` automatically and blocks the push if
+a gate fails, so a broken build never reaches GitHub Actions. Emergency bypass:
+`git push --no-verify`.
+
+The hook runs the FAST gates only: those are deterministic and side-effect-free.
+The full test suite (`npm run verify`) spawns provider/test child processes and
+creates throwaway git workspaces, so it is left to CI and manual runs rather than
+a push hook. The hook also strips inherited `GIT_*` env vars before running, so
+test workspaces never resolve back to this repo.
+
+Fix formatting drift — the most common CI `lint` failure — with:
+
+```bash
+npm run format   # prettier --write on packages/*/src
+```
+
+Individual checks (CI mirrors these exactly; `format:check` is the gate that
+historically broke CI because local runs omitted it):
+
+```bash
+npm run format:check
 npm test
 npm run typecheck
 npm run test:fixtures
