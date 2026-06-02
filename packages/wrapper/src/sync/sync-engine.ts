@@ -403,12 +403,16 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   const conflicts = plan.outputs.filter((o) => o.action === 'conflict');
   if (check) {
     const isDrift = calculateDrift(existingManifest, plan.manifest);
+    const removedOutputs = plan.outputs.filter((o) => o.action === 'removed');
     const hasDuplicates = duplicateWarnings.length > 0;
-    if (isDrift || conflicts.length > 0 || (strict && hasDuplicates)) {
+    if (isDrift || conflicts.length > 0 || removedOutputs.length > 0 || (strict && hasDuplicates)) {
       const staleOutputs = plan.outputs.filter((o) => o.action === 'updated');
       const messages: string[] = [];
       if (staleOutputs.length > 0) {
         messages.push(`Stale outputs: ${staleOutputs.map((o) => o.targetPath).join(', ')}`);
+      }
+      if (removedOutputs.length > 0) {
+        messages.push(`Pending removals (legacy cleanup): ${removedOutputs.map((o) => o.targetPath).join(', ')}`);
       }
       if (conflicts.length > 0) {
         messages.push(`Conflicts: ${conflicts.map((o) => o.targetPath).join(', ')}`);

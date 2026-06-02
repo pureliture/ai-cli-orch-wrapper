@@ -1512,6 +1512,98 @@ describe('Skill Sync', () => {
     }
   });
 
+  it('--check fails when v4 manifest has pending legacy Gemini removal', async () => {
+    // RED test: verifies the fix that makes --check detect planned 'removed' outputs.
+    // Strategy:
+    //   1. Run a real sync to get a fully up-to-date v5 manifest (AGENTS.md hash correct).
+    //   2. Put GEMINI.md back on disk and inject a GEMINI.md entry into the manifest,
+    //      keeping version:'4' so readManifestForLegacyCleanup sees it and plans removal.
+    //   3. --check must THROW because planLegacyGeminiCleanup emits a 'removed' output
+    //      and calculateDrift(existingManifest[v5], plan.manifest[v5]) == false
+    //      (both sides are v5 with identical AGENTS.md, no GEMINI.md).
+    //      Without the fix the condition only checks isDrift || conflicts → passes silently.
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-check-legacy-removal-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
+
+      // Step 1: real sync to get correct v5 manifest on disk
+      await runSync(tmpDir, { dryRun: false });
+
+      // Step 2: add GEMINI.md to disk and inject it into the manifest as v4 legacy entry
+      const geminiContent = '<!-- BEGIN ACO GENERATED -->\nold gemini content\n<!-- END ACO GENERATED -->\n';
+      await writeFile(join(tmpDir, 'GEMINI.md'), geminiContent);
+
+      const geminiHash = computeHash(geminiContent);
+      // Read the current v5 manifest and add the GEMINI.md entry, downgrading to v4
+      const { readFile: rf } = await import('node:fs/promises');
+      const manifestPath = join(tmpDir, '.aco', 'sync-manifest.json');
+      const existingV5 = JSON.parse(await rf(manifestPath, 'utf-8'));
+      const v4Manifest = {
+        ...existingV5,
+        version: '4',
+        targetHashes: { ...existingV5.targetHashes, 'GEMINI.md': geminiHash },
+        targets: {
+          ...existingV5.targets,
+          'GEMINI.md': { hash: geminiHash, owner: 'aco', kind: 'config' },
+        },
+      };
+      await writeFile(manifestPath, JSON.stringify(v4Manifest));
+
+      // Step 3: --check must FAIL (pending legacy Gemini removal)
+      await assert.rejects(
+        async () => runSync(tmpDir, { check: true }),
+        /Sync check failed/,
+        '--check should reject when legacy Gemini removal is pending'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('--check converges: passes after real sync removes v4 legacy Gemini targets', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-check-legacy-converge-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
+
+      // Establish a clean v5 baseline
+      await runSync(tmpDir, { dryRun: false });
+
+      // Inject v4 legacy GEMINI.md entry and create file on disk
+      const geminiContent = '<!-- BEGIN ACO GENERATED -->\nold gemini content\n<!-- END ACO GENERATED -->\n';
+      await writeFile(join(tmpDir, 'GEMINI.md'), geminiContent);
+      const geminiHash = computeHash(geminiContent);
+      const { readFile: rf } = await import('node:fs/promises');
+      const manifestPath = join(tmpDir, '.aco', 'sync-manifest.json');
+      const existingV5 = JSON.parse(await rf(manifestPath, 'utf-8'));
+      const v4Manifest = {
+        ...existingV5,
+        version: '4',
+        targetHashes: { ...existingV5.targetHashes, 'GEMINI.md': geminiHash },
+        targets: {
+          ...existingV5.targets,
+          'GEMINI.md': { hash: geminiHash, owner: 'aco', kind: 'config' },
+        },
+      };
+      await writeFile(manifestPath, JSON.stringify(v4Manifest));
+
+      // Real sync (no --check) must delete GEMINI.md and migrate manifest to v5
+      const syncResult = await runSync(tmpDir, { dryRun: false });
+      const geminiRemoved = syncResult.outputs.some(
+        (o) => o.targetPath.endsWith('GEMINI.md') && o.action === 'removed'
+      );
+      assert.ok(geminiRemoved, 'real sync must have a removed output for GEMINI.md');
+
+      const { existsSync } = await import('node:fs');
+      assert.equal(existsSync(join(tmpDir, 'GEMINI.md')), false, 'GEMINI.md must be deleted');
+
+      // Subsequent --check must pass (convergence — no perpetual failure)
+      const checkResult = await runSync(tmpDir, { check: true });
+      assert.equal(checkResult.conflicts, 0, 'post-sync --check must pass with no conflicts');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('--clean-duplicates refuses non-owned duplicates without --force-clean', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-refuse-'));
     try {
