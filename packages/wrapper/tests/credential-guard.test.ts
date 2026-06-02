@@ -33,7 +33,6 @@ describe('isCredentialLikePath: credential pattern detection', () => {
     'secrets.yaml',
     'secrets.yml',
     '.codex/auth.json',
-    '.gemini/oauth_creds.json',
   ];
 
   for (const p of credentialPaths) {

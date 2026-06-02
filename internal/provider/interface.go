@@ -27,9 +27,9 @@ type InvokeOpts struct {
 //   - Return the install hint when IsAvailable() is false (R-AVAIL-01)
 //   - Classify auth failures via IsAuthFailure (R-AUTH-04)
 //
-// Phase 1: Implementations are stubs. Phase 4 adds Gemini provider.
+// Implementations: AntigravityProvider (agy), CodexProvider (codex).
 type Provider interface {
-	// Name returns the canonical provider key (e.g., "gemini").
+	// Name returns the canonical provider key (e.g., "antigravity").
 	Name() string
 
 	// Binary returns the executable name to locate via PATH.

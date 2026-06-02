@@ -19,7 +19,7 @@ export interface TaskRecord {
   endedAt?: string;
   /** Agent name from sentinel metadata (e.g. "reviewer"). */
   agent?: string;
-  /** Model identifier from sentinel metadata (e.g. "gemini-2.5-pro"). */
+  /** Model identifier from sentinel metadata. */
   model?: string;
   /** Provider process exit code from sentinel metadata. */
   exitCode?: number;

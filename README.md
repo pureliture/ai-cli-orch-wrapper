@@ -1,7 +1,7 @@
 <!-- ──────────────── HERO BANNER ──────────────── -->
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12&height=240&section=header&text=ai-cli-orch-wrapper&fontSize=58&fontColor=ffffff&animation=fadeIn&fontAlignY=36&desc=Repo-local%20AI%20workflow%20harness%20for%20Claude%20·%20Codex%20·%20Gemini&descSize=15&descAlignY=58&descAlign=50" alt="banner" width="100%" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=12&height=240&section=header&text=ai-cli-orch-wrapper&fontSize=58&fontColor=ffffff&animation=fadeIn&fontAlignY=36&desc=Repo-local%20AI%20workflow%20harness%20for%20Claude%20·%20Codex%20·%20Antigravity&descSize=15&descAlignY=58&descAlign=50" alt="banner" width="100%" />
 
 <br/>
 
@@ -18,7 +18,7 @@
 
 <!-- Tagline -->
 <h3>
-  <code>Claude</code> · <code>Codex</code> · <code>Gemini</code>를<br/>
+  <code>Claude</code> · <code>Codex</code> · <code>Antigravity</code>를<br/>
   Claude Code가 감독하고 외부 AI CLI는 advisory로 위임하는 <b>consent-gated AI delegation wrapper</b>입니다.
 </h3>
 
@@ -30,7 +30,7 @@
   <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="https://img.shields.io/badge/Claude-D97706?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude" />
-  <img src="https://img.shields.io/badge/Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white" alt="Gemini" />
+  <img src="https://img.shields.io/badge/Antigravity-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Antigravity" />
   <img src="https://img.shields.io/badge/OpenAI_Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="Codex" />
 </p>
 
@@ -56,7 +56,7 @@
 
 ## 🏛️ 아키텍처 개요
 
-> command pack 설치, Claude 기준 자산의 Codex/Gemini target sync, provider 실행, session-aware
+> command pack 설치, Claude 기준 자산의 Codex/Antigravity target sync, provider 실행, session-aware
 > `result/status/cancel` — 외부 AI CLI를 **하나의 반복 가능한 개발 워크플로우**로 묶는 것이 목표입니다.
 
 용어 기준: provider invocation, run/session artifacts, briefs, advisory output은
@@ -77,7 +77,7 @@
 #### 🟣 Harness / Generated 분리
 
 `.claude/`는 **사람이 관리하는 기준 자산**.<br/>
-Codex·Gemini 대상 파일은 생성 산출물로 관리되어 운영 중 수동 수정과 자동 생성의 경계가 분명합니다.
+Codex·Antigravity 대상 파일은 생성 산출물로 관리되어 운영 중 수동 수정과 자동 생성의 경계가 분명합니다.
 
 </td>
 <td width="50%" valign="top">
@@ -85,7 +85,7 @@ Codex·Gemini 대상 파일은 생성 산출물로 관리되어 운영 중 수�
 #### 🔵 Provider Abstraction
 
 동일한 `aco` 진입점에서<br/>
-**Gemini · Codex별 실행 차이를 흡수**합니다.<br/>
+**Antigravity · Codex별 실행 차이를 흡수**합니다.<br/>
 새 provider 추가는 `IProvider` 구현 + registry 등록으로 끝납니다.
 
 </td>
@@ -155,10 +155,10 @@ Codex·Gemini 대상 파일은 생성 산출물로 관리되어 운영 중 수�
 <td>Anthropic 공식 CLI</td>
 </tr>
 <tr>
-<td><img src="https://img.shields.io/badge/Gemini_CLI-4285F4?style=flat-square&logo=googlegemini&logoColor=white" /></td>
+<td><img src="https://img.shields.io/badge/Antigravity_CLI-4285F4?style=flat-square&logo=google&logoColor=white" /></td>
 <td>🟡 Provider별</td>
-<td>Gemini provider 사용 시</td>
-<td><code>npm i -g @google/gemini-cli</code></td>
+<td>Antigravity provider 사용 시</td>
+<td><code>curl -fsSL https://antigravity.google/cli/install.sh | bash</code></td>
 </tr>
 <tr>
 <td><img src="https://img.shields.io/badge/Codex_CLI-412991?style=flat-square&logo=openai&logoColor=white" /></td>
@@ -178,7 +178,7 @@ Codex·Gemini 대상 파일은 생성 산출물로 관리되어 운영 중 수�
 
 ```bash
 npx @pureliture/ai-cli-orch-wrapper pack setup
-npx @pureliture/ai-cli-orch-wrapper provider setup gemini
+npx @pureliture/ai-cli-orch-wrapper provider setup antigravity
 npx @pureliture/ai-cli-orch-wrapper provider setup codex
 ```
 
@@ -204,7 +204,7 @@ aco pack setup
 npm install
 npm run build --workspace=packages/wrapper
 node packages/wrapper/dist/cli.js pack setup
-node packages/wrapper/dist/cli.js provider setup gemini
+node packages/wrapper/dist/cli.js provider setup antigravity
 node packages/wrapper/dist/cli.js sync --check
 ```
 
@@ -246,9 +246,9 @@ npx @pureliture/ai-cli-orch-wrapper --version
 </thead>
 <tbody>
 <tr>
-<td align="center"><img src="https://img.shields.io/badge/Gemini-4285F4?style=for-the-badge&logo=googlegemini&logoColor=white" /></td>
-<td><code>npm install -g @google/gemini-cli</code></td>
-<td><code>GEMINI_API_KEY</code> · <code>GOOGLE_API_KEY</code> · <code>~/.gemini/oauth_creds.json</code></td>
+<td align="center"><img src="https://img.shields.io/badge/Antigravity-4285F4?style=for-the-badge&logo=google&logoColor=white" /></td>
+<td><code>curl -fsSL https://antigravity.google/cli/install.sh | bash</code></td>
+<td>OS Keyring (no API key env required)</td>
 </tr>
 <tr>
 <td align="center"><img src="https://img.shields.io/badge/Codex-412991?style=for-the-badge&logo=openai&logoColor=white" /></td>
@@ -260,13 +260,13 @@ npx @pureliture/ai-cli-orch-wrapper --version
 
 ```bash
 # provider CLI와 local credential readiness 확인
-aco provider setup gemini
+aco provider setup antigravity
 aco provider setup codex
 ```
 
 > ⚠️ **Headless / CI 환경 주의사항**
 >
-> - Gemini: `GEMINI_API_KEY` 환경변수 필수 (`GOOGLE_API_KEY`는 Node wrapper readiness heuristic 전용)
+> - Antigravity: OS Keyring 기반 인증. API key 환경변수 불필요. `-m`/`--cwd` 플래그 미지원
 > - Codex: `OPENAI_API_KEY` 또는 OAuth. 토큰 만료 시 `codex login` 재실행
 
 <br/>
@@ -300,11 +300,11 @@ aco provider setup codex
 <tr>
 <td align="center"><img src="https://img.shields.io/badge/🔄-Sync-06b6d4?style=for-the-badge" /></td>
 <td><code>aco sync --check</code><br/><code>aco sync --force</code></td>
-<td>Codex/Gemini target drift 확인 및 갱신</td>
+<td>Codex/Antigravity target drift 확인 및 갱신</td>
 </tr>
 <tr>
 <td align="center"><img src="https://img.shields.io/badge/▶️-Run-10b981?style=for-the-badge" /></td>
-<td><code>aco run gemini review</code><br/><code>aco run codex review</code></td>
+<td><code>aco run antigravity review</code><br/><code>aco run codex review</code></td>
 <td>provider command 실행 · session 생성</td>
 </tr>
 <tr>
@@ -384,14 +384,14 @@ aco delegate researcher --input-file context.txt
 🛰️  aco Runtime Session
 
 ✨ Active
-  Provider:   gemini
+  Provider:   antigravity
   Command:    review
   Session ID: f3f2d9...b1
-  Auth:       ready (oauth)
+  Auth:       ready (keyring)
   Branch:     main
 
 🧩 Exposed
-  Providers:  gemini
+  Providers:  antigravity
   Agents:     reviewer, planner
   Hooks:      PostToolUse
   Skills:     review-skill
@@ -436,32 +436,32 @@ AI CLI workflow를 처음 도입하는 저장소
   npx @pureliture/ai-cli-orch-wrapper pack setup
 
 + ② provider 설정
-  aco provider setup gemini
+  aco provider setup antigravity
 
 + ③ context sync 상태 확인
   aco sync --check
 
 + ④ 첫 실행
-  aco run gemini review
+  aco run antigravity review
 
 + ⑤ 결과 확인
   aco result
 ```
 
 **✨ 결과**
-`~/.aco/sessions/`에 session 로그 생성, `AGENTS.md` · `GEMINI.md` 자동 생성
+`~/.aco/sessions/`에 session 로그 생성, `AGENTS.md` 자동 생성
 
 </td>
 <td valign="top">
 
 **🎬 상황**
-PR 머지 전 Gemini와 Codex **양쪽 리뷰**를 받고 싶을 때
+PR 머지 전 Antigravity와 Codex **양쪽 리뷰**를 받고 싶을 때
 
 **📋 단계**
 
 ```diff
-+ ① Gemini 리뷰 실행
-  aco run gemini review
++ ① Antigravity 리뷰 실행
+  aco run antigravity review
 
 + ② session ID 메모
   aco status
@@ -601,10 +601,8 @@ PR 머지 전 Gemini와 Codex **양쪽 리뷰**를 받고 싶을 때
 
 ```
 📄 AGENTS.md               # Codex 프로젝트 지침
-📄 GEMINI.md               # Gemini 프로젝트 지침
-📁 .agents/skills/         # Codex·Gemini 공유 (ACO-owned only)
+📁 .agents/skills/         # Codex·Antigravity 공유 (ACO-owned only)
 📁 .codex/agents/          # Codex custom agent
-📁 .gemini/agents/         # Gemini agent
 🗂️ .aco/sync-manifest.json  # Drift tracking
 ```
 
@@ -661,20 +659,20 @@ aco sync --force
 <tr>
 <td align="center">🟢</td>
 <td><b>Context sync</b></td>
-<td>Claude 자산을 Codex/Gemini target으로 동기화·drift 확인</td>
+<td>Claude 자산을 Codex/Antigravity target으로 동기화·drift 확인</td>
 <td><code>aco sync --check</code></td>
 </tr>
 <tr>
 <td align="center">🟢</td>
 <td><b>Provider setup</b></td>
-<td>Gemini/Codex CLI · credential readiness 확인</td>
+<td>Antigravity/Codex CLI · credential readiness 확인</td>
 <td><code>aco provider setup &lt;name&gt;</code></td>
 </tr>
 <tr>
 <td align="center">🟢</td>
 <td><b>Provider invocation</b></td>
 <td>provider별 command 실행 · session 생성</td>
-<td><code>aco run gemini review</code></td>
+<td><code>aco run antigravity review</code></td>
 </tr>
 <tr>
 <td align="center">🟢</td>
@@ -753,14 +751,14 @@ npx @pureliture/ai-cli-orch-wrapper --version
 <summary>Provider를 찾을 수 없거나 인증되지 않은 경우</summary>
 
 ```bash
-npm install -g @google/gemini-cli
+curl -fsSL https://antigravity.google/cli/install.sh | bash
 npm install -g @openai/codex
-aco provider setup gemini
+aco provider setup antigravity
 aco provider setup codex
 ```
 
 Codex OAuth 토큰 만료 시: `codex login` 재실행<br/>
-Headless/CI 환경: `GEMINI_API_KEY` · `OPENAI_API_KEY` 환경변수 설정
+Headless/CI 환경: Antigravity는 OS Keyring 사용. Codex는 `OPENAI_API_KEY` 환경변수 설정
 
 </details>
 
@@ -775,7 +773,7 @@ aco pack setup
 </details>
 
 <details>
-<summary>Codex/Gemini target surface가 stale해 보이는 경우</summary>
+<summary>Codex/Antigravity target surface가 stale해 보이는 경우</summary>
 
 ```bash
 # 읽기 전용 drift 확인 (변경 없음)

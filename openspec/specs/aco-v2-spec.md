@@ -5,6 +5,11 @@
 **Source:** openspec/prd-aco-v2-native-agent-architecture.md v0.2
 **Scope:** Phase 1 (delegate CLI + frontmatter routing) + Phase 2 (context marshaling) + Phase 3 (sentinel output, cleanup)
 
+> **Migration note (2026-05-31):** Gemini CLI provider가 제거되고 `antigravity`(binary `agy`) provider로 대체되었습니다.
+> 설치는 `curl -fsSL https://antigravity.google/cli/install.sh | bash`이고, 인증은 OS Keyring을 사용합니다.
+> **agy는 per-call 모델 플래그(`-m`/`--model`)가 없어 formatter의 `model` 필드를 무시하며, 모델은 `/model`로 out-of-band 선택되어 persist됩니다.**
+> 따라서 antigravity 예시에는 구체적 모델 id를 명시하지 않습니다. 이 spec 전체에서 `gemini_cli`/`gemini` 참조는 `antigravity`/`agy`로 마이그레이션되었습니다.
+
 ---
 
 ## Actors
@@ -16,7 +21,7 @@
 | **aco binary** | Go 바이너리. frontmatter 파싱 + formatter routing + provider 실행을 담당. role을 소유하지 않음 |
 | **Formatter** | `.aco/formatter.yaml`. vendor-specific 변환 규칙 집합. aco가 읽는 설정 파일 |
 | **Agent Spec** | `.claude/agents/<id>.md`. CC와 aco가 공유하는 canonical agent 정의 파일 |
-| **Provider CLI** | `gemini` 또는 `codex` 바이너리. aco가 exec하는 외부 프로세스 |
+| **Provider CLI** | `agy` (Antigravity) 또는 `codex` 바이너리. aco가 exec하는 외부 프로세스 |
 
 ---
 
@@ -83,7 +88,7 @@ version: 1                    # 필수
 providerDefaults:             # provider별 기본 launchArgs
   codex:
     launchArgs: []
-  gemini_cli:
+  antigravity:
     launchArgs: []
 
 modelAliasMap:                # modelAlias → provider + model
@@ -91,11 +96,9 @@ modelAliasMap:                # modelAlias → provider + model
     provider: codex
     model: gpt-5.4
   opus:
-    provider: gemini_cli
-    model: gemini-2.5-pro
+    provider: antigravity       # agy는 모델 플래그 미지원. model 필드는 무시되고 /model로 선택됨
   haiku:
-    provider: gemini_cli
-    model: gemini-2.5-flash
+    provider: antigravity       # agy는 모델 플래그 미지원. model 필드는 무시되고 /model로 선택됨
 
 effortMap:                    # reasoningEffort → provider별 값
   codex:
@@ -103,7 +106,7 @@ effortMap:                    # reasoningEffort → provider별 값
     medium: medium
     high: high
     max: xhigh
-  gemini_cli:
+  antigravity:
     low: low
     medium: medium
     high: high
@@ -111,7 +114,7 @@ effortMap:                    # reasoningEffort → provider별 값
 
 roleHintRules:                # roleHint → preferredProvider (override)
   research:
-    preferredProvider: gemini_cli
+    preferredProvider: antigravity
   execute:
     preferredProvider: codex
   review:
@@ -176,7 +179,7 @@ fallback:                     # 필수. 최종 해석 실패 시 사용
 3. provider 종료 대기
 4. exit 1 반환
 
-**Node.js 계열 provider (codex, gemini)**:
+**Node.js 계열 provider (codex, antigravity)**:
 - `cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}` 설정
 - SIGTERM을 process group 전체에 전달하여 child process tree 처리
 
@@ -216,12 +219,13 @@ ACO_META_<rid>: {"agent":"<agent-id>","provider":"<provider>","model":"<model>",
 - sentinel이 없으면 caller가 비정상 종료로 판단해도 됨
 - `--no-meta` 플래그로 생략 가능
 - crypto/rand 실패 시 sentinel 없이 종료 (stderr 경고)
+- antigravity는 per-call 모델 플래그가 없으므로 `model` 값이 빈 문자열일 수 있다 (모델은 `/model`로 persist되어 aco가 알지 못함)
 
 **예시**:
 ```
 이 코드에서 다음과 같은 문제를 발견했습니다...
 (provider raw output 계속)
-ACO_META_a3f2b1c4d5e6f789: {"agent":"reviewer","provider":"gemini_cli","model":"gemini-2.5-pro","exit_code":0,"duration_ms":3812}
+ACO_META_a3f2b1c4d5e6f789: {"agent":"reviewer","provider":"antigravity","model":"","exit_code":0,"duration_ms":3812}
 ```
 
 ---
@@ -296,7 +300,7 @@ aco delegate reviewer --input "$PROMPT"
 | C-07 | stdout은 provider stdout + sentinel 1줄만. tee 없음. output.log 없음 |
 | C-08 | Ghost Worktree는 aco 종료 시 즉시 삭제. CC가 삭제를 지시할 때까지 유지하지 않음 |
 | C-09 | `.aco/formatter.yaml`의 `version` 필드는 현재 `1`만 지원. 다른 값이면 에러 |
-| C-10 | provider는 codex + gemini_cli만. copilot 제거 |
+| C-10 | provider는 codex + antigravity만. copilot 제거 |
 
 ---
 
@@ -345,9 +349,9 @@ Then:  codex CLI 실행됨
 ```
 Given: researcher.md의 modelAlias: sonnet-4.6 (codex로 매핑됨)
        researcher.md의 roleHint: research
-       formatter.roleHintRules.research.preferredProvider: gemini_cli
+       formatter.roleHintRules.research.preferredProvider: antigravity
 When:  aco delegate researcher --input "..."
-Then:  gemini_cli CLI 실행됨 (roleHint가 codex를 override)
+Then:  antigravity CLI 실행됨 (roleHint가 codex를 override)
 ```
 
 ### AC-04: formatter fallback
@@ -399,7 +403,7 @@ Then:  마지막 줄이 "ACO_META: " 로 시작하는 JSON
 
 ```
 Given: .claude/agents/researcher.md
-When:  grep -i "gemini\|codex\|gpt\|claude" .claude/agents/researcher.md
+When:  grep -i "antigravity\|codex\|gpt\|claude" .claude/agents/researcher.md
 Then:  0 results (provider 이름 없음)
 ```
 

@@ -17,19 +17,19 @@ registerFixture({
   async fn(runner) {
     // Case A: Successful run → exit 0
     {
-      const mockGemini = runner.providerPath('gemini');
-      await createMockProvider({ path: mockGemini, chunkCount: 1, exitCode: 0 });
+      const mockAgy = runner.providerPath('agy');
+      await createMockProvider({ path: mockAgy, chunkCount: 1, exitCode: 0 });
 
-      const result = await runner.run(['run', 'gemini', 'review', '--input', 'test']);
+      const result = await runner.run(['run', 'antigravity', 'review', '--input', 'test']);
       assert.equal(result.exitCode, 0, 'successful provider run must exit 0');
     }
 
     // Case B: Failed run (exit code 2) → aco exits non-zero and reports failure
     {
-      const mockGemini = runner.providerPath('gemini');
-      await createMockProvider({ path: mockGemini, chunkCount: 0, exitCode: 2 });
+      const mockAgy = runner.providerPath('agy');
+      await createMockProvider({ path: mockAgy, chunkCount: 0, exitCode: 2 });
 
-      const result = await runner.run(['run', 'gemini', 'review', '--input', 'test']);
+      const result = await runner.run(['run', 'antigravity', 'review', '--input', 'test']);
       assert.equal(result.exitCode, 1, 'aco must normalize provider failure to exit 1');
       assert.match(result.stderr, /exited with code 2/);
     }

@@ -3,7 +3,8 @@ version: 1
 providerDefaults:
   codex:
     launchArgs: []
-  gemini_cli:
+  antigravity:
+    # agy supports --sandbox (Terminal Sandbox isolation) — keep this flag.
     launchArgs:
       - --sandbox
 
@@ -12,18 +13,25 @@ modelAliasMap:
     provider: codex
     model: gpt-5.4
   opus:
-    provider: gemini_cli
-    model: gemini-2.5-pro
+    provider: antigravity
+    # agy는 per-call --model 플래그 없음; resolver가 providerModels 빈 목록으로 no-model provider를 인식해 codex fallback 없이 통과.
+    model: ~
   haiku:
-    provider: gemini_cli
-    model: gemini-2.5-flash
+    provider: antigravity
+    # agy는 per-call --model 플래그 없음; resolver가 providerModels 빈 목록으로 no-model provider를 인식해 codex fallback 없이 통과.
+    model: ~
 
 providerModels:
   codex:
     - gpt-5.4
-  gemini_cli:
-    - gemini-2.5-pro
-    - gemini-2.5-flash
+  antigravity:
+    # agy는 per-call 모델 미지원; agy `/model`로 선택된 persisted 디폴트 사용; aco `--model`은 antigravity에서 무시.
+    # 아래는 참고용 모델 목록 (aco로 선택 불가, agy 세션 내부에서만 /model로 변경 가능):
+    # - gemini-3.1-pro
+    # - gemini-3.5-flash
+    # - claude-sonnet-4.6
+    # - claude-opus-4.6
+    # - gpt-oss-120b
 
 effortMap:
   codex:
@@ -31,7 +39,7 @@ effortMap:
     medium: medium
     high: high
     max: xhigh
-  gemini_cli:
+  antigravity:
     low: low
     medium: medium
     high: high
@@ -39,7 +47,7 @@ effortMap:
 
 roleHintRules:
   research:
-    preferredProvider: gemini_cli
+    preferredProvider: antigravity
   execute:
     preferredProvider: codex
   review:

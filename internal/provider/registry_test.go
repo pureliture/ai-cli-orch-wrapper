@@ -19,11 +19,10 @@ func (p registryTestProvider) CheckAuth(context.Context) error                  
 
 func TestRegistryNames_Sorted(t *testing.T) {
 	r := NewRegistry()
-	r.Register(registryTestProvider{name: "gemini_cli"})
+	r.Register(registryTestProvider{name: "antigravity"})
 	r.Register(registryTestProvider{name: "codex"})
-	r.Register(registryTestProvider{name: "gemini"})
 
-	if got, want := r.Names(), []string{"codex", "gemini", "gemini_cli"}; !reflect.DeepEqual(got, want) {
+	if got, want := r.Names(), []string{"antigravity", "codex"}; !reflect.DeepEqual(got, want) {
 		t.Fatalf("Names() = %v, want %v", got, want)
 	}
 }

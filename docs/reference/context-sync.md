@@ -1,6 +1,6 @@
 # Context 동기화
 
-`aco sync`는 Claude Code 프로젝트 설정을 Codex와 Gemini의 프로젝트 단위 설정으로 동기화한다.
+`aco sync`는 Claude Code 프로젝트 설정을 Codex와 Antigravity의 프로젝트 단위 설정으로 동기화한다. manifest 형식은 v5다.
 
 ## Delegation Surfaces
 
@@ -19,7 +19,7 @@ Task-specific behavior belongs in natural language task text, CLI flags, or pres
 
 Do not add `/aco:review`, `/aco:spec-review`, `/aco:plan-review`, or similar task-specific slash commands. If delegation guidance changes, update the generic `/aco` command and `aco-delegation` skill instead.
 
-`aco sync` may expose relevant shared policy surfaces to Codex/Gemini targets according to the existing managed-block and allowed-skill rules. It does not turn `.claude/aco/tasks/` into provider execution by itself; `aco ask --yes` remains the execution gate.
+`aco sync` may expose relevant shared policy surfaces to Codex/Antigravity targets according to the existing managed-block and allowed-skill rules. It does not turn `.claude/aco/tasks/` into provider execution by itself; `aco ask --yes` remains the execution gate.
 
 ## 중요: `.agents/skills`는 `.claude/skills`의 미러가 아님
 
@@ -38,17 +38,19 @@ Do not add `/aco:review`, `/aco:spec-review`, `/aco:plan-review`, or similar tas
 5. Skill 이름 기반 휴리스틱 (`openspec-*` → external, `gh-*` → provider-specific 등)
 6. Default deny (owner `unknown`으로 분류)
 
-## 지원되는 CLI 표면 (2026-04-22 기준)
+## 지원되는 CLI 표면 (2026-05-31 기준, manifest v5)
 
-| 표면                      | Codex CLI 0.122.0                                | Gemini CLI 0.38.2                 |
+| 표면                      | Codex CLI 0.122.0                                | Antigravity (`agy`)               |
 | ------------------------- | ------------------------------------------------ | --------------------------------- |
-| 프로젝트 지침             | `AGENTS.md`                                      | `GEMINI.md`                       |
+| 프로젝트 지침             | `AGENTS.md`                                      | (없음 — `agy`는 AGENTS.md 미지원) |
 | Skills                    | `.agents/skills/<skill>/SKILL.md`                | `.agents/skills/<skill>/SKILL.md` |
-| Custom agents             | `.codex/agents/*.toml`                           | `.gemini/agents/*.md`             |
-| 비대화형 prompt           | `codex exec [PROMPT]`                            | `gemini --prompt <prompt>`        |
+| Custom agents             | `.codex/agents/*.toml`                           | (없음 — agent 표면 미지원)        |
+| 비대화형 prompt           | `codex exec [PROMPT]`                            | `agy --prompt <prompt>`           |
 | Reasoning effort CLI flag | **지원 안 함**                                   | **지원 안 함**                    |
 
-Codex와 Gemini는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사용한다. `.codex/skills` 또는 `.gemini/skills`를 직접 사용하지 않는다. 이 경로들은 공유 표면이 아니다.
+Codex는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사용한다. `.codex/skills`를 직접 사용하지 않는다. 이 경로는 공유 표면이 아니다.
+
+> **Gemini 제거 주의**: Phases 1-3 마이그레이션으로 Gemini CLI provider가 제거되었다. `GEMINI.md`는 더 이상 `aco sync` 생성 대상이 아니다. `.gemini/agents/*`도 sync 대상에서 제외된다.
 
 ## Source 탐색 순서
 
@@ -63,28 +65,27 @@ Codex와 Gemini는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사
 Skill source는 frontmatter에서 `x-aco-owned`, `x-aco-kind`, `x-aco-targets`를 파싱하여 동기화 자격을 판단한다.
 
 `.claude/settings.json` hook 설정은 `aco sync` source가 아니다. Hook은 provider별 user-level runtime
-설정으로 취급하며, repo-local context sync가 `.codex/hooks.json`, `.codex/config.toml`, 또는
-`.gemini/settings.json` hook entry를 생성하지 않는다.
+설정으로 취급하며, repo-local context sync가 `.codex/hooks.json`, `.codex/config.toml` hook entry를 생성하지 않는다.
 
 ## 손실 변환 경고
 
-모든 Claude Code 설정을 Codex 또는 Gemini에 그대로 표현할 수 있는 것은 아니다. 다음 필드는 삭제되거나 의미 손실이 있는 형태로 변환된다. 경고는 `.aco/sync-manifest.json`에 기록된다.
+모든 Claude Code 설정을 Codex 또는 Antigravity에 그대로 표현할 수 있는 것은 아니다. 다음 필드는 삭제되거나 의미 손실이 있는 형태로 변환된다. 경고는 `.aco/sync-manifest.json`에 기록된다.
 
 ### Reasoning Effort
 
-`.claude/agents/*.md`의 `reasoningEffort`는 provider 중립적인 의도 표현이다. Codex CLI와 Gemini CLI 모두 `--reasoning-effort` 런타임 flag를 지원하지 않는다.
+`.claude/agents/*.md`의 `reasoningEffort`는 provider 중립적인 의도 표현이다. Codex CLI와 Antigravity CLI 모두 `--reasoning-effort` 런타임 flag를 지원하지 않는다.
 
 - **Codex**: agent spec에 필드가 있을 때만 `model_reasoning_effort`를 `.codex/agents/*.toml`에 기록한다. 이는 설정 수준 필드이며 런타임 CLI flag가 아니다.
-- **Gemini**: `reasoningEffort`는 완전히 생략한다. manifest 경고를 기록한다.
+- **Antigravity**: `reasoningEffort`는 완전히 생략한다. manifest 경고를 기록한다.
 - **Runtime**: `aco delegate`는 어떤 provider CLI에도 `--reasoning-effort`를 전달하지 않는다.
 
-### Gemini Read-Only 강제
+### Antigravity Read-Only 강제
 
-`workspaceMode: read-only`와 `permissionProfile: restricted`는 Codex에서 `sandbox_mode = "read-only"`로 표현할 수 있다. Gemini에서는 best-effort 수준의 tool restriction만 가능하다. read-only 강제가 완전히 동등하지 않다는 manifest 경고를 기록한다.
+`workspaceMode: read-only`와 `permissionProfile: restricted`는 Codex에서 `sandbox_mode = "read-only"`로 표현할 수 있다. Antigravity에서는 best-effort 수준의 tool restriction만 가능하다. read-only 강제가 완전히 동등하지 않다는 manifest 경고를 기록한다.
 
 ### Hook 설정
 
-Hook은 `aco sync`가 변환하지 않는다. Claude, Codex, Gemini의 hook event와 실행 시맨틱은
+Hook은 `aco sync`가 변환하지 않는다. Claude와 Codex의 hook event와 실행 시맨틱은
 project context보다 user-level runtime 설정에 가깝고, repo-local sync 산출물로 관리하면
 provider runtime 설치와 context sync 경계가 섞인다. Hook 설치와 검증은 별도 user-level runtime
 setup gate에서 다룬다.
@@ -92,7 +93,7 @@ setup gate에서 다룬다.
 ## 사용법
 
 ```bash
-# Claude context를 Codex와 Gemini 대상으로 동기화
+# Claude context를 Codex 대상으로 동기화 (Antigravity는 project-instruction target 없음)
 aco sync
 
 # 동기화가 최신인지 확인 (stale이면 1로 종료)
@@ -118,15 +119,15 @@ aco sync --clean-duplicates --force-clean
 
 `aco sync`는 다음 산출물을 관리한다:
 
-| 산출물                    | 유형       | 설명                                           |
-| ------------------------- | ---------- | ---------------------------------------------- |
-| `AGENTS.md`               | 관리 block | Claude context에서 생성한 Codex 프로젝트 지침  |
-| `GEMINI.md`               | 관리 block | Claude context에서 생성한 Gemini 프로젝트 지침 |
-| `.agents/skills/<skill>/` | 디렉터리   | 명시적으로 허용된 ACO-owned skill만 복사       |
-| `.codex/agents/*.toml`    | 파일       | Codex custom agent 정의                        |
-| `.gemini/agents/*.md`     | 파일       | Gemini custom agent 정의                       |
-| `.aco/sync-manifest.json` | 파일       | 소유권, 해시, 경고를 담은 sync manifest        |
-| `.aco/sync.yaml`          | 파일       | skill include/exclude 규칙 (선택)              |
+| 산출물                    | 유형       | 설명                                                    |
+| ------------------------- | ---------- | ------------------------------------------------------- |
+| `AGENTS.md`               | 관리 block | Claude context에서 생성한 Codex 프로젝트 지침           |
+| `.agents/skills/<skill>/` | 디렉터리   | 명시적으로 허용된 ACO-owned skill만 복사                |
+| `.codex/agents/*.toml`    | 파일       | Codex custom agent 정의                                 |
+| `.aco/sync-manifest.json` | 파일       | 소유권, 해시, 경고를 담은 sync manifest (형식 v5)       |
+| `.aco/sync.yaml`          | 파일       | skill include/exclude 규칙 (선택)                       |
+
+> `GEMINI.md`와 `.gemini/agents/*.md`는 Phases 1-3 마이그레이션으로 Gemini provider가 제거되면서 더 이상 생성 대상이 아니다.
 
 ## 외부 asset 소유권
 
@@ -136,7 +137,7 @@ OpenSpec, Superpowers 등 upstream-managed tool의 skill이나 command는 ACO가
 - `.aco/sync-manifest.json`에 `owner: external`로 기록한다.
 - `aco sync --force`로도 외부 asset을 덮어쓰거나 입양하지 않는다.
 
-provider-specific command (예: `.gemini/commands/gh-issue.toml`, `.claude/commands/gh-issue.md`)는 해당 provider의 표면에 남아야 하며, 공유 skill 표면으로 복사되지 않는다.
+provider-specific command (예: `.claude/commands/gh-issue.md`)는 해당 provider의 표면에 남아야 하며, 공유 skill 표면으로 복사되지 않는다.
 
 ## Manifest 충돌 감지
 
@@ -148,7 +149,7 @@ provider-specific command (예: `.gemini/commands/gh-issue.toml`, `.claude/comma
 
 `aco sync --check`는 동일한 provider가 여러 표면에서 동일한 이름의 command나 skill을 노출하는 경우 경고를 출력한다:
 
-- Gemini command와 shared skill이 충돌하는 경우 (예: `.gemini/commands/gh-issue.toml` + `.agents/skills/gh-issue/SKILL.md`)
+- shared skill이 여러 provider 표면과 충돌하는 경우 (예: `.agents/skills/gh-issue/SKILL.md`)
 - OpenSpec/Superpowers asset이 여러 provider 표면에 중복으로 존재하는 경우
 
 `--strict` 모드에서는 중복 경고가 오류로 승격되어 `aco sync --check`가 non-zero로 종료된다.

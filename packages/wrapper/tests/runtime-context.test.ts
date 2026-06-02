@@ -39,19 +39,6 @@ async function ensureCodexArtifacts(workspace: string): Promise<void[]> {
   ]);
 }
 
-async function ensureGeminiArtifacts(workspace: string): Promise<void[]> {
-  await mkdir(join(workspace, '.gemini', 'agents'), { recursive: true });
-  return Promise.all([
-    writeFile(join(workspace, '.gemini', 'agents', 'reviewer.md'), '# reviewer\n'),
-    writeFile(join(workspace, '.gemini', 'agents', 'planner.md'), '# planner\n'),
-    writeFile(
-      join(workspace, '.gemini', 'settings.json'),
-      JSON.stringify({ hooks: [{ event: 'PostToolUse' }, { event: 'UserPromptSubmit' }] }),
-      'utf8'
-    ),
-  ]);
-}
-
 async function ensureSharedSkills(workspace: string): Promise<void[]> {
   return Promise.all([
     mkdir(join(workspace, '.agents', 'skills', 'review-skill'), { recursive: true })
@@ -95,24 +82,27 @@ describe('runtime context collection', () => {
     });
   });
 
-  it('collects gemini exposed metadata from generated target files', async () => {
+  it('exposes empty provider surface for antigravity (agy has no workspace agents/hooks/config)', async () => {
     await withWorkspace(async (workspace) => {
-      await Promise.all([ensureGeminiArtifacts(workspace), ensureSharedSkills(workspace)]);
+      await ensureSharedSkills(workspace);
 
       const context = await collectRuntimeContext({
-        provider: 'gemini',
+        provider: 'antigravity',
         command: 'summarize',
-        sessionId: 'session-gemini-1',
+        sessionId: 'session-antigravity-1',
         permissionProfile: 'restricted',
         auth: makeAuth('cli-fallback'),
         cwd: workspace,
       });
 
-      assert.equal(context.active.provider, 'gemini');
+      assert.equal(context.active.provider, 'antigravity');
       assert.equal(context.active.permissionProfile, 'restricted');
-      assert.deepEqual(context.exposed.providerAgents, ['planner', 'reviewer']);
-      assert.deepEqual(context.exposed.providerHooks, ['PostToolUse', 'UserPromptSubmit']);
-      assert.equal(context.exposed.providerConfigFiles.join(','), 'settings.json');
+      // agy는 workspace custom-agent 등록 표면이 없고 hooks/config도 읽지 않으므로
+      // provider-specific 노출 표면이 전부 비어 있다. shared skills만 노출된다.
+      assert.deepEqual(context.exposed.providerAgents, []);
+      assert.deepEqual(context.exposed.providerHooks, []);
+      assert.deepEqual(context.exposed.providerConfigFiles, []);
+      assert.deepEqual(context.exposed.sharedSkills, ['planner-skill', 'review-skill']);
     });
   });
 
@@ -121,7 +111,7 @@ describe('runtime context collection', () => {
       execFileSync('git', ['init', '-b', 'feature-test'], { cwd: workspace });
 
       const context = await collectRuntimeContext({
-        provider: 'gemini',
+        provider: 'antigravity',
         command: 'review',
         sessionId: 'session-branch-1',
         permissionProfile: 'default',

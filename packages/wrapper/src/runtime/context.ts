@@ -135,6 +135,9 @@ function pickProviderExposed(
   hooks: string[];
   configFiles: string[];
 }> {
+  // antigravity(agy)는 workspace custom-agent 등록 표면이 없고 workspace hooks/config도
+  // 읽지 않으므로 provider-specific 노출 표면이 존재하지 않는다. → null로 두어
+  // 아래 빈 결과 경로로 빠지게 한다.
   const providers =
     provider === 'codex'
       ? {
@@ -143,14 +146,7 @@ function pickProviderExposed(
           configPath: join(workspace, '.codex', 'config.toml'),
           ext: '.toml',
         }
-      : provider === 'gemini'
-        ? {
-            agentsDir: join(workspace, '.gemini', 'agents'),
-            hooksPath: join(workspace, '.gemini', 'settings.json'),
-            configPath: join(workspace, '.gemini', 'settings.json'),
-            ext: '.md',
-          }
-        : null;
+      : null;
 
   if (!providers) {
     return Promise.resolve({ agents: [], hooks: [], configFiles: [] });

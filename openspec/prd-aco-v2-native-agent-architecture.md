@@ -5,11 +5,16 @@
 **Author:** Synthesized from brainstorm sessions 1 & 2 + frontmatter spec
 **Version:** 0.2
 
+> **Migration note (2026-05-31):** Gemini CLI provider가 제거되고 `antigravity`(binary `agy`) provider로 대체되었습니다.
+> 이 PRD 전체에서 `gemini`/`gemini_cli`/`Gemini` 참조는 `antigravity`/`Antigravity`로 마이그레이션되었습니다.
+> 바이너리는 `agy`, 설치는 `curl -fsSL https://antigravity.google/cli/install.sh | bash`, 인증은 OS Keyring입니다.
+> **agy는 per-call 모델 플래그(`-m`/`--model`)가 없어 formatter의 `model` 필드를 무시하며, 모델은 `/model`로 out-of-band 선택되어 persist됩니다.** 따라서 antigravity 예시에는 구체적 모델 id를 명시하지 않습니다.
+
 ---
 
 ## 1. Executive Summary
 
-aco v2는 Claude Code(CC) 워크플로우 내에서 외부 AI CLI(Gemini, Codex)를 **peer agent**처럼 자연스럽게 동작하도록 만드는 아키텍처 전환이다.
+aco v2는 Claude Code(CC) 워크플로우 내에서 외부 AI CLI(Antigravity, Codex)를 **peer agent**처럼 자연스럽게 동작하도록 만드는 아키텍처 전환이다.
 
 현재 aco는 slash command → Bash tool → `aco run <provider> <command>` 경로로 작동하여, CC orchestrator가 external AI를 "tool call sidebar"로 인식한다. v2는 이 구조를 세 가지 축으로 전환한다:
 
@@ -34,9 +39,9 @@ CC orchestrator
   │ slash command
   ▼
 Bash tool call ← CC가 이것을 "tool use sidebar"로 표시
-  │ aco run gemini reviewer
+  │ aco run antigravity reviewer
   ▼
-aco binary → gemini CLI → stdout
+aco binary → antigravity CLI (agy) → stdout
   │
   ▼ Bash tool result block ← orchestrator가 받는 것
 CC orchestrator
@@ -49,7 +54,7 @@ CC orchestrator
 | 문제 | 현재 상태 | 목표 |
 |------|-----------|------|
 | **Invocation frame** | Bash result block | Peer agent response |
-| **Provider 노출** | 호출자가 `aco run gemini ...` 명시 | aco가 frontmatter 읽어 결정 |
+| **Provider 노출** | 호출자가 `aco run antigravity ...` 명시 | aco가 frontmatter 읽어 결정 |
 | **Agent 파일 수** | CLI+Role 조합 (N×M) | role 수만큼 (N) |
 | **Routing 설정 위치** | aco 바이너리 하드코딩 | `.aco/formatter.yaml` |
 | **Context 전달** | 프롬프트 파일 정적 내용 | CC runtime context 동적 수집 |
@@ -81,7 +86,7 @@ CC orchestrator
 |----|------|-----------|
 | G-06 | Blocking single-task 유지 | async state 없음, session registry 없음, exit 0/1만 반환 |
 | G-07 | Signal forwarding 유지 | SIGTERM → provider SIGTERM → 5초 후 SIGKILL |
-| G-08 | Copilot 제거 | codex + gemini만 유지 |
+| G-08 | Copilot 제거 | codex + antigravity만 유지 |
 | G-09 | Sentinel meta line output | streaming 유지하면서 마지막에 `ACO_META: {...}` 1줄 추가 |
 
 ### P2 — Nice to Have (v2.1+)
@@ -95,7 +100,7 @@ CC orchestrator
 ### 성공 메트릭 측정 방법
 
 - **Native feeling**: CC 세션 로그에서 Agent tool result vs Bash tool result 비율
-- **Routing 분리**: `grep -r "gemini\|codex" .claude/agents/` = 0 results
+- **Routing 분리**: `grep -r "antigravity\|codex" .claude/agents/` = 0 results
 - **Provider 교체 비용**: 변경 파일이 `.aco/formatter.yaml`만 포함
 - **Context 완성도**: invocation string에 git diff 포함 여부
 
@@ -194,7 +199,7 @@ skillRefs와 memoryRefs는 참고 대상으로만 취급한다.
 
 **명시적 미지원 필드**: `background`, `tools`, `disallowedTools`, `hooks`
 
-**검증**: `grep -r "gemini\|codex" .claude/agents/` = 0 results
+**검증**: `grep -r "antigravity\|codex" .claude/agents/` = 0 results
 
 ---
 
@@ -226,7 +231,7 @@ version: 1
 providerDefaults:
   codex:
     launchArgs: []
-  gemini_cli:
+  antigravity:
     launchArgs: []
 
 modelAliasMap:
@@ -234,11 +239,9 @@ modelAliasMap:
     provider: codex
     model: gpt-5.4
   opus:
-    provider: gemini_cli
-    model: gemini-2.5-pro
+    provider: antigravity       # agy는 모델 플래그 미지원. model 필드는 무시되고 /model로 선택됨
   haiku:
-    provider: gemini_cli
-    model: gemini-2.5-flash
+    provider: antigravity       # agy는 모델 플래그 미지원. model 필드는 무시되고 /model로 선택됨
 
 effortMap:
   codex:
@@ -246,7 +249,7 @@ effortMap:
     medium: medium
     high: high
     max: xhigh
-  gemini_cli:
+  antigravity:
     low: low
     medium: medium
     high: high
@@ -254,7 +257,7 @@ effortMap:
 
 roleHintRules:
   research:
-    preferredProvider: gemini_cli
+    preferredProvider: antigravity
   execute:
     preferredProvider: codex
   review:
@@ -347,7 +350,7 @@ aco delegate reviewer --input "$PROMPT"
 **출력 형식**:
 ```
 안녕하세요, 이 코드에서 문제를 발견했습니다...  ← raw provider output (실시간 스트리밍)
-ACO_META: {"provider":"gemini_cli","agent":"reviewer","exit_code":0,"duration_ms":4200}
+ACO_META: {"provider":"antigravity","agent":"reviewer","exit_code":0,"duration_ms":4200}
 ```
 
 **구현**: `cmd.Stdout = out` (pure passthrough) 유지. provider 종료 후 `fmt.Fprintf(out, "ACO_META: %s\n", metaJSON)` 1줄 추가.
@@ -358,7 +361,7 @@ ACO_META: {"provider":"gemini_cli","agent":"reviewer","exit_code":0,"duration_ms
 
 ### FR-008: Copilot Provider 제거
 
-**설명**: copilot provider를 제거하고 codex + gemini_cli만 유지한다.
+**설명**: copilot provider를 제거하고 codex + antigravity만 유지한다.
 
 ---
 
@@ -422,7 +425,7 @@ ACO_META: {"provider":"gemini_cli","agent":"reviewer","exit_code":0,"duration_ms
 3. `aco run <provider> <command>` deprecation 경고 추가
 4. 기존 CLI+Role 조합 agent 파일 제거
 
-**완료 기준**: `ls packages/wrapper/src/providers/` = gemini.ts + codex.ts만 존재
+**완료 기준**: `ls packages/wrapper/src/providers/` = antigravity.ts + codex.ts만 존재
 
 ---
 
@@ -448,7 +451,7 @@ ACO_META: {"provider":"gemini_cli","agent":"reviewer","exit_code":0,"duration_ms
 | `.aco/formatter.yaml` 미존재 시 동작 | High | High | fallback 필드로 최소 동작 보장, formatter 없을 시 명확한 에러 메시지 |
 | Template context marshaling 오버헤드 | Medium | Medium | `git diff --cached` 우선, 대용량 diff truncation |
 | `modelAlias` 미설정 agent의 routing | Medium | Medium | `roleHint` → `roleHintRules` → `fallback` 경로로 반드시 도달 |
-| Gemini/Codex CLI cold start | Medium | High | 단기: timeout 기본값 조정, 장기: Warm Process Pool (G-12) |
+| Antigravity/Codex CLI cold start | Medium | High | 단기: timeout 기본값 조정, 장기: Warm Process Pool (G-12) |
 | Ghost Worktree conflict | Low | Low | `.gitignore` 내 위치에 생성, defer cleanup |
 
 ### 가정 사항 (검증 필요)
@@ -479,11 +482,11 @@ aco binary
   │
   │ .aco/formatter.yaml 읽기
   │   modelAliasMap: sonnet-4.6 → codex
-  │   roleHintRules: research → preferredProvider: gemini_cli (override)
+  │   roleHintRules: research → preferredProvider: antigravity (override)
   │
-  │ exec gemini_cli (blocking, stream stdout)
+  │ exec antigravity (agy, blocking, stream stdout)
   ▼
-gemini_cli → output streams
+antigravity (agy) → output streams
   │
   ▼ Agent tool result (peer agent response)
 CC orchestrator
@@ -502,9 +505,9 @@ aco delegate researcher --input "..."
   │   └── sonnet-4.6 → provider: codex, model: gpt-5.4
   │
   ├── formatter.roleHintRules 조회 (override 적용)
-  │   └── research → preferredProvider: gemini_cli
+  │   └── research → preferredProvider: antigravity
   │
-  └── 최종: gemini_cli + gemini-2.5-pro 실행
+  └── 최종: antigravity 실행 (agy는 모델 플래그 미지원. model 필드 무시, /model로 선택)
 ```
 
 ### 파일 구조 변화
@@ -512,8 +515,8 @@ aco delegate researcher --input "..."
 ```
 변경 전:
 .claude/agents/
-├── gemini-researcher.md
-├── gemini-reviewer.md
+├── antigravity-researcher.md
+├── antigravity-reviewer.md
 └── codex-executor.md
 
 변경 후:

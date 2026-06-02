@@ -677,7 +677,7 @@ function printUsage(): void {
   aco --version
   aco --help
   aco sync [--check] [--dry-run] [--force]
-  aco ask --task <text> [--providers codex,gemini,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--model <model>] [--dry-run|--yes]
+  aco ask --task <text> [--providers codex,antigravity,mock] [--input <text>] [--input-file <path>] [--preset <name>] [--permission-profile restricted|default|unrestricted] [--output-mode brief|save-only|full] [--model <model>] [--dry-run|--yes]
   aco delegate <agent-id> [--input <text>] [--input-file <path>]
   aco doctor
   aco run <provider> <command> [--input <text>] [--permission-profile default|restricted|unrestricted] [--timeout <seconds>] [--model <model>]

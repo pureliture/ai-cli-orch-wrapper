@@ -27,11 +27,9 @@ import (
 
 const maxStderrBytes = 64 * 1024
 
-// envAllowlist defines which environment variables are passed to providers.
-// This prevents sensitive environment variables (API keys, tokens, etc.)
-// from being exposed to provider processes, while allowing provider-specific
-// auth variables needed for CI/headless operation.
-var envAllowlist = map[string]bool{
+// baseEnvAllowlist contains always-passed, non-sensitive operational variables.
+// These are passed to every provider regardless of authentication method.
+var baseEnvAllowlist = map[string]bool{
 	"ACO_TIMEOUT_SECONDS": true,
 	"PATH":                true,
 	"HOME":                true,
@@ -39,23 +37,38 @@ var envAllowlist = map[string]bool{
 	"TERM":                true,
 	"LANG":                true,
 	"LC_ALL":              true,
-	// Provider auth variables for CI/headless operation
-	"GEMINI_API_KEY":  true,
-	"GITHUB_TOKEN":    true,
+}
+
+// authEnvAllowlist contains provider auth variables for CI/headless operation.
+// These are NOT passed to providers that authenticate out-of-band (e.g.
+// antigravity/agy via OS Keyring), mirroring the Node AntigravityProvider
+// which uses buildProviderEnv([]) (no auth env).
+var authEnvAllowlist = map[string]bool{
+	"GITHUB_TOKEN":      true,
 	"ANTHROPIC_API_KEY": true,
 }
 
-// filterEnvForAllowlist filters environment variables to only those in the allowlist.
-func filterEnvForAllowlist(env []string) []string {
+// providersWithoutAuthEnv lists providers that authenticate out-of-band and
+// must receive only base env — no auth keys. antigravity (agy) uses OS Keyring
+// and needs no auth env passed through the process environment.
+var providersWithoutAuthEnv = map[string]bool{
+	"antigravity": true,
+}
+
+// filterEnvForAllowlist filters environment variables to the allowlist for the
+// given provider. Base keys always pass; auth keys pass only for providers not
+// in providersWithoutAuthEnv (i.e. providers that use in-process auth env such
+// as codex and mock).
+func filterEnvForAllowlist(env []string, providerName string) []string {
+	passAuth := !providersWithoutAuthEnv[providerName]
 	var filtered []string
 	for _, e := range env {
-		// Split on first '=' to get the key
 		idx := strings.Index(e, "=")
 		if idx <= 0 {
 			continue
 		}
 		key := e[:idx]
-		if envAllowlist[key] {
+		if baseEnvAllowlist[key] || (passAuth && authEnvAllowlist[key]) {
 			filtered = append(filtered, e)
 		}
 	}
@@ -96,7 +109,7 @@ type ProcessRunner struct{}
 //
 // No cmd.WaitDelay — reference executor.go does not use it.
 // Setpgid is used to place the provider and all its children in a new process group.
-// This is a necessary deviation from ccg-workflow to ensure Node.js CLIs (Gemini, Copilot)
+// This is a necessary deviation from ccg-workflow to ensure provider CLIs (agy, codex)
 // and their spawned workers are properly terminated without orphaning pipes.
 // No session files — blocking model, stdout streams inline.
 func (ProcessRunner) Run(ctx context.Context, opts RunOpts) (RunResult, error) {
@@ -127,14 +140,16 @@ func (ProcessRunner) Run(ctx context.Context, opts RunOpts) (RunResult, error) {
 		cmd.Dir = "."
 	}
 	cmd.Env = os.Environ()
-	// Filter environment variables to allowlist for security
-	cmd.Env = filterEnvForAllowlist(cmd.Env)
+	// Filter environment variables to provider-aware allowlist for security.
+	// antigravity authenticates via OS Keyring and receives base env only;
+	// other providers (codex, mock) also receive auth keys (GITHUB_TOKEN, etc.).
+	cmd.Env = filterEnvForAllowlist(cmd.Env, opts.Provider.Name())
 	// Setpgid places the provider and all its children in a new process group.
 	// forwardSignals and terminateCommand send signals to the whole group via
 	// syscall.Kill(-pgid, ...) so that children holding stdout pipes are also
 	// killed and cmd.Wait() can return.
-	// ccg-workflow does not use Setpgid; we need it because gemini is a
-	// Node.js CLI that spawns workers which would otherwise orphan the pipe.
+	// ccg-workflow does not use Setpgid; we need it because provider CLIs
+	// (e.g. agy, codex) can spawn child workers which would otherwise orphan the pipe.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	stderrBuf := newTailBuffer(maxStderrBytes)

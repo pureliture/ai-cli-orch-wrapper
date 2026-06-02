@@ -46,9 +46,9 @@ providerDefaults:
     launchArgs:
       - --sandbox
       - workspace-write
-  gemini_cli:
+  antigravity:
     launchArgs:
-      - --yolo
+      - --dangerously-skip-permissions
 modelAliasMap:
   sonnet-4.6:
     provider: codex
@@ -56,11 +56,11 @@ modelAliasMap:
 providerModels:
   codex:
     - gpt-5.4
-  gemini_cli:
-    - gemini-2.5-pro
+  antigravity:
+    - default
 roleHintRules:
   research:
-    preferredProvider: gemini_cli
+    preferredProvider: antigravity
 fallback:
   provider: codex
   model: gpt-5.4
@@ -68,7 +68,7 @@ fallback:
 
 	registry := provider.NewRegistry()
 	registry.Register(newStaticProvider("codex", "codex"))
-	registry.Register(newStaticProvider("gemini_cli", "gemini"))
+	registry.Register(newStaticProvider("antigravity", "agy"))
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -101,11 +101,11 @@ fallback:
 	if !testRunner.called {
 		t.Fatal("expected runner to be called")
 	}
-	if testRunner.last.Provider.Name() != "gemini_cli" {
-		t.Fatalf("runner provider = %q, want gemini_cli", testRunner.last.Provider.Name())
+	if testRunner.last.Provider.Name() != "antigravity" {
+		t.Fatalf("runner provider = %q, want antigravity", testRunner.last.Provider.Name())
 	}
-	if testRunner.last.Model != "gemini-2.5-pro" {
-		t.Fatalf("runner model = %q, want gemini-2.5-pro", testRunner.last.Model)
+	if testRunner.last.Model != "default" {
+		t.Fatalf("runner model = %q, want default", testRunner.last.Model)
 	}
 	if testRunner.last.PermProfile != provider.ProfileRestricted {
 		t.Fatalf("permission profile = %q, want restricted", testRunner.last.PermProfile)
@@ -340,7 +340,7 @@ func TestGenerateSentinelRID_Uniqueness(t *testing.T) {
 // TestWriteSentinel_Format verifies the sentinel output format includes the random identifier.
 func TestWriteSentinel_Format(t *testing.T) {
 	var buf bytes.Buffer
-	err := writeSentinel(&buf, "a3f2b1c4d5e6f789", "researcher", "gemini_cli", "gemini-2.5-pro", 0, 1234)
+	err := writeSentinel(&buf, "a3f2b1c4d5e6f789", "researcher", "antigravity", "default", 0, 1234)
 	if err != nil {
 		t.Fatalf("writeSentinel() error = %v", err)
 	}
@@ -353,10 +353,10 @@ func TestWriteSentinel_Format(t *testing.T) {
 	if !strings.Contains(got, `"agent":"researcher"`) {
 		t.Fatalf("writeSentinel() output missing agent field: %q", got)
 	}
-	if !strings.Contains(got, `"provider":"gemini_cli"`) {
+	if !strings.Contains(got, `"provider":"antigravity"`) {
 		t.Fatalf("writeSentinel() output missing provider field: %q", got)
 	}
-	if !strings.Contains(got, `"model":"gemini-2.5-pro"`) {
+	if !strings.Contains(got, `"model":"default"`) {
 		t.Fatalf("writeSentinel() output missing model field: %q", got)
 	}
 	if !strings.Contains(got, `"exit_code":0`) {
