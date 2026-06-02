@@ -42,7 +42,6 @@ Rules:
   - test commands and results
   - PR URL if created
 
-<!-- BEGIN ACO GENERATED CONTEXT -->
 ## CLAUDE.md
 
 # ai-cli-orch-wrapper
@@ -115,10 +114,11 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 Codex는 `$aco`를 통해 ACO delegation을 실행할 수 있다. 이는 Claude의 `/aco` slash command와 동일한 consent-gated delegation 흐름을 Codex 세션에서 미러링한다.
 
 - **`$aco`**: `aco ask` 기반 consent-gated delegation 실행. peers = `antigravity`/`mock`. 실행에는 `--yes` 동의가 필요하다.
-- Claude entrypoints: `/aco` (단일 generic delegation command)
-- Codex entrypoints: `$aco` (위와 동일한 `aco ask` 흐름, Codex 세션 내에서 실행)
+- **`aco delegate <agent-id>`**: `.claude/agents/<agent-id>.md` spec과 seed를 `--input`과 합쳐 stdout에 출력하는 로컬 prompt 빌더. 외부 호출 없음, Agent tool 자동 인터셉트 없음.
+- Claude entrypoints: `/aco` (단일 generic delegation command) + `aco delegate`.
+- Codex entrypoints: `$aco` (위와 동일한 `aco ask`/`aco delegate` 흐름). 일급 스킬 파일: `.codex/skills/aco/SKILL.md`.
 - `$aco`는 task-specific subcommand를 만들지 않는다. task 내용은 자연어 task text, CLI flag, preset으로 전달한다.
-- `/aco` command file: `.claude/commands/aco.md`. Codex용 별도 파일은 없다. 위임 정책은 `.claude/skills/aco-delegation/SKILL.md`가 담당한다.
+- 위임 정책 정본: `.claude/skills/aco-delegation/SKILL.md` + `.claude/commands/aco.md`. Codex 일급 진입점은 `.codex/skills/aco/`가 미러한다.
 
 ## Commit Message Policy
 
@@ -233,4 +233,3 @@ bash -n scripts/pm-hook.sh scripts/setup-github-labels.sh scripts/setup-github-p
 - New sprint-based planning surfaces.
 - Extra GitHub label taxonomies that duplicate Project fields.
 - Windows 지원. macOS/Linux만 보장한다. `chmod`, shebang, POSIX 권한·시그널 모델 등의 POSIX 의존 패턴은 그대로 사용하며, Windows 호환성 제안(예: cross-platform shim, polyfill, `mode` 옵션 제거, shebang 우회)은 won't fix로 처리한다.
-<!-- END ACO GENERATED CONTEXT -->

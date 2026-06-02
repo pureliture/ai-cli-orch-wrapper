@@ -50,6 +50,8 @@ Do not add `/aco:review`, `/aco:spec-review`, `/aco:plan-review`, or similar tas
 
 Codex는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사용한다. `.codex/skills`를 직접 사용하지 않는다. 이 경로는 공유 표면이 아니다.
 
+> **AGENTS.md 주의**: 위 표의 `AGENTS.md`는 Codex CLI 런타임이 읽는 경로를 나타낼 뿐이다. `AGENTS.md`는 `aco sync`가 생성하거나 관리하지 않는다. 사람이 직접 유지보수하는 peer 문서이다.
+>
 > **Gemini 제거 주의**: Phases 1-3 마이그레이션으로 Gemini CLI provider가 제거되었다. `GEMINI.md`는 더 이상 `aco sync` 생성 대상이 아니다. `.gemini/agents/*`도 sync 대상에서 제외된다.
 
 ## Source 탐색 순서
@@ -119,14 +121,15 @@ aco sync --clean-duplicates --force-clean
 
 `aco sync`는 다음 산출물을 관리한다:
 
-| 산출물                    | 유형       | 설명                                                    |
-| ------------------------- | ---------- | ------------------------------------------------------- |
-| `AGENTS.md`               | 관리 block | Claude context에서 생성한 Codex 프로젝트 지침           |
-| `.agents/skills/<skill>/` | 디렉터리   | 명시적으로 허용된 ACO-owned skill만 복사                |
-| `.codex/agents/*.toml`    | 파일       | Codex custom agent 정의                                 |
-| `.aco/sync-manifest.json` | 파일       | 소유권, 해시, 경고를 담은 sync manifest (형식 v5)       |
-| `.aco/sync.yaml`          | 파일       | skill include/exclude 규칙 (선택)                       |
+| 산출물                    | 유형     | 설명                                                    |
+| ------------------------- | -------- | ------------------------------------------------------- |
+| `.agents/skills/<skill>/` | 디렉터리 | 명시적으로 허용된 ACO-owned skill만 복사                |
+| `.codex/agents/*.toml`    | 파일     | Codex custom agent 정의                                 |
+| `.aco/sync-manifest.json` | 파일     | 소유권, 해시, 경고를 담은 sync manifest (형식 v5)       |
+| `.aco/sync.yaml`          | 파일     | skill include/exclude 규칙 (선택)                       |
 
+> `AGENTS.md`는 더 이상 `aco sync`의 생성 대상이 아니다. 사람이 직접 유지보수하는 peer 문서이며, `aco sync`는 이 파일을 읽거나 감지하거나 쓰지 않는다.
+>
 > `GEMINI.md`와 `.gemini/agents/*.md`는 Phases 1-3 마이그레이션으로 Gemini provider가 제거되면서 더 이상 생성 대상이 아니다.
 
 ## 외부 asset 소유권
