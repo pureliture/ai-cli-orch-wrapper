@@ -29,9 +29,9 @@
   <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
   <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Claude-D97706?style=for-the-badge&logo=anthropic&logoColor=white" alt="Claude" />
-  <img src="https://img.shields.io/badge/Antigravity-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Antigravity" />
-  <img src="https://img.shields.io/badge/OpenAI_Codex-412991?style=for-the-badge&logo=openai&logoColor=white" alt="Codex" />
+  <img src="docs/images/claudecode-icon.png" height="28" alt="Claude" />&nbsp;<b>Claude</b>
+  &nbsp;&nbsp;<img src="docs/images/antigravity-icon.png" height="28" alt="Antigravity" />&nbsp;<b>Antigravity</b>
+  &nbsp;&nbsp;<img src="docs/images/codex-icon.webp" height="28" alt="Codex" />&nbsp;<b>Codex</b>
 </p>
 
 <br/>
@@ -149,19 +149,19 @@ Codex·Antigravity 대상 파일은 생성 산출물로 관리되어 운영 중 
 <td><code>≥ 18.x</code></td>
 </tr>
 <tr>
-<td><img src="https://img.shields.io/badge/Claude_Code-D97706?style=flat-square&logo=anthropic&logoColor=white" /></td>
+<td><img src="docs/images/claudecode-icon.png" height="22" alt="Claude Code" />&nbsp;<b>Claude Code</b></td>
 <td>✅ 필수</td>
 <td>repo-local command pack 기준 실행</td>
 <td>Anthropic 공식 CLI</td>
 </tr>
 <tr>
-<td><img src="https://img.shields.io/badge/Antigravity_CLI-4285F4?style=flat-square&logo=google&logoColor=white" /></td>
+<td><img src="docs/images/antigravity-icon.png" height="22" alt="Antigravity CLI" />&nbsp;<b>Antigravity CLI</b></td>
 <td>🟡 Provider별</td>
 <td>Antigravity provider 사용 시</td>
 <td><code>curl -fsSL https://antigravity.google/cli/install.sh | bash</code></td>
 </tr>
 <tr>
-<td><img src="https://img.shields.io/badge/Codex_CLI-412991?style=flat-square&logo=openai&logoColor=white" /></td>
+<td><img src="docs/images/codex-icon.webp" height="22" alt="Codex CLI" />&nbsp;<b>Codex CLI</b></td>
 <td>🟡 Provider별</td>
 <td>Codex provider 사용 시</td>
 <td><code>npm i -g @openai/codex</code></td>
@@ -246,12 +246,12 @@ npx @pureliture/ai-cli-orch-wrapper --version
 </thead>
 <tbody>
 <tr>
-<td align="center"><img src="https://img.shields.io/badge/Antigravity-4285F4?style=for-the-badge&logo=google&logoColor=white" /></td>
+<td align="center"><img src="docs/images/antigravity-icon.png" height="30" alt="Antigravity" /><br/><b>Antigravity</b></td>
 <td><code>curl -fsSL https://antigravity.google/cli/install.sh | bash</code></td>
 <td>OS Keyring (no API key env required)</td>
 </tr>
 <tr>
-<td align="center"><img src="https://img.shields.io/badge/Codex-412991?style=for-the-badge&logo=openai&logoColor=white" /></td>
+<td align="center"><img src="docs/images/codex-icon.webp" height="30" alt="Codex" /><br/><b>Codex</b></td>
 <td><code>npm install -g @openai/codex</code></td>
 <td><code>OPENAI_API_KEY</code> · <code>~/.codex/auth.json</code></td>
 </tr>
@@ -359,7 +359,7 @@ aco doctor
 
 | 커맨드 | 용도 | 방향 |
 |--------|------|------|
-| `aco ask` | 외부 AI provider(Gemini, Codex)에 advisory 작업을 위임 | Claude Code → 외부 AI CLI |
+| `aco ask` | 외부 AI provider(Antigravity, Codex)에 advisory 작업을 위임 | Claude Code → 외부 AI CLI |
 | `aco delegate` | 명명된 agent spec과 seed 파일로 풍부한 프롬프트를 구성해 stdout에 출력 | Claude Code 세션 내 재사용 |
 
 `aco ask`는 동의 게이트를 통해 외부 provider를 실제로 호출하고 결과를 artifact에 저장합니다.
