@@ -1,6 +1,4 @@
 import { discoverSources } from './source-discovery.js';
-import { aggregateContext } from './context-transform.js';
-import { getManagedBlockUpdate } from './managed-block.js';
 import { syncSkills } from './skill-transform.js';
 import { syncCodexAgents } from './agent-codex-transform.js';
 import {
@@ -645,26 +643,10 @@ async function computeTransformPlan(
   // GEMINI.md / .gemini/agents/* files that still need removal.
   await planLegacyGeminiCleanup(repoRoot, legacyCleanupManifest, outputs, warnings);
 
-  // 1. Context -> AGENTS.md (only; GEMINI.md is retired in Phase 2)
-  const contextContent = aggregateContext(sources);
-  if (contextContent) {
-    const agentsMdPath = `${repoRoot}/AGENTS.md`;
-
-    const updatedAgents = await getManagedBlockUpdate(agentsMdPath, contextContent);
-    const agentsHash = computeHash(updatedAgents);
-    outputs.push({
-      targetPath: agentsMdPath,
-      kind: 'managed-block',
-      action: 'updated',
-      content: updatedAgents,
-      hash: agentsHash,
-      owner: 'aco',
-      assetKind: 'config',
-    });
-    const agentsMdKey = toManifestKey(repoRoot, agentsMdPath);
-    targetHashes[agentsMdKey] = agentsHash;
-    targets[agentsMdKey] = { hash: agentsHash, owner: 'aco', kind: 'config' };
-  }
+  // 1. Guideline/instruction markdown (AGENTS.md / GEMINI.md) is intentionally NOT
+  //    generated. `aco sync` owns only structured-surface targets (skills, codex
+  //    agents, hooks); AGENTS.md is a hand-maintained peer document and is never
+  //    read, detected, or written by sync. See OpenSpec change aco-sync-narrow-scope.
 
   // 2. Skills
   const skillResult = await syncSkills(sources, repoRoot, existingManifest, config);

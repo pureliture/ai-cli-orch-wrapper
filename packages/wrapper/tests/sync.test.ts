@@ -185,20 +185,38 @@ Body text.`;
 // ---------------------------------------------------------------------------
 
 describe('Phase 2: AGENTS.md-only sync output', () => {
-  it('runSync produces AGENTS.md but NO GEMINI.md', async () => {
+  it('runSync produces neither AGENTS.md nor GEMINI.md (guideline md projection removed)', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-agents-only-'));
     try {
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# Project context\n\nSome rules.');
 
       const result = await runSync(tmpDir, { dryRun: false });
 
-      // AGENTS.md must appear in outputs
+      // AGENTS.md must NOT appear in outputs — sync no longer generates guideline markdown
       const agentsOutput = result.outputs.find((o) => o.targetPath.endsWith('AGENTS.md'));
-      assert.ok(agentsOutput, 'AGENTS.md must be in sync outputs');
+      assert.equal(agentsOutput, undefined, 'AGENTS.md must NOT be in sync outputs');
 
       // GEMINI.md must NOT appear in outputs
       const geminiOutput = result.outputs.find((o) => o.targetPath.endsWith('GEMINI.md'));
       assert.equal(geminiOutput, undefined, 'GEMINI.md must NOT be in sync outputs');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('runSync does NOT create or modify AGENTS.md on disk', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-agents-untouched-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# Project context\n\nSome rules.');
+      // Pre-existing hand-maintained AGENTS.md with stale managed-block markers
+      const handAgents =
+        '# Hand-maintained\n\n<!-- BEGIN ACO GENERATED CONTEXT -->\nstale\n<!-- END ACO GENERATED CONTEXT -->\n';
+      await writeFile(join(tmpDir, 'AGENTS.md'), handAgents);
+
+      await runSync(tmpDir, { dryRun: false });
+
+      const after = await readFile(join(tmpDir, 'AGENTS.md'), 'utf-8');
+      assert.equal(after, handAgents, 'sync must leave AGENTS.md byte-for-byte unchanged');
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -237,7 +255,7 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
     }
   });
 
-  it('manifest targets include AGENTS.md and codex surfaces after sync', async () => {
+  it('manifest targets exclude AGENTS.md but include codex surfaces after sync', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-codex-intact-'));
     try {
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
@@ -252,7 +270,7 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
         await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
       );
 
-      assert.ok('AGENTS.md' in manifest.targets, 'AGENTS.md must be in manifest targets');
+      assert.equal('AGENTS.md' in manifest.targets, false, 'AGENTS.md must NOT be in manifest targets');
       const codexAgentKey = join('.codex', 'agents', 'helper.toml');
       assert.ok(codexAgentKey in manifest.targets, '.codex/agents/helper.toml must be in manifest targets');
     } finally {
@@ -1927,19 +1945,19 @@ describe('Skill Sync', () => {
       const acoDir = join(tmpDir, '.aco');
       await mkdir(acoDir, { recursive: true });
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# Initial');
-      await mkdir(join(tmpDir, '.claude', 'skills', 'myskill'), { recursive: true });
+      await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
       await writeFile(
-        join(tmpDir, '.claude', 'skills', 'myskill', 'SKILL.md'),
-        '---\nname: myskill\nx-aco-owned: true\n---\n\n# My Skill'
+        join(tmpDir, '.claude', 'agents', 'helper.md'),
+        '---\nid: helper\nwhen: Help with tasks\n---\nYou are a helper.'
       );
 
-      // First sync to create AGENTS.md with known hash
+      // First sync to create the codex agent target with a known hash
       await runSync(tmpDir, { dryRun: false });
 
-      // Manually modify AGENTS.md to create drift
-      const agentsPath = join(tmpDir, 'AGENTS.md');
-      const originalContent = await readFile(agentsPath, 'utf-8');
-      await writeFile(agentsPath, originalContent + '\n<!-- user modification -->');
+      // Manually modify the manifest-owned codex agent target to create drift
+      const codexAgentPath = join(tmpDir, '.codex', 'agents', 'helper.toml');
+      const originalContent = await readFile(codexAgentPath, 'utf-8');
+      await writeFile(codexAgentPath, originalContent + '\n# user modification\n');
 
       // Running sync without --force should fail
       await assert.rejects(async () => runSync(tmpDir, { dryRun: false }), /conflict/i);
