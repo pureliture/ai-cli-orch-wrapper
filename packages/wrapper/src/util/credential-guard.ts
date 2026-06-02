@@ -17,10 +17,7 @@ const CREDENTIAL_PATTERNS: RegExp[] = [
 /**
  * Well-known full relative-path credential files (matched against the normalized path).
  */
-const CREDENTIAL_PATHS: RegExp[] = [
-  /(?:^|\/)\.codex\/auth\.json$/,
-  /(?:^|\/)\.gemini\/oauth_creds\.json$/,
-];
+const CREDENTIAL_PATHS: RegExp[] = [/(?:^|\/)\.codex\/auth\.json$/];
 
 /**
  * Returns true if the given file path looks like a credential or secret file.

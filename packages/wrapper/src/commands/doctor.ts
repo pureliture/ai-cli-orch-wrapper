@@ -41,7 +41,7 @@ export async function cmdDoctor(args: string[]): Promise<void> {
 
   console.log('');
   console.log('Providers:');
-  for (const key of ['mock', 'codex', 'gemini']) {
+  for (const key of ['mock', 'codex', 'antigravity']) {
     const provider = providerRegistry.get(key);
     if (!provider) {
       console.log(`  ${key}: missing (not registered)`);
@@ -69,7 +69,7 @@ export async function cmdDoctor(args: string[]): Promise<void> {
 function formatLocalProviderReadiness(key: string): string {
   if (key === 'mock') return 'ready (built-in, no external credentials)';
   if (key === 'codex') return formatCodexReadiness();
-  if (key === 'gemini') return formatGeminiReadiness();
+  if (key === 'antigravity') return formatAntigravityReadiness();
   return 'available (credential heuristic unavailable)';
 }
 
@@ -92,13 +92,12 @@ function formatCodexReadiness(): string {
   });
 }
 
-function formatGeminiReadiness(): string {
-  return formatCredentialReadiness({
-    envKeys: ['GEMINI_API_KEY', 'GOOGLE_API_KEY'],
-    credPath: ['.gemini', 'oauth_creds.json'],
-    missingMsg: 'gemini auth login OR export GEMINI_API_KEY',
-    loginCmd: 'run gemini auth login',
-  });
+function formatAntigravityReadiness(): string {
+  // antigravity는 OS Keyring을 사용하므로 env var나 credential 파일 fast-path가 없음.
+  // binary가 있으면 ready로 표시한다.
+  // 복구 힌트: binary 설치 → curl -fsSL https://antigravity.google/cli/install.sh | bash
+  //   인증 → 첫 실행 시 브라우저 로그인으로 OS Keyring에 세션 저장.
+  return 'available; authentication via OS Keyring (agy); first-run browser login stores session in OS Keyring';
 }
 
 interface CredentialReadinessOptions {

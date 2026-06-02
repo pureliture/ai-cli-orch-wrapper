@@ -11,8 +11,6 @@ export * from './context-transform.js';
 export * from './skill-transform.js';
 export * from './agent-parse.js';
 export * from './agent-codex-transform.js';
-export * from './agent-gemini-transform.js';
 export * from './hook-parse.js';
 export * from './hook-codex-transform.js';
-export * from './hook-gemini-transform.js';
 export * from './sync-engine.js';

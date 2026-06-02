@@ -12,7 +12,7 @@ repo-level instructions from `AGENTS.md`.
 - provider-neutral wrapper 구조와 context-sync surface 경계를 따른다. 관련 없는 리팩터링, 포맷 변경, dead code 삭제는 하지 않는다.
 - 모든 변경 라인은 사용자 요청, runtime compatibility, 또는 검증 필요성과 직접 연결되어야 한다.
 - 비사소한 변경은 성공 기준과 검증 명령을 먼저 정하고, 완료 전에 실제 결과를 확인한다.
-- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`의 generated block은 sync contract를 먼저 확인하고, 불가피할 때만 손으로 수정한다.
+- `AGENTS.md`, `CLAUDE.md`의 generated block은 sync contract를 먼저 확인하고, 불가피할 때만 손으로 수정한다. (`GEMINI.md`는 Phases 1-3 마이그레이션으로 제거됨)
 
 ## Repo Structure
 
@@ -23,9 +23,9 @@ This repo is an npm workspace with the following layout:
 - `templates/commands/` — packaged Claude slash command sources. Keep each file in parity with the matching `.claude/commands/` file when behavior changes.
 - `.claude/commands/` — repo-local Claude slash commands used by maintainers.
 - `.claude/skills/` — Claude-local skill sources and compatibility copies.
-- `.agents/skills/` — shared Codex/Gemini skill surface for explicitly allowed ACO-owned shared policy/reference skills only. `github-kanban-ops` is the canonical GitHub PM policy source. `gh-*` command-alias skills, OpenSpec skills, and Superpowers skills are not mirrored here.
+- `.agents/skills/` — shared Codex/Antigravity skill surface for explicitly allowed ACO-owned shared policy/reference skills only. `github-kanban-ops` is the canonical GitHub PM policy source. `gh-*` command-alias skills, OpenSpec skills, and Superpowers skills are not mirrored here.
 - `.codex/agents/` — Codex custom agent definitions generated or maintained for local workflows.
-- `.gemini/commands/` and `.gemini/agents/` — Gemini command and agent surfaces that should stay aligned with the active workflow where supported.
+- `.gemini/commands/` and `.gemini/agents/` — 이 디렉터리는 Phases 1-3 마이그레이션으로 더 이상 `aco sync` 생성 대상이 아니다. 잔여 파일이 있다면 Gemini provider 제거 후 정리가 필요하다.
 - `docs/` — architecture, contracts, guides, reference docs, phase plans, and archived planning material.
 - `openspec/` — OpenSpec proposals, specs, design docs, and task lists.
 
@@ -54,15 +54,24 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 
 ## Context Sync
 
-`aco sync` converts Claude project context into Codex/Gemini target surfaces.
+`aco sync`는 Claude 프로젝트 컨텍스트를 Codex 대상 표면으로 변환한다. manifest 형식은 v5다. Gemini provider는 Phases 1-3 마이그레이션으로 제거되었으며 `GEMINI.md`는 더 이상 생성 대상이 아니다.
 
 - Source order starts with root `CLAUDE.md`, then optional `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, and hooks.
 - Codex project instructions live in root `AGENTS.md`.
-- Gemini project instructions live in root `GEMINI.md`.
 - Shared skills live in `.agents/skills/<skill>/`, but only explicitly allowed ACO-owned skills are synced. `.agents/skills/` is not a mirror of `.claude/skills/`.
-- Do not hand-maintain `.codex/skills/` or `.gemini/skills/` copies unless the runtime requirement is proven.
+- Do not hand-maintain `.codex/skills/` copies unless the runtime requirement is proven.
 - Use `aco sync --check` to detect stale generated targets and `aco sync --force` only when overwriting managed drift is intentional.
 - Use `aco sync --check --strict` to fail on duplicate provider-surface warnings in CI.
+
+## Codex `$aco` Entrypoint
+
+Codex는 `$aco`를 통해 ACO delegation을 실행할 수 있다. 이는 Claude의 `/aco` slash command와 동일한 consent-gated delegation 흐름을 Codex 세션에서 미러링한다.
+
+- **`$aco`**: `aco ask` 기반 consent-gated delegation 실행. peers = `antigravity`/`mock`. 실행에는 `--yes` 동의가 필요하다.
+- Claude entrypoints: `/aco` (단일 generic delegation command)
+- Codex entrypoints: `$aco` (위와 동일한 `aco ask` 흐름, Codex 세션 내에서 실행)
+- `$aco`는 task-specific subcommand를 만들지 않는다. task 내용은 자연어 task text, CLI flag, preset으로 전달한다.
+- `/aco` command file: `.claude/commands/aco.md`. Codex용 별도 파일은 없다. 위임 정책은 `.claude/skills/aco-delegation/SKILL.md`가 담당한다.
 
 ## Commit Message Policy
 
@@ -119,9 +128,35 @@ GitHub 코드 리뷰에서는 P0/P1 위주로 flag한다. P2/P3는 정말 의미
 
 ## Validation
 
-Common checks:
+Before pushing, run the local CI mirror:
 
 ```bash
+npm run verify        # FULL  — lint + contract + typecheck + test + go build/test + fixtures + smoke
+npm run verify:fast   # FAST  — deterministic gates only: lint + contract + typecheck + go build
+```
+
+A `pre-push` git hook (`.githooks/pre-push`, wired by the `prepare` script via
+`core.hooksPath`) runs `npm run verify:fast` automatically and blocks the push if
+a gate fails, so a broken build never reaches GitHub Actions. Emergency bypass:
+`git push --no-verify`.
+
+The hook runs the FAST gates only: those are deterministic and side-effect-free.
+The full test suite (`npm run verify`) spawns provider/test child processes and
+creates throwaway git workspaces, so it is left to CI and manual runs rather than
+a push hook. The hook also strips inherited `GIT_*` env vars before running, so
+test workspaces never resolve back to this repo.
+
+Fix formatting drift — the most common CI `lint` failure — with:
+
+```bash
+npm run format   # prettier --write on packages/*/src
+```
+
+Individual checks (CI mirrors these exactly; `format:check` is the gate that
+historically broke CI because local runs omitted it):
+
+```bash
+npm run format:check
 npm test
 npm run typecheck
 npm run test:fixtures

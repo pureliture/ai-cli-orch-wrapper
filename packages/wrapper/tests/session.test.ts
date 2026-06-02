@@ -15,9 +15,9 @@ async function makeStore() {
 describe('SessionStore', () => {
   it('create() creates task.json with status running', async () => {
     const { store, dir } = await makeStore();
-    const record = await store.create('gemini', 'review');
+    const record = await store.create('antigravity', 'review');
     assert.equal(record.status, 'running');
-    assert.equal(record.provider, 'gemini');
+    assert.equal(record.provider, 'antigravity');
     assert.equal(record.command, 'review');
     assert.ok(typeof record.id === 'string');
     assert.ok(record.startedAt);
@@ -29,14 +29,14 @@ describe('SessionStore', () => {
 
   it('read() returns the same record created', async () => {
     const { store } = await makeStore();
-    const created = await store.create('gemini', 'adversarial');
+    const created = await store.create('antigravity', 'adversarial');
     const read = await store.read(created.id);
     assert.deepEqual(created, read);
   });
 
   it('markDone() transitions status to done and sets endedAt', async () => {
     const { store } = await makeStore();
-    const record = await store.create('gemini', 'rescue');
+    const record = await store.create('antigravity', 'rescue');
     await store.markDone(record.id);
     const updated = await store.read(record.id);
     assert.equal(updated.status, 'done');
@@ -45,7 +45,7 @@ describe('SessionStore', () => {
 
   it('markFailed() transitions status to failed', async () => {
     const { store } = await makeStore();
-    const record = await store.create('gemini', 'review');
+    const record = await store.create('antigravity', 'review');
     await store.markFailed(record.id);
     const updated = await store.read(record.id);
     assert.equal(updated.status, 'failed');
@@ -53,7 +53,7 @@ describe('SessionStore', () => {
 
   it('markCancelled() transitions status to cancelled', async () => {
     const { store } = await makeStore();
-    const record = await store.create('gemini', 'review');
+    const record = await store.create('antigravity', 'review');
     await store.markCancelled(record.id);
     const updated = await store.read(record.id);
     assert.equal(updated.status, 'cancelled');
@@ -61,7 +61,7 @@ describe('SessionStore', () => {
 
   it('update() merges partial patch', async () => {
     const { store } = await makeStore();
-    const record = await store.create('gemini', 'review', 1234);
+    const record = await store.create('antigravity', 'review', 1234);
     await store.update(record.id, { pid: 5678 });
     const updated = await store.read(record.id);
     assert.equal(updated.pid, 5678);
@@ -70,24 +70,24 @@ describe('SessionStore', () => {
 
   it('update() stores runtimeContext metadata', async () => {
     const { store } = await makeStore();
-    const record = await store.create('gemini', 'review');
+    const record = await store.create('antigravity', 'review');
 
     const runtimeContext: RuntimeContext = {
       active: {
-        provider: 'gemini',
+        provider: 'antigravity',
         command: 'review',
         sessionId: record.id,
         permissionProfile: 'default',
         cwd: '/tmp/project',
         branch: 'main',
-        auth: { ok: true, method: 'api-key' },
+        auth: { ok: true, method: 'cli-fallback' },
       },
       exposed: {
         sharedSkills: ['planner', 'review'],
         providerAgents: ['planner'],
         providerHooks: ['PostToolUse'],
         providerConfigFiles: ['settings.json'],
-        provider: 'gemini',
+        provider: 'antigravity',
       },
     };
 
@@ -120,16 +120,16 @@ describe('SessionStore', () => {
 
   it('latestId() returns the most recent session', async () => {
     const { store } = await makeStore();
-    await store.create('gemini', 'review');
+    await store.create('antigravity', 'review');
     await new Promise((r) => setTimeout(r, 5));
-    const second = await store.create('gemini', 'rescue');
+    const second = await store.create('antigravity', 'rescue');
     const latest = store.latestId();
     assert.equal(latest, second.id);
   });
 
   it('outputLogPath() returns path within session dir', async () => {
     const { store, dir } = await makeStore();
-    const record = await store.create('gemini', 'review');
+    const record = await store.create('antigravity', 'review');
     const logPath = store.outputLogPath(record.id);
     assert.ok(logPath.startsWith(dir));
     assert.ok(logPath.endsWith('output.log'));
@@ -137,7 +137,7 @@ describe('SessionStore', () => {
 
   it('createOutputTee() writes output without buffering unread readable chunks', async () => {
     const { store } = await makeStore();
-    const record = await store.create('gemini', 'review');
+    const record = await store.create('antigravity', 'review');
     const originalStdoutWrite = process.stdout.write;
     let stdout = '';
 
@@ -171,7 +171,7 @@ describe('SessionStore', () => {
 
   it('createOutputTee() waits for stdout backpressure before accepting the next chunk', async () => {
     const { store } = await makeStore();
-    const record = await store.create('gemini', 'review');
+    const record = await store.create('antigravity', 'review');
     const originalStdoutWrite = process.stdout.write;
     let releaseStdout: (() => void) | undefined;
 

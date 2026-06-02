@@ -20,19 +20,19 @@ registerFixture({
   knownNodeGap: true,
   async fn(runner) {
     const { writeFile } = await import('node:fs/promises');
-    const mockGemini = runner.providerPath('gemini');
+    const mockAgy = runner.providerPath('agy');
     // Simulates a provider that exits with an auth error signal
     // The Go wrapper must detect this as an auth failure
-    await writeFile(mockGemini, [
+    await writeFile(mockAgy, [
       '#!/usr/bin/env bash',
       'echo "Error: authentication required" >&2',
       'exit 126', // 126 = command found but not executable / auth convention
     ].join('\n') + '\n', { mode: 0o755 });
 
-    const result = await runner.run(['run', 'gemini', 'review', '--input', 'test']);
+    const result = await runner.run(['run', 'antigravity', 'review', '--input', 'test']);
 
     assert.equal(result.exitCode, 1, 'auth failure must exit 1');
     assert.match(result.stderr, /authentication required/i);
-    assert.match(result.stderr, /Run: gemini/i);
+    assert.match(result.stderr, /Run: agy/i);
   },
 });

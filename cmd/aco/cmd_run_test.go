@@ -23,7 +23,7 @@ func (r *runTestRunner) Run(_ context.Context, opts runner.RunOpts) (runner.RunR
 
 func TestCmdRun_PrependsFocusToContent(t *testing.T) {
 	registry := provider.NewRegistry()
-	registry.Register(newStaticProvider("gemini", "gemini"))
+	registry.Register(newStaticProvider("antigravity", "agy"))
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
@@ -37,7 +37,7 @@ func TestCmdRun_PrependsFocusToContent(t *testing.T) {
 	}
 
 	exitCode := cmdRun(d, []string{
-		"gemini",
+		"antigravity",
 		"adversarial",
 		"--focus", "security",
 		"--input", "inspect the patch",
@@ -56,7 +56,7 @@ func TestCmdRun_PrependsFocusToContent(t *testing.T) {
 
 func TestCmdRun_RejectsInvalidTimeout(t *testing.T) {
 	registry := provider.NewRegistry()
-	registry.Register(newStaticProvider("gemini", "gemini"))
+	registry.Register(newStaticProvider("antigravity", "agy"))
 
 	var stderr bytes.Buffer
 	testRunner := &runTestRunner{}
@@ -68,7 +68,7 @@ func TestCmdRun_RejectsInvalidTimeout(t *testing.T) {
 	}
 
 	exitCode := cmdRun(d, []string{
-		"gemini",
+		"antigravity",
 		"review",
 		"--timeout", "abc",
 	})

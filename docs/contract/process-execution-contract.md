@@ -31,7 +31,7 @@ Go runtime의 `aco run`과 `aco delegate`는 동기(synchronous)이고 차단(bl
 aco run <provider> <command>   ← 프로세스 종료까지 차단
   │
   ▼
-외부 프로바이더 바이너리 (gemini, codex, 등)
+외부 프로바이더 바이너리 (agy, codex, 등)
   │
   ▼
 stdout 스트리밍 → 호출자
@@ -58,7 +58,7 @@ cmd := exec.Command(provider.Binary(), args...)
 
 `cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}`
 
-모든 프로바이더 프로세스는 새로운 프로세스 그룹에서 실행된다. 이는 Node.js 기반 CLI(gemini, codex 등)가 워커 프로세스를 생성했을 때, `aco`가 전체 프로세스 트리를 종료할 수 있게 한다.
+모든 프로바이더 프로세스는 새로운 프로세스 그룹에서 실행된다. 이는 Node.js 기반 CLI(agy, codex 등)가 워커 프로세스를 생성했을 때, `aco`가 전체 프로세스 트리를 종료할 수 있게 한다.
 
 ### 3.3 작업 디렉터리
 
@@ -71,13 +71,15 @@ Go runtime 경로의 `cmd.Env`는 호스트의 전체 환경변수 목록에서 
 `packages/wrapper` 경로의 provider child process는 별도 `env` override 없이 `process.env`를
 상속한다:
 
-| 전달됨                                           | 차단됨             |
-| ------------------------------------------------ | ------------------ |
-| `PATH`, `HOME`, `USER`, `TERM`, `LANG`, `LC_ALL` | `ACO_API_KEY`      |
-| `ACO_TIMEOUT_SECONDS`                            | `GOOGLE_API_KEY`   |
-| `GEMINI_API_KEY` (CI/headless)                   | `COPILOT_TOKEN`    |
-| `GITHUB_TOKEN` (CI/headless)                     | 기타 모든 환경변수 |
-| `ANTHROPIC_API_KEY` (CI/headless)                |                    |
+| 전달됨                                           | 차단됨              |
+| ------------------------------------------------ | ------------------- |
+| `PATH`, `HOME`, `USER`, `TERM`, `LANG`, `LC_ALL` | `ACO_API_KEY`       |
+| `ACO_TIMEOUT_SECONDS`                            | `GOOGLE_API_KEY`    |
+| `GITHUB_TOKEN` (CI/headless)                     | `GEMINI_API_KEY`    |
+| `ANTHROPIC_API_KEY` (CI/headless)                | `COPILOT_TOKEN`     |
+|                                                  | 기타 모든 환경변수  |
+
+> `antigravity` provider(`agy`)는 OS Keyring 기반 인증으로 전달할 headless env key가 없다.
 
 ---
 
@@ -99,7 +101,7 @@ stderr는 메모리 내 **tail buffer** (최대 64KB)에 캡처된다. 프로세
 `aco delegate`는 프로바이더 출력 뒤에 JSON 메타데이터를 출력한다. `--no-meta` 플래그가 제공되면 생략된다:
 
 ```
-ACO_META_<rid>: {"agent":"reviewer","provider":"gemini","model":"gemini-2.5","exit_code":0,"duration_ms":4200}
+ACO_META_<rid>: {"agent":"reviewer","provider":"antigravity","model":"agy-1","exit_code":0,"duration_ms":4200}
 ```
 
 `<rid>`는 8바이트 무작위값, 16진수 인코딩. 이는 호출자(Claude Code)가 구조화된 메타데이터를 파싱할 수 있게 한다.
@@ -168,7 +170,7 @@ ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 | `opts.ReasoningEffort`   | 추론 노력 수준                          |
 | `opts.ExtraArgs`         | 추가 CLI 인자                           |
 
-각 프로바이더는 자신의 CLI 규약에 맞춰 이 정보를 인자로 변환한다. 예: Gemini는 `gemini -p "<prompt>\n<content>" [--yolo]`.
+각 프로바이더는 자신의 CLI 규약에 맞춰 이 정보를 인자로 변환한다. 예: Antigravity는 `agy -p "<prompt>\n<content>" [--yolo]`.
 
 ---
 
@@ -263,6 +265,6 @@ ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSecs)*time.Second)
 - **runner.go의 StubRunner**: 현재 `internal/runner/runner.go`에는 `StubRunner`만 있고, 실제 구현은 `process.go`의 `ProcessRunner`에 있다. Phase B에서 인터페이스 정리가 필요하다.
 - **prompt 로딩**: 현재 `embed.FS` 대신 맵 기반 내장값을 사용한다. Phase 4에서 `.md` 파일 기반으로 전환할 예정이다.
 - **delegate 모드에서의 에러 분류**: `classifyDelegateError`는 항상 exit code 1을 반환. 향후 세분화 필요.
-- **프로바이더 추가**: 현재 gemini와 codex만 지원. 새 프로바이더 추가 시 `Provider` 인터페이스 준수 필수.
+- **프로바이더 추가**: 현재 antigravity와 codex를 지원. 새 프로바이더 추가 시 `Provider` 인터페이스 준수 필수.
 
 이 문서는 `docs/contract/go-node-boundary.md`와 함께 읽어야 `aco`의 전체 아키텍처를 이해할 수 있다.

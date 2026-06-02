@@ -11,7 +11,7 @@ aco ask --preset <name> --dry-run
 aco pack install
 aco pack setup
 aco pack status
-aco provider setup gemini
+aco provider setup antigravity
 aco provider setup codex
 aco result
 aco status
@@ -33,17 +33,17 @@ If post-install sync fails, use the manifest path printed by setup and run `pack
 🛰️  aco Runtime Session
 
 ✨ Active
-  Provider: gemini
+  Provider: antigravity
   Command: review
   Session ID: f3f2d9...b1
   Permission: default
   Working Dir: /path/to/repo
   Branch: main
-  Prompt Template: /path/to/repo/.claude/aco/prompts/gemini/review.md
-  Auth: ready (cli-fallback, vgemini-cli 1.2.3, bin gemini)
+  Prompt Template: /path/to/repo/.claude/aco/prompts/antigravity/review.md
+  Auth: ready (keyring)
 
 🧩 Exposed
-  Providers: gemini
+  Providers: antigravity
   Agents: reviewer
   Hooks: PostToolUse
   Config: settings.json
@@ -56,10 +56,10 @@ If post-install sync fails, use the manifest path printed by setup and run `pack
 credential-readiness heuristics before spawning the CLI. The `--version` fallback verifies binary
 availability; it is not a remote authentication check.
 
-| Provider | Fast-path auth sources                                           | Fallback           |
-| -------- | ---------------------------------------------------------------- | ------------------ |
-| Gemini   | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, `~/.gemini/oauth_creds.json` | `gemini --version` |
-| Codex    | `OPENAI_API_KEY`, `~/.codex/auth.json`                           | `codex --version`  |
+| Provider    | Fast-path auth sources         | Fallback          |
+| ----------- | ------------------------------ | ----------------- |
+| Antigravity | OS Keyring (no API key env)    | `agy --version`   |
+| Codex       | `OPENAI_API_KEY`, `~/.codex/auth.json` | `codex --version` |
 
 Expired Codex OAuth tokens report `codex login` as the fix.
 

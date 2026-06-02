@@ -85,7 +85,7 @@ Do not enable broader permission profiles unless the task requires it and the pr
 
 Timeout and `aco cancel --session <id>` are reliability controls. They best-effort terminate provider processes and record session artifacts, but they are not sandbox, secret-redaction, or remote-auth guarantees.
 
-Real Codex/Gemini smoke commands can require provider credentials, local CLI setup, network access, and real provider latency. Keep those commands opt-in and separate from default CI or deterministic repo tests.
+Real Codex/Antigravity smoke commands can require provider credentials, local CLI setup, network access, and real provider latency. Keep those commands opt-in and separate from default CI or deterministic repo tests.
 
 ## Currently Implemented Protections
 
@@ -99,7 +99,7 @@ Real Codex/Gemini smoke commands can require provider credentials, local CLI set
 - Private key files: `*.pem`, `*.key`
 - Certificate bundles: `*.pfx`, `*.p12`
 - Generic secret files: `secrets.json`, `secrets.yaml`, `secrets.yml`
-- Well-known CLI credential files: `.codex/auth.json`, `.gemini/oauth_creds.json`
+- Well-known CLI credential files: `.codex/auth.json`
 
 If a blocked path is supplied, `aco ask` exits with an error. To override explicitly:
 

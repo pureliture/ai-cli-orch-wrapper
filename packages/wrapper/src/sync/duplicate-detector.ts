@@ -41,54 +41,7 @@ export async function detectDuplicates(
   const warnings: SyncWarning[] = [];
   const index: ExposureEntry[] = [];
 
-  // 1. Index Gemini commands (.gemini/commands/*.toml)
-  const geminiCommandsDir = join(repoRoot, '.gemini', 'commands');
-  try {
-    const entries = await readdir(geminiCommandsDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (entry.name.includes('..') || entry.name.includes('/') || entry.name.includes('\\')) {
-        continue;
-      }
-      if (entry.isDirectory()) {
-        // Subdirectories like opsx/
-        const subDir = join(geminiCommandsDir, entry.name);
-        const subEntries = await readdir(subDir, { withFileTypes: true });
-        for (const sub of subEntries) {
-          if (sub.name.includes('..') || sub.name.includes('/') || sub.name.includes('\\')) {
-            continue;
-          }
-          if (sub.isFile() && sub.name.endsWith('.toml')) {
-            const name = basename(sub.name, '.toml');
-            index.push({
-              provider: 'gemini',
-              name: `${entry.name}/${name}`,
-              path: join(subDir, sub.name),
-              kind: 'command',
-            });
-          }
-        }
-      } else if (entry.isFile() && entry.name.endsWith('.toml')) {
-        const name = basename(entry.name, '.toml');
-        index.push({
-          provider: 'gemini',
-          name,
-          path: join(geminiCommandsDir, entry.name),
-          kind: 'command',
-        });
-      }
-    }
-  } catch (err: unknown) {
-    const e = err as Error & { code?: string };
-    if (e.code !== 'ENOENT') {
-      warnings.push({
-        source: geminiCommandsDir,
-        message: `Failed to scan Gemini commands: ${e.message}`,
-        severity: 'warning',
-      });
-    }
-  }
-
-  // 2. Index shared skills (.agents/skills/*/)
+  // 1. Index shared skills (.agents/skills/*/)
   const agentsSkillsDir = join(repoRoot, '.agents', 'skills');
   try {
     const entries = await readdir(agentsSkillsDir, { withFileTypes: true });
@@ -99,7 +52,7 @@ export async function detectDuplicates(
       if (entry.isDirectory()) {
         const name = entry.name;
         index.push({
-          provider: 'gemini',
+          provider: 'agents',
           name,
           path: join(agentsSkillsDir, name, 'SKILL.md'),
           kind: 'skill',
@@ -117,7 +70,7 @@ export async function detectDuplicates(
     }
   }
 
-  // 3. Index Codex skills (.codex/skills/*/)
+  // 2. Index Codex skills (.codex/skills/*/)
   const codexSkillsDir = join(repoRoot, '.codex', 'skills');
   try {
     const entries = await readdir(codexSkillsDir, { withFileTypes: true });
@@ -146,7 +99,7 @@ export async function detectDuplicates(
     }
   }
 
-  // 4. Index Claude commands (.claude/commands/*.md)
+  // 3. Index Claude commands (.claude/commands/*.md)
   const claudeCommandsDir = join(repoRoot, '.claude', 'commands');
   try {
     const entries = await readdir(claudeCommandsDir, { withFileTypes: true });
@@ -175,13 +128,13 @@ export async function detectDuplicates(
     }
   }
 
-  // 5. Index planned outputs
+  // 4. Index planned outputs
   for (const output of outputs) {
     if (output.action === 'removed') continue;
     if (output.assetKind === 'command-alias-skill' || output.assetKind === 'shared-skill') {
       const name = basename(output.targetPath);
       index.push({
-        provider: 'gemini',
+        provider: 'agents',
         name,
         path: join(output.targetPath, 'SKILL.md'),
         kind: 'skill',
@@ -189,7 +142,7 @@ export async function detectDuplicates(
     }
   }
 
-  // 5.5 Deduplicate entries with identical provider:name:path to avoid false positives
+  // 4.5 Deduplicate entries with identical provider:name:path to avoid false positives
   const seen = new Set<string>();
   const dedupedIndex: ExposureEntry[] = [];
   for (const entry of index) {
@@ -199,7 +152,7 @@ export async function detectDuplicates(
     dedupedIndex.push(entry);
   }
 
-  // 6. Detect duplicates: same provider + same name from multiple surfaces
+  // 5. Detect duplicates: same provider + same name from multiple surfaces
   const byProviderName = new Map<string, ExposureEntry[]>();
   const warnedCanonicals = new Set<string>();
   for (const entry of dedupedIndex) {
@@ -260,7 +213,7 @@ export async function detectDuplicates(
     });
   }
 
-  // 7. Cross-name canonical duplicate detection for OpenSpec
+  // 6. Cross-name canonical duplicate detection for OpenSpec
   const openSpecEntries = dedupedIndex.filter(
     (e) => e.name.startsWith('openspec-') || e.name.startsWith('opsx/')
   );

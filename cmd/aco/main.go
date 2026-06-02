@@ -46,8 +46,7 @@ func main() {
 	}
 
 	d.registry.Register(provider.NewCodex())
-	d.registry.Register(provider.NewGemini())
-	d.registry.Register(provider.NewGeminiCLI())
+	d.registry.Register(provider.NewAntigravity())
 
 	switch os.Args[1] {
 	case "--version", "-v":

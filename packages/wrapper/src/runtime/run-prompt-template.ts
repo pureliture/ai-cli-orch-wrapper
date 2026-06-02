@@ -13,7 +13,10 @@ export interface RunPromptTemplateResult {
   promptTemplatePath?: string;
 }
 
-const DOCUMENTED_PROMPT_COMMANDS = new Set(['gemini:review', 'codex:review']);
+// NOTE: antigravity:review를 documented로 추가했지만 Phase 3에서
+// .claude/aco/prompts/antigravity/review.md 파일이 생성되기 전까지는
+// 해당 커맨드 실행 시 오류가 발생하므로 그 전에 prompt 파일을 배포해야 한다.
+const DOCUMENTED_PROMPT_COMMANDS = new Set(['antigravity:review', 'codex:review']);
 const SAFE_PATH_SEGMENT = /^[A-Za-z0-9_-]+$/;
 
 function assertSafePathSegment(name: string, value: string): void {

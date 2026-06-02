@@ -9,17 +9,17 @@
 
 ## 결론
 
-제안의 큰 방향은 타당하다. 이 저장소는 단순히 Gemini나 Codex CLI를 호출하는 wrapper로
+제안의 큰 방향은 타당하다. 이 저장소는 단순히 Antigravity나 Codex CLI를 호출하는 wrapper로
 보이기보다, Claude Code 중심의 repo-local harness를 여러 AI CLI 실행면과 연결하는
 **AI 개발 워크플로우 하네스**로 설명해야 한다.
 
 가장 먼저 개선할 것은 기능 추가가 아니라 포지셔닝이다. 현재 README와 루트
-`package.json` 설명은 Gemini 중심 command pack처럼 읽히는 부분이 남아 있다. 반면 실제
+`package.json` 설명은 Antigravity 중심 command pack처럼 읽히는 부분이 남아 있다. 반면 실제
 레포는 이미 다음 요소를 함께 다룬다.
 
 - npm으로 설치 가능한 `aco` CLI
 - Claude Code 기준 command/agent/skill 자산
-- Codex/Gemini 대상 context sync
+- Codex/Antigravity 대상 context sync
 - provider setup과 실행 추상화
 - session-aware `run`, `status`, `result`, `cancel`
 - Go runtime과 Node wrapper의 실행 책임 분리
@@ -29,14 +29,14 @@
 
 ```text
 ai-cli-orch-wrapper is a repo-local AI workflow harness that connects
-Claude Code, Codex CLI, and Gemini CLI into repeatable development workflows:
+Claude Code, Codex CLI, and Antigravity CLI into repeatable development workflows:
 context sync, provider execution, session tracking, and repo-local review workflows.
 ```
 
 한국어 포트폴리오 설명도 같은 축으로 유지한다.
 
 ```text
-Claude Code, Codex CLI, Gemini CLI를 하나의 개발 워크플로우로 묶기 위한
+Claude Code, Codex CLI, Antigravity CLI를 하나의 개발 워크플로우로 묶기 위한
 repo-local AI workflow harness입니다. 단순 provider wrapper가 아니라
 프로젝트 컨텍스트 동기화, provider별 실행 추상화, PR 리뷰 자동화,
 세션 기록, 결과 조회, CI 검증까지 포함한 개발 자동화 도구로 설계했습니다.
@@ -51,7 +51,7 @@ repo-local AI workflow harness입니다. 단순 provider wrapper가 아니라
 | 영역                 | 현재 상태                                                                           | 판단                                                        |
 | -------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | README 포지셔닝      | harness 중심 intro와 docs 진입점은 보강했지만, 첫 1분 구조는 더 다듬어야 한다.      | PR1에서 What/Why/Core workflow/Non-goals/Safety를 완성한다. |
-| 루트 package 설명    | Goal 2에서 consent-gated external AI delegation wrapper로 갱신했다.                 | Gemini-only 인상을 줄인다.                                  |
+| 루트 package 설명    | Goal 2에서 consent-gated external AI delegation wrapper로 갱신했다.                 | Antigravity-only 인상을 줄인다.                             |
 | wrapper package 설명 | Goal 2에서 doctor, delegation, session artifact 범위를 반영했다.                    | 공개 CLI 표면에 더 가깝다.                                  |
 | context sync         | `aco sync`, `--check`, `--dry-run`, `--force`가 있다.                               | 핵심 차별화 소재로 밀 수 있다.                              |
 | sync diff/explain    | `--diff`, `--explain`은 없다.                                                       | `--dry-run`보다 평가자에게 보이는 설명력이 약하다.          |
@@ -66,7 +66,7 @@ repo-local AI workflow harness입니다. 단순 provider wrapper가 아니라
 | 구분          | 현재 구현된 범위                                                                      | planned 범위                                                              |
 | ------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | 포지셔닝      | README와 architecture가 `aco`, provider, sync, session을 설명한다.                    | README 첫 화면을 workflow harness 중심으로 재구성한다.                    |
-| provider 실행 | Node wrapper의 `aco ask`/`aco run`이 mock/Gemini/Codex provider 흐름을 지원한다.      | multi-provider aggregation과 richer result formats를 추가한다.            |
+| provider 실행 | Node wrapper의 `aco ask`/`aco run`이 mock/Antigravity/Codex provider 흐름을 지원한다.  | multi-provider aggregation과 richer result formats를 추가한다.            |
 | context sync  | `aco sync`, `--check`, `--dry-run`, `--force`가 있다.                                 | `--diff`, `--explain`을 추가해 drift와 ownership을 설명한다.              |
 | session 결과  | `ledger.json`, `brief.md`, `task.json`, `input.md`, `prompt.md`, `output.log`가 있다. | `findings.json`과 provider output normalization은 future work로 분리한다. |
 | 보안 문서     | `docs/security.md`가 Node wrapper와 Go runtime 보안 경계를 분리해 설명한다.           | `.acoignore` enforcement와 secret scanning strategy를 추가한다.           |
@@ -123,14 +123,13 @@ README와 case study는 "implemented", "planned", "experimental"을 분리해야
 
 강하게 수용한다.
 
-이 레포에서 가장 설득력 있는 소재는 `.claude/`를 canonical source로 두고 Codex/Gemini
+이 레포에서 가장 설득력 있는 소재는 `.claude/`를 canonical source로 두고 Codex/Antigravity
 대상 파일을 생성 산출물로 관리하는 구조다. 여러 AI coding tool이 각자 instruction
 파일을 요구하는 상황에서, 수동 복사로 생기는 drift를 manifest와 managed block으로
 관리한다는 이야기는 실무적이다.
 
-대표 generated target은 `AGENTS.md`, `GEMINI.md`, `.agents/skills/`, `.codex/agents/`,
-`.codex/hooks.json`, `.gemini/agents/`, `.gemini/settings.json`이다. 특히 `.agents/skills/`는
-Codex와 Gemini가 공유하는 skill target이며, provider별 skill 디렉터리로 복사하지 않는다.
+대표 generated target은 `AGENTS.md`, `.agents/skills/`, `.codex/agents/`이다. 특히 `.agents/skills/`는
+Codex와 Antigravity가 공유하는 skill target이며, provider별 skill 디렉터리로 복사하지 않는다.
 
 추가하면 좋은 CLI 표면은 다음 순서다.
 
@@ -244,7 +243,7 @@ Go runtime 쪽에는 환경 변수 allowlist와 path validation 계약이 있지
 | 단계                  | 작업                                             | 이유                                                 |
 | --------------------- | ------------------------------------------------ | ---------------------------------------------------- |
 | Foundation            | README 첫 화면을 workflow harness 중심으로 개편  | 첫 30초 안에 가치가 보여야 한다.                     |
-| Foundation            | 루트 `package.json` description 정리             | Goal 2에서 완료. Gemini-only 인상을 줄인다.          |
+| Foundation            | 루트 `package.json` description 정리             | Goal 2에서 완료. Antigravity-only 인상을 줄인다.     |
 | Foundation            | `docs/case-study.md` 추가                        | 포트폴리오/평가자용 단일 링크가 필요하다.            |
 | Demo                  | mock provider 또는 no-auth demo path 추가        | Goal 2에서 완료. 인증 없이 핵심 workflow를 보여준다. |
 | Operational hardening | `aco doctor` 추가                                | Goal 2에서 local-only v1 완료.                       |
@@ -266,7 +265,7 @@ Go runtime 쪽에는 환경 변수 allowlist와 path validation 계약이 있지
 
 - README 첫 화면에 30초 설명, problem/solution, core workflow 추가
 - 설치 섹션을 value proposition 아래로 이동
-- "Why not just use Codex/Gemini/Claude directly?" 섹션 추가
+- "Why not just use Codex/Antigravity/Claude directly?" 섹션 추가
 - 루트 `package.json` description 정리
 - `docs/case-study.md` 추가
 - `docs/README.md`에 case study, roadmap, runtime boundary 진입점 추가
@@ -301,14 +300,14 @@ harness임을 명확히 설명한다.
 완료 기준:
 
 - README 첫 화면에서 문제, 대상 사용자, 핵심 workflow가 보인다.
-- "Why not just use Codex/Gemini/Claude directly?" 섹션이 있다.
+- "Why not just use Codex/Antigravity/Claude directly?" 섹션이 있다.
 - 설치 전에 demo 또는 core workflow가 먼저 설명된다.
 
 ### Issue 2: chore: align package metadata with provider support
 
 목적:
 
-루트 package metadata가 Gemini-only command pack처럼 보이는 문제를 정리한다.
+루트 package metadata가 Antigravity-only command pack처럼 보이는 문제를 정리한다.
 
 범위:
 
@@ -318,7 +317,7 @@ harness임을 명확히 설명한다.
 
 완료 기준:
 
-- 루트 설명이 Claude Code, Codex CLI, Gemini CLI를 함께 다루는 repo-local workflow
+- 루트 설명이 Claude Code, Codex CLI, Antigravity CLI를 함께 다루는 repo-local workflow
   harness로 읽힌다.
 - package metadata와 README 첫 문단이 충돌하지 않는다.
 
@@ -385,7 +384,7 @@ non-network and no-provider-invocation boundary.
 
 - `aco doctor`가 success/warning/failure를 구분해 출력한다.
 - provider 미설치 또는 로컬 credential/auth 파일 상태 문제 시 다음 명령을 안내한다.
-- `gemini --version`, `codex --version` fallback은 인증 검증이 아니라 binary availability 확인으로 표기한다.
+- `agy --version`, `codex --version` fallback은 인증 검증이 아니라 binary availability 확인으로 표기한다.
 - drift 감지 시 `aco sync --diff` 또는 `aco sync --force` 안내가 나온다.
 
 ### Issue 6: task: add sync diff and explain modes

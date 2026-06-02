@@ -674,6 +674,55 @@ describe('aco ask CLI', () => {
     assert.equal(runResult.fullOutput.length, 600);
   });
 
+  // F-c: --model + antigravity 경고 테스트
+  it('warns on stderr when --model is used with antigravity provider', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'antigravity',
+      '--task',
+      'review this',
+      '--model',
+      'gemini-3.1-pro',
+      '--dry-run',
+    ]);
+
+    // dry-run이므로 exit code 0, stderr에 경고가 있어야 함
+    assert.equal(result.code, 0);
+    assert.match(result.stderr, /\[aco\] warning: antigravity\(agy\) ignores --model/);
+    assert.match(result.stderr, /--model applies to codex only/);
+  });
+
+  it('does NOT warn when --model is used with codex provider', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'codex',
+      '--task',
+      'review this',
+      '--model',
+      'gpt-5.4',
+      '--dry-run',
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.doesNotMatch(result.stderr, /antigravity\(agy\) ignores --model/);
+  });
+
+  it('does NOT warn when antigravity is used without --model', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'antigravity',
+      '--task',
+      'review this',
+      '--dry-run',
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.doesNotMatch(result.stderr, /antigravity\(agy\) ignores --model/);
+  });
+
   it('credential note message says "will NOT inherit" not "will be inherited"', async () => {
     // OPENAI_API_KEY는 findCredentialEnvKeys가 탐지하는 키다.
     // envPolicy allowlist 도입 이후 child에게 전달되지 않으므로,

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+#
+# pre-push — run the full local CI mirror (npm run verify) before allowing a push,
+# so a broken build/lint never reaches GitHub Actions.
+#
+# Wired via core.hooksPath=.githooks (set by the package.json "prepare" script on
+# `npm install` / `npm ci`). Emergency bypass: `git push --no-verify`.
+set -euo pipefail
+
+# Git runs hooks with GIT_DIR/GIT_WORK_TREE/etc. exported. Those leak into every
+# subprocess and override -C/cwd git resolution, so tests that spin up throwaway
+# git workspaces would resolve to THIS repo (wrong branch/dir) and fail. Strip
+# them so `npm run verify` runs exactly as a normal shell invocation would.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX GIT_COMMON_DIR \
+  GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE \
+  GIT_QUARANTINE_PATH GIT_PUSH_CERT GIT_PUSH_CERT_STATUS 2>/dev/null || true
+
+cd "$(git rev-parse --show-toplevel)"
+
+# Skip gracefully on a fresh clone with no deps — don't block pushes before setup.
+if [ ! -x node_modules/.bin/prettier ]; then
+  echo "[pre-push] deps not installed (run 'npm ci') — skipping verify." >&2
+  exit 0
+fi
+
+echo "[pre-push] Running deterministic CI gates (npm run verify:fast). Bypass: git push --no-verify" >&2
+if ! npm run --silent verify:fast; then
+  echo "" >&2
+  echo "[pre-push] BLOCKED — a CI gate failed (see above)." >&2
+  echo "[pre-push]   formatting issues → run: npm run format" >&2
+  echo "[pre-push]   full local CI mirror (incl. tests) → npm run verify" >&2
+  echo "[pre-push]   then re-push. Emergency bypass: git push --no-verify" >&2
+  exit 1
+fi

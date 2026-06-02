@@ -105,7 +105,7 @@ aco ask --preset review --dry-run
 aco ask --preset spec-critique --dry-run
 aco ask --preset plan-critique --dry-run
 aco ask --preset tdd --dry-run
-aco run gemini review --input "demo"
+aco run antigravity review --input "demo"
 aco run codex review --input "demo"
 ```
 
@@ -133,7 +133,7 @@ Timeout 발생 시 session은 `failed`가 되고, cancellation은 `cancelled`가
 optional live provider smoke:
 
 ```bash
-node packages/wrapper/dist/cli.js run gemini review --input "hello" --permission-profile restricted --timeout 120
+node packages/wrapper/dist/cli.js run antigravity review --input "hello" --permission-profile restricted --timeout 120
 node packages/wrapper/dist/cli.js run codex review --input "hello" --permission-profile restricted --timeout 120
 ```
 
@@ -164,7 +164,7 @@ aco result
 `aco run`은 기본적으로 `stream-only` 출력 정책을 사용하고, `aco ask`의 `brief` 모드만
 `bounded` 출력 정책을 사용해 preview 크기를 제한한다.
 
-실제 Codex/Gemini provider를 호출할 때도 같은 동의 규칙을 적용한다. external provider output은
+실제 Codex/Antigravity provider를 호출할 때도 같은 동의 규칙을 적용한다. external provider output은
 advisory이며, 최종 판단과 종합은 Claude Code와 maintainer가 수행한다.
 
 ### `aco: command not found`
@@ -177,26 +177,26 @@ node packages/wrapper/dist/cli.js --version
 ### Provider를 찾을 수 없거나 인증되지 않은 경우
 
 ```bash
-aco provider setup gemini
+aco provider setup antigravity
 aco provider setup codex
-aco run gemini review
+aco run antigravity review
 aco status --session <id>
 ```
 
-Gemini CLI: `npm install -g @google/gemini-cli`
+Antigravity CLI: OS Keyring 기반 인증 (`agy` 바이너리)
 Codex CLI: `npm install -g @openai/codex`
 
 `aco provider setup`은 provider 바이너리부터 확인한 뒤 local credential readiness를 휴리스틱으로
 확인한다. 다음 fast-path source 중 하나가 있으면 로컬 credential이 준비된 것으로 본다. 이
 검사는 remote 인증 검증이 아니다.
 
-| Provider | 인증 source                                                           |
-| -------- | --------------------------------------------------------------------- |
-| Gemini   | `GEMINI_API_KEY`, `GOOGLE_API_KEY`, 또는 `~/.gemini/oauth_creds.json` |
-| Codex    | `OPENAI_API_KEY` 또는 `~/.codex/auth.json`                            |
+| Provider     | 인증 source                                                         |
+| ------------ | ------------------------------------------------------------------- |
+| Antigravity  | OS Keyring (env key 없음 — headless CI 환경에서는 open risk)        |
+| Codex        | `OPENAI_API_KEY` 또는 `~/.codex/auth.json`                          |
 
 Codex OAuth 파일에 만료 시간이 있고 만료된 경우에는 `codex login`을 실행한다. headless 또는
-CI 환경에서는 Gemini에 `GEMINI_API_KEY`, Codex에 `OPENAI_API_KEY`를 우선 사용한다.
+CI 환경에서는 Codex에 `OPENAI_API_KEY`를 우선 사용한다.
 
 `aco run <provider> <command>`는 provider 실행 전에 runtime dashboard를 stderr에 출력한다. TTY에서 실행하면 ANSI 색/이모지가 붙으며, CI 또는 `NO_COLOR` 설정 시에는 순수 텍스트로 출력되어 로그/스크립트 파이프에서 안정적이다.
 

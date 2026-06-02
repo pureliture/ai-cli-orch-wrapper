@@ -30,7 +30,7 @@ Backlog placeholders:
 
 | Term                       | Definition                                                         | Example                                                        |
 | -------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------- |
-| `provider`                 | External AI CLI or local mock implementation invoked by `aco`.     | `mock`, `gemini`, and `codex` are providers.                   |
+| `provider`                 | External AI CLI or local mock implementation invoked by `aco`.     | `mock`, `antigravity`, and `codex` are providers.              |
 | `provider invocation`      | One execution of a provider command through `aco`.                 | `aco ask --provider mock --yes` creates a provider invocation. |
 | `provider advisory output` | Provider output saved as review evidence, not authoritative truth. | `output.log` stores full provider advisory output.             |
 | `permission profile`       | The permission posture attached to a run or session.               | The default permission profile is `restricted`.                |

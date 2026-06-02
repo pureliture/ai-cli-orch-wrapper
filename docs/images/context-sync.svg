@@ -52,9 +52,9 @@
   <rect x="490" y="166" width="196" height="56" rx="7" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"></rect>
   <rect x="490" y="166" width="4" height="56" rx="2" fill="#2563eb"></rect>
   <path d="M503,174 C504.54,179.46 504.54,179.46 510,181 C504.54,182.54 504.54,182.54 503,188 C501.46,182.54 501.46,182.54 496,181 C501.46,179.46 501.46,179.46 503,174 Z" fill="url(#gm-cs)"></path>
-  <text x="514" y="184" font-size="9.5" font-weight="700" fill="#1d4ed8">Gemini CLI</text>
-  <text x="507" y="200" font-size="9" fill="#1e40af">GEMINI.md  ·  .gemini/agents/</text>
-  <text x="507" y="215" font-size="9" fill="#1e40af">.gemini/settings.json</text>
+  <text x="514" y="184" font-size="9.5" font-weight="700" fill="#1d4ed8">Antigravity (agy)</text>
+  <text x="507" y="200" font-size="9" fill="#1e40af">(project-instruction target 없음)</text>
+  <text x="507" y="215" font-size="9" fill="#1e40af">OS Keyring 인증</text>
   <rect x="490" y="230" width="196" height="42" rx="7" fill="#f0fdfa" stroke="#5eead4" stroke-width="1"></rect>
   <rect x="490" y="230" width="4" height="42" rx="2" fill="#0d9488"></rect>
   <text x="507" y="248" font-size="9.5" font-weight="700" fill="#0f766e">Shared</text>

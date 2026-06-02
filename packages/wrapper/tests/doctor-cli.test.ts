@@ -93,7 +93,7 @@ describe('aco doctor CLI', () => {
     const workspace = await makeWorkspace();
     const binDir = await mkdtemp(join(tmpdir(), 'aco-doctor-bin-'));
     await makeFakeBinary(binDir, 'codex');
-    await makeFakeBinary(binDir, 'gemini');
+    await makeFakeBinary(binDir, 'agy');
 
     const result = await runCli(['doctor'], {
       home,
@@ -101,7 +101,6 @@ describe('aco doctor CLI', () => {
       env: {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
         OPENAI_API_KEY: 'secret-openai-key',
-        GEMINI_API_KEY: 'secret-gemini-key',
       },
     });
 
@@ -118,11 +117,10 @@ describe('aco doctor CLI', () => {
     assert.match(result.stdout, /aco-delegation skill:/);
     assert.match(result.stdout, /mock:/);
     assert.match(result.stdout, /codex:/);
-    assert.match(result.stdout, /gemini:/);
+    assert.match(result.stdout, /antigravity:/);
     assert.match(result.stdout, /remote auth verification: not performed/);
     assert.match(result.stdout, /Sync drift: not configured \(sync manifest missing\)/);
     assert.doesNotMatch(result.stdout, /secret-openai-key/);
-    assert.doesNotMatch(result.stdout, /secret-gemini-key/);
     assert.doesNotMatch(result.stdout, /Provider: mock/);
     assert.equal(existsSync(join(home, '.aco', 'provider-auth-cache.json')), false);
   });
@@ -136,7 +134,7 @@ describe('aco doctor CLI', () => {
     assert.match(result.stdout, /\/aco command: missing/);
     assert.match(result.stdout, /aco-delegation skill: missing/);
     assert.match(result.stdout, /codex: missing/);
-    assert.match(result.stdout, /gemini: missing/);
+    assert.match(result.stdout, /antigravity: missing/);
     assert.match(result.stdout, /mock: ready/);
   });
 
@@ -145,9 +143,9 @@ describe('aco doctor CLI', () => {
     const workspace = await makeWorkspace();
     const binDir = await mkdtemp(join(tmpdir(), 'aco-doctor-marker-bin-'));
     const codexMarker = join(home, 'codex-executed');
-    const geminiMarker = join(home, 'gemini-executed');
+    const agyMarker = join(home, 'agy-executed');
     await makeMarkerBinary(binDir, 'codex', codexMarker);
-    await makeMarkerBinary(binDir, 'gemini', geminiMarker);
+    await makeMarkerBinary(binDir, 'agy', agyMarker);
 
     const result = await runCli(['doctor'], {
       home,
@@ -155,16 +153,14 @@ describe('aco doctor CLI', () => {
       env: {
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
         OPENAI_API_KEY: '',
-        GEMINI_API_KEY: '',
-        GOOGLE_API_KEY: '',
       },
     });
 
     assert.equal(result.code, 0);
     assert.match(result.stdout, /codex:/);
-    assert.match(result.stdout, /gemini:/);
+    assert.match(result.stdout, /antigravity:/);
     assert.equal(existsSync(codexMarker), false);
-    assert.equal(existsSync(geminiMarker), false);
+    assert.equal(existsSync(agyMarker), false);
   });
 
   it('reports sync manifests that point at another checkout', async () => {
@@ -200,7 +196,7 @@ describe('aco doctor CLI', () => {
     const workspace = await makeWorkspace();
     const binDir = await mkdtemp(join(tmpdir(), 'aco-doctor-bin-'));
     await makeFakeBinary(binDir, 'codex');
-    await makeFakeBinary(binDir, 'gemini');
+    await makeFakeBinary(binDir, 'agy');
 
     const result = await runCli(['doctor'], {
       home,
@@ -217,9 +213,8 @@ describe('aco doctor CLI', () => {
       result.stdout,
       /codex: available; local auth heuristic missing \(no HOME or USERPROFILE set; codex login OR export OPENAI_API_KEY\)/
     );
-    assert.match(
-      result.stdout,
-      /gemini: available; local auth heuristic missing \(no HOME or USERPROFILE set; gemini auth login OR export GEMINI_API_KEY\)/
-    );
+    // antigravity는 OS Keyring 기반이므로 HOME/USERPROFILE 유무에 관계없이
+    // binary가 있으면 ready로 표시된다.
+    assert.match(result.stdout, /antigravity: available; authentication via OS Keyring \(agy\)/);
   });
 });

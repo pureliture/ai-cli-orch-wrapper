@@ -61,7 +61,7 @@ try {
   for (const required of [
     'dist/cli.js',
     'templates/commands/aco.md',
-    'templates/prompts/gemini/review.md',
+    'templates/prompts/antigravity/review.md',
     'templates/prompts/codex/review.md',
     'templates/tasks/review.md',
     'templates/tasks/spec-critique.md',
@@ -81,12 +81,12 @@ try {
   mkdirSync(home, { recursive: true });
   mkdirSync(project, { recursive: true });
   mkdirSync(fakeBin, { recursive: true });
-  const fakeGemini = join(fakeBin, 'gemini');
+  const fakeAgy = join(fakeBin, 'agy');
   writeFileSync(
-    fakeGemini,
-    '#!/usr/bin/env node\nprocess.stdout.write("fake gemini saw prompt\\n" + process.argv.join("\\n"));\n'
+    fakeAgy,
+    '#!/usr/bin/env node\nprocess.stdout.write("fake agy saw prompt\\n" + process.argv.join("\\n"));\n'
   );
-  chmodSync(fakeGemini, 0o755);
+  chmodSync(fakeAgy, 0o755);
   exec(
     'npm',
     ['install', '--prefix', prefix, '--no-audit', '--no-fund', '--ignore-scripts', tarball],
@@ -123,9 +123,9 @@ try {
     assert.match(dryRun, /Provider execution: skipped/);
   }
 
-  const review = run('aco', ['run', 'gemini', 'review', '--input', 'demo'], { cwd: project, env });
-  assert.match(review.stdout, /fake gemini saw prompt/);
-  assert.match(review.stderr, /\.claude\/aco\/prompts\/gemini\/review\.md/);
+  const review = run('aco', ['run', 'antigravity', 'review', '--input', 'demo'], { cwd: project, env });
+  assert.match(review.stdout, /fake agy saw prompt/);
+  assert.match(review.stderr, /\.claude\/aco\/prompts\/antigravity\/review\.md/);
 } finally {
   rmSync(tempRoot, { recursive: true, force: true });
   rmSync(generatedPackageTemplates, { recursive: true, force: true });

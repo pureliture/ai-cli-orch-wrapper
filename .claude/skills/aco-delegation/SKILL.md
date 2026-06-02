@@ -5,12 +5,12 @@ description: Use when a Claude Code session should consider delegating an adviso
 
 # aco Delegation
 
-Use `aco ask` when an external Codex/Gemini/mock CLI perspective can save Claude Code context tokens or provide an advisory second opinion.
+Use `aco ask` when an external Codex/Antigravity/mock CLI perspective can save Claude Code context tokens or provide an advisory second opinion.
 
 ## When To Suggest
 
 - Broad review, critique, or comparison work would consume a lot of Claude Code tokens.
-- The user asks for an external reviewer, Codex/Gemini perspective, or multi-tool critique.
+- The user asks for an external reviewer, Codex/Antigravity perspective, or multi-tool critique.
 - A spec, plan, diff, or document needs architecture, testing, tech-debt, or simplification feedback.
 - A deterministic no-auth demo is enough; use `--providers mock`.
 

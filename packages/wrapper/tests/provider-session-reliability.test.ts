@@ -20,7 +20,7 @@ async function makeHome(): Promise<string> {
 
 async function makeWorkspaceWithPrompt(): Promise<string> {
   const workspace = await mkdtemp(join(tmpdir(), 'aco-provider-reliability-workspace-'));
-  const promptDir = join(workspace, '.claude', 'aco', 'prompts', 'gemini');
+  const promptDir = join(workspace, '.claude', 'aco', 'prompts', 'antigravity');
   await mkdir(promptDir, { recursive: true });
   await writeFile(join(promptDir, 'review.md'), 'Review this input.\n');
   return workspace;
@@ -33,10 +33,10 @@ async function makeFakeProviderBin(name: string, body: string): Promise<string> 
   return dir;
 }
 
-function makeFakeGeminiBody(runtimeBody: string): string {
+function makeFakeAgyBody(runtimeBody: string): string {
   return [
     "if (process.argv.includes('--version')) {",
-    "  process.stdout.write('gemini-test 0.0.0\\n');",
+    "  process.stdout.write('agy-test 0.0.0\\n');",
     '  process.exit(0);',
     '}',
     runtimeBody,
@@ -70,7 +70,6 @@ async function runCli(
           HOME: home,
           USERPROFILE: home,
           NO_COLOR: '1',
-          GEMINI_API_KEY: 'test-key',
           PATH: options.pathPrefix
             ? `${options.pathPrefix}${delimiter}${process.env.PATH ?? ''}`
             : process.env.PATH,
@@ -144,11 +143,11 @@ describe('provider session reliability CLI contract', () => {
   it('rejects invalid timeout values before creating provider sessions', async () => {
     const workspace = await makeWorkspaceWithPrompt();
     const binDir = await makeFakeProviderBin(
-      'gemini',
-      makeFakeGeminiBody("process.stdout.write('should not run\\n');")
+      'agy',
+      makeFakeAgyBody("process.stdout.write('should not run\\n');")
     );
 
-    const runResult = await runCli(['run', 'gemini', 'review', '--timeout', '0'], {
+    const runResult = await runCli(['run', 'antigravity', 'review', '--timeout', '0'], {
       cwd: workspace,
       pathPrefix: binDir,
     });
@@ -170,8 +169,8 @@ describe('provider session reliability CLI contract', () => {
   it('marks a slow spawned provider failed and writes timeout artifacts', async () => {
     const workspace = await makeWorkspaceWithPrompt();
     const binDir = await makeFakeProviderBin(
-      'gemini',
-      makeFakeGeminiBody(
+      'agy',
+      makeFakeAgyBody(
         [
           "process.stdout.write('partial output before timeout\\n');",
           "setTimeout(() => { process.stdout.write('late output\\n'); process.exit(0); }, 3000);",
@@ -179,7 +178,7 @@ describe('provider session reliability CLI contract', () => {
       )
     );
 
-    const result = await runCli(['run', 'gemini', 'review', '--input', 'demo', '--timeout', '1'], {
+    const result = await runCli(['run', 'antigravity', 'review', '--input', 'demo', '--timeout', '1'], {
       cwd: workspace,
       pathPrefix: binDir,
       timeoutMs: 5_000,
@@ -197,7 +196,7 @@ describe('provider session reliability CLI contract', () => {
     const output = await readFile(join(sessionDir, 'output.log'), 'utf8');
     const error = await readFile(join(sessionDir, 'error.log'), 'utf8');
 
-    assert.equal(task.provider, 'gemini');
+    assert.equal(task.provider, 'antigravity');
     assert.equal(task.command, 'review');
     assert.equal(task.status, 'failed');
     assert.equal(typeof task.pid, 'number');
@@ -209,8 +208,8 @@ describe('provider session reliability CLI contract', () => {
   it('records ask timeout in the run ledger without invoking live providers', async () => {
     const workspace = await makeWorkspaceWithPrompt();
     const binDir = await makeFakeProviderBin(
-      'gemini',
-      makeFakeGeminiBody(
+      'agy',
+      makeFakeAgyBody(
         [
           "process.stdout.write('ask partial output before timeout\\n');",
           "setTimeout(() => { process.stdout.write('ask late output\\n'); process.exit(0); }, 3000);",
@@ -222,7 +221,7 @@ describe('provider session reliability CLI contract', () => {
       [
         'ask',
         '--providers',
-        'gemini',
+        'antigravity',
         '--task',
         'demo',
         '--yes',
@@ -259,8 +258,8 @@ describe('provider session reliability CLI contract', () => {
     const home = await makeHome();
     const workspace = await makeWorkspaceWithPrompt();
     const binDir = await makeFakeProviderBin(
-      'gemini',
-      makeFakeGeminiBody(
+      'agy',
+      makeFakeAgyBody(
         [
           "process.stdout.write('provider started\\n');",
           "process.on('SIGTERM', () => setTimeout(() => process.exit(0), 50));",
@@ -276,7 +275,6 @@ describe('provider session reliability CLI contract', () => {
       HOME: home,
       USERPROFILE: home,
       NO_COLOR: '1',
-      GEMINI_API_KEY: 'test-key',
       PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
     };
 
@@ -287,7 +285,7 @@ describe('provider session reliability CLI contract', () => {
         tsxRegister,
         cliPath,
         'run',
-        'gemini',
+        'antigravity',
         'review',
         '--input',
         'demo',

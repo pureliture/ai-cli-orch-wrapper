@@ -18,15 +18,15 @@ registerFixture({
   knownNodeGap: false,
   async fn(runner) {
     // Create a mock provider that writes 3 chunks with 100ms delay between each
-    const mockGemini = runner.providerPath('gemini');
+    const mockAgy = runner.providerPath('agy');
     await createMockProvider({
-      path: mockGemini,
+      path: mockAgy,
       chunkCount: 3,
       chunkDelayMs: 100,
       exitCode: 0,
     });
 
-    const result = await runner.run(['run', 'gemini', 'review', '--input', 'test input']);
+    const result = await runner.run(['run', 'antigravity', 'review', '--input', 'test input']);
 
     // At least 2 distinct chunks must have arrived while the process was running
     // (i.e., not all at once after process exit)

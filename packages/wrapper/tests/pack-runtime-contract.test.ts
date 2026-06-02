@@ -158,7 +158,7 @@ describe('pack template runtime contract', () => {
       await setupPack();
 
       await stat(join(workspace, '.claude', 'commands', 'aco.md'));
-      await stat(join(workspace, '.claude', 'aco', 'prompts', 'gemini', 'review.md'));
+      await stat(join(workspace, '.claude', 'aco', 'prompts', 'antigravity', 'review.md'));
       await stat(join(workspace, '.claude', 'aco', 'prompts', 'codex', 'review.md'));
       await stat(join(workspace, '.claude', 'aco', 'tasks', 'spec-critique.md'));
       await stat(join(workspace, '.claude', 'aco', 'tasks', 'plan-critique.md'));
@@ -249,16 +249,6 @@ describe('pack template runtime contract', () => {
     await withWorkspace(async (workspace) => {
       process.env.PATH = `${binDir}${delimiter}${process.env.PATH ?? ''}`;
       await setupPack();
-      const geminiReview = await resolveRunPromptTemplate({
-        cwd: workspace,
-        home: workspace,
-        providerKey: 'gemini',
-        command: 'review',
-      });
-      assert.equal(
-        geminiReview.promptTemplatePath,
-        join(workspace, '.claude', 'aco', 'prompts', 'gemini', 'review.md')
-      );
 
       const codexReview = await resolveRunPromptTemplate({
         cwd: workspace,
@@ -284,10 +274,22 @@ describe('pack template runtime contract', () => {
         join(workspace, '.claude', 'aco', 'prompts', 'codex', 'review.md')
       );
 
+      // antigravity:review는 pack setup 후 .claude/aco/prompts/antigravity/review.md에서 해소된다.
+      const antigravityReview = await resolveRunPromptTemplate({
+        cwd: workspace,
+        home: workspace,
+        providerKey: 'antigravity',
+        command: 'review',
+      });
+      assert.equal(
+        antigravityReview.promptTemplatePath,
+        join(workspace, '.claude', 'aco', 'prompts', 'antigravity', 'review.md')
+      );
+
       const unknown = await resolveRunPromptTemplate({
         cwd: workspace,
         home: workspace,
-        providerKey: 'gemini',
+        providerKey: 'codex',
         command: 'unknown-command',
       });
       assert.equal(unknown.promptTemplatePath, undefined);
@@ -300,10 +302,10 @@ describe('pack template runtime contract', () => {
       resolveRunPromptTemplate({
         cwd: await mkdtemp(join(tmpdir(), 'aco-missing-review-cwd-')),
         home: await mkdtemp(join(tmpdir(), 'aco-missing-review-home-')),
-        providerKey: 'gemini',
+        providerKey: 'antigravity',
         command: 'review',
       }),
-      /Missing prompt template.*gemini.*review/
+      /Missing prompt template.*antigravity.*review/
     );
   });
 
@@ -312,7 +314,7 @@ describe('pack template runtime contract', () => {
       resolveRunPromptTemplate({
         cwd: await mkdtemp(join(tmpdir(), 'aco-invalid-command-cwd-')),
         home: await mkdtemp(join(tmpdir(), 'aco-invalid-command-home-')),
-        providerKey: 'gemini',
+        providerKey: 'antigravity',
         command: '../review',
       }),
       /Invalid command name/
@@ -322,7 +324,7 @@ describe('pack template runtime contract', () => {
       resolveRunPromptTemplate({
         cwd: await mkdtemp(join(tmpdir(), 'aco-invalid-provider-cwd-')),
         home: await mkdtemp(join(tmpdir(), 'aco-invalid-provider-home-')),
-        providerKey: '../gemini',
+        providerKey: '../antigravity',
         command: 'review',
       }),
       /Invalid provider key/

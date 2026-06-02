@@ -57,7 +57,7 @@
       "known_node_gap": false,
       "expected_against_node": "PASS",
       "actual": "PASS",
-      "notes": "Smoke tested: exit 1 confirmed; stderr contains 'gemini' satisfying the install-hint assertion (assertions.ts checks for 'npm install' OR 'gemini' in stderr); no session directory created. README notes 'Partial' gap but assertions.ts sets knownNodeGap: false."
+      "notes": "Smoke tested: exit 1 confirmed; stderr contains 'gemini' (genuinely-unknown provider after antigravity migration) satisfying the install-hint assertion (assertions.ts checks for 'npm install' OR 'gemini' in stderr); no session directory created. README notes 'Partial' gap but assertions.ts sets knownNodeGap: false."
     },
     {
       "id": "08",
@@ -118,11 +118,11 @@
     },
     {
       "name": "provider-not-found-registered",
-      "command": "node packages/wrapper/dist/cli.js run gemini review --input test (PATH=/usr/bin:/bin, no gemini binary)",
+      "command": "node packages/wrapper/dist/cli.js run antigravity review --input test (PATH=/usr/bin:/bin, no agy binary)",
       "result": "PASS",
-      "output": "Error: gemini CLI not found in PATH",
+      "output": "Error: agy CLI not found in PATH",
       "exit_code": 1,
-      "notes": "Known provider (gemini) with binary absent from PATH exits 1 with error in stderr"
+      "notes": "Known provider (antigravity) with binary absent from PATH exits 1 with error in stderr"
     },
     {
       "name": "provider-not-found-unknown",
