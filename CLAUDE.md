@@ -59,7 +59,7 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 - Source order starts with root `CLAUDE.md`, then optional `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, and hooks.
 - Codex project instructions live in root `AGENTS.md`.
 - Shared skills live in `.agents/skills/<skill>/`, but only explicitly allowed ACO-owned skills are synced. `.agents/skills/` is not a mirror of `.claude/skills/`.
-- Do not hand-maintain `.codex/skills/` copies unless the runtime requirement is proven.
+- Do not hand-maintain `.codex/skills/` copies unless the runtime requirement is proven. Exception: `.codex/skills/aco/` is an approved Codex-native first-class `$aco` entrypoint (not a sync-generated shared copy).
 - Use `aco sync --check` to detect stale generated targets and `aco sync --force` only when overwriting managed drift is intentional.
 - Use `aco sync --check --strict` to fail on duplicate provider-surface warnings in CI.
 

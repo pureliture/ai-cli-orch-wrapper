@@ -248,8 +248,16 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
         await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
       );
 
-      assert.equal('GEMINI.md' in manifest.targets, false, 'GEMINI.md must not be in manifest targets');
-      assert.equal('GEMINI.md' in manifest.targetHashes, false, 'GEMINI.md must not be in manifest targetHashes');
+      assert.equal(
+        'GEMINI.md' in manifest.targets,
+        false,
+        'GEMINI.md must not be in manifest targets'
+      );
+      assert.equal(
+        'GEMINI.md' in manifest.targetHashes,
+        false,
+        'GEMINI.md must not be in manifest targetHashes'
+      );
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -270,9 +278,43 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
         await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
       );
 
-      assert.equal('AGENTS.md' in manifest.targets, false, 'AGENTS.md must NOT be in manifest targets');
+      assert.equal(
+        'AGENTS.md' in manifest.targets,
+        false,
+        'AGENTS.md must NOT be in manifest targets'
+      );
       const codexAgentKey = join('.codex', 'agents', 'helper.toml');
-      assert.ok(codexAgentKey in manifest.targets, '.codex/agents/helper.toml must be in manifest targets');
+      assert.ok(
+        codexAgentKey in manifest.targets,
+        '.codex/agents/helper.toml must be in manifest targets'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('sync --check tolerates a stale aco-owned AGENTS.md entry in a legacy manifest', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-stale-agents-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
+      await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.claude', 'agents', 'helper.md'),
+        '---\nid: helper\nwhen: Help with tasks\n---\nYou are a helper.'
+      );
+
+      // Establish a clean, up-to-date manifest
+      await runSync(tmpDir, { dryRun: false });
+      const manifestPath = join(tmpDir, '.aco', 'sync-manifest.json');
+      const manifest = JSON.parse(await readFile(manifestPath, 'utf-8'));
+
+      // Simulate a manifest written by an older aco version that still lists AGENTS.md
+      manifest.targets['AGENTS.md'] = { hash: 'stale-agents', owner: 'aco', kind: 'config' };
+      manifest.targetHashes['AGENTS.md'] = 'stale-agents';
+      await writeFile(manifestPath, JSON.stringify(manifest));
+
+      // The stale AGENTS.md entry must NOT be treated as drift (no false CI failure)
+      await assert.doesNotReject(async () => runSync(tmpDir, { check: true }));
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -285,7 +327,8 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
 
       // Create legacy GEMINI.md on disk
       const geminiMdPath = join(tmpDir, 'GEMINI.md');
-      const geminiContent = '<!-- BEGIN ACO GENERATED -->\nold content\n<!-- END ACO GENERATED -->\n';
+      const geminiContent =
+        '<!-- BEGIN ACO GENERATED -->\nold content\n<!-- END ACO GENERATED -->\n';
       await writeFile(geminiMdPath, geminiContent);
 
       // Create legacy .gemini/agents/helper.md on disk
@@ -327,14 +370,21 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
 
       // .gemini/agents/helper.md removal should be in outputs
       const geminiAgentRemoved = result.outputs.some(
-        (o) => o.targetPath.includes('.gemini') && o.targetPath.includes('agents') && o.action === 'removed'
+        (o) =>
+          o.targetPath.includes('.gemini') &&
+          o.targetPath.includes('agents') &&
+          o.action === 'removed'
       );
       assert.ok(geminiAgentRemoved, 'aco-owned .gemini/agents/* from v4 manifest must be removed');
 
       // The legacy files must actually be gone from disk (not just planned)
       const { existsSync } = await import('node:fs');
       assert.equal(existsSync(geminiMdPath), false, 'GEMINI.md must be deleted from disk');
-      assert.equal(existsSync(geminiAgentPath), false, '.gemini/agents/helper.md must be deleted from disk');
+      assert.equal(
+        existsSync(geminiAgentPath),
+        false,
+        '.gemini/agents/helper.md must be deleted from disk'
+      );
 
       // The regenerated v5 manifest must not list the legacy Gemini targets
       const updatedManifest = JSON.parse(
@@ -1217,7 +1267,10 @@ describe('Skill Sync', () => {
       const warnings = await detectDuplicates(tmpDir, outputs);
       // openspec-test and openspec-test-change both canonicalize to 'openspec-test' under provider:codex
       const dupWarnings = warnings.filter((w) => w.message.includes('openspec-test'));
-      assert.ok(dupWarnings.length > 0, 'Should detect openspec cross-name duplicate in .codex/skills/');
+      assert.ok(
+        dupWarnings.length > 0,
+        'Should detect openspec cross-name duplicate in .codex/skills/'
+      );
 
       const dup = dupWarnings[0];
       assert.ok(
@@ -1350,7 +1403,10 @@ describe('Skill Sync', () => {
       // openspec-apply and openspec-apply-change both canonicalize to openspec-apply under 'codex'
       const targetDir = join(tmpDir, '.codex', 'skills', 'openspec-apply');
       await mkdir(targetDir, { recursive: true });
-      await writeFile(join(targetDir, 'SKILL.md'), '---\nname: openspec-apply\n---\n\n# OpenSpec Apply');
+      await writeFile(
+        join(targetDir, 'SKILL.md'),
+        '---\nname: openspec-apply\n---\n\n# OpenSpec Apply'
+      );
 
       await mkdir(join(tmpDir, '.codex', 'skills', 'openspec-apply-change'), { recursive: true });
       await writeFile(
@@ -1459,10 +1515,7 @@ describe('Skill Sync', () => {
       // The duplicate detection ran; the .agents/skills/openspec-apply (planned) should be cleaned
       // Since the source was included in sync.yaml, it appeared as a planned output
       // and was simultaneously on-disk → cleanDuplicates cleans planned ones
-      assert.ok(
-        typeof result.outputs === 'object',
-        'runSync should complete without throwing'
-      );
+      assert.ok(typeof result.outputs === 'object', 'runSync should complete without throwing');
 
       const manifest = JSON.parse(
         await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
@@ -1548,7 +1601,8 @@ describe('Skill Sync', () => {
       await runSync(tmpDir, { dryRun: false });
 
       // Step 2: add GEMINI.md to disk and inject it into the manifest as v4 legacy entry
-      const geminiContent = '<!-- BEGIN ACO GENERATED -->\nold gemini content\n<!-- END ACO GENERATED -->\n';
+      const geminiContent =
+        '<!-- BEGIN ACO GENERATED -->\nold gemini content\n<!-- END ACO GENERATED -->\n';
       await writeFile(join(tmpDir, 'GEMINI.md'), geminiContent);
 
       const geminiHash = computeHash(geminiContent);
@@ -1587,7 +1641,8 @@ describe('Skill Sync', () => {
       await runSync(tmpDir, { dryRun: false });
 
       // Inject v4 legacy GEMINI.md entry and create file on disk
-      const geminiContent = '<!-- BEGIN ACO GENERATED -->\nold gemini content\n<!-- END ACO GENERATED -->\n';
+      const geminiContent =
+        '<!-- BEGIN ACO GENERATED -->\nold gemini content\n<!-- END ACO GENERATED -->\n';
       await writeFile(join(tmpDir, 'GEMINI.md'), geminiContent);
       const geminiHash = computeHash(geminiContent);
       const { readFile: rf } = await import('node:fs/promises');
@@ -2067,16 +2122,17 @@ describe('Skill Sync', () => {
       const codexHooksContent = '[{"event":"PostToolUse","command":"bash scripts/hook.sh"}]\n';
       const codexConfigContent =
         'model = "gpt-5.5"\n\n# BEGIN ACO GENERATED\n[features]\ncodex_hooks = true\n# END ACO GENERATED\n';
-      const geminiSettingsContent = JSON.stringify(
-        {
-          theme: 'dark',
-          hooks: {
-            PostToolUse: [{ command: 'bash scripts/hook.sh' }],
+      const geminiSettingsContent =
+        JSON.stringify(
+          {
+            theme: 'dark',
+            hooks: {
+              PostToolUse: [{ command: 'bash scripts/hook.sh' }],
+            },
           },
-        },
-        null,
-        2
-      ) + '\n';
+          null,
+          2
+        ) + '\n';
 
       await writeFile(codexHooksPath, codexHooksContent);
       await writeFile(codexConfigPath, codexConfigContent);

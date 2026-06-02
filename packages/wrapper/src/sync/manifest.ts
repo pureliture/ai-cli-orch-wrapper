@@ -15,6 +15,17 @@ export function isLegacyGeminiTarget(manifestKey: string): boolean {
   return manifestKey === 'GEMINI.md' || manifestKey.startsWith('.gemini/agents/');
 }
 
+/**
+ * Guideline/instruction markdown that the sync engine no longer emits. A manifest
+ * written by an older aco version may still list `AGENTS.md` as an aco-owned target;
+ * `calculateDrift` tolerates such a stale entry so `aco sync --check` does not
+ * false-positive on the first run after upgrade (the next write-sync drops the key
+ * naturally). GEMINI.md is handled separately by the v5 migration + on-disk cleanup.
+ */
+export function isRetiredGuidanceTarget(manifestKey: string): boolean {
+  return manifestKey === 'AGENTS.md';
+}
+
 export async function readManifest(rootPath: string): Promise<SyncManifest | null> {
   try {
     const path = join(rootPath, MANIFEST_DIR, MANIFEST_FILE);
@@ -75,8 +86,14 @@ export function calculateDrift(current: SyncManifest | null, updated: SyncManife
     if (currentRecord.kind !== record.kind) return true;
   }
 
-  // Check for removed targets
-  if (Object.keys(current.targets).length !== Object.keys(updated.targets).length) {
+  // Check for removed targets. Ignore aco-owned retired guidance targets (e.g.
+  // AGENTS.md) that a legacy manifest still lists but the engine no longer emits —
+  // otherwise an unrefreshed manifest would false-positive after upgrade.
+  const staleRetired = Object.keys(current.targets).filter(
+    (k) =>
+      isRetiredGuidanceTarget(k) && current.targets[k]?.owner === 'aco' && !(k in updated.targets)
+  ).length;
+  if (Object.keys(current.targets).length - staleRetired !== Object.keys(updated.targets).length) {
     return true;
   }
 

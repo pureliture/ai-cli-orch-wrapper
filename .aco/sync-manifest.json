@@ -1,8 +1,8 @@
 {
   "version": "5",
-  "generatedAt": "2026-06-02T18:25:05.520Z",
+  "generatedAt": "2026-06-02T18:40:36.753Z",
   "sourceHashes": {
-    "CLAUDE.md": "ea2a193696eb33be2baa0035d290ca4cf70c2093518f3e21222fbc2e56f0ff42",
+    "CLAUDE.md": "27dd2047f9fd75ef9d03dc32955c65da306a685c79d9953fc51607e43d0fe507",
     ".claude/skills/aco-delegation/SKILL.md": "25e6e8f42f60183232d51e5eb9945148cf1d68fd5b29c59c8289e12f2c095f39",
     ".claude/skills/gh-issue/SKILL.md": "16eab5668a5520c3cf20864dd635b85a418e957f90c803f75cde1ee3006261ca",
     ".claude/skills/gh-pr/SKILL.md": "cff001a7c0735dcb6572ed12e3b5738878fbb3279418064c07f6165e56544e3f",

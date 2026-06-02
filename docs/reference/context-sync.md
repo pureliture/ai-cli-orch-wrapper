@@ -48,7 +48,7 @@ Do not add `/aco:review`, `/aco:spec-review`, `/aco:plan-review`, or similar tas
 | 비대화형 prompt           | `codex exec [PROMPT]`                            | `agy --prompt <prompt>`           |
 | Reasoning effort CLI flag | **지원 안 함**                                   | **지원 안 함**                    |
 
-Codex는 `.agents/skills/<skill>/`을 공유 skill 디렉터리로 사용한다. `.codex/skills`를 직접 사용하지 않는다. 이 경로는 공유 표면이 아니다.
+Codex는 공유 skill을 `.agents/skills/<skill>/`에서 읽는다. `.codex/skills/`는 `aco sync`가 관리하는 공유 표면이 아니다. 단, `.codex/skills/aco/`처럼 hand-maintained Codex-local 일급 진입점(`$aco`)은 존재한다.
 
 > **AGENTS.md 주의**: 위 표의 `AGENTS.md`는 Codex CLI 런타임이 읽는 경로를 나타낼 뿐이다. `AGENTS.md`는 `aco sync`가 생성하거나 관리하지 않는다. 사람이 직접 유지보수하는 peer 문서이다.
 >
