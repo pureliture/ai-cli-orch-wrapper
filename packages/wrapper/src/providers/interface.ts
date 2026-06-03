@@ -53,6 +53,12 @@ export interface InvokeOptions {
 export interface IProvider {
   readonly key: string;
   readonly installHint: string;
+  /**
+   * Dashboard glyph shown in front of this provider's rollup row.
+   * A colored-circle emoji (e.g. 🔵/🟢/⚪); the dashboard falls back to an
+   * ASCII label (`[AG]`/`[CX]`/`[MC]`) when unicode is disabled.
+   */
+  readonly icon: string;
 
   isAvailable(): boolean;
   checkAuth(): Promise<AuthResult>;

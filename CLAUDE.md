@@ -68,7 +68,7 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 
 Claude Code 세션은 `/aco`로 외부 AI provider에 advisory 작업을 위임한다. consent-gated 흐름이라 `aco ask --dry-run`으로 계획을 본 뒤 명시 동의(`--yes`) 시에만 provider를 실행한다. peers = `antigravity`/`mock`.
 
-- **`/aco`**: 단일 generic delegation command. task는 자연어 text, CLI flag, preset으로 전달하며 task-specific subcommand를 만들지 않는다.
+- **`/aco`**: 단일 generic delegation command. 사용자는 자연어로 task를 전달하고(필요 시 provider를 자연어로 명시), command 본문이 이를 `aco ask`로 위임한다. `/aco status`·`/aco result` 같은 task-specific subcommand를 만들지 않는다 — 세션 운영(`aco status`/`result`/`cancel`)은 하부 CLI plumbing이다.
 - **`aco delegate <agent-id>`**: `.claude/agents/<agent-id>.md` spec 기반 로컬 prompt 빌더(외부 호출 없음).
 - `/aco` command file: `.claude/commands/aco.md`. 위임 정책 정본: `.claude/skills/aco-delegation/SKILL.md`.
 - Codex 세션의 동등 진입점(`$aco` / `aco delegate`)은 `AGENTS.md`와 `.codex/skills/aco/`가 소유한다(hand-maintained).

@@ -199,6 +199,33 @@ describe('aco ask CLI', () => {
     await stat(join(runDir, 'brief.md'));
   });
 
+  it('suppresses dashboard to stderr in non-TTY (pipe) and outputs brief to stdout (U8 5.1)', async () => {
+    // execFile 환경은 stdout/stderr가 파이프(비-TTY)이므로 대시보드는 비활성화된다.
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'review this demo input',
+      '--input',
+      'demo',
+      '--yes',
+      '--output-mode',
+      'brief',
+    ]);
+
+    assert.equal(result.code, 0);
+    // 5.1: 비-TTY 환경에서 대시보드 프레임은 stderr에 출력되지 않는다.
+    assert.doesNotMatch(
+      result.stderr,
+      /aco Runtime Session/,
+      'dashboard must be suppressed in non-TTY'
+    );
+    // stdout brief는 손상 없이 출력된다.
+    assert.doesNotMatch(result.stdout, /aco Runtime Session/);
+    assert.match(result.stdout, /Run:/);
+  });
+
   it('preserves raw inline input including leading spaces and trailing newline', async () => {
     const rawInput = '  leading spaces stay\ntrailing newline stays\n';
 
@@ -763,6 +790,7 @@ describe('aco ask CLI', () => {
     const provider: IProvider = {
       key: 'slow-test',
       installHint: 'test provider',
+      icon: '⚪',
       isAvailable: () => true,
       checkAuth: async () => ({
         ok: true,

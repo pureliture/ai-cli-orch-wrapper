@@ -17,6 +17,10 @@ const genericFallback = "code review assistant delegated from Claude Code"
 // antigravity provider requires antigravity-* keys.
 func TestLoad_AntigravityEmbeddedKeys(t *testing.T) {
 	tmp := t.TempDir() // empty cwd: no local override, forces embedded lookup
+	// HOME를 격리해 ~/.claude/aco/prompts/ 에 설치된 파일이 임베디드 기본값을 오버라이드하는
+	// 환경 의존 문제를 방지한다. t.Setenv는 테스트 종료 시 자동 복원된다.
+	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	cases := []struct {
 		command     string
@@ -47,6 +51,8 @@ func TestLoad_AntigravityEmbeddedKeys(t *testing.T) {
 // exist: the gemini provider now falls through to the generic fallback.
 func TestLoad_GeminiKeysRemoved(t *testing.T) {
 	tmp := t.TempDir()
+	t.Setenv("HOME", tmp)
+	t.Setenv("USERPROFILE", tmp)
 
 	for _, command := range []string{"review", "adversarial", "rescue"} {
 		t.Run(command, func(t *testing.T) {

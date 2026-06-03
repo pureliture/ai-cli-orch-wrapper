@@ -18,13 +18,13 @@ deterministic **mock** provider를 사용한다.
 
 ## Goal 2 Consent-Gated Delegation Layer
 
-`aco ask`는 Claude Code를 위한 high-level orchestration layer다. 기존 `aco run <provider> <command>`는 low-level provider primitive로 유지한다. 두 명령 모두 provider invocation, session output capture, PID recording은 shared provider-session runner를 사용해 provider 실행 계약이 갈라지지 않도록 한다.
+사용자 진입점은 `/aco <자연어 작업>`(Claude Code) 또는 `$aco <자연어 작업>`(Codex) 스킬이다. 스킬이 내부적으로 `aco ask`(high-level orchestration)와 `aco run <provider> <command>`(low-level provider primitive)를 호출한다. 두 내부 명령 모두 provider invocation, session output capture, PID recording은 shared provider-session runner를 사용해 provider 실행 계약이 갈라지지 않도록 한다.
 
 ```text
-Claude Code /aco command
-  -> aco ask --dry-run
+사용자: /aco <자연어 작업>  (또는 Codex: $aco <자연어 작업>)
+  -> [스킬 내부] aco ask --dry-run
   -> user reviews plan
-  -> aco ask --yes
+  -> [스킬 내부] aco ask --yes
   -> provider advisory output
   -> bounded brief on stdout
   -> full output in ~/.aco/sessions/<session-id>/output.log
@@ -49,7 +49,7 @@ Language reference: [Ubiquitous Language](reference/ubiquitous-language.md).
   <img src="images/architecture-overview.svg" alt="System Architecture" width="100%" />
 </p>
 
-> 사람의 진입점인 Claude Code Harness에서 출발해, Node wrapper(`aco` CLI)는 command pack
+> 사용자 진입점은 `/aco`(Claude Code) 또는 `$aco`(Codex) 스킬이다. 스킬에서 출발해, Node wrapper(`aco` CLI)는 내부적으로 command pack
 > 설치·sync·consent-gated delegation(`aco ask`)·low-level provider 실행(`aco run`)과
 > run/session artifact lifecycle을 담당한다. Go delegate runtime(`cmd/aco`)은 blocking provider
 > 실행 실험을 담당한다. provider 출력은 advisory이며, 최종 판단은 Claude Code와 maintainer가
@@ -64,7 +64,7 @@ npm package: @pureliture/ai-cli-orch-wrapper
 CLI: aco
 ```
 
-`aco`는 런타임 명령과 설정 명령을 모두 담당한다:
+`aco` CLI는 런타임 명령과 설정 명령을 모두 담당한다. 아래는 maintainer/디버그 맥락의 내부 plumbing 표면이며, 사용자 1차 진입점은 `/aco <자연어>`(Claude Code)·`$aco <자연어>`(Codex) 스킬이다:
 
 ```text
 aco run ...
@@ -76,8 +76,8 @@ aco provider setup <name>
 ```
 
 Node.js 래퍼는 `mock`, `antigravity`, `codex` provider 흐름을 지원한다. `aco ask`는 기본적으로
-`mock`, `restricted`, `brief`를 사용하고, provider 실행에는 `--yes`가 필요하다. 세션 명령도
-담당한다:
+`mock`, `restricted`, `brief`를 사용하고, provider 실행에는 `--yes`가 필요하다. 세션 운영 명령도
+담당한다(maintainer/디버그용):
 
 ```text
 aco result [--session <id>]
@@ -115,9 +115,9 @@ Node 래퍼 세션은 `packages/wrapper`의 `aco ask`와 `aco run <provider> <co
   <img src="images/session-lifecycle.svg" alt="Session Lifecycle" width="100%" />
 </p>
 
-`aco ask`의 기본 흐름은 `--dry-run`으로 실행 계획을 보여주고, `--yes`가 있을 때만 provider를
+`/aco` 스킬이 내부적으로 실행하는 `aco ask`의 기본 흐름은 `--dry-run`으로 실행 계획을 보여주고, `--yes`가 있을 때만 provider를
 호출한다. 기본 `brief` output은 Claude Code에 bounded summary만 반환하고, full output은
-`output.log`에 저장해 `aco result`로 조회한다. `aco status`/`aco result`/`aco cancel`은 기존
+`output.log`에 저장해 `aco result`로 조회한다(maintainer/디버그용). `aco status`/`aco result`/`aco cancel`은 기존
 session 단위 조작을 유지한다.
 
 ## Context 동기화

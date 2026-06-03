@@ -11,10 +11,11 @@ Claude Code에는 bounded brief만 반환해 토큰 사용량을 줄이는 gener
 wrapper다. Claude Code는 supervisor이자 final synthesizer로 남고, 외부 provider 출력은
 advisory로 취급한다.
 
-현재 구현된 표면은 Node wrapper CLI의 pack/provider setup, `aco sync`, high-level `aco ask`,
-low-level `aco run`, `aco status`, `aco result`, `aco cancel`과 Go delegate runtime의 blocking
-provider 실행 실험으로 나뉜다. MVP에서 `aco ask`는 기본 provider를 no-auth `mock`으로 두며,
-real Codex/Antigravity provider는 `--providers codex,antigravity`처럼 명시했을 때만 실행한다.
+현재 구현된 표면은 Node wrapper CLI의 pack/provider setup, `aco sync`와 Go delegate runtime의
+blocking provider 실행 실험으로 나뉜다. 사용자 진입점은 Claude Code의 `/aco <자연어 작업>`,
+Codex의 `$aco <자연어 작업>`이며, 내부적으로 `aco ask`/`aco run` 등 하부 CLI plumbing이 실행된다.
+MVP에서 기본 provider는 no-auth `mock`이며, real Codex/Antigravity provider는 자연어로 명시했을
+때 선택된다.
 
 현재 문서는 프로젝트의 재포지셔닝과 개선 계획도 함께 담고 있다. 현재 Goal 2 hardening의
 구현 기준과 검증 증거는 [plans/consent-gated-delegation-hardening/](plans/consent-gated-delegation-hardening/)에
@@ -54,23 +55,24 @@ node packages/wrapper/dist/cli.js sync --check
 ```bash
 aco pack status
 aco sync --check
-aco ask --providers mock --task "review this demo input" --input "demo" --dry-run
-aco ask --providers mock --task "review this demo input" --input "demo" --yes --output-mode brief
-aco result
 aco doctor
-aco run antigravity review
-aco status
-aco result
 ```
 
-`aco run`은 출력 정책을 `stream-only`로 두어 기본 동작에서 대형 출력의 메모리 보존을 억제한다. `aco ask`는
-`brief` 모드에서 `bounded` 정책으로 출력 미리보기 크기를 제한한다.
+위임 작업은 Claude Code에서 `/aco <자연어 작업>`, Codex에서 `$aco <자연어 작업>`으로 실행한다.
+예시: `/aco antigravity로 이 PR을 리뷰해줘`. `/aco`는 실행 계획(dry-run)을 먼저 제시하고
+동의 시 실행한다.
 
-`aco ask`는 provider 실행 전 `--dry-run`으로 실행 계획을 확인할 수 있고, 실제 외부 provider
-실행에는 `--yes`가 필요하다. 기본 permission profile은 `restricted`, 기본 output mode는
-`brief`다. full provider output은 Claude Code stdout으로 바로 흘리지 않고
-`~/.aco/sessions/<session-id>/output.log`에 저장하며, run-level 요약은
+<details>
+<summary>내부/maintainer/디버그용 CLI plumbing</summary>
+
+`aco ask`는 위임 스킬이 내부적으로 호출하는 하부 명령이다. `aco run`은 출력 정책을
+`stream-only`로 두어 대형 출력의 메모리 보존을 억제한다. `aco ask`는 `brief` 모드에서
+`bounded` 정책으로 출력 미리보기 크기를 제한한다. provider 실행 전 `--dry-run`으로 계획을
+확인하고, 실제 실행에는 `--yes`가 필요하다. full provider output은 Claude Code stdout으로
+바로 흘리지 않고 `~/.aco/sessions/<session-id>/output.log`에 저장하며, run-level 요약은
 `~/.aco/runs/<run-id>/brief.md`와 `ledger.json`에 저장한다.
+
+</details>
 
 ## 독자별 탐색 경로
 
