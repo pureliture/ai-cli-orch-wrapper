@@ -33,8 +33,19 @@ async function main(): Promise<void> {
 
   const copied: string[] = [];
   const missing: string[] = [];
+  const invalid: string[] = [];
+
+  // Skill names become path segments under both `.claude/skills/` and
+  // `templates/skills/`. Even though `.aco/sync.yaml` is maintainer-controlled,
+  // validate each entry as a single safe segment so a stray `../` or absolute
+  // path can never let the generator read or write outside those roots.
+  const SAFE_SKILL_NAME = /^[a-z0-9][a-z0-9._-]*$/;
 
   for (const name of include) {
+    if (!SAFE_SKILL_NAME.test(name) || name.includes('..')) {
+      invalid.push(name);
+      continue;
+    }
     const src = path.join(skillsSrcRoot, name);
     if (!existsSync(src)) {
       missing.push(name);
@@ -44,6 +55,13 @@ async function main(): Promise<void> {
     await mkdir(path.dirname(dest), { recursive: true });
     await cp(src, dest, { recursive: true });
     copied.push(name);
+  }
+
+  if (invalid.length > 0) {
+    console.error(
+      `build-skill-templates: refusing unsafe skill name(s) in .aco/sync.yaml include: ${invalid.join(', ')}`
+    );
+    process.exitCode = 1;
   }
 
   console.log(

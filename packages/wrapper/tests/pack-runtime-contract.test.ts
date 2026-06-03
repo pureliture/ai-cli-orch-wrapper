@@ -592,6 +592,7 @@ describe('pack template runtime contract', () => {
   it('installs skills only under --global into the user-level skills dir', async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-skill-global-'));
     const home = await mkdtemp(join(tmpdir(), 'aco-pack-skill-global-home-'));
+    const profile = await mkdtemp(join(tmpdir(), 'aco-pack-skill-global-profile-'));
     const binDir = await makeFakeAcoBinary('aco-test-local');
     try {
       const result = await runCli(
@@ -600,7 +601,7 @@ describe('pack template runtime contract', () => {
           cwd: workspace,
           env: {
             HOME: home,
-            USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-skill-global-profile-')),
+            USERPROFILE: profile,
             PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
           },
         }
@@ -621,19 +622,22 @@ describe('pack template runtime contract', () => {
     } finally {
       await rm(workspace, { recursive: true, force: true });
       await rm(home, { recursive: true, force: true });
+      await rm(profile, { recursive: true, force: true });
       await rm(binDir, { recursive: true, force: true });
     }
   });
 
   it('does not write skills into the sync source on non-global install', async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-skill-local-'));
+    const home = await mkdtemp(join(tmpdir(), 'aco-pack-skill-local-home-'));
+    const profile = await mkdtemp(join(tmpdir(), 'aco-pack-skill-local-profile-'));
     const binDir = await makeFakeAcoBinary('aco-test-local');
     try {
       const result = await runCli(['pack', 'install', '--binary-name', 'aco-test-local'], {
         cwd: workspace,
         env: {
-          HOME: await mkdtemp(join(tmpdir(), 'aco-pack-skill-local-home-')),
-          USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-skill-local-profile-')),
+          HOME: home,
+          USERPROFILE: profile,
           PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
         },
       });
@@ -643,12 +647,16 @@ describe('pack template runtime contract', () => {
       assert.equal(existsSync(join(workspace, '.claude', 'skills')), false);
     } finally {
       await rm(workspace, { recursive: true, force: true });
+      await rm(home, { recursive: true, force: true });
+      await rm(profile, { recursive: true, force: true });
       await rm(binDir, { recursive: true, force: true });
     }
   });
 
   it('keeps the sync source skills dir intact across non-global pack setup', async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-skill-sync-'));
+    const home = await mkdtemp(join(tmpdir(), 'aco-pack-skill-sync-home-'));
+    const profile = await mkdtemp(join(tmpdir(), 'aco-pack-skill-sync-profile-'));
     const binDir = await makeFakeAcoBinary('aco-test-local');
     const sentinelBody = '---\nname: local-only\n---\nlocal sentinel\n';
     try {
@@ -660,8 +668,8 @@ describe('pack template runtime contract', () => {
       const result = await runCli(['pack', 'setup', '--binary-name', 'aco-test-local'], {
         cwd: workspace,
         env: {
-          HOME: await mkdtemp(join(tmpdir(), 'aco-pack-skill-sync-home-')),
-          USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-skill-sync-profile-')),
+          HOME: home,
+          USERPROFILE: profile,
           PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
         },
       });
@@ -672,6 +680,8 @@ describe('pack template runtime contract', () => {
       assert.equal(existsSync(join(workspace, '.claude', 'skills', 'aco-delegation')), false);
     } finally {
       await rm(workspace, { recursive: true, force: true });
+      await rm(home, { recursive: true, force: true });
+      await rm(profile, { recursive: true, force: true });
       await rm(binDir, { recursive: true, force: true });
     }
   });
@@ -679,11 +689,12 @@ describe('pack template runtime contract', () => {
   it('removes installed skills on global uninstall via manifest', async () => {
     const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-skill-uninstall-'));
     const home = await mkdtemp(join(tmpdir(), 'aco-pack-skill-uninstall-home-'));
+    const profile = await mkdtemp(join(tmpdir(), 'aco-pack-skill-uninstall-profile-'));
     const binDir = await makeFakeAcoBinary('aco-test-local');
     try {
       const env = {
         HOME: home,
-        USERPROFILE: await mkdtemp(join(tmpdir(), 'aco-pack-skill-uninstall-profile-')),
+        USERPROFILE: profile,
         PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
       };
       const install = await runCli(
@@ -703,6 +714,7 @@ describe('pack template runtime contract', () => {
     } finally {
       await rm(workspace, { recursive: true, force: true });
       await rm(home, { recursive: true, force: true });
+      await rm(profile, { recursive: true, force: true });
       await rm(binDir, { recursive: true, force: true });
     }
   });
