@@ -790,6 +790,120 @@ node packages/wrapper/dist/cli.js sync --check
 
 <br/>
 
+## 📋 각 CLI 가이드라인 파일에 ACO.md 참조 추가하기
+
+`ACO.md`는 이 저장소의 `aco` 사용법을 요약한 레퍼런스 문서입니다.
+각 AI CLI의 가이드라인 파일에 `ACO.md`를 참조해 두면, 해당 CLI가 세션을 시작할 때마다
+`aco` 사용 방법을 자동으로 컨텍스트에 포함할 수 있습니다.
+
+> **참고:** Claude Code의 `@ACO.md` 인라인 import 구문은 Claude Code 고유 기능입니다.
+> **Codex**는 이 구문을 지원하지 않으므로 `AGENTS.md`에 일반 텍스트 *포인터*(파일을 가리키는 지시문)를 둡니다 — 내용이 자동 인라인되지 않고 에이전트가 필요 시 `ACO.md`를 읽습니다.
+> **Antigravity(agy)**는 Rules 파일에서 자체 `@filename` 참조를 지원합니다(공식 docs 기준). 따라서 텍스트 포인터 또는 `@` 참조 둘 다 가능합니다.
+
+---
+
+### Claude Code
+
+Claude Code는 `CLAUDE.md`에서 `@파일명` 구문으로 다른 파일을 인라인 임포트할 수 있습니다.
+
+**경로 안전성 주의사항:** `@ACO.md`는 참조된 파일이 실제로 존재하는 위치에서만 해석됩니다.
+사용자 레벨 `~/.claude/CLAUDE.md`에 `@ACO.md`를 추가하면, `ACO.md`가 없는 프로젝트에서는
+**해석 오류**가 발생할 수 있습니다. 전역 참조 시 두 가지 방법 중 하나를 선택합니다.
+
+**방법 A — 글로벌 설치 (사본 방식):**
+
+```bash
+# ACO.md를 ~/.claude/에 사본으로 복사 (저장소 루트에서 실행)
+cp ACO.md ~/.claude/ACO.md
+
+# ~/.claude/CLAUDE.md에 추가
+echo "" >> ~/.claude/CLAUDE.md
+echo "@ACO.md" >> ~/.claude/CLAUDE.md
+```
+
+**방법 B — 절대경로 사용:**
+
+```
+# ~/.claude/CLAUDE.md 또는 프로젝트 CLAUDE.md
+@/absolute/path/to/repo/ACO.md
+```
+
+**프로젝트 한정 참조 (저장소 내부에서만 사용하는 경우):**
+
+```
+# 저장소 루트 CLAUDE.md — ACO.md가 이 repo에 존재하므로 안전
+@ACO.md
+```
+
+---
+
+### Codex
+
+Codex는 `@`-import를 지원하지 않습니다. 프로젝트 루트의 `AGENTS.md`에 일반 텍스트로
+`ACO.md`를 참조하는 지시문을 추가합니다. `AGENTS.md`는 `aco sync`가 생성하지 않으므로
+직접 편집합니다.
+
+이 참조는 *포인터*입니다 — `AGENTS.md`가 `ACO.md` 내용을 자동으로 인라인하지 않고,
+에이전트가 지시에 따라 `ACO.md`를 읽도록 안내하는 역할입니다. `AGENTS.md`에 아래 줄을 추가합니다:
+
+```markdown
+> aco 사용법은 저장소 루트의 ACO.md를 참고한다. 위임 작업 전 ACO.md를 읽을 것.
+```
+
+사용자 레벨 설정으로 관리하려면 `~/.codex/AGENTS.md`를 사용하는 방법도 있으나,
+이 파일의 지원 여부는 Codex CLI 버전에 따라 다를 수 있으므로 공식 문서를 확인합니다.
+
+---
+
+### Antigravity (agy)
+
+Antigravity는 `~/.gemini/GEMINI.md`를 사용자 레벨 글로벌 룰 파일로 지원합니다.
+이 파일에 `ACO.md` 참조를 추가하면 모든 워크스페이스에 적용됩니다.
+
+```bash
+# ~/.gemini/GEMINI.md에 참조 추가
+cat >> ~/.gemini/GEMINI.md << 'EOF'
+
+## ACO 사용법
+
+aco 사용법은 저장소 루트의 ACO.md를 참고한다.
+EOF
+```
+
+**`@` 참조 사용 (선택):** Antigravity Rules 파일은 `@filename` 참조를 지원합니다. 상대경로는
+Rules 파일 위치 기준, 절대경로(`@/abs/path/ACO.md`)는 그대로 해석되며, 그 외에는 워크스페이스
+기준으로 resolve됩니다. 따라서 텍스트 포인터 대신 `~/.gemini/GEMINI.md`에 `@/절대경로/ACO.md`를
+넣어 내용을 끌어올 수도 있습니다.
+
+> **경로 안전 주의(Claude와 동일):** 전역 `~/.gemini/GEMINI.md`에 단순 상대경로 `@ACO.md`를 쓰면
+> `~/.gemini/ACO.md` → 현재 워크스페이스 순으로 resolve를 시도하므로, `ACO.md`가 없는 다른
+> 프로젝트에서 `agy`를 띄우면 탐색 오류/룰 누락이 납니다. 전역 룰에서는 **절대경로(`@/절대경로/ACO.md`)**
+> 또는 사본을 사용하세요. 단순 텍스트 포인터(파일 참조)는 이 문제에서 자유롭습니다.
+
+> **참고:** 이 저장소는 프로젝트 루트 `GEMINI.md`를 `aco sync` 생성 대상에서 제거했습니다.
+> 이미 워크스페이스 정책용으로 프로젝트 루트 `GEMINI.md`를 유지하고 있는 사용자는
+> 해당 파일에 직접 추가할 수 있으나, 글로벌 적용에는 `~/.gemini/GEMINI.md`를 우선합니다.
+> 워크스페이스 룰 표면으로는 `.agents/rules/`도 사용할 수 있습니다(Rules 전용 디렉터리).
+
+---
+
+### 요약
+
+| CLI | 파일 | 방법 |
+|-----|------|------|
+| Claude Code | `~/.claude/CLAUDE.md` 또는 프로젝트 `CLAUDE.md` | `@ACO.md` 또는 절대경로 (`@`-import는 Claude Code 고유 기능) |
+| Codex | `AGENTS.md` (프로젝트 루트, 직접 유지보수) | 일반 텍스트 참조 |
+| Antigravity (agy) | `~/.gemini/GEMINI.md` (사용자 레벨 글로벌 룰) | 일반 텍스트 참조 |
+
+> 이 설정은 수동 작업입니다. `aco sync`는 사용자 홈 디렉터리의 파일을 자동으로 편집하지 않습니다.
+
+<br/>
+
+<!-- ────────────── SECTION DIVIDER ────────────── -->
+<img src="https://capsule-render.vercel.app/api?type=rect&color=gradient&customColorList=12&height=3" width="100%" />
+
+<br/>
+
 ## 📚 문서
 
 <table>
