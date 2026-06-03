@@ -1,33 +1,100 @@
-Run the generic consent-gated external AI delegation wrapper.
+Receive a natural language task, determine the best provider and scope, present
+an execution plan, and — after explicit consent — invoke `aco ask --yes` to run
+the provider and return a brief summary.
+
+---
+
+## Flow
+
+1. **Read context.** Parse `$ARGUMENTS` and read relevant project files (diff,
+   architecture docs, etc.) to understand what needs to be done.
+2. **Determine provider and task.** If the user names a provider (e.g.
+   "antigravity로 리뷰해줘", "use mock"), use it directly. Otherwise choose the
+   most appropriate available provider based on context.
+3. **Check provider readiness.** If the chosen provider is not authenticated or
+   not installed, stop and print setup guidance (see **Unauthenticated provider**
+   below). Do not fall back silently to another provider.
+4. **Present execution plan.** Run `aco ask --dry-run` and show the proposed
+   provider, task, input scope, and permission profile. Wait for explicit user
+   approval before proceeding.
+5. **Execute on consent.** Only after the user confirms, run:
+
+   ```bash
+   aco ask --providers <provider> --task "<task>" --input "<input>" --yes
+   ```
+
+6. **Return brief.** Synthesize the provider output into a concise summary.
+   Full output is saved as a session artifact; use `aco result --session <id>`
+   to retrieve it later.
+
+---
+
+## Entry
 
 ```bash
 ARGS="${ARGUMENTS:-}"
 if [ -z "$ARGS" ]; then
-  echo 'Usage: /aco "natural language task for external advisory delegation"'
+  echo 'Usage: /aco "natural language task — optionally name a provider, e.g. antigravity로 리뷰해줘"'
   exit 1
 fi
 
 aco ask --task "$ARGS" --dry-run
-
-cat <<'EOF'
-
-Provider execution was not started.
-Review the dry-run plan above. If you want to invoke providers, run an explicit
-aco ask command with --yes, for example:
-
-  aco ask --providers mock --task "<task>" --input "<input>" --yes
-
-Use --output-mode full only when you explicitly want full provider output in
-the Claude Code session. By default, aco ask saves full output as artifacts and
-returns a bounded brief.
-EOF
 ```
 
-Alternatively, for directing a task to a specific named agent spec:
+After the dry-run, Claude presents the plan and waits for approval. On consent,
+Claude calls `aco ask --providers <provider> --task "<task>" --input "<input>" --yes`
+and returns a brief summary to the user.
 
-  aco delegate <agent-id> --input "<task and context>"
+---
 
-This reads the agent spec from `.claude/agents/<agent-id>.md`, combines its
-seed prompt with the supplied input, and prints the result to stdout.
-`aco delegate` does NOT auto-intercept Agent tool calls — it must be invoked
-explicitly.
+## Provider named in prompt
+
+If `$ARGUMENTS` contains an explicit provider name (e.g. "antigravity", "mock"),
+extract it and pass it as `--providers <provider>` to both the dry-run and the
+live call. Do not override a user-specified provider.
+
+---
+
+## Unauthenticated provider
+
+If `aco doctor` or the dry-run output reports that the chosen provider is not
+ready, stop immediately and print:
+
+```
+Provider <name> is not authenticated or not installed.
+Run /antigravity:setup (for Antigravity) or follow the provider setup guide,
+then retry /aco.
+```
+
+Do not silently fall back to another provider. Do not run the live call.
+
+---
+
+## Output mode
+
+Default output mode is `brief`. Full provider output is saved to session
+artifacts automatically. Use `--output-mode full` only when the user
+explicitly requests it.
+
+---
+
+## aco delegate (named-agent prompt builder)
+
+For directing a task to a specific local agent spec — no external call:
+
+```bash
+aco delegate <agent-id> --input "<task and context>"
+```
+
+This reads `.claude/agents/<agent-id>.md`, combines the seed prompt with the
+supplied input, and prints the result to stdout. No provider is invoked.
+
+---
+
+## Constraints
+
+- Never invoke a provider without dry-run review and explicit user consent.
+- Never create task-specific subcommands or slash commands. Use natural language
+  tasks or `.claude/aco/tasks/<preset>.md` presets.
+- Do not send secrets, credentials, or unrelated files to providers.
+- External provider output is advisory. Claude Code is the final synthesizer.

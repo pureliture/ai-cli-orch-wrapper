@@ -8,21 +8,44 @@ description: Codex command-alias skill for Claude /aco parity. Use when invoked 
 Claude `/aco`와 동일한 ACO delegation 흐름을 Codex 세션에서 미러링하는 thin wrapper 스킬이다.
 위임 정책의 전체 내용은 `.claude/skills/aco-delegation/SKILL.md`에 있다. 이 스킬은 정책을 중복하지 않는다.
 
-## 두 가지 흐름
+## 흐름 (model A)
+
+1. **컨텍스트 파악.** 인자를 파싱하고 관련 프로젝트 파일(diff, architecture docs 등)을 읽어 작업 범위를 결정한다.
+2. **provider 및 작업 결정.** 사용자가 provider를 명시하면(예: "antigravity로 리뷰", "use mock") 그대로 사용한다. 명시하지 않으면 컨텍스트를 기반으로 적합한 provider를 선택한다.
+3. **provider 준비 상태 확인.** 선택한 provider가 미인증이거나 미설치 상태이면 즉시 멈추고 setup 안내를 출력한다. 다른 provider로 자동 대체하지 않는다.
+4. **실행 계획 제시.** `aco ask --dry-run`을 실행해 제안 provider, 작업, 입력 범위, permission profile을 사용자에게 보여준다. 명시적 동의를 기다린다.
+5. **동의 후 실행.** 사용자가 확인하면:
+
+   ```bash
+   aco ask --providers <provider> --task "<태스크>" --input "<입력>" --yes
+   ```
+
+6. **brief 반환.** provider 출력을 요약한 brief를 반환한다. 전체 출력은 세션 아티팩트로 저장되며 `aco result --session <id>`로 조회한다.
+
+## provider가 명시된 경우
+
+인자에 provider 이름(예: "antigravity", "mock")이 포함되면 해당 provider를 `--providers <provider>`로 dry-run과 실행 양쪽에 고정한다. 사용자 지정 provider는 재정의하지 않는다.
+
+## 미인증 provider
+
+`aco doctor` 또는 dry-run 출력이 provider 미준비를 보고하면 즉시 멈추고 아래를 출력한다:
+
+```
+Provider <name>이 인증되지 않았거나 설치되지 않았습니다.
+Antigravity는 /antigravity:setup을, 다른 provider는 해당 setup 가이드를 따르고 다시 시도하세요.
+```
+
+다른 provider로 자동 대체하지 않는다. 실행 명령을 내리지 않는다.
+
+## 두 가지 하위 플로우
 
 ### 1. `aco ask` — Consent-Gated 외부 어드바이저리 위임
 
-외부 AI CLI(antigravity, mock)에 리뷰·분석·비교 작업을 위임할 때 사용한다.
-
-**반드시 dry-run 먼저:**
-
 ```bash
+# 반드시 dry-run 먼저
 aco ask --task "<자연어 태스크>" --dry-run
-```
 
-dry-run 출력을 사용자에게 보여주고 명시적 동의를 받은 뒤에만 실행한다:
-
-```bash
+# 동의 후 실행
 aco ask --providers antigravity --task "<태스크>" --input "<텍스트>" --yes
 ```
 
@@ -45,7 +68,7 @@ aco delegate <agent-id> --input "<태스크 및 컨텍스트>"
 ```
 
 - agent spec 파일을 읽고 seed prompt와 `--input`을 결합해 출력만 한다.
-- 외부 provider나 Claude Code session에 자동으로 전달하지 않는다.
+- 외부 provider나 Codex session에 자동으로 전달하지 않는다.
 - agent spec이 없으면 에러를 반환한다.
 
 ## 호출 예시
@@ -60,6 +83,11 @@ aco ask --providers mock --task "auth 모듈 아키텍처 리뷰" --input "$(cat
 # named agent 프롬프트 빌드 (로컬, 외부 호출 없음)
 aco delegate reviewer --input "PR #42 변경 내용 검토"
 ```
+
+## 금지 사항
+
+- provider 없이 또는 동의 없이 외부 호출을 하지 않는다.
+- task-specific subcommand나 slash command를 만들지 않는다. 자연어 태스크 또는 `.claude/aco/tasks/<preset>.md` 프리셋을 사용한다.
 
 ## 참조
 

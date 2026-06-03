@@ -787,4 +787,17 @@ describe('pack template runtime contract', () => {
       'templates/commands/antigravity/setup.md must be kept (provisioning, not delegation)'
     );
   });
+
+  // U2 패리티 테스트: .claude/commands/aco.md와 templates/commands/aco.md는
+  // byte-for-byte 일치해야 한다 (CLAUDE.md Maintenance Rules: "byte-for-byte aligned").
+  it('templates/commands/aco.md is byte-for-byte identical to .claude/commands/aco.md', async () => {
+    const repoRoot = resolve(wrapperRoot, '..', '..');
+    const source = await readFile(join(repoRoot, '.claude', 'commands', 'aco.md'), 'utf8');
+    const template = await readFile(join(repoRoot, 'templates', 'commands', 'aco.md'), 'utf8');
+    assert.equal(
+      template,
+      source,
+      'templates/commands/aco.md must be byte-for-byte identical to .claude/commands/aco.md'
+    );
+  });
 });
