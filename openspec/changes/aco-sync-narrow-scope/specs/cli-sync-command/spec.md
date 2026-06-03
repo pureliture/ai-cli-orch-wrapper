@@ -15,8 +15,13 @@ The system SHALL provide an `aco sync` command that explicitly synchronizes Clau
 - **AND** read and write project-level files relative to that root
 
 #### Scenario: Missing Claude sources
-- **WHEN** no `.claude/agents/`, `.claude/skills/`, or Claude hook source exists
+- **WHEN** no Claude source files exist at all (no `CLAUDE.md`, `.claude/rules/`, `.claude/agents/`, `.claude/skills/`, or hook settings)
 - **THEN** `aco sync` SHALL fail with a clear "no sync sources found" message
+
+<!-- NOTE: Requiring at least one *structured* source (so a CLAUDE.md/rules-only repo
+     fails instead of writing an empty manifest) is a tracked follow-up, deferred from
+     PR #150 review to avoid a large test-fixture churn. -->
+
 
 #### Scenario: Project-guidance markdown is out of scope
 - **WHEN** `aco sync` runs
