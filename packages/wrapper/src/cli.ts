@@ -25,7 +25,7 @@ import { formatAuthStatus } from './runtime/auth-display.js';
 import { invokeProviderForSession } from './runtime/provider-session-runner.js';
 import { terminateProviderProcess } from './runtime/provider-process.js';
 import {
-  createProviderCancellationHandler,
+  installProviderCancellationHandler,
   type ProviderCancellationState,
 } from './runtime/provider-cancellation.js';
 import { resolveRunPromptTemplate } from './runtime/run-prompt-template.js';
@@ -235,31 +235,35 @@ async function cmdRun(args: string[]): Promise<void> {
     activePid: undefined,
     sessionId: session.id,
   };
-  const handleSignal = createProviderCancellationHandler({
+  const cancellation = installProviderCancellationHandler({
     state: cancellationState,
     markCancelled: (sessionId) => sessionStore.markCancelled(sessionId),
-  });
-  process.on('SIGINT', handleSignal);
-  process.on('SIGTERM', handleSignal);
-  const runResult = await invokeProviderForSession({
-    provider,
-    command,
-    prompt,
-    content,
-    permissionProfile,
-    sessionId: session.id,
-    output: tee,
-    outputBuffer: resolveRunOutputBuffering(),
-    timeoutMs: executionControl.timeoutMs,
     killGraceMs: executionControl.killGraceMs,
-    ...(model ? { model } : {}),
-    envPolicy: 'allowlist',
-    onPid: (pid) => {
-      cancellationState.activePid = pid;
-    },
   });
-  process.off('SIGINT', handleSignal);
-  process.off('SIGTERM', handleSignal);
+  let runResult: Awaited<ReturnType<typeof invokeProviderForSession>>;
+  try {
+    runResult = await invokeProviderForSession({
+      provider,
+      command,
+      prompt,
+      content,
+      permissionProfile,
+      sessionId: session.id,
+      output: tee,
+      outputBuffer: resolveRunOutputBuffering(),
+      timeoutMs: executionControl.timeoutMs,
+      killGraceMs: executionControl.killGraceMs,
+      ...(model ? { model } : {}),
+      envPolicy: 'allowlist',
+      onPid: (pid) => {
+        cancellationState.activePid = pid;
+      },
+    });
+  } finally {
+    // P1b/P2a: 정상·예외 경로 모두에서 활성 PID를 리셋하고 리스너를 해제한다.
+    cancellationState.activePid = undefined;
+    cancellation.dispose();
+  }
   const runError = runResult.error;
   const latest = await sessionStore.read(session.id).catch(() => undefined);
 

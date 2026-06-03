@@ -15,7 +15,7 @@ import { checkProviderProfileSupport } from '../runtime/provider-profile-guard.j
 import { emitRuntimeDashboard } from '../runtime/session-dashboard.js';
 import { getCachedProviderAuth } from '../providers/auth-cache.js';
 import {
-  createProviderCancellationHandler,
+  installProviderCancellationHandler,
   type ProviderCancellationState,
 } from '../runtime/provider-cancellation.js';
 import {
@@ -168,18 +168,17 @@ export async function cmdAsk(args: string[]): Promise<void> {
 
   const inputHashValue = sha256Hex(input);
 
-  // 사용자 취소(SIGINT/SIGTERM) 시 진행 중인 provider 자식 프로세스를 정리하고
-  // 현재 세션을 cancelled로 기록한다. state는 루프에서 활성 PID/세션을 갱신한다.
+  // 사용자 취소(SIGINT/SIGTERM) 시 진행 중인 provider 자식 프로세스를 graceful하게
+  // 정리하고 현재 세션을 cancelled로 기록한다. state는 루프에서 활성 PID/세션을 갱신한다.
   const cancellationState: ProviderCancellationState = {
     activePid: undefined,
     sessionId: undefined,
   };
-  const handleSignal = createProviderCancellationHandler({
+  const cancellation = installProviderCancellationHandler({
     state: cancellationState,
     markCancelled: (sessionId) => sessionStore.markCancelled(sessionId),
+    killGraceMs: options.executionControl.killGraceMs,
   });
-  process.on('SIGINT', handleSignal);
-  process.on('SIGTERM', handleSignal);
 
   const sessions: AskSessionLedger[] = [];
   try {
@@ -192,141 +191,146 @@ export async function cmdAsk(args: string[]): Promise<void> {
       );
       cancellationState.sessionId = session.id;
       cancellationState.activePid = undefined;
-      const sessionDir = sessionStore.sessionDir(session.id);
-      await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
+      // P1b: provider별 실행 구간을 try/finally로 감싸 invoke가 throw해도
+      // activePid를 반드시 초기화한다(이후 신호가 죽은/엉뚱한 PID를 종료하지 않게).
+      try {
+        const sessionDir = sessionStore.sessionDir(session.id);
+        await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
 
-      // 공통 커널로 'aco Runtime Session' 대시보드를 stderr에 렌더한다.
-      // aco run과 동일한 커널을 사용하며, stdout brief는 손상시키지 않는다.
-      // (U7에서 멀티프로바이더 롤업으로 확장된다. 현재는 provider별 단일 행.)
-      const auth = await getCachedProviderAuth(provider, { skipCache: true });
-      const runtimeContext = await emitRuntimeDashboard({
-        provider: provider.key,
-        command: 'ask',
-        sessionId: session.id,
-        permissionProfile: options.permissionProfile,
-        auth,
-      });
-      await sessionStore.update(session.id, { runtimeContext });
+        // 공통 커널로 'aco Runtime Session' 대시보드를 stderr에 렌더한다.
+        // aco run과 동일한 커널을 사용하며, stdout brief는 손상시키지 않는다.
+        // (U7에서 멀티프로바이더 롤업으로 확장된다. 현재는 provider별 단일 행.)
+        const auth = await getCachedProviderAuth(provider, { skipCache: true });
+        const runtimeContext = await emitRuntimeDashboard({
+          provider: provider.key,
+          command: 'ask',
+          sessionId: session.id,
+          permissionProfile: options.permissionProfile,
+          auth,
+        });
+        await sessionStore.update(session.id, { runtimeContext });
 
-      const outputLog = sessionStore.outputLogPath(session.id);
-      const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });
-      const outputBuffer = resolveAskOutputBuffering(options.outputMode);
-      if (outputBuffer.mode === 'bounded') {
-        outputBuffer.snapshot = { value: '' };
-      }
-      let error: string | undefined;
-      let status: AskSessionLedger['status'] = 'done';
-      const runResult = await invokeProviderForSession({
-        provider,
-        command: 'ask',
-        prompt,
-        content: input,
-        permissionProfile: options.permissionProfile,
-        sessionId: session.id,
-        output: outputStream,
-        outputBuffer,
-        maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
-        timeoutMs: options.executionControl.timeoutMs,
-        killGraceMs: options.executionControl.killGraceMs,
-        ...(options.model ? { model: options.model } : {}),
-        envPolicy: 'allowlist',
-        onPid: (pid) => {
-          cancellationState.activePid = pid;
-        },
-        onChunk:
-          options.outputMode === 'full'
-            ? (chunk) => {
-                process.stdout.write(chunk);
-              }
-            : undefined,
-      });
-      cancellationState.activePid = undefined;
+        const outputLog = sessionStore.outputLogPath(session.id);
+        const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });
+        const outputBuffer = resolveAskOutputBuffering(options.outputMode);
+        if (outputBuffer.mode === 'bounded') {
+          outputBuffer.snapshot = { value: '' };
+        }
+        let error: string | undefined;
+        let status: AskSessionLedger['status'] = 'done';
+        const runResult = await invokeProviderForSession({
+          provider,
+          command: 'ask',
+          prompt,
+          content: input,
+          permissionProfile: options.permissionProfile,
+          sessionId: session.id,
+          output: outputStream,
+          outputBuffer,
+          maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
+          timeoutMs: options.executionControl.timeoutMs,
+          killGraceMs: options.executionControl.killGraceMs,
+          ...(options.model ? { model: options.model } : {}),
+          envPolicy: 'allowlist',
+          onPid: (pid) => {
+            cancellationState.activePid = pid;
+          },
+          onChunk:
+            options.outputMode === 'full'
+              ? (chunk) => {
+                  process.stdout.write(chunk);
+                }
+              : undefined,
+        });
 
-      if (!runResult.error) {
-        const latest = await sessionStore.read(session.id);
-        if (latest.status === 'cancelled') {
-          status = 'cancelled';
-          error = 'Session was cancelled before provider completion.';
+        if (!runResult.error) {
+          const latest = await sessionStore.read(session.id);
+          if (latest.status === 'cancelled') {
+            status = 'cancelled';
+            error = 'Session was cancelled before provider completion.';
+            await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
+          } else {
+            await sessionStore.markDone(session.id);
+          }
+        } else {
+          const err = runResult.error;
+          error = err instanceof Error ? err.message : String(err);
           await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
-        } else {
-          await sessionStore.markDone(session.id);
+          const latest = await sessionStore.read(session.id).catch(() => undefined);
+          if (latest?.status === 'cancelled') {
+            status = 'cancelled';
+          } else {
+            status = 'failed';
+            await sessionStore.markFailed(session.id);
+          }
         }
-      } else {
-        const err = runResult.error;
-        error = err instanceof Error ? err.message : String(err);
-        await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
-        const latest = await sessionStore.read(session.id).catch(() => undefined);
-        if (latest?.status === 'cancelled') {
-          status = 'cancelled';
-        } else {
-          status = 'failed';
-          await sessionStore.markFailed(session.id);
+
+        const usage = await collectUsage(provider.key, session.id);
+
+        const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
+        const stderrContent = runResult.stderrContent;
+        const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
+        const warningCount = countWarnings(runResult.stderrContent);
+        const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
+
+        let stderrArtifactPath: string | undefined;
+        if (stderrBytes > 0) {
+          const stderrPath = join(sessionDir, 'stderr.log');
+          await writeFile(stderrPath, stderrContent, { mode: 0o600 });
+          stderrArtifactPath = stderrPath;
         }
+
+        const summary = summarizeProviderOutput(runResult.fullOutput, provider);
+        const brief = renderSessionBrief({
+          runId,
+          task: options.task ?? '',
+          provider: provider.key,
+          sessionId: session.id,
+          outputLog,
+          status,
+          summary,
+          error,
+        });
+        const briefPath = join(sessionDir, 'brief.md');
+        await writeFile(briefPath, brief, { mode: 0o600 });
+
+        sessions.push({
+          id: session.id,
+          provider: provider.key,
+          status,
+          outputLog,
+          briefPath,
+          summary,
+          ...(error ? { error } : {}),
+          usageStatus: usage.usageStatus,
+          ...(usage.model !== undefined ? { model: usage.model } : {}),
+          ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
+          ...(usage.outputTokens !== undefined ? { outputTokens: usage.outputTokens } : {}),
+          ...(usage.nativeSessionPath !== undefined
+            ? { nativeSessionPath: usage.nativeSessionPath }
+            : {}),
+          hasOutput: runResult.hasOutput,
+          outputBytes,
+          stderrBytes,
+          warningCount,
+          resultQuality,
+          ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
+          canonicalInputPath,
+          inputHash: inputHashValue,
+          // true only when the summarizer applied char-limit truncation,
+          // not when the provider simply reformats/filters output
+          summaryTruncated: summary.includes('...[truncated to'),
+          topFindings: extractTopFindings(runResult.fullOutput),
+        });
+      } finally {
+        // P1b: 정상/예외 경로 모두에서 활성 PID를 초기화해 stale PID 오종료를 막는다.
+        cancellationState.activePid = undefined;
       }
-
-      const usage = await collectUsage(provider.key, session.id);
-
-      const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
-      const stderrContent = runResult.stderrContent;
-      const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
-      const warningCount = countWarnings(runResult.stderrContent);
-      const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
-
-      let stderrArtifactPath: string | undefined;
-      if (stderrBytes > 0) {
-        const stderrPath = join(sessionDir, 'stderr.log');
-        await writeFile(stderrPath, stderrContent, { mode: 0o600 });
-        stderrArtifactPath = stderrPath;
-      }
-
-      const summary = summarizeProviderOutput(runResult.fullOutput, provider);
-      const brief = renderSessionBrief({
-        runId,
-        task: options.task ?? '',
-        provider: provider.key,
-        sessionId: session.id,
-        outputLog,
-        status,
-        summary,
-        error,
-      });
-      const briefPath = join(sessionDir, 'brief.md');
-      await writeFile(briefPath, brief, { mode: 0o600 });
-
-      sessions.push({
-        id: session.id,
-        provider: provider.key,
-        status,
-        outputLog,
-        briefPath,
-        summary,
-        ...(error ? { error } : {}),
-        usageStatus: usage.usageStatus,
-        ...(usage.model !== undefined ? { model: usage.model } : {}),
-        ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
-        ...(usage.outputTokens !== undefined ? { outputTokens: usage.outputTokens } : {}),
-        ...(usage.nativeSessionPath !== undefined
-          ? { nativeSessionPath: usage.nativeSessionPath }
-          : {}),
-        hasOutput: runResult.hasOutput,
-        outputBytes,
-        stderrBytes,
-        warningCount,
-        resultQuality,
-        ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
-        canonicalInputPath,
-        inputHash: inputHashValue,
-        // true only when the summarizer applied char-limit truncation,
-        // not when the provider simply reformats/filters output
-        summaryTruncated: summary.includes('...[truncated to'),
-        topFindings: extractTopFindings(runResult.fullOutput),
-      });
     }
   } finally {
     cancellationState.activePid = undefined;
     cancellationState.sessionId = undefined;
-    process.off('SIGINT', handleSignal);
-    process.off('SIGTERM', handleSignal);
+    cancellation.dispose();
   }
 
   const endedAt = new Date().toISOString();

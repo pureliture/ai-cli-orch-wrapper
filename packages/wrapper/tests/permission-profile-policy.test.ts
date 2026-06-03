@@ -26,6 +26,7 @@ import { terminateProviderProcess } from '../src/runtime/provider-process';
 import { resolveProvidersForAsk } from '../src/commands/ask';
 import {
   createProviderCancellationHandler,
+  installProviderCancellationHandler,
   type ProviderCancellationState,
 } from '../src/runtime/provider-cancellation';
 import { ProviderRegistry } from '../src/providers/registry';
@@ -501,7 +502,7 @@ describe('취소 정책 — provider 프로세스 안전 종료', () => {
 // createProviderCancellationHandler를 seam으로 분리해 정리 경로가 호출됨을 단언한다.
 
 describe('취소 핸들러 — createProviderCancellationHandler', () => {
-  it('활성 PID가 있으면 시그널 수신 시 terminateProviderProcess를 호출한다', () => {
+  it('활성 PID가 있으면 SIGTERM으로 graceful 종료를 먼저 시도한다', () => {
     const terminated: Array<{ pid: number; signal: NodeJS.Signals }> = [];
     let cancelledSessionId: string | undefined;
 
@@ -518,13 +519,20 @@ describe('취소 핸들러 — createProviderCancellationHandler', () => {
       exit: () => {
         /* exit를 막아 테스트가 끝까지 실행되도록 한다 */
       },
+      // grace 타이머를 즉시 실행하지 않도록 no-op로 둔다 (SIGKILL escalation 분리 테스트).
+      scheduleKill: () => undefined,
     });
 
     handler('SIGINT');
 
-    assert.equal(terminated.length, 1, 'terminate must be called once');
+    // P1a: 받은 신호를 그대로 전파하지 않고 항상 SIGTERM(graceful)으로 먼저 종료한다.
+    assert.equal(terminated.length, 1, 'terminate must be called once with SIGTERM');
     assert.equal(terminated[0].pid, 4242, 'terminate must target the active PID');
-    assert.equal(terminated[0].signal, 'SIGINT', 'terminate must forward the received signal');
+    assert.equal(
+      terminated[0].signal,
+      'SIGTERM',
+      'graceful termination must send SIGTERM first, not the raw signal'
+    );
 
     return new Promise<void>((resolveDone) => {
       setImmediate(() => {
@@ -536,6 +544,47 @@ describe('취소 핸들러 — createProviderCancellationHandler', () => {
         resolveDone();
       });
     });
+  });
+
+  it('graceful 종료 후에도 자식이 살아있으면 SIGKILL로 escalate한다', () => {
+    const terminated: Array<{ pid: number; signal: NodeJS.Signals }> = [];
+    let scheduledDelay: number | undefined;
+    let killCallback: (() => void) | undefined;
+
+    const state: ProviderCancellationState = { activePid: 7777, sessionId: 'sess-kill' };
+    const handler = createProviderCancellationHandler({
+      state,
+      terminate: (pid, signal) => {
+        terminated.push({ pid, signal });
+        return true;
+      },
+      markCancelled: async () => {},
+      exit: () => {},
+      killGraceMs: 1234,
+      // SIGKILL escalation 타이머를 캡처해 수동으로 발화시킨다.
+      scheduleKill: (cb, delayMs) => {
+        killCallback = cb;
+        scheduledDelay = delayMs;
+        return undefined;
+      },
+    });
+
+    handler('SIGINT');
+
+    // 1차: SIGTERM
+    assert.deepEqual(terminated[0], { pid: 7777, signal: 'SIGTERM' });
+    assert.equal(scheduledDelay, 1234, 'kill escalation must use killGraceMs');
+
+    // grace 만료 시뮬레이션
+    assert.ok(killCallback, 'kill escalation callback must be scheduled');
+    killCallback?.();
+
+    // 2차: SIGKILL
+    assert.deepEqual(
+      terminated[1],
+      { pid: 7777, signal: 'SIGKILL' },
+      'after grace, terminate must escalate to SIGKILL'
+    );
   });
 
   it('활성 PID가 없으면 terminate를 호출하지 않지만 세션은 cancelled로 기록한다', () => {
@@ -553,6 +602,7 @@ describe('취소 핸들러 — createProviderCancellationHandler', () => {
         cancelledSessionId = sessionId;
       },
       exit: () => {},
+      scheduleKill: () => undefined,
     });
 
     handler('SIGTERM');
@@ -578,6 +628,7 @@ describe('취소 핸들러 — createProviderCancellationHandler', () => {
         markCalled = true;
       },
       exit: () => {},
+      scheduleKill: () => undefined,
     });
 
     handler('SIGINT');
@@ -588,6 +639,112 @@ describe('취소 핸들러 — createProviderCancellationHandler', () => {
         resolveDone();
       });
     });
+  });
+
+  // P1b: provider invoke 완료/실패 후 activePid가 리셋되면, 이후 신호가 stale PID를
+  // 종료하지 않는다. cmdAsk의 inner finally가 state.activePid를 undefined로 만든 뒤
+  // 같은 핸들러로 신호가 와도 terminate가 호출되지 않아야 한다.
+  it('activePid가 리셋된 후 신호가 와도 stale PID를 종료하지 않는다', () => {
+    const terminated: number[] = [];
+    let cancelledSessionId: string | undefined;
+
+    // 멀티 provider 순차 실행을 흉내낸다: 첫 provider 실행 중 PID가 잡혔다가,
+    // 완료 후 finally에서 activePid가 undefined로 리셋된 상태.
+    const state: ProviderCancellationState = { activePid: 9999, sessionId: 'sess-A' };
+    const handler = createProviderCancellationHandler({
+      state,
+      terminate: (pid) => {
+        terminated.push(pid);
+        return true;
+      },
+      markCancelled: async (sessionId) => {
+        cancelledSessionId = sessionId;
+      },
+      exit: () => {},
+      scheduleKill: () => undefined,
+    });
+
+    // provider 완료 후 finally가 activePid를 리셋한다 (P1b).
+    state.activePid = undefined;
+    // 다음 provider의 세션으로 갱신되었지만 아직 PID는 없는 구간에서 신호 수신.
+    state.sessionId = 'sess-B';
+
+    handler('SIGINT');
+
+    assert.equal(terminated.length, 0, 'stale PID 9999 must NOT be terminated after reset');
+
+    return new Promise<void>((resolveDone) => {
+      setImmediate(() => {
+        // 현재 세션(sess-B)은 여전히 cancelled로 기록되어야 한다.
+        assert.equal(cancelledSessionId, 'sess-B', 'current session must still be cancelled');
+        resolveDone();
+      });
+    });
+  });
+});
+
+// ── P2a: register/cleanup 쌍 — installProviderCancellationHandler ─────────────
+//
+// signal listener가 루프/명령마다 누적되지 않도록 install/dispose 쌍을 제공한다.
+
+describe('취소 핸들러 등록/해제 — installProviderCancellationHandler', () => {
+  it('install은 SIGINT/SIGTERM 리스너를 등록하고 dispose는 해제한다', () => {
+    const before = {
+      sigint: process.listenerCount('SIGINT'),
+      sigterm: process.listenerCount('SIGTERM'),
+    };
+
+    const state: ProviderCancellationState = { activePid: undefined, sessionId: undefined };
+    const handle = installProviderCancellationHandler({
+      state,
+      markCancelled: async () => {},
+      exit: () => {},
+      scheduleKill: () => undefined,
+    });
+
+    assert.equal(
+      process.listenerCount('SIGINT'),
+      before.sigint + 1,
+      'install must add exactly one SIGINT listener'
+    );
+    assert.equal(
+      process.listenerCount('SIGTERM'),
+      before.sigterm + 1,
+      'install must add exactly one SIGTERM listener'
+    );
+
+    handle.dispose();
+
+    assert.equal(
+      process.listenerCount('SIGINT'),
+      before.sigint,
+      'dispose must remove the SIGINT listener'
+    );
+    assert.equal(
+      process.listenerCount('SIGTERM'),
+      before.sigterm,
+      'dispose must remove the SIGTERM listener'
+    );
+  });
+
+  it('dispose는 여러 번 호출해도 안전하다 (idempotent)', () => {
+    const before = process.listenerCount('SIGINT');
+    const state: ProviderCancellationState = { activePid: undefined, sessionId: undefined };
+    const handle = installProviderCancellationHandler({
+      state,
+      markCancelled: async () => {},
+      exit: () => {},
+      scheduleKill: () => undefined,
+    });
+
+    handle.dispose();
+    handle.dispose();
+
+    assert.equal(
+      process.listenerCount('SIGINT'),
+      before,
+      'repeated dispose must not corrupt listener count'
+    );
   });
 });
 
@@ -691,6 +848,94 @@ describe('취소 통합 — aco ask SIGINT 시 세션 cancelled', () => {
 
     assert.notEqual(exitCode, 0, 'cancelled ask must exit non-zero');
     assert.equal(task.status, 'cancelled', 'session must be marked cancelled on SIGINT');
+
+    await rm(home, { recursive: true, force: true });
+    await rm(binDir, { recursive: true, force: true });
+  });
+
+  // P2b: SIGTERM을 무시하는 자식이라도 부모가 SIGKILL escalation으로 정리한다.
+  it('SIGTERM을 무시하는 자식도 SIGKILL fallback으로 정리하고 ask가 종료된다', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'aco-ask-kill-home-'));
+    const binDir = await mkdtemp(join(tmpdir(), 'aco-ask-kill-bin-'));
+    // SIGTERM을 무시하는 fake agy: graceful 종료를 거부해 SIGKILL escalation을 강제한다.
+    const body = [
+      "if (process.argv.includes('--version')) {",
+      "  process.stdout.write('agy-test 0.0.0\\n');",
+      '  process.exit(0);',
+      '}',
+      "process.stdout.write('provider started\\n');",
+      "process.on('SIGTERM', () => { /* ignore — force SIGKILL path */ });",
+      'setInterval(() => {}, 1000);',
+    ].join('\n');
+    await writeFile(join(binDir, 'agy'), `#!/usr/bin/env node\n${body}\n`, { mode: 0o755 });
+
+    const cliRoot = resolve(__dirname, '..');
+    const cliPath = join(cliRoot, 'src', 'cli.ts');
+    const tsxRegister = require.resolve('tsx/cjs');
+
+    const child = spawn(
+      process.execPath,
+      [
+        '--require',
+        tsxRegister,
+        cliPath,
+        'ask',
+        '--providers',
+        'antigravity',
+        '--task',
+        'sigkill fallback test',
+        '--yes',
+        '--output-mode',
+        'save-only',
+        '--timeout',
+        '30',
+      ],
+      {
+        cwd: cliRoot,
+        env: {
+          ...process.env,
+          HOME: home,
+          USERPROFILE: home,
+          NO_COLOR: '1',
+          // 취소 시 SIGKILL escalation grace를 짧게 줘 테스트 시간 안에 발화시킨다.
+          ACO_KILL_GRACE_MS: '300',
+          PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }
+    );
+
+    const { id, pid } = await waitForAskSessionWithPid(home);
+    child.kill('SIGINT');
+
+    const exitCode = await new Promise<number | null>((resolveExit, rejectExit) => {
+      const timer = setTimeout(
+        () => rejectExit(new Error('aco ask did not exit after SIGINT (SIGKILL path)')),
+        8_000
+      );
+      child.once('exit', (code) => {
+        clearTimeout(timer);
+        resolveExit(code);
+      });
+    });
+
+    const task = JSON.parse(
+      await readFile(join(home, '.aco', 'sessions', id, 'task.json'), 'utf8')
+    ) as { status: string };
+
+    assert.notEqual(exitCode, 0, 'cancelled ask must exit non-zero even when child ignores SIGTERM');
+    assert.equal(task.status, 'cancelled', 'session must be cancelled even on SIGKILL path');
+
+    // 자식 프로세스 그룹이 실제로 정리되었는지 확인한다 (고아 leak 방지).
+    // SIGKILL escalation 후 잠시 대기한 뒤 kill(pid, 0)으로 생존을 점검한다.
+    await new Promise((r) => setTimeout(r, 500));
+    let stillAlive = true;
+    try {
+      process.kill(pid, 0);
+    } catch {
+      stillAlive = false;
+    }
+    assert.equal(stillAlive, false, 'child must be killed (no orphan leak) after SIGKILL fallback');
 
     await rm(home, { recursive: true, force: true });
     await rm(binDir, { recursive: true, force: true });
