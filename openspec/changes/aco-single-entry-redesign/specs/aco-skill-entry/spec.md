@@ -53,3 +53,49 @@
 
 - **WHEN** 사용자가 미인증 provider로 `/aco` 위임을 시도한다
 - **THEN** 시스템은 위임을 진행하지 않고 해당 provider의 setup 방법을 안내한다
+
+### Requirement: 금지 subcommand 가드레일
+
+`/aco`·`$aco` 본문은 첫 토큰이 `status`·`result`·`cancel`·`delegate`이면 이를 자연어 위임으로 SHALL 처리하지 않고, 해당 하부 CLI(`aco status` 등) 사용을 SHALL 안내한다.
+
+#### Scenario: 금지 subcommand 입력
+
+- **WHEN** 사용자가 `/aco status`를 입력한다
+- **THEN** 외부 위임이 트리거되지 않고, 시스템은 `aco status` 하부 CLI 사용을 안내한다
+
+### Requirement: permission-profile 전파
+
+`/aco`가 받은 `--permission-profile`은 하위 provider 기동 시 명시적으로 SHALL 전파된다. 해당 프로필을 지원하지 않는 provider는 실행을 SHALL 차단한다.
+
+#### Scenario: 프로필 전파
+
+- **WHEN** 사용자가 `restricted` 프로필로 `/aco` 위임을 실행한다
+- **THEN** 하위 provider는 `restricted` 프로필을 전달받아 실행되고, 프로필을 지원하지 않는 provider는 실행이 차단된다
+
+### Requirement: 최소 컨텍스트 전달
+
+`/aco`·`$aco`는 위임 시 모델이 구성한 `--task` 문자열을 전달하며, diff·branch 같은 무거운 컨텍스트를 강제로 수집해 전달하지 SHALL 않는다(필요 시 task 안에 포함).
+
+#### Scenario: 기본 위임
+
+- **WHEN** 사용자가 `/aco`로 위임한다
+- **THEN** 시스템은 모델이 구성한 task 문자열을 전달하고, 별도의 강제 컨텍스트 marshaling을 수행하지 않는다
+
+### Requirement: 위임 실패·취소·동시 호출 정책
+
+시스템은 자연어 의도 해석 실패, 사용자 취소, 중복 동시 `/aco` 호출에 대한 정책을 SHALL 정의한다.
+
+#### Scenario: 자연어 의도 해석 실패
+
+- **WHEN** `/aco`가 작업이나 provider를 결정하지 못한다
+- **THEN** 외부 위임을 실행하지 않고 사용자에게 명확화를 요청한다
+
+#### Scenario: 실행 중 취소
+
+- **WHEN** 위임 실행 중 사용자가 취소(Ctrl+C)한다
+- **THEN** 진행 중인 provider 프로세스를 안전하게 종료하고 세션을 취소 상태로 기록한다
+
+#### Scenario: 중복 동시 호출
+
+- **WHEN** 이미 위임이 진행 중인데 새 `/aco` 호출이 들어온다
+- **THEN** 정의된 정책(대기·거부·병렬 허용)에 따라 처리한다

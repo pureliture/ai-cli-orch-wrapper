@@ -10,7 +10,12 @@
 - `renderRuntimeDashboard`·`collectRuntimeContext`를 공통 `runtime/` 커널로 추출해 `aco ask`도 'aco Runtime Session' 대시보드를 렌더하게 한다. 커맨드(`aco ask`/`aco run`)는 분리 유지, 내부 커널만 통합한다.
 - 멀티프로바이더 대시보드는 롤업 헤더(command·branch) + provider별 행(session·auth)으로 렌더한다. `collectRuntimeContext`를 멀티 세션 모델로 확장한다.
 - `IProvider`에 `readonly icon` 필드를 추가하고, 대시보드가 provider별 색동그라미 이모지(antigravity 🔵 · codex 🟢 · mock ⚪, host 헤더 🟠)를 렌더한다.
-- stdout `brief`와 stderr 대시보드가 충돌하지 않도록 TTY/NO_COLOR 인식 억제를 추가한다.
+- stdout `brief`와 stderr 대시보드 충돌을 막는다: 비-TTY는 대시보드 비활성/요약 로거, `NO_COLOR`는 색만 제거, brief는 대시보드 렌더 완료 후 일괄 출력하며 갱신은 throttle(100~200ms)한다.
+- `/aco`·`$aco` 본문에 금지 subcommand(`status`·`result`·`cancel`·`delegate`) 가드레일을 두어, 그 입력이 자연어 위임으로 오인되지 않고 하부 CLI 안내로 유도되게 한다.
+- `/aco`가 받은 `--permission-profile`을 하위 provider 기동 시 명시적으로 전파하고, 프로필을 지원하지 않는 provider는 실행을 차단한다(보안 최소 규격).
+- provider 아이콘은 비-UTF-8/구형 터미널 대비 `--no-unicode`(또는 감지) ASCII 폴백(`[AG]`/`[CX]`/`[MC]`)을 제공한다.
+- 미인증 시 `/aco`가 setup을 안내하고, 가능하면 동의 기반 interactive provisioning 후 원 작업으로 복귀한다.
+- 멀티프로바이더 부분 인증 실패, 자연어 의도 해석 실패, 사용자 취소(Ctrl+C), 중복 동시 호출에 대한 정책을 정의한다.
 
 ## Capabilities
 
@@ -27,4 +32,5 @@
 - 배포/호환: `/antigravity:*` 제거는 pack 사용자에게 보이는 breaking change. README·ACO.md 등 문서는 별도 커밋(415ba4d)에서 이미 스킬-시나리오로 reframe됨.
 - 검증: `pack install` 후 위임 진입점이 `/aco`(+`$aco`)만 노출, `/aco`→`aco ask` 실행 시 대시보드 표시, 멀티프로바이더 롤업, 비-TTY 폴백, `aco run` 회귀 없음, `npm run verify`·`check:skill-templates` 통과.
 - 관련 위험(별도 처리): 리서치 중 `aco ask --permission-profile restricted`가 antigravity(agy) 같은 외부 agentic CLI의 파일·git 변경을 막지 못함을 확인했다. 본 change 범위 밖이며 별도 hardening으로 다룬다.
+- 메인 스펙 drift: `openspec/specs/aco-v2-spec.md`는 본 change에서 재작성하지 않으므로 후속 마일스톤에서 동기화하는 부채로 명시한다.
 - 추적: GitHub #161.
