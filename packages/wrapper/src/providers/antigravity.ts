@@ -1,9 +1,25 @@
+import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import { buildProviderEnv } from '../util/provider-env.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 import { readVersion } from '../util/read-version.js';
 import { defaultSummarizeOutput } from '../util/summarize-output.js';
+
+/**
+ * Stable, neutral working directory for `agy` invocations.
+ *
+ * agy persists every cwd it runs in as a project in `~/.gemini/antigravity-cli`,
+ * so inheriting aco's cwd (often an ephemeral temp/session/job dir) floods the
+ * Antigravity sidebar with junk projects. Pinning a single fixed directory keeps
+ * exactly one stable entry instead. Review content is passed via `-p`/stdin, not
+ * read from cwd, so this does not affect delegation output.
+ */
+export function agyWorkspaceDir(): string {
+  return join(homedir(), '.aco', 'agy-workspace');
+}
 
 export class AntigravityProvider implements IProvider {
   readonly key = 'antigravity';
@@ -78,7 +94,11 @@ export class AntigravityProvider implements IProvider {
     const env = buildProviderEnv([]);
     const combined = content ? `${prompt}\n\n${content}` : prompt;
     const args = [...this.buildArgs(command, options), combined];
-    yield* spawnStream(binary, args, { processName: 'agy', stdin: 'pipe', env }, options);
+    // Pin agy to a stable neutral cwd so ephemeral invocation dirs are not
+    // registered as Antigravity projects. See agyWorkspaceDir() above.
+    const cwd = agyWorkspaceDir();
+    await mkdir(cwd, { recursive: true });
+    yield* spawnStream(binary, args, { processName: 'agy', stdin: 'pipe', env, cwd }, options);
   }
 
   summarizeOutput(output: string, maxLength: number): string {

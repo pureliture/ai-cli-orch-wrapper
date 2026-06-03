@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { AntigravityProvider } from '../src/providers/antigravity';
+import { AntigravityProvider, agyWorkspaceDir } from '../src/providers/antigravity';
 import { CodexProvider } from '../src/providers/codex';
 import { MockProvider } from '../src/providers/mock';
 import { ProviderRegistry } from '../src/providers/registry';
@@ -144,6 +144,14 @@ describe('AntigravityProvider', () => {
 
   it('key is "antigravity"', () => {
     assert.equal(new AntigravityProvider().key, 'antigravity');
+  });
+
+  it('agyWorkspaceDir() is a stable neutral dir under ~/.aco (not an ephemeral cwd)', () => {
+    const dir = agyWorkspaceDir();
+    assert.equal(dir, path.join(os.homedir(), '.aco', 'agy-workspace'));
+    // Stable across calls — agy must register the same single project, not the cwd.
+    assert.equal(dir, agyWorkspaceDir());
+    assert.notEqual(dir, process.cwd());
   });
 
   it('installHint contains curl', () => {
