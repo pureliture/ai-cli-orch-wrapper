@@ -46,7 +46,7 @@
 - [ ] 5.3 파이프(비-TTY) 출력 테스트 추가/통과
 - [ ] 5.4 멀티프로바이더 롤업 렌더 테스트 추가/통과
 - [ ] 5.5 기본 `brief` 출력 정합성 테스트 추가/통과
-- [ ] 5.6 `pack install` 후 위임 진입점이 `/aco`(+`$aco`)만 노출됨을 fixtures/smoke로 확인
-- [ ] 5.7 rollback 절차(릴리즈 이전 상태 복원) 검증
-- [ ] 5.8 `npm run verify`(lint·contract·typecheck·test·go·fixtures·smoke) 통과
-- [ ] 5.9 (후속 마일스톤) `openspec/specs/aco-v2-spec.md` 동기화 부채 기록·추적
+- [x] 5.6 `pack install` 후 위임 진입점이 `/aco`(+`$aco`)만 노출됨을 fixtures/smoke로 확인
+- [x] 5.7 rollback 절차(릴리즈 이전 상태 복원) 검증
+- [x] 5.8 `npm run verify`(lint·contract·typecheck·test·go·fixtures·smoke) 통과
+- [x] 5.9 (후속 마일스톤) `openspec/specs/aco-v2-spec.md` 동기화 부채 기록·추적 — design.md에 drift 부채 명시됨

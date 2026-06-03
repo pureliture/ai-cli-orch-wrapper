@@ -778,7 +778,9 @@ describe('취소 통합 — aco ask SIGINT 시 세션 cancelled', () => {
   async function waitForAskSessionWithPid(
     home: string
   ): Promise<{ id: string; pid: number }> {
-    const deadline = Date.now() + 4_000;
+    // 전체 테스트 실행 시 시스템 부하로 Node.js + tsx 초기화가 4초를 초과하는 flake 방지.
+    // 단독 실행 시 ~1-2초이므로 8초는 충분한 여유를 제공한다.
+    const deadline = Date.now() + 8_000;
     const root = join(home, '.aco', 'sessions');
     while (Date.now() < deadline) {
       if (existsSync(root)) {

@@ -102,16 +102,24 @@ async function latestRunId(home: string): Promise<string> {
 }
 
 async function waitForSessionWithPid(home: string): Promise<{ id: string; pid: number }> {
-  const deadline = Date.now() + 3_000;
+  // 타임아웃을 8초로 늘림: 전체 테스트 실행 시 시스템 부하로 인해
+  // Node.js + tsx 초기화 + aco run 시작까지 3초를 초과하는 flake가 있었음.
+  // 단독 실행 시 ~500ms이므로 8초는 충분한 여유를 제공한다.
+  const deadline = Date.now() + 8_000;
   while (Date.now() < deadline) {
     const root = join(home, '.aco', 'sessions');
     if (existsSync(root)) {
       const ids = await readdir(root);
       for (const id of ids) {
-        const task = JSON.parse(await readFile(join(root, id, 'task.json'), 'utf8')) as {
-          pid?: unknown;
-        };
-        if (typeof task.pid === 'number') return { id, pid: task.pid };
+        // JSON 파싱 오류(비원자적 write 중간 읽기)를 방어적으로 처리한다.
+        try {
+          const task = JSON.parse(await readFile(join(root, id, 'task.json'), 'utf8')) as {
+            pid?: unknown;
+          };
+          if (typeof task.pid === 'number') return { id, pid: task.pid };
+        } catch {
+          // 부분 쓰기 또는 빈 파일 — 다음 폴링 주기에서 재시도
+        }
       }
     }
     await new Promise((resolve) => setTimeout(resolve, 50));
@@ -181,7 +189,9 @@ describe('provider session reliability CLI contract', () => {
     const result = await runCli(['run', 'antigravity', 'review', '--input', 'demo', '--timeout', '1'], {
       cwd: workspace,
       pathPrefix: binDir,
-      timeoutMs: 5_000,
+      // 전체 테스트 실행 시 시스템 부하로 Node.js + tsx 초기화가 5초를 초과하는 flake 방지.
+      // 단독 실행 시 ~2-3초이므로 10초는 충분한 여유를 제공한다.
+      timeoutMs: 10_000,
     });
 
     assert.equal(result.code, 1);
@@ -230,7 +240,8 @@ describe('provider session reliability CLI contract', () => {
         '--timeout',
         '1',
       ],
-      { cwd: workspace, pathPrefix: binDir, timeoutMs: 5_000 }
+      // 전체 테스트 실행 시 시스템 부하로 Node.js + tsx 초기화가 5초를 초과하는 flake 방지.
+      { cwd: workspace, pathPrefix: binDir, timeoutMs: 10_000 }
     );
 
     assert.equal(result.code, 1);
