@@ -7,6 +7,12 @@ description: Use when a Claude Code session should consider delegating an adviso
 
 Use `aco ask` when an external Codex/Antigravity/mock CLI perspective can save Claude Code context tokens or provide an advisory second opinion.
 
+## Entrypoints
+
+The single delegation entrypoint is `/aco` in Claude Code sessions and `$aco` in Codex sessions.
+Do not use `/antigravity:review`, `/antigravity:adversarial`, `/antigravity:rescue`, `/review`, `/execute`, or `/research` — these have been retired.
+Use `/antigravity:setup` only for provider provisioning (installing the Antigravity CLI), not for delegation.
+
 ## When To Suggest
 
 - Broad review, critique, or comparison work would consume a lot of Claude Code tokens.
