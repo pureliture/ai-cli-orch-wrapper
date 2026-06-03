@@ -390,6 +390,13 @@ describe('runSync: portable target keys across checkout locations', () => {
       const claudeContent = '# shared context\n\nSome shared rules.';
       for (const root of [rootA, rootB]) {
         await writeFile(join(root, 'CLAUDE.md'), claudeContent);
+        // A structured source is required for runSync; keep it identical across
+        // both checkouts so the cross-checkout manifest comparison stays valid.
+        await mkdir(join(root, '.claude', 'agents'), { recursive: true });
+        await writeFile(
+          join(root, '.claude', 'agents', '_anchor.md'),
+          '---\nid: _anchor\nwhen: anchor structured source\n---\nAnchor.'
+        );
       }
 
       // 2. Run a full sync in rootA: produces sync outputs (AGENTS.md only, no GEMINI.md)

@@ -595,6 +595,13 @@ describe('pack template runtime contract', () => {
       );
 
       await writeFile(join(driftWorkspace, 'CLAUDE.md'), '# Original\n');
+      // A structured source is required for runSync to proceed; the drift under
+      // test is the CLAUDE.md edit, which produces no synced output on its own.
+      await mkdir(join(driftWorkspace, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(driftWorkspace, '.claude', 'agents', '_anchor.md'),
+        '---\nid: _anchor\nwhen: anchor structured source\n---\nAnchor.'
+      );
       await runSync(driftWorkspace, { dryRun: false });
       await writeFile(join(driftWorkspace, 'CLAUDE.md'), '# Updated\n');
 
