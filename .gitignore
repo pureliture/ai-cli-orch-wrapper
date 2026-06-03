@@ -95,3 +95,4 @@ templates/skills/improve-codebase-architecture/
 # Local scratch / runtime cruft (not part of the repo)
 /commit.msg
 /cache/
+/pr-body.md
