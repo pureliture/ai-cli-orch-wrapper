@@ -42,7 +42,7 @@ Do not add `/aco:review`, `/aco:spec-review`, `/aco:plan-review`, or similar tas
 
 | 표면                      | Codex CLI 0.122.0                                | Antigravity (`agy`)               |
 | ------------------------- | ------------------------------------------------ | --------------------------------- |
-| 프로젝트 지침             | `AGENTS.md`                                      | (없음 — `agy`는 AGENTS.md 미지원) |
+| 프로젝트 지침             | `AGENTS.md`                                      | (`aco sync` 생성 없음 — 아래 주의 참조) |
 | Skills                    | `.agents/skills/<skill>/SKILL.md`                | `.agents/skills/<skill>/SKILL.md` |
 | Custom agents             | `.codex/agents/*.toml`                           | (없음 — agent 표면 미지원)        |
 | 비대화형 prompt           | `codex exec [PROMPT]`                            | `agy --prompt <prompt>`           |
@@ -51,6 +51,8 @@ Do not add `/aco:review`, `/aco:spec-review`, `/aco:plan-review`, or similar tas
 Codex는 공유 skill을 `.agents/skills/<skill>/`에서 읽는다. `.codex/skills/`는 `aco sync`가 관리하는 공유 표면이 아니다. 단, `.codex/skills/aco/`처럼 hand-maintained Codex-local 일급 진입점(`$aco`)은 존재한다.
 
 > **AGENTS.md 주의**: 위 표의 `AGENTS.md`는 Codex CLI 런타임이 읽는 경로를 나타낼 뿐이다. `AGENTS.md`는 `aco sync`가 생성하거나 관리하지 않는다. 사람이 직접 유지보수하는 peer 문서이다.
+>
+> **agy capability vs sync 구분**: 표의 "프로젝트 지침" agy 칸이 "생성 없음"인 것은 **`aco sync`가 agy용 project-instruction target을 생성하지 않는다**는 sync-파이프라인 사실이지, agy CLI가 해당 파일을 못 읽는다는 뜻이 아니다. Antigravity CLI는 워크스페이스 루트의 로컬 `AGENTS.md`/`GEMINI.md`를 startup에 파싱하지만, `aco sync`의 자동 생성·동기화 대상에서만 제외된다(hand-maintained). 전역 가이드라인은 `~/.gemini/GEMINI.md`(global rules, 전 workspace 적용)로 로드된다.
 >
 > **Gemini 제거 주의**: Phases 1-3 마이그레이션으로 Gemini CLI provider가 제거되었다. `GEMINI.md`는 더 이상 `aco sync` 생성 대상이 아니다. `.gemini/agents/*`도 sync 대상에서 제외된다.
 
