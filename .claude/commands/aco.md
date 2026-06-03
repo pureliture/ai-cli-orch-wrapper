@@ -65,11 +65,35 @@ GUARDRAIL_MSG
 esac
 # ─────────────────────────────────────────────────────────────────────
 
-aco ask --task "$ARGS" --dry-run
+# ── provider 감지 ─────────────────────────────────────────────────────
+# $ARGS에 알려진 provider(antigravity|codex|mock)가 단어 경계로 명시되면
+# 감지해 dry-run에 --providers로 전달한다. 없으면 generic dry-run을 유지하고
+# 모델이 컨텍스트로 provider를 결정한다.
+# 단어 경계 매칭: 앞뒤가 문자열 경계이거나 ASCII 영숫자가 아닌 문자여야 한다.
+# "antigravity로"·"codex 로"는 매칭하지만 "antigravityx"·"mockup"은 무시한다.
+_ACO_DETECTED=""
+for _provider in antigravity codex mock; do
+  if [[ "$ARGS" =~ (^|[^A-Za-z0-9])"$_provider"([^A-Za-z0-9]|$) ]]; then
+    if [ -z "$_ACO_DETECTED" ]; then
+      _ACO_DETECTED="$_provider"
+    else
+      _ACO_DETECTED="$_ACO_DETECTED,$_provider"
+    fi
+  fi
+done
+
+if [ -n "$_ACO_DETECTED" ]; then
+  aco ask --providers "$_ACO_DETECTED" --task "$ARGS" --dry-run
+else
+  aco ask --task "$ARGS" --dry-run
+fi
+# ─────────────────────────────────────────────────────────────────────
 ```
 
-After the dry-run, Claude presents the plan and waits for approval. On consent,
-Claude calls `aco ask --providers <provider> --task "<task>" --input "<input>" --yes`
+After the dry-run, Claude presents the plan and waits for approval. If a
+provider was detected in `$ARGS`, the dry-run pins it via `--providers`; on
+consent, Claude reuses that same provider for the live call. On consent, Claude
+calls `aco ask --providers <provider> --task "<task>" --input "<input>" --yes`
 and returns a brief summary to the user.
 
 ---

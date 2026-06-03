@@ -27,6 +27,33 @@ esac
 
 이 검사는 반드시 위임 실행 전에 수행해야 한다.
 
+## provider 감지
+
+`$ARGS`에 알려진 provider(`antigravity`·`codex`·`mock`)가 단어 경계로 명시되면 감지해 dry-run에 `--providers`로 전달한다. 그래야 dry-run이 보여주는 계획과 실제 실행 provider가 일치한다. 없으면 generic dry-run을 유지하고 모델이 컨텍스트로 provider를 결정한다.
+
+단어 경계 매칭: provider 토큰 앞뒤가 문자열 경계이거나 ASCII 영숫자가 아닌 문자여야 한다. `antigravity로`·`codex 로`는 매칭하지만 `antigravityx`·`mockup` 같은 부분문자열은 무시한다.
+
+```bash
+_ACO_DETECTED=""
+for _provider in antigravity codex mock; do
+  if [[ "$ARGS" =~ (^|[^A-Za-z0-9])"$_provider"([^A-Za-z0-9]|$) ]]; then
+    if [ -z "$_ACO_DETECTED" ]; then
+      _ACO_DETECTED="$_provider"
+    else
+      _ACO_DETECTED="$_ACO_DETECTED,$_provider"
+    fi
+  fi
+done
+
+if [ -n "$_ACO_DETECTED" ]; then
+  aco ask --providers "$_ACO_DETECTED" --task "$ARGS" --dry-run
+else
+  aco ask --task "$ARGS" --dry-run
+fi
+```
+
+dry-run에서 provider가 고정되었으면 동의 후 실행도 같은 provider로 수행한다.
+
 ## 흐름 (model A)
 
 1. **컨텍스트 파악.** 인자를 파싱하고 관련 프로젝트 파일(diff, architecture docs 등)을 읽어 작업 범위를 결정한다.
