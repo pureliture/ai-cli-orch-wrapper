@@ -40,16 +40,24 @@ export function shouldRenderDashboardFromEnv(): boolean {
 /**
  * 대시보드 갱신 throttle/deadband 가드를 생성한다(5.2 throttle).
  *
- * `shouldRender()`를 호출하면:
- * - 마지막 렌더로부터 `deadbandMs` 이내이면 `false` 반환(억제)
- * - deadband 경과 후이면 `true` 반환하고 내부 타임스탬프를 갱신한다
+ * `shouldRender(force?)`를 호출하면:
+ * - `force === true`이면 deadband를 무시하고 항상 `true`를 반환한다.
+ *   (P1 trailing-edge 보장: 마지막/강제 flush 렌더가 throttle에 걸려 최종 상태가
+ *   영구 유실되는 것을 막는다.)
+ * - 그 외에는 마지막 렌더로부터 `deadbandMs` 이내이면 `false`(억제),
+ *   deadband 경과 후이면 `true`를 반환한다.
+ *
+ * 통과(`true`)할 때마다(force 포함) 내부 타임스탬프를 갱신하므로, 강제 flush 이후
+ * 잦은 갱신은 다시 deadband로 억제된다.
  */
-export function makeDashboardThrottleGuard(deadbandMs: number): { shouldRender: () => boolean } {
+export function makeDashboardThrottleGuard(deadbandMs: number): {
+  shouldRender: (force?: boolean) => boolean;
+} {
   let lastRenderAt = -Infinity;
   return {
-    shouldRender(): boolean {
+    shouldRender(force = false): boolean {
       const now = Date.now();
-      if (now - lastRenderAt < deadbandMs) return false;
+      if (!force && now - lastRenderAt < deadbandMs) return false;
       lastRenderAt = now;
       return true;
     },
@@ -57,20 +65,21 @@ export function makeDashboardThrottleGuard(deadbandMs: number): { shouldRender: 
 }
 
 /**
- * locale 환경 변수(`LANG`, `LC_ALL`, `LC_CTYPE`)를 검사해 UTF-8 지원 여부를 반환한다.
+ * locale 환경 변수를 검사해 UTF-8 지원 여부를 반환한다.
  * 4.6 배선: `--no-unicode` 플래그의 보조 locale 감지 경로에서 사용한다.
  *
- * 판정 규칙:
- * - `LC_ALL` 또는 `LC_CTYPE` 또는 `LANG` 중 하나라도 "utf-8"/"utf8"(대소문자 무관) 포함 → true
- * - 셋 모두 설정되지 않으면 `true`(안전한 기본값: UTF-8 지원 가정)
- * - 설정은 됐지만 UTF-8 식별자가 없으면 `false`
+ * 판정 규칙(POSIX 우선순위 `LC_ALL` > `LC_CTYPE` > `LANG`):
+ * - 우선순위 순으로 첫 번째로 설정된(빈 문자열이 아닌) 변수만 본다.
+ *   그 값에 "utf-8"/"utf8"(대소문자 무관)가 있으면 `true`, 없으면 `false`.
+ *   예: `LC_ALL=C`로 명시적으로 끄면 `LANG=...UTF-8`이 있어도 `false`.
+ * - 셋 모두 미설정이면 `true`(안전한 기본값: UTF-8 지원 가정).
  */
 export function isUnicodeLocale(env: Record<string, string | undefined>): boolean {
-  const candidates = [env['LC_ALL'], env['LC_CTYPE'], env['LANG']].filter(
+  const effective = [env['LC_ALL'], env['LC_CTYPE'], env['LANG']].find(
     (v): v is string => typeof v === 'string' && v.length > 0
   );
-  if (candidates.length === 0) return true; // locale 정보 없음 → UTF-8 가정
-  return candidates.some((v) => /utf-?8/i.test(v));
+  if (effective === undefined) return true; // locale 정보 없음 → UTF-8 가정
+  return /utf-?8/i.test(effective);
 }
 
 /**
