@@ -13,7 +13,12 @@ import type { IProvider, OutputBufferPolicy, PermissionProfile } from '../provid
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
 import { checkProviderProfileSupport } from '../runtime/provider-profile-guard.js';
 import { collectRuntimeContexts } from '../runtime/context.js';
-import { renderRuntimeRollupDashboard, type RuntimeRollupEntry } from '../runtime/dashboard.js';
+import {
+  renderRuntimeRollupDashboard,
+  shouldRenderDashboardFromEnv,
+  isUnicodeLocaleFromEnv,
+  type RuntimeRollupEntry,
+} from '../runtime/dashboard.js';
 import { getPrimarySession } from '../runtime/session-dashboard.js';
 import { getCachedProviderAuth } from '../providers/auth-cache.js';
 import {
@@ -64,6 +69,8 @@ interface AskOptions {
   timeoutSeconds: number;
   executionControl: ProviderExecutionControl;
   model?: string;
+  /** --no-unicode 플래그 또는 비-UTF-8 locale 감지 시 true. 4.6 배선. */
+  noUnicode: boolean;
 }
 
 interface AskSessionLedger {
@@ -212,12 +219,19 @@ export async function cmdAsk(args: string[]): Promise<void> {
   );
 
   // 공통 커널로 'aco Runtime Session' 롤업 대시보드를 stderr에 1회 렌더한다.
-  // stdout brief는 손상시키지 않는다.
+  // 5.1: 비-TTY(파이프/CI)이면 대시보드 프레임을 완전 비활성화해 stdout brief를 손상시키지 않는다.
+  // 4.6: --no-unicode 또는 비-UTF-8 locale 감지 시 ASCII 폴백을 사용한다.
   const rollupEntries: RuntimeRollupEntry[] = planned.map(({ provider }, idx) => ({
     context: runtimeContexts[idx],
     icon: provider.icon,
   }));
-  process.stderr.write(renderRuntimeRollupDashboard(rollupEntries) + '\n');
+  if (shouldRenderDashboardFromEnv()) {
+    process.stderr.write(
+      renderRuntimeRollupDashboard(rollupEntries, {
+        unicode: !options.noUnicode,
+      }) + '\n'
+    );
+  }
 
   // 멀티세션이라도 취소 핸들러는 단일 활성 세션만 추적한다(provider는 순차 실행).
   // getPrimarySession seam으로 단일 접근부를 일원화해, 루프 진입 전 Ctrl+C가
@@ -469,6 +483,9 @@ export async function cmdAsk(args: string[]): Promise<void> {
 
 function parseAskOptions(args: string[]): AskOptions {
   const timeoutFlag = parseProviderTimeoutFlag(args);
+  // 4.6 배선: --no-unicode 플래그 또는 비-UTF-8 locale 감지
+  const noUnicodeFlag = args.includes('--no-unicode');
+  const noUnicodeLocale = !isUnicodeLocaleFromEnv();
   return {
     providers: parseProviders(parseFlag(args, '--providers')),
     task: parseFlag(args, '--task'),
@@ -483,6 +500,7 @@ function parseAskOptions(args: string[]): AskOptions {
     timeoutSeconds: resolveProviderTimeoutSeconds(timeoutFlag),
     executionControl: resolveProviderExecutionControl(timeoutFlag),
     model: parseFlag(args, '--model'),
+    noUnicode: noUnicodeFlag || noUnicodeLocale,
   };
 }
 
@@ -711,6 +729,7 @@ Options:
                                     brief summary bound: ${SUMMARY_CHAR_LIMIT} chars
   --timeout <seconds>             Provider execution timeout (default: 300, env: ACO_TIMEOUT_SECONDS)
   --model <model>                 Model identifier passed to the provider binary via -m flag
+  --no-unicode                    Use ASCII fallback labels instead of emoji icons in dashboard
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
 }

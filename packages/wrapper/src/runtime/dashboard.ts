@@ -16,6 +16,74 @@ const RESET = '\x1b[0m';
 
 const DEFAULT_MAX_LIST = 16;
 
+/**
+ * stderr 대시보드를 렌더해야 하는지 판단한다(5.1 TTY 분리 대응).
+ *
+ * - 비-TTY(파이프/CI): `false` → 대시보드 프레임 완전 비활성화
+ * - TTY + NO_COLOR: `true` → 색만 제거, 구조 유지
+ * - TTY + 색 허용: `true`
+ */
+export function shouldRenderDashboard(opts: { isTTY: boolean; noColor: boolean }): boolean {
+  return opts.isTTY;
+}
+
+/**
+ * 현재 process 환경을 기반으로 대시보드 렌더 여부를 결정한다.
+ * stderr.isTTY와 NO_COLOR 환경 변수를 확인한다.
+ */
+export function shouldRenderDashboardFromEnv(): boolean {
+  const isTTY = process.stderr.isTTY === true;
+  const noColor = process.env.NO_COLOR !== undefined;
+  return shouldRenderDashboard({ isTTY, noColor });
+}
+
+/**
+ * 대시보드 갱신 throttle/deadband 가드를 생성한다(5.2 throttle).
+ *
+ * `shouldRender()`를 호출하면:
+ * - 마지막 렌더로부터 `deadbandMs` 이내이면 `false` 반환(억제)
+ * - deadband 경과 후이면 `true` 반환하고 내부 타임스탬프를 갱신한다
+ */
+export function makeDashboardThrottleGuard(deadbandMs: number): { shouldRender: () => boolean } {
+  let lastRenderAt = -Infinity;
+  return {
+    shouldRender(): boolean {
+      const now = Date.now();
+      if (now - lastRenderAt < deadbandMs) return false;
+      lastRenderAt = now;
+      return true;
+    },
+  };
+}
+
+/**
+ * locale 환경 변수(`LANG`, `LC_ALL`, `LC_CTYPE`)를 검사해 UTF-8 지원 여부를 반환한다.
+ * 4.6 배선: `--no-unicode` 플래그의 보조 locale 감지 경로에서 사용한다.
+ *
+ * 판정 규칙:
+ * - `LC_ALL` 또는 `LC_CTYPE` 또는 `LANG` 중 하나라도 "utf-8"/"utf8"(대소문자 무관) 포함 → true
+ * - 셋 모두 설정되지 않으면 `true`(안전한 기본값: UTF-8 지원 가정)
+ * - 설정은 됐지만 UTF-8 식별자가 없으면 `false`
+ */
+export function isUnicodeLocale(env: Record<string, string | undefined>): boolean {
+  const candidates = [env['LC_ALL'], env['LC_CTYPE'], env['LANG']].filter(
+    (v): v is string => typeof v === 'string' && v.length > 0
+  );
+  if (candidates.length === 0) return true; // locale 정보 없음 → UTF-8 가정
+  return candidates.some((v) => /utf-?8/i.test(v));
+}
+
+/**
+ * process.env 기반으로 UTF-8 locale 여부를 판단한다.
+ */
+export function isUnicodeLocaleFromEnv(): boolean {
+  return isUnicodeLocale({
+    LC_ALL: process.env.LC_ALL,
+    LC_CTYPE: process.env.LC_CTYPE,
+    LANG: process.env.LANG,
+  });
+}
+
 function isColorEnabled(forceColor?: boolean): boolean {
   if (forceColor === true) return true;
   if (forceColor === false) return false;

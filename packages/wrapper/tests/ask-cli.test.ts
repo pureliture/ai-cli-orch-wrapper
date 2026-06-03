@@ -199,7 +199,8 @@ describe('aco ask CLI', () => {
     await stat(join(runDir, 'brief.md'));
   });
 
-  it('renders the aco Runtime Session dashboard to stderr (shared kernel)', async () => {
+  it('suppresses dashboard to stderr in non-TTY (pipe) and outputs brief to stdout (U8 5.1)', async () => {
+    // execFile 환경은 stdout/stderr가 파이프(비-TTY)이므로 대시보드는 비활성화된다.
     const result = await runCli([
       'ask',
       '--providers',
@@ -214,17 +215,14 @@ describe('aco ask CLI', () => {
     ]);
 
     assert.equal(result.code, 0);
-    // 롤업 대시보드는 stderr에 1회 렌더되어 stdout brief를 손상시키지 않는다.
-    assert.match(result.stderr, /aco Runtime Session/);
-    // 롤업 헤더는 1회만 렌더된다(provider 루프마다 반복 렌더하지 않음).
-    assert.equal(result.stderr.match(/aco Runtime Session/g)?.length, 1);
-    // 롤업 헤더(공통)와 provider 행(session)이 stderr에 나타난다.
-    assert.match(result.stderr, /Rollup/);
-    assert.match(result.stderr, /Session ID/);
-    // NO_COLOR=1 환경에서도 provider 아이콘은 유지된다(별도 --no-unicode 미설정).
-    assert.match(result.stderr, /⚪ mock/);
+    // 5.1: 비-TTY 환경에서 대시보드 프레임은 stderr에 출력되지 않는다.
+    assert.doesNotMatch(
+      result.stderr,
+      /aco Runtime Session/,
+      'dashboard must be suppressed in non-TTY'
+    );
+    // stdout brief는 손상 없이 출력된다.
     assert.doesNotMatch(result.stdout, /aco Runtime Session/);
-    // stdout brief는 그대로 유지된다.
     assert.match(result.stdout, /Run:/);
   });
 
