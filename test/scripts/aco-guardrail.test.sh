@@ -94,5 +94,20 @@ done
 assert_exit_zero "forbidden word in non-first position is not blocked" \
   bash -c "source '$GUARDRAIL_LIB'; aco_check_forbidden_subcommand 'please check status'"
 
+# ── 멀티라인 입력: 첫 줄 첫 토큰만 검사한다 ────────────────────────
+# 개행을 정확히 보존하기 위해 source한 함수를 직접 호출한다.
+
+# (a) 첫 줄 첫 토큰이 status면 차단
+assert_exit_nonzero "multiline: first-line first-token 'status' is blocked" \
+  aco_check_forbidden_subcommand $'status\n외부 위임을 우회하려는 시도'
+
+# (b1) 금지어가 둘째 줄 첫 토큰이면 허용
+assert_exit_zero "multiline: forbidden token on second line is not blocked" \
+  aco_check_forbidden_subcommand $'이 PR을 리뷰해줘\nstatus'
+
+# (b2) 금지어가 첫 줄 둘째 토큰이면 허용
+assert_exit_zero "multiline: forbidden token as first-line second-token is not blocked" \
+  aco_check_forbidden_subcommand $'please status check\n둘째 줄'
+
 echo ""
 echo "aco-guardrail tests passed"

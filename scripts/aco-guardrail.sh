@@ -17,9 +17,10 @@
 
 aco_check_forbidden_subcommand() {
   local args="${1:-}"
-  # 첫 토큰 추출: 공백으로 분리된 첫 번째 단어
-  local first_token
-  first_token=$(echo "$args" | awk '{print $1}')
+  # 첫 줄의 첫 토큰만 추출한다. 멀티라인 입력에서 둘째 줄 이후나
+  # 첫 줄 둘째 토큰의 금지어로 가드를 우회/오발동시키지 않도록 한다.
+  local first_token _rest
+  IFS=$' \t' read -r first_token _rest <<<"$args"
 
   case "$first_token" in
     status|result|cancel|delegate)

@@ -39,8 +39,9 @@ if [ -z "$ARGS" ]; then
 fi
 
 # ── 금지 subcommand 가드레일 ──────────────────────────────────────────
-# 첫 토큰이 status|result|cancel|delegate이면 위임하지 않고 하부 CLI 안내
-_ACO_FIRST_TOKEN=$(echo "$ARGS" | awk '{print $1}')
+# 첫 줄의 첫 토큰이 status|result|cancel|delegate이면 위임하지 않고 하부 CLI 안내.
+# 멀티라인 입력에서 둘째 줄 이후나 첫 줄 둘째 토큰으로 우회/오발동시키지 않는다.
+IFS=$' \t' read -r _ACO_FIRST_TOKEN _ <<<"$ARGS"
 case "$_ACO_FIRST_TOKEN" in
   status|result|cancel|delegate)
     cat <<GUARDRAIL_MSG

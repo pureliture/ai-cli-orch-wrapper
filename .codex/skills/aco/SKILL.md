@@ -10,14 +10,16 @@ Claude `/aco`와 동일한 ACO delegation 흐름을 Codex 세션에서 미러링
 
 ## 금지 subcommand 가드레일
 
-`$aco`에 전달된 첫 토큰이 `status`·`result`·`cancel`·`delegate`이면 자연어 위임으로 처리하지 않고 하부 CLI 사용을 안내한다.
+`$aco`에 전달된 첫 줄의 첫 토큰이 `status`·`result`·`cancel`·`delegate`이면 자연어 위임으로 처리하지 않고 하부 CLI 사용을 안내한다.
 
 ```bash
-_ACO_FIRST_TOKEN=$(echo "$ARGS" | awk '{print $1}')
+# 첫 줄의 첫 토큰만 검사한다. 멀티라인 입력에서 둘째 줄 이후나
+# 첫 줄 둘째 토큰으로 가드를 우회/오발동시키지 않는다.
+IFS=$' \t' read -r _ACO_FIRST_TOKEN _ <<<"$ARGS"
 case "$_ACO_FIRST_TOKEN" in
   status|result|cancel|delegate)
     # 위임 차단 — 하부 CLI 안내 출력 후 종료
-    echo "/$_ACO_FIRST_TOKEN 는 하부 CLI subcommand입니다. 'aco $_ACO_FIRST_TOKEN [옵션]'을 직접 사용하세요."
+    printf '%s\n' "/$_ACO_FIRST_TOKEN 는 하부 CLI subcommand입니다. 'aco $_ACO_FIRST_TOKEN [옵션]'을 직접 사용하세요."
     exit 0
     ;;
 esac
