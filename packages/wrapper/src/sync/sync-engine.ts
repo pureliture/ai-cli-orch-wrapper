@@ -264,6 +264,88 @@ async function planLegacyGeminiCleanup(
   }
 }
 
+function isCodexAgentTarget(manifestKey: string): boolean {
+  return manifestKey.startsWith('.codex/agents/') && manifestKey.endsWith('.toml');
+}
+
+/**
+ * Plan removal of aco-owned `.codex/agents/*.toml` targets recorded in the manifest
+ * whose source agent no longer exists (so syncCodexAgents produced no output for them).
+ * Without this, deleting the last `.claude/agents/*.md` source would leave the
+ * generated Codex agent file orphaned on disk while the manifest silently drops its
+ * entry — breaking the cleanup-only guarantee that lets a structure-less repo with a
+ * prior manifest still run. Mirrors planLegacyGeminiCleanup's hash + path-safety checks.
+ */
+async function planStaleCodexAgentCleanup(
+  repoRoot: string,
+  existingManifest: SyncManifest | null,
+  producedTargetKeys: ReadonlySet<string>,
+  outputs: SyncOutput[],
+  warnings: SyncWarning[]
+): Promise<void> {
+  if (!existingManifest) return;
+
+  const records = new Map<string, ManifestTargetRecord>();
+  for (const [targetKey, record] of Object.entries(existingManifest.targets ?? {})) {
+    records.set(targetKey, record);
+  }
+  for (const [targetKey, hash] of Object.entries(existingManifest.targetHashes ?? {})) {
+    if (!records.has(targetKey)) {
+      records.set(targetKey, { hash, owner: 'aco', kind: 'agent' });
+    }
+  }
+
+  for (const [targetKey, record] of records) {
+    if (!isCodexAgentTarget(targetKey)) continue;
+    if (producedTargetKeys.has(targetKey)) continue; // source still present — keep
+    if (record.owner !== 'aco') continue;
+
+    const targetPath = join(repoRoot, targetKey);
+    // Path-safety: require the manifest key to round-trip through repo-relative
+    // normalization (no `..` traversal), matching the legacy-Gemini cleanup defense.
+    if (toManifestKey(repoRoot, targetPath) !== targetKey) {
+      warnings.push({
+        source: targetKey,
+        message:
+          'Stale Codex agent target key does not round-trip through repo-relative ' +
+          `normalization (possible path traversal); skipping auto-removal: "${targetKey}".`,
+        severity: 'warning',
+      });
+      continue;
+    }
+
+    let diskContent: string;
+    try {
+      diskContent = await readFile(targetPath, 'utf8');
+    } catch (err: unknown) {
+      // Already gone — the freshly built manifest omits it, so nothing to remove.
+      if (isErrorWithCode(err) && err.code === 'ENOENT') continue;
+      throw err;
+    }
+
+    const expectedHash = record.hash ?? existingManifest.targetHashes?.[targetKey];
+    if (expectedHash && computeHash(diskContent) !== expectedHash) {
+      warnings.push({
+        source: targetKey,
+        message:
+          'Stale Codex agent target hash does not match manifest; skipping auto-removal. ' +
+          `Review ${targetKey} before deleting.`,
+        severity: 'warning',
+      });
+      continue;
+    }
+
+    outputs.push({
+      targetPath,
+      kind: 'file',
+      action: 'removed',
+      hash: record.hash,
+      owner: 'aco',
+      assetKind: 'agent',
+    });
+  }
+}
+
 function stripCodexManagedHookBlock(content: string): string | null {
   const begin = '# BEGIN ACO GENERATED';
   const end = '# END ACO GENERATED';
@@ -590,7 +672,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
         // (normalize-and-re-derive round-trip check), so they bypass the
         // .agents/skills-only guard below without re-deriving the defense here.
         if (!isLegacyGeminiTarget(toManifestKey(repoRoot, output.targetPath))) {
-          const allowedDirs = ['.agents/skills'];
+          const allowedDirs = ['.agents/skills', '.codex/agents'];
           if (!isPathWithinRepo(repoRoot, output.targetPath, allowedDirs)) {
             plan.warnings.push({
               source: relative(repoRoot, output.targetPath) || output.targetPath,
@@ -700,7 +782,9 @@ async function computeTransformPlan(
   const codexAgentResult = await syncCodexAgents(sources, repoRoot);
   outputs.push(...codexAgentResult.outputs);
   warnings.push(...codexAgentResult.warnings);
+  const producedCodexAgentKeys = new Set<string>();
   for (const o of codexAgentResult.outputs) {
+    producedCodexAgentKeys.add(toManifestKey(repoRoot, o.targetPath));
     if (o.hash) {
       const key = toManifestKey(repoRoot, o.targetPath);
       targetHashes[key] = o.hash;
@@ -711,6 +795,16 @@ async function computeTransformPlan(
       };
     }
   }
+
+  // 3b. Remove orphaned Codex agent targets whose source was deleted, so the
+  //     cleanup-only path (prior manifest, no structured source) actually cleans up.
+  await planStaleCodexAgentCleanup(
+    repoRoot,
+    existingManifest,
+    producedCodexAgentKeys,
+    outputs,
+    warnings
+  );
 
   const manifest: SyncManifest = {
     version: '5',

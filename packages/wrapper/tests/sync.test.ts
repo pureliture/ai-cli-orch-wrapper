@@ -496,6 +496,37 @@ describe('No structured sources hard-fail', () => {
       await rm(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it('cleanup-only sync removes the orphaned Codex agent target after its source is deleted', async () => {
+    // The escape hatch promises cleanup completes; this proves it for Codex agents.
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-orphan-codex-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
+      await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.claude', 'agents', 'helper.md'),
+        '---\nid: helper\nwhen: Help with tasks\n---\nYou are a helper.'
+      );
+
+      // First sync produces .codex/agents/helper.toml and records it in the manifest.
+      await runSync(tmpDir, { dryRun: false });
+      const toml = join(tmpDir, '.codex', 'agents', 'helper.toml');
+      const { existsSync } = await import('node:fs');
+      assert.equal(existsSync(toml), true, 'first sync must create the Codex agent target');
+
+      // Delete the only structured source, then re-sync (CLAUDE.md + prior manifest).
+      await rm(join(tmpDir, '.claude', 'agents', 'helper.md'));
+      const result = await runSync(tmpDir, { dryRun: false });
+
+      const removed = result.outputs.some(
+        (o) => o.targetPath.endsWith('helper.toml') && o.action === 'removed'
+      );
+      assert.ok(removed, 'orphaned Codex agent target must be planned for removal');
+      assert.equal(existsSync(toml), false, 'orphaned Codex agent target must be deleted from disk');
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
