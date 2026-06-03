@@ -4,7 +4,7 @@
 
 ## Delegation Surfaces
 
-Consent-gated delegation intentionally keeps the Claude Code UX centered on one generic command:
+Consent-gated delegation은 Claude Code UX를 하나의 generic command로 집중시킨다. 사용자 1차 진입점은 `/aco <자연어 작업>`(Claude Code) 및 `$aco <자연어 작업>`(Codex)뿐이다.
 
 ```text
 .claude/commands/aco.md
@@ -19,7 +19,7 @@ Task-specific behavior belongs in natural language task text, CLI flags, or pres
 
 Do not add `/aco:review`, `/aco:spec-review`, `/aco:plan-review`, or similar task-specific slash commands. If delegation guidance changes, update the generic `/aco` command and `aco-delegation` skill instead.
 
-`aco sync` may expose relevant shared policy surfaces to Codex/Antigravity targets according to the existing managed-block and allowed-skill rules. It does not turn `.claude/aco/tasks/` into provider execution by itself; `aco ask --yes` remains the execution gate.
+`aco sync`는 기존 managed-block·allowed-skill 규칙에 따라 공유 정책 표면을 Codex/Antigravity 대상으로 노출할 수 있다. `.claude/aco/tasks/`를 단독으로 provider 실행으로 전환하지는 않는다. provider 실제 실행은 내부적으로 `aco ask --yes`(또는 스킬이 실행하는 동등한 플로우)를 통해서만 발생한다.
 
 ## 중요: `.agents/skills`는 `.claude/skills`의 미러가 아님
 
@@ -172,7 +172,7 @@ provider-specific command (예: `.claude/commands/gh-issue.md`)는 해당 provid
 
 skill 설치는 `--global` 모드에서만 일어난다. non-global `pack install`/`pack setup`이 skill을 복사하면 `<cwd>/.claude/skills/`(= `aco sync`의 read source)를 덮어쓰고, `pack setup`이 직후 `aco sync`를 실행하므로 sync source 오염이 `.agents/skills/`로 전파된다. 이를 막기 위해 non-global 실행은 skill 복사를 skip한다.
 
-설치된 task preset은 `aco ask --preset <name>`이 읽는 advisory prompt source이며, 그 자체로 provider를 실행하지 않는다. 실제 provider 실행은 `aco ask --yes` 또는 `aco run <provider> <command>`에서만 발생한다.
+설치된 task preset은 내부적으로 `aco ask --preset <name>`이 읽는 advisory prompt source이며, 그 자체로 provider를 실행하지 않는다. 실제 provider 실행은 스킬 내부의 `aco ask --yes` 또는 maintainer 디버그용 `aco run <provider> <command>`에서만 발생한다.
 
 setup은 pack 파일을 쓰기 전에 sync preflight를 실행한다. manifest-owned target conflict는 fatal로 처리되어 파일 쓰기 전에 실패하고, `aco sync --check` 또는 `aco sync --force` 안내를 출력한다. no-source workspace와 update-only drift는 setup을 막지 않으며, 설치 후 sync 단계에서 skip 또는 refresh로 처리된다. 설치 후 sync가 실패하면 setup에 사용한 것과 같은 entrypoint로 `pack uninstall`을 실행하고, `--global` setup은 `pack uninstall --global`을 recovery 경로로 사용한다.
 

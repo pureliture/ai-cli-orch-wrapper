@@ -5,7 +5,29 @@
 
 ---
 
-## 빠른 시작 — 동의 흐름 (consent-gated flow)
+## 사용자 진입점 — `/aco` · `$aco` 스킬
+
+**사용자 1차 진입점은 스킬입니다.** `aco` CLI를 직접 치지 않아도 됩니다.
+
+- **Claude Code 세션**: `/aco <자연어 작업>`
+- **Codex 세션**: `$aco <자연어 작업>`
+
+스킬이 컨텍스트를 읽어 provider·작업을 결정하고, 실행 계획(dry-run)을 먼저 제시합니다. 계획에 동의하면 실제 위임이 실행되고 결과가 요약 반환됩니다.
+
+### 예시
+
+```
+/aco TypeScript 타입 에러 분석해줘
+/aco antigravity로 이 PR 리뷰해줘
+$aco 현재 브랜치 코드 리뷰 요청
+```
+
+> ※ Codex 세션에서 `$aco`를 쓸 때 provider가 `codex`로 지정되면 self-delegation(재귀)이 됩니다. Codex 세션의 peer는 `antigravity`/`mock`입니다. [주의 사항](#주의-사항-caution) 참고.
+
+---
+
+<details>
+<summary>aco CLI 직접 실행 — 동의 흐름 (maintainer / 디버그용)</summary>
 
 ```bash
 # 1단계: 실행 계획 미리보기 (provider 호출 없음)
@@ -15,14 +37,14 @@ aco ask --task "TypeScript 타입 에러 분석" --providers antigravity --dry-r
 aco ask --task "TypeScript 타입 에러 분석" --providers antigravity --yes
 ```
 
-> ※ 주의: 위 예시의 provider를 `codex`로 바꿔 **Codex CLI 세션 안에서** 실행하면 self-delegation(재귀)이 됩니다. Codex 세션에서는 `--providers antigravity`(또는 다른 peer)를 쓰세요. [주의 사항](#주의-사항-caution) 참고.
-
 `--yes` 없이 실행하면 `Consent required` 안내만 출력하고 종료합니다(인터랙티브 동의 프롬프트는 없습니다).
 실행 계획은 `--dry-run`으로 확인하고, 실제 위임은 계획 확인 후 `--yes`로 실행하세요.
 
+</details>
+
 ---
 
-## 서브커맨드 목록
+## 하부 CLI plumbing 참조 (maintainer / 디버그)
 
 | 커맨드 | 설명 |
 |---|---|
@@ -40,6 +62,8 @@ aco ask --task "TypeScript 타입 에러 분석" --providers antigravity --yes
 ---
 
 ## aco ask — 상세 옵션
+
+> 내부 plumbing 옵션입니다. 일반 사용에서는 `/aco` · `$aco` 스킬이 이 옵션들을 자동으로 결정합니다.
 
 ```
 aco ask --task <text>
@@ -69,7 +93,7 @@ aco ask --task <text>
 
 ## Provider 목록
 
-`aco ask`의 `--providers` 플래그에 사용할 수 있는 provider:
+위임 시 사용할 수 있는 provider (자연어로 지정 가능: "antigravity로 리뷰해줘"):
 
 | Provider | 설명 |
 |---|---|
@@ -77,8 +101,8 @@ aco ask --task <text>
 | `antigravity` | Antigravity (agy) CLI |
 | `mock` | 테스트용 mock provider |
 
-**기본(default) provider는 `mock`입니다.** `--providers`를 생략하면 mock이 사용됩니다.
-실제 작업을 위임할 때는 반드시 `--providers codex` 또는 `--providers antigravity`를 명시하세요.
+**기본(default) provider는 `mock`입니다.** provider를 명시하지 않으면 mock이 사용됩니다.
+실제 작업을 위임할 때는 "antigravity로 해줘" 또는 "codex로 해줘"처럼 자연어로 지정하거나, `aco ask`의 `--providers` 플래그를 사용하세요.
 
 ---
 

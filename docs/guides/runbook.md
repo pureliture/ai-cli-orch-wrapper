@@ -2,7 +2,19 @@
 
 ## No-Auth Consent-Gated Demo
 
-Use the built Node wrapper for the public CLI path:
+사용자 1차 진입점은 `/aco <자연어 작업>`(Claude Code) 또는 `$aco <자연어 작업>`(Codex)다.
+`/aco`는 컨텍스트를 읽어 provider와 작업을 결정하고, 실행 계획(dry-run)을 먼저 제시한 뒤 동의 시 실행한다.
+
+**예시 (Claude Code에서):**
+
+```
+/aco mock provider로 "review this demo input" 리뷰해줘 — dry-run 먼저 보여줘
+```
+
+`/aco`가 실행 계획을 제시하면 동의 여부를 확인하고, 동의 시 실제 위임이 진행된다. 결과는 `/aco`가 요약해서 반환한다.
+
+<details>
+<summary>Maintainer / 디버그용: 빌드된 CLI 직접 실행</summary>
 
 ```bash
 npm run build
@@ -12,14 +24,18 @@ node packages/wrapper/dist/cli.js result
 node packages/wrapper/dist/cli.js doctor
 ```
 
+</details>
+
 Expected behavior:
 
-- `--dry-run` shows the plan and prints `Provider execution: skipped`.
-- `--yes --output-mode brief` creates run/session artifacts and prints a bounded summary, not full provider output.
-- `aco result` prints the full deterministic mock output from `output.log`.
-- `aco doctor` prints local diagnostics only. It does not call real providers or verify remote auth. It uses `HOME` or `USERPROFILE` heuristics for credential paths, and falls back gracefully when neither is set.
+- dry-run 단계는 계획을 출력하고 `Provider execution: skipped`를 표시한다.
+- 동의 후 실행(`--yes --output-mode brief`)은 run/session 아티팩트를 생성하고 bounded 요약을 출력한다. full provider output은 아니다.
+- `aco result`는 `output.log`의 deterministic mock 출력을 반환한다.
+- `aco doctor`는 local diagnostics만 출력한다. 실제 provider를 호출하거나 remote auth를 검증하지 않는다. `HOME` 또는 `USERPROFILE` 휴리스틱으로 credential 경로를 찾고, 없으면 graceful fallback한다.
 
 ## Inspecting Artifacts
+
+세션/런 아티팩트는 아래 내부 CLI로 조회할 수 있다 (maintainer / 디버깅용).
 
 ```bash
 aco status
@@ -97,7 +113,7 @@ npm run build --workspace=packages/wrapper
 npm run test:pack-runtime-contract --workspace=packages/wrapper
 ```
 
-copy-paste pilot:
+아래는 maintainer용 copy-paste 검증 시퀀스다. 사용자 1차 UX가 아니라 preset 계약과 provider 연결을 직접 확인하는 목적이다.
 
 ```bash
 aco pack setup
@@ -130,7 +146,7 @@ git diff --check
 
 Timeout 발생 시 session은 `failed`가 되고, cancellation은 `cancelled`가 된다. 두 경로 모두 가능한 경우 `~/.aco/sessions/<session-id>/error.log`를 남긴다.
 
-optional live provider smoke:
+optional live provider smoke (maintainer용, 실제 provider CLI·auth·network 필요):
 
 ```bash
 node packages/wrapper/dist/cli.js run antigravity review --input "hello" --permission-profile restricted --timeout 120
@@ -143,8 +159,19 @@ node packages/wrapper/dist/cli.js run codex review --input "hello" --permission-
 
 ## Consent-Gated Delegation MVP
 
-`aco ask`는 Claude Code 세션에서 외부 AI CLI에 advisory 작업을 위임하기 위한 high-level 명령이다.
-외부 provider는 `--yes` 없이는 실행되지 않는다.
+`/aco`(Claude Code) 또는 `$aco`(Codex) 스킬이 사용자 1차 진입점이다. 자연어로 작업을 전달하면 스킬이 내부적으로 `aco ask`를 실행하는 consent-gated 흐름을 처리한다. provider는 동의 없이 실행되지 않는다.
+
+**예시 (Claude Code에서):**
+
+```
+/aco antigravity로 이 PR 리뷰해줘
+/aco mock으로 "review this demo input" dry-run 먼저 보여줘
+```
+
+`/aco`는 컨텍스트를 읽어 provider와 작업을 결정하고 실행 계획을 먼저 제시한다. 동의 시 실제 위임이 진행되며 결과를 요약해 반환한다.
+
+<details>
+<summary>내부 plumbing (maintainer / 디버그용): aco ask 직접 실행</summary>
 
 ```bash
 # provider 실행 없이 계획만 확인
@@ -156,6 +183,8 @@ aco ask --providers mock --task "review this demo input" --input "demo" --yes --
 # full provider output 조회
 aco result
 ```
+
+</details>
 
 기본 permission profile은 `restricted`이고 기본 output mode는 `brief`다. full output은
 `~/.aco/sessions/<session-id>/output.log`에 저장되며, run-level 요약은
@@ -216,7 +245,7 @@ aco pack install
 
 ## 세션 데이터
 
-세션은 `~/.aco/sessions/<uuid>/`에 저장된다.
+세션은 `~/.aco/sessions/<uuid>/`에 저장된다. 아래는 maintainer / 디버깅용 내부 CLI 명령이다.
 
 ```bash
 aco status
