@@ -745,4 +745,59 @@ describe('pack template runtime contract', () => {
       await rm(binDir, { recursive: true, force: true });
     }
   });
+
+  // U1 회귀 테스트: pack install로 배포되는 위임 진입점이 /aco 하나뿐이어야 한다.
+  // 제거 대상 커맨드(/antigravity:review, /antigravity:adversarial, /antigravity:rescue,
+  // /review, /execute, /research)는 templates/commands/ 에 존재해서는 안 된다.
+  // antigravity:setup 은 프로비저닝 전용이라 삭제 대상에서 제외한다.
+  it('distributes only /aco as delegation entrypoint — removed commands must not exist in templates', async () => {
+    const templatesRoot = resolve(wrapperRoot, '..', '..', 'templates');
+    const commandFiles = await listMarkdownFiles(join(templatesRoot, 'commands'));
+
+    const FORBIDDEN_COMMANDS = [
+      join('antigravity', 'review.md'),
+      join('antigravity', 'adversarial.md'),
+      join('antigravity', 'rescue.md'),
+      'review.md',
+      'execute.md',
+      'research.md',
+    ];
+    const REQUIRED_COMMANDS = ['aco.md'];
+
+    for (const forbidden of FORBIDDEN_COMMANDS) {
+      assert.equal(
+        commandFiles.includes(forbidden),
+        false,
+        `templates/commands/${forbidden} must be removed (delegation entrypoint is /aco only)`
+      );
+    }
+
+    for (const required of REQUIRED_COMMANDS) {
+      assert.equal(
+        commandFiles.includes(required),
+        true,
+        `templates/commands/${required} must remain (single delegation entrypoint)`
+      );
+    }
+
+    // antigravity:setup 은 프로비저닝 커맨드이므로 유지되어야 한다.
+    assert.equal(
+      commandFiles.includes(join('antigravity', 'setup.md')),
+      true,
+      'templates/commands/antigravity/setup.md must be kept (provisioning, not delegation)'
+    );
+  });
+
+  // U2 패리티 테스트: .claude/commands/aco.md와 templates/commands/aco.md는
+  // byte-for-byte 일치해야 한다 (CLAUDE.md Maintenance Rules: "byte-for-byte aligned").
+  it('templates/commands/aco.md is byte-for-byte identical to .claude/commands/aco.md', async () => {
+    const repoRoot = resolve(wrapperRoot, '..', '..');
+    const source = await readFile(join(repoRoot, '.claude', 'commands', 'aco.md'), 'utf8');
+    const template = await readFile(join(repoRoot, 'templates', 'commands', 'aco.md'), 'utf8');
+    assert.equal(
+      template,
+      source,
+      'templates/commands/aco.md must be byte-for-byte identical to .claude/commands/aco.md'
+    );
+  });
 });

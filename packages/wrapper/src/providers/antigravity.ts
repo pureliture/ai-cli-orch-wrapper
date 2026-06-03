@@ -8,6 +8,7 @@ import { defaultSummarizeOutput } from '../util/summarize-output.js';
 export class AntigravityProvider implements IProvider {
   readonly key = 'antigravity';
   readonly installHint = 'curl -fsSL https://antigravity.google/cli/install.sh | bash';
+  readonly icon = '🔵';
 
   isAvailable(): boolean {
     return which('agy') !== null;

@@ -102,7 +102,9 @@ const GO_TO_TS_MAP: Record<string, { tsName: string; isField?: boolean; goOnly?:
 };
 
 // TypeScript-only members that have no Go counterpart
-const TS_ONLY = new Set(["key", "installHint", "onPid", "permissionProfile", "sessionId"]);
+// `icon` is a Node-side dashboard glyph (rollup render); the Go Provider interface
+// has no dashboard rendering responsibility, so it stays TS-only by design.
+const TS_ONLY = new Set(["key", "installHint", "icon", "onPid", "permissionProfile", "sessionId"]);
 
 function checkDrift(goMethods: Method[], tsMethods: Method[]): string[] {
   const errors: string[] = [];

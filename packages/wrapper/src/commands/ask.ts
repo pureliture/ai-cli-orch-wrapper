@@ -9,8 +9,22 @@ import process from 'node:process';
 import { providerRegistry } from '../providers/registry.js';
 import { isCredentialLikePath, findCredentialEnvKeys } from '../util/credential-guard.js';
 import { sessionStore } from '../session/store.js';
-import type { OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
+import type { IProvider, OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
+import { checkProviderProfileSupport } from '../runtime/provider-profile-guard.js';
+import { collectRuntimeContexts } from '../runtime/context.js';
+import {
+  renderRuntimeRollupDashboard,
+  shouldRenderDashboardFromEnv,
+  isUnicodeLocaleFromEnv,
+  type RuntimeRollupEntry,
+} from '../runtime/dashboard.js';
+import { getPrimarySession } from '../runtime/session-dashboard.js';
+import { getCachedProviderAuth } from '../providers/auth-cache.js';
+import {
+  installProviderCancellationHandler,
+  type ProviderCancellationState,
+} from '../runtime/provider-cancellation.js';
 import {
   parseProviderTimeoutFlag,
   resolveProviderExecutionControl,
@@ -55,6 +69,8 @@ interface AskOptions {
   timeoutSeconds: number;
   executionControl: ProviderExecutionControl;
   model?: string;
+  /** --no-unicode 플래그 또는 비-UTF-8 locale 감지 시 true. 4.6 배선. */
+  noUnicode: boolean;
 }
 
 interface AskSessionLedger {
@@ -101,7 +117,13 @@ export async function cmdAsk(args: string[]): Promise<void> {
   }
   validateAskOptions(options);
 
-  const providers = resolveProviders(options.providers);
+  let providers: IProvider[];
+  try {
+    providers = resolveProvidersForAsk(options.providers, options.permissionProfile);
+  } catch (err) {
+    // checkProviderProfileSupport는 미지원 profile에 대해 Error를 throw한다.
+    fail(err instanceof Error ? err.message : String(err));
+  }
   const input = await collectInput(options);
   const preset = options.preset ? await loadPreset(options.preset) : undefined;
   const prompt = buildPrompt(options, preset);
@@ -155,7 +177,26 @@ export async function cmdAsk(args: string[]): Promise<void> {
 
   const inputHashValue = sha256Hex(input);
 
-  const sessions: AskSessionLedger[] = [];
+  // 사용자 취소(SIGINT/SIGTERM) 시 진행 중인 provider 자식 프로세스를 graceful하게
+  // 정리하고 현재 세션을 cancelled로 기록한다. state는 루프에서 활성 PID/세션을 갱신한다.
+  const cancellationState: ProviderCancellationState = {
+    activePid: undefined,
+    sessionId: undefined,
+  };
+  const cancellation = installProviderCancellationHandler({
+    state: cancellationState,
+    markCancelled: (sessionId) => sessionStore.markCancelled(sessionId),
+    killGraceMs: options.executionControl.killGraceMs,
+  });
+
+  // 멀티프로바이더 위임: provider별 session·auth·runtimeContext를 먼저 수집한 뒤
+  // 롤업 대시보드를 stderr에 1회만 렌더한다(provider 루프마다 반복 렌더하지 않음).
+  // 단일 provider일 때도 동일 경로로 헤더 1개 + 행 1개를 렌더한다.
+  const planned: Array<{
+    provider: IProvider;
+    session: Awaited<ReturnType<typeof sessionStore.create>>;
+    auth: Awaited<ReturnType<typeof getCachedProviderAuth>>;
+  }> = [];
   for (const provider of providers) {
     const session = await sessionStore.create(
       provider.key,
@@ -163,118 +204,227 @@ export async function cmdAsk(args: string[]): Promise<void> {
       undefined,
       options.permissionProfile
     );
-    const sessionDir = sessionStore.sessionDir(session.id);
-    await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
+    const auth = await getCachedProviderAuth(provider, { skipCache: true });
+    planned.push({ provider, session, auth });
+  }
 
-    const outputLog = sessionStore.outputLogPath(session.id);
-    const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });
-    const outputBuffer = resolveAskOutputBuffering(options.outputMode);
-    if (outputBuffer.mode === 'bounded') {
-      outputBuffer.snapshot = { value: '' };
-    }
-    let error: string | undefined;
-    let status: AskSessionLedger['status'] = 'done';
-    const runResult = await invokeProviderForSession({
-      provider,
+  const runtimeContexts = await collectRuntimeContexts(
+    planned.map(({ provider, session, auth }) => ({
+      provider: provider.key,
       command: 'ask',
-      prompt,
-      content: input,
+      sessionId: session.id,
       permissionProfile: options.permissionProfile,
-      sessionId: session.id,
-      output: outputStream,
-      outputBuffer,
-      maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
-      timeoutMs: options.executionControl.timeoutMs,
-      killGraceMs: options.executionControl.killGraceMs,
-      ...(options.model ? { model: options.model } : {}),
-      envPolicy: 'allowlist',
-      onChunk:
-        options.outputMode === 'full'
-          ? (chunk) => {
-              process.stdout.write(chunk);
-            }
-          : undefined,
-    });
+      auth,
+    }))
+  );
 
-    if (!runResult.error) {
-      const latest = await sessionStore.read(session.id);
-      if (latest.status === 'cancelled') {
-        status = 'cancelled';
-        error = 'Session was cancelled before provider completion.';
-        await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
-      } else {
-        await sessionStore.markDone(session.id);
-      }
-    } else {
-      const err = runResult.error;
-      error = err instanceof Error ? err.message : String(err);
-      await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
-      const latest = await sessionStore.read(session.id).catch(() => undefined);
-      if (latest?.status === 'cancelled') {
-        status = 'cancelled';
-      } else {
-        status = 'failed';
-        await sessionStore.markFailed(session.id);
+  // 공통 커널로 'aco Runtime Session' 롤업 대시보드를 stderr에 1회 렌더한다.
+  // 5.1: 비-TTY(파이프/CI)이면 대시보드 프레임을 완전 비활성화해 stdout brief를 손상시키지 않는다.
+  // 4.6: --no-unicode 또는 비-UTF-8 locale 감지 시 ASCII 폴백을 사용한다.
+  const rollupEntries: RuntimeRollupEntry[] = planned.map(({ provider }, idx) => ({
+    context: runtimeContexts[idx],
+    icon: provider.icon,
+  }));
+  if (shouldRenderDashboardFromEnv()) {
+    process.stderr.write(
+      renderRuntimeRollupDashboard(rollupEntries, {
+        unicode: !options.noUnicode,
+      }) + '\n'
+    );
+  }
+
+  // 멀티세션이라도 취소 핸들러는 단일 활성 세션만 추적한다(provider는 순차 실행).
+  // getPrimarySession seam으로 단일 접근부를 일원화해, 루프 진입 전 Ctrl+C가
+  // 들어와도 대표 세션이 cancelled로 기록되도록 기본값을 시드한다.
+  const primarySession = getPrimarySession(
+    planned.map(({ session, provider }) => ({ id: session.id, provider: provider.key }))
+  );
+  cancellationState.sessionId = primarySession?.id;
+
+  await Promise.all(
+    planned.map(({ session }, idx) =>
+      sessionStore.update(session.id, { runtimeContext: runtimeContexts[idx] })
+    )
+  );
+
+  const sessions: AskSessionLedger[] = [];
+  try {
+    for (const { provider, session, auth } of planned) {
+      cancellationState.sessionId = session.id;
+      cancellationState.activePid = undefined;
+      // P1b: provider별 실행 구간을 try/finally로 감싸 invoke가 throw해도
+      // activePid를 반드시 초기화한다(이후 신호가 죽은/엉뚱한 PID를 종료하지 않게).
+      try {
+        const sessionDir = sessionStore.sessionDir(session.id);
+        await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
+
+        // 4.7 부분 인증 실패: degraded 정책 — 미인증 provider는 실행을 건너뛰고
+        // failed 세션으로 기록한다(인증된 provider만 계속 진행). 대시보드는 이미
+        // 위에서 해당 provider 행을 not-ready로 표시했다.
+        if (!auth.ok) {
+          const error = `Provider '${provider.key}' is not authenticated; skipped (degraded). ${
+            auth.hint ?? 'run: aco provider setup'
+          }`;
+          await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
+          await sessionStore.markFailed(session.id);
+          const briefPath = join(sessionDir, 'brief.md');
+          await writeFile(
+            briefPath,
+            renderSessionBrief({
+              runId,
+              task: options.task ?? '',
+              provider: provider.key,
+              sessionId: session.id,
+              outputLog: sessionStore.outputLogPath(session.id),
+              status: 'failed',
+              summary: '(skipped: provider not authenticated)',
+              error,
+            }),
+            { mode: 0o600 }
+          );
+          sessions.push({
+            id: session.id,
+            provider: provider.key,
+            status: 'failed',
+            outputLog: sessionStore.outputLogPath(session.id),
+            briefPath,
+            summary: '(skipped: provider not authenticated)',
+            error,
+            usageStatus: 'unavailable',
+            hasOutput: false,
+            outputBytes: 0,
+            stderrBytes: 0,
+            warningCount: 0,
+            resultQuality: 'error',
+            canonicalInputPath,
+            inputHash: inputHashValue,
+            summaryTruncated: false,
+            topFindings: null,
+          });
+          continue;
+        }
+
+        const outputLog = sessionStore.outputLogPath(session.id);
+        const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });
+        const outputBuffer = resolveAskOutputBuffering(options.outputMode);
+        if (outputBuffer.mode === 'bounded') {
+          outputBuffer.snapshot = { value: '' };
+        }
+        let error: string | undefined;
+        let status: AskSessionLedger['status'] = 'done';
+        const runResult = await invokeProviderForSession({
+          provider,
+          command: 'ask',
+          prompt,
+          content: input,
+          permissionProfile: options.permissionProfile,
+          sessionId: session.id,
+          output: outputStream,
+          outputBuffer,
+          maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
+          timeoutMs: options.executionControl.timeoutMs,
+          killGraceMs: options.executionControl.killGraceMs,
+          ...(options.model ? { model: options.model } : {}),
+          envPolicy: 'allowlist',
+          onPid: (pid) => {
+            cancellationState.activePid = pid;
+          },
+          onChunk:
+            options.outputMode === 'full'
+              ? (chunk) => {
+                  process.stdout.write(chunk);
+                }
+              : undefined,
+        });
+
+        if (!runResult.error) {
+          const latest = await sessionStore.read(session.id);
+          if (latest.status === 'cancelled') {
+            status = 'cancelled';
+            error = 'Session was cancelled before provider completion.';
+            await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
+          } else {
+            await sessionStore.markDone(session.id);
+          }
+        } else {
+          const err = runResult.error;
+          error = err instanceof Error ? err.message : String(err);
+          await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
+          const latest = await sessionStore.read(session.id).catch(() => undefined);
+          if (latest?.status === 'cancelled') {
+            status = 'cancelled';
+          } else {
+            status = 'failed';
+            await sessionStore.markFailed(session.id);
+          }
+        }
+
+        const usage = await collectUsage(provider.key, session.id);
+
+        const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
+        const stderrContent = runResult.stderrContent;
+        const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
+        const warningCount = countWarnings(runResult.stderrContent);
+        const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
+
+        let stderrArtifactPath: string | undefined;
+        if (stderrBytes > 0) {
+          const stderrPath = join(sessionDir, 'stderr.log');
+          await writeFile(stderrPath, stderrContent, { mode: 0o600 });
+          stderrArtifactPath = stderrPath;
+        }
+
+        const summary = summarizeProviderOutput(runResult.fullOutput, provider);
+        const brief = renderSessionBrief({
+          runId,
+          task: options.task ?? '',
+          provider: provider.key,
+          sessionId: session.id,
+          outputLog,
+          status,
+          summary,
+          error,
+        });
+        const briefPath = join(sessionDir, 'brief.md');
+        await writeFile(briefPath, brief, { mode: 0o600 });
+
+        sessions.push({
+          id: session.id,
+          provider: provider.key,
+          status,
+          outputLog,
+          briefPath,
+          summary,
+          ...(error ? { error } : {}),
+          usageStatus: usage.usageStatus,
+          ...(usage.model !== undefined ? { model: usage.model } : {}),
+          ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
+          ...(usage.outputTokens !== undefined ? { outputTokens: usage.outputTokens } : {}),
+          ...(usage.nativeSessionPath !== undefined
+            ? { nativeSessionPath: usage.nativeSessionPath }
+            : {}),
+          hasOutput: runResult.hasOutput,
+          outputBytes,
+          stderrBytes,
+          warningCount,
+          resultQuality,
+          ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
+          canonicalInputPath,
+          inputHash: inputHashValue,
+          // true only when the summarizer applied char-limit truncation,
+          // not when the provider simply reformats/filters output
+          summaryTruncated: summary.includes('...[truncated to'),
+          topFindings: extractTopFindings(runResult.fullOutput),
+        });
+      } finally {
+        // P1b: 정상/예외 경로 모두에서 활성 PID를 초기화해 stale PID 오종료를 막는다.
+        cancellationState.activePid = undefined;
       }
     }
-
-    const usage = await collectUsage(provider.key, session.id);
-
-    const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
-    const stderrContent = runResult.stderrContent;
-    const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
-    const warningCount = countWarnings(runResult.stderrContent);
-    const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
-
-    let stderrArtifactPath: string | undefined;
-    if (stderrBytes > 0) {
-      const stderrPath = join(sessionDir, 'stderr.log');
-      await writeFile(stderrPath, stderrContent, { mode: 0o600 });
-      stderrArtifactPath = stderrPath;
-    }
-
-    const summary = summarizeProviderOutput(runResult.fullOutput, provider);
-    const brief = renderSessionBrief({
-      runId,
-      task: options.task ?? '',
-      provider: provider.key,
-      sessionId: session.id,
-      outputLog,
-      status,
-      summary,
-      error,
-    });
-    const briefPath = join(sessionDir, 'brief.md');
-    await writeFile(briefPath, brief, { mode: 0o600 });
-
-    sessions.push({
-      id: session.id,
-      provider: provider.key,
-      status,
-      outputLog,
-      briefPath,
-      summary,
-      ...(error ? { error } : {}),
-      usageStatus: usage.usageStatus,
-      ...(usage.model !== undefined ? { model: usage.model } : {}),
-      ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
-      ...(usage.outputTokens !== undefined ? { outputTokens: usage.outputTokens } : {}),
-      ...(usage.nativeSessionPath !== undefined
-        ? { nativeSessionPath: usage.nativeSessionPath }
-        : {}),
-      hasOutput: runResult.hasOutput,
-      outputBytes,
-      stderrBytes,
-      warningCount,
-      resultQuality,
-      ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
-      canonicalInputPath,
-      inputHash: inputHashValue,
-      // true only when the summarizer applied char-limit truncation,
-      // not when the provider simply reformats/filters output
-      summaryTruncated: summary.includes('...[truncated to'),
-      topFindings: extractTopFindings(runResult.fullOutput),
-    });
+  } finally {
+    cancellationState.activePid = undefined;
+    cancellationState.sessionId = undefined;
+    cancellation.dispose();
   }
 
   const endedAt = new Date().toISOString();
@@ -333,6 +483,9 @@ export async function cmdAsk(args: string[]): Promise<void> {
 
 function parseAskOptions(args: string[]): AskOptions {
   const timeoutFlag = parseProviderTimeoutFlag(args);
+  // 4.6 배선: --no-unicode 플래그 또는 비-UTF-8 locale 감지
+  const noUnicodeFlag = args.includes('--no-unicode');
+  const noUnicodeLocale = !isUnicodeLocaleFromEnv();
   return {
     providers: parseProviders(parseFlag(args, '--providers')),
     task: parseFlag(args, '--task'),
@@ -347,6 +500,7 @@ function parseAskOptions(args: string[]): AskOptions {
     timeoutSeconds: resolveProviderTimeoutSeconds(timeoutFlag),
     executionControl: resolveProviderExecutionControl(timeoutFlag),
     model: parseFlag(args, '--model'),
+    noUnicode: noUnicodeFlag || noUnicodeLocale,
   };
 }
 
@@ -378,10 +532,23 @@ function validateAskOptions(options: AskOptions): void {
   }
 }
 
-function resolveProviders(keys: string[]) {
+/**
+ * provider key 목록을 IProvider 인스턴스로 해석하고, 각 provider가 요청된
+ * permission profile을 지원하는지 검증한다. 미지원 profile이면 Error를 throw해
+ * 실행을 차단한다 (checkProviderProfileSupport).
+ *
+ * registry 인자는 테스트에서 격리된 registry를 주입하기 위한 seam이며,
+ * 기본값은 전역 providerRegistry다.
+ */
+export function resolveProvidersForAsk(
+  keys: string[],
+  permissionProfile: PermissionProfile,
+  registry: { get(key: string): IProvider | undefined } = providerRegistry
+): IProvider[] {
   return keys.map((key) => {
-    const provider = providerRegistry.get(key);
+    const provider = registry.get(key);
     if (!provider) fail(`Unknown provider: ${key}`);
+    checkProviderProfileSupport(provider, permissionProfile);
     return provider;
   });
 }
@@ -562,6 +729,7 @@ Options:
                                     brief summary bound: ${SUMMARY_CHAR_LIMIT} chars
   --timeout <seconds>             Provider execution timeout (default: 300, env: ACO_TIMEOUT_SECONDS)
   --model <model>                 Model identifier passed to the provider binary via -m flag
+  --no-unicode                    Use ASCII fallback labels instead of emoji icons in dashboard
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
 }

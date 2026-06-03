@@ -404,6 +404,7 @@ describe('invokeProviderForSession stderr wiring (Fix A & B)', () => {
     class StderrTestProvider implements IProvider {
       readonly key = 'stderr-test';
       readonly installHint = 'test only';
+      readonly icon = '⚪';
       isAvailable(): boolean { return true; }
       async checkAuth(): Promise<AuthResult> {
         return { ok: true, method: 'cli-fallback' };
@@ -467,6 +468,7 @@ describe('invokeProviderForSession stderr wiring (Fix A & B)', () => {
     class SeparateStderrProvider implements IProvider {
       readonly key = 'separate-stderr-test';
       readonly installHint = 'test only';
+      readonly icon = '⚪';
       isAvailable(): boolean { return true; }
       async checkAuth(): Promise<AuthResult> {
         return { ok: true, method: 'cli-fallback' };

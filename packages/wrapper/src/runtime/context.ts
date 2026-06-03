@@ -185,6 +185,21 @@ async function getBranch(workspace: string): Promise<string | undefined> {
   }
 }
 
+/**
+ * 여러 provider 입력을 받아 provider별 RuntimeContext를 수집한다.
+ *
+ * `aco ask`(선언적 멀티프로바이더)는 한 위임에 여러 provider가 참여할 수 있으므로
+ * 단일 세션이 아닌 멀티 세션 모델이 필요하다. 각 provider는 독립된 session·auth를
+ * 가지며, 이 함수는 입력 순서를 보존해 RuntimeContext 배열을 반환한다.
+ *
+ * `aco run`(단일 provider)은 계속 단일 입력 `collectRuntimeContext`를 사용한다.
+ */
+export async function collectRuntimeContexts(
+  inputs: readonly RuntimeContextInput[]
+): Promise<RuntimeContext[]> {
+  return Promise.all(inputs.map((input) => collectRuntimeContext(input)));
+}
+
 export async function collectRuntimeContext(input: RuntimeContextInput): Promise<RuntimeContext> {
   const workspace = input.cwd ?? process.cwd();
   const [sharedSkills, providerExposed, branch] = await Promise.all([

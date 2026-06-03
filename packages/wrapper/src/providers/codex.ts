@@ -11,6 +11,7 @@ import { defaultSummarizeOutput } from '../util/summarize-output.js';
 export class CodexProvider implements IProvider {
   readonly key = 'codex';
   readonly installHint = 'npm install -g @openai/codex';
+  readonly icon = '🟢';
 
   isAvailable(): boolean {
     return which('codex') !== null;

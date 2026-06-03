@@ -8,7 +8,7 @@ Terminology reference: [Ubiquitous Language](ubiquitous-language.md) defines `ru
 
 ## Why Artifacts Exist
 
-Claude Code 세션 안에서는 token-saving이 중요하다. `aco ask --output-mode brief`는 bounded summary만 보여 주고, full provider output은 artifact로 저장한다. Claude Code는 필요한 경우 `aco result` 또는 artifact 파일을 통해 full output을 다시 확인한다.
+Claude Code 세션 안에서는 token-saving이 중요하다. `aco ask --output-mode brief`는 bounded summary만 보여 주고, full provider output은 artifact로 저장한다. 스킬 위임 흐름 내부에서 필요한 경우 `aco result` 또는 artifact 파일을 통해 full output을 다시 확인한다.
 
 ## `aco ask` Run Layout
 
