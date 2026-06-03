@@ -214,9 +214,15 @@ describe('aco ask CLI', () => {
     ]);
 
     assert.equal(result.code, 0);
-    // 대시보드는 stderr에 렌더되어 stdout brief를 손상시키지 않는다.
+    // 롤업 대시보드는 stderr에 1회 렌더되어 stdout brief를 손상시키지 않는다.
     assert.match(result.stderr, /aco Runtime Session/);
-    assert.match(result.stderr, /Provider/);
+    // 롤업 헤더는 1회만 렌더된다(provider 루프마다 반복 렌더하지 않음).
+    assert.equal(result.stderr.match(/aco Runtime Session/g)?.length, 1);
+    // 롤업 헤더(공통)와 provider 행(session)이 stderr에 나타난다.
+    assert.match(result.stderr, /Rollup/);
+    assert.match(result.stderr, /Session ID/);
+    // NO_COLOR=1 환경에서도 provider 아이콘은 유지된다(별도 --no-unicode 미설정).
+    assert.match(result.stderr, /⚪ mock/);
     assert.doesNotMatch(result.stdout, /aco Runtime Session/);
     // stdout brief는 그대로 유지된다.
     assert.match(result.stdout, /Run:/);
@@ -786,6 +792,7 @@ describe('aco ask CLI', () => {
     const provider: IProvider = {
       key: 'slow-test',
       installHint: 'test provider',
+      icon: '⚪',
       isAvailable: () => true,
       checkAuth: async () => ({
         ok: true,

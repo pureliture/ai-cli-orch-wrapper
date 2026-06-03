@@ -12,7 +12,9 @@ import { sessionStore } from '../session/store.js';
 import type { IProvider, OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
 import { checkProviderProfileSupport } from '../runtime/provider-profile-guard.js';
-import { emitRuntimeDashboard } from '../runtime/session-dashboard.js';
+import { collectRuntimeContexts } from '../runtime/context.js';
+import { renderRuntimeRollupDashboard, type RuntimeRollupEntry } from '../runtime/dashboard.js';
+import { getPrimarySession } from '../runtime/session-dashboard.js';
 import { getCachedProviderAuth } from '../providers/auth-cache.js';
 import {
   installProviderCancellationHandler,
@@ -180,15 +182,60 @@ export async function cmdAsk(args: string[]): Promise<void> {
     killGraceMs: options.executionControl.killGraceMs,
   });
 
+  // 멀티프로바이더 위임: provider별 session·auth·runtimeContext를 먼저 수집한 뒤
+  // 롤업 대시보드를 stderr에 1회만 렌더한다(provider 루프마다 반복 렌더하지 않음).
+  // 단일 provider일 때도 동일 경로로 헤더 1개 + 행 1개를 렌더한다.
+  const planned: Array<{
+    provider: IProvider;
+    session: Awaited<ReturnType<typeof sessionStore.create>>;
+    auth: Awaited<ReturnType<typeof getCachedProviderAuth>>;
+  }> = [];
+  for (const provider of providers) {
+    const session = await sessionStore.create(
+      provider.key,
+      'ask',
+      undefined,
+      options.permissionProfile
+    );
+    const auth = await getCachedProviderAuth(provider, { skipCache: true });
+    planned.push({ provider, session, auth });
+  }
+
+  const runtimeContexts = await collectRuntimeContexts(
+    planned.map(({ provider, session, auth }) => ({
+      provider: provider.key,
+      command: 'ask',
+      sessionId: session.id,
+      permissionProfile: options.permissionProfile,
+      auth,
+    }))
+  );
+
+  // 공통 커널로 'aco Runtime Session' 롤업 대시보드를 stderr에 1회 렌더한다.
+  // stdout brief는 손상시키지 않는다.
+  const rollupEntries: RuntimeRollupEntry[] = planned.map(({ provider }, idx) => ({
+    context: runtimeContexts[idx],
+    icon: provider.icon,
+  }));
+  process.stderr.write(renderRuntimeRollupDashboard(rollupEntries) + '\n');
+
+  // 멀티세션이라도 취소 핸들러는 단일 활성 세션만 추적한다(provider는 순차 실행).
+  // getPrimarySession seam으로 단일 접근부를 일원화해, 루프 진입 전 Ctrl+C가
+  // 들어와도 대표 세션이 cancelled로 기록되도록 기본값을 시드한다.
+  const primarySession = getPrimarySession(
+    planned.map(({ session, provider }) => ({ id: session.id, provider: provider.key }))
+  );
+  cancellationState.sessionId = primarySession?.id;
+
+  await Promise.all(
+    planned.map(({ session }, idx) =>
+      sessionStore.update(session.id, { runtimeContext: runtimeContexts[idx] })
+    )
+  );
+
   const sessions: AskSessionLedger[] = [];
   try {
-    for (const provider of providers) {
-      const session = await sessionStore.create(
-        provider.key,
-        'ask',
-        undefined,
-        options.permissionProfile
-      );
+    for (const { provider, session, auth } of planned) {
       cancellationState.sessionId = session.id;
       cancellationState.activePid = undefined;
       // P1b: provider별 실행 구간을 try/finally로 감싸 invoke가 throw해도
@@ -197,18 +244,51 @@ export async function cmdAsk(args: string[]): Promise<void> {
         const sessionDir = sessionStore.sessionDir(session.id);
         await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
 
-        // 공통 커널로 'aco Runtime Session' 대시보드를 stderr에 렌더한다.
-        // aco run과 동일한 커널을 사용하며, stdout brief는 손상시키지 않는다.
-        // (U7에서 멀티프로바이더 롤업으로 확장된다. 현재는 provider별 단일 행.)
-        const auth = await getCachedProviderAuth(provider, { skipCache: true });
-        const runtimeContext = await emitRuntimeDashboard({
-          provider: provider.key,
-          command: 'ask',
-          sessionId: session.id,
-          permissionProfile: options.permissionProfile,
-          auth,
-        });
-        await sessionStore.update(session.id, { runtimeContext });
+        // 4.7 부분 인증 실패: degraded 정책 — 미인증 provider는 실행을 건너뛰고
+        // failed 세션으로 기록한다(인증된 provider만 계속 진행). 대시보드는 이미
+        // 위에서 해당 provider 행을 not-ready로 표시했다.
+        if (!auth.ok) {
+          const error = `Provider '${provider.key}' is not authenticated; skipped (degraded). ${
+            auth.hint ?? 'run: aco provider setup'
+          }`;
+          await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
+          await sessionStore.markFailed(session.id);
+          const briefPath = join(sessionDir, 'brief.md');
+          await writeFile(
+            briefPath,
+            renderSessionBrief({
+              runId,
+              task: options.task ?? '',
+              provider: provider.key,
+              sessionId: session.id,
+              outputLog: sessionStore.outputLogPath(session.id),
+              status: 'failed',
+              summary: '(skipped: provider not authenticated)',
+              error,
+            }),
+            { mode: 0o600 }
+          );
+          sessions.push({
+            id: session.id,
+            provider: provider.key,
+            status: 'failed',
+            outputLog: sessionStore.outputLogPath(session.id),
+            briefPath,
+            summary: '(skipped: provider not authenticated)',
+            error,
+            usageStatus: 'unavailable',
+            hasOutput: false,
+            outputBytes: 0,
+            stderrBytes: 0,
+            warningCount: 0,
+            resultQuality: 'error',
+            canonicalInputPath,
+            inputHash: inputHashValue,
+            summaryTruncated: false,
+            topFindings: null,
+          });
+          continue;
+        }
 
         const outputLog = sessionStore.outputLogPath(session.id);
         const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });

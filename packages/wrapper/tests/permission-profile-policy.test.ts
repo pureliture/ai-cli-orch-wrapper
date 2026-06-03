@@ -154,6 +154,7 @@ describe('permission-profile 전파 — buildArgs가 프로필을 반영한다',
     const spyProvider: IProvider = {
       key: 'spy',
       installHint: 'spy provider',
+      icon: '⚪',
       isAvailable: () => true,
       async checkAuth() {
         return { ok: true, method: 'cli-fallback' as const };
@@ -208,6 +209,7 @@ describe('permission-profile 미지원 provider 차단', () => {
     } = {
       key: 'unsupported-profile-provider',
       installHint: 'test only',
+      icon: '⚪',
       isAvailable: () => true,
       async checkAuth() {
         return { ok: true, method: 'cli-fallback' as const };
@@ -255,6 +257,7 @@ describe('permission-profile 미지원 provider 차단', () => {
     } = {
       key: 'full-profile-provider',
       installHint: 'test only',
+      icon: '⚪',
       isAvailable: () => true,
       async checkAuth() {
         return { ok: true, method: 'cli-fallback' as const };
@@ -295,6 +298,7 @@ describe('미지원 provider 차단 — ask 실제 경로(resolveProvidersForAsk
     } = {
       key: 'no-restricted',
       installHint: 'test only',
+      icon: '⚪',
       isAvailable: () => true,
       async checkAuth() {
         return { ok: true, method: 'cli-fallback' as const };
@@ -333,6 +337,7 @@ describe('미지원 provider 차단 — ask 실제 경로(resolveProvidersForAsk
     } = {
       key: 'all-profiles',
       installHint: 'test only',
+      icon: '⚪',
       isAvailable: () => true,
       async checkAuth() {
         return { ok: true, method: 'cli-fallback' as const };

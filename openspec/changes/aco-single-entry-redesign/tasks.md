@@ -31,13 +31,13 @@
 
 ## 4. 멀티프로바이더 롤업 + provider 아이콘 (C)
 
-- [ ] 4.1 `collectRuntimeContext`를 단일 세션 → 멀티 세션 모델로 확장
-- [ ] 4.2 대시보드를 롤업 헤더(command·branch) + provider별 행(session·auth)으로 렌더
-- [ ] 4.3 `IProvider`에 `readonly icon` 필드 추가(`interface.ts`)
-- [ ] 4.4 각 provider에 icon 지정(antigravity 🔵 · codex 🟢 · mock ⚪) + registry 조회
-- [ ] 4.5 대시보드 provider 행 앞에 `icon` 렌더(host 헤더 🟠)
-- [ ] 4.6 `--no-unicode`/비-UTF-8 감지 시 ASCII 아이콘 폴백(`[AG]`/`[CX]`/`[MC]`) + 유니코드 호환성 테스트
-- [ ] 4.7 멀티프로바이더 부분 인증 실패(abort vs degraded) 처리 + 대시보드 상태 표시
+- [x] 4.1 `collectRuntimeContext`를 단일 세션 → 멀티 세션 모델로 확장
+- [x] 4.2 대시보드를 롤업 헤더(command·branch) + provider별 행(session·auth)으로 렌더
+- [x] 4.3 `IProvider`에 `readonly icon` 필드 추가(`interface.ts`)
+- [x] 4.4 각 provider에 icon 지정(antigravity 🔵 · codex 🟢 · mock ⚪) + registry 조회
+- [x] 4.5 대시보드 provider 행 앞에 `icon` 렌더(host 헤더 🟠)
+- [x] 4.6 `--no-unicode`/비-UTF-8 감지 시 ASCII 아이콘 폴백(`[AG]`/`[CX]`/`[MC]`) + 유니코드 호환성 테스트
+- [x] 4.7 멀티프로바이더 부분 인증 실패(abort vs degraded) 처리 + 대시보드 상태 표시
 
 ## 5. 출력 동기화 · TTY · 검증
 

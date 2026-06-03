@@ -22,6 +22,7 @@ describe('command invocation output buffering policy', () => {
     const provider: IProvider = {
       key: 'mock',
       installHint: 'mock',
+      icon: '⚪',
       isAvailable: () => true,
       checkAuth: async () => ({ ok: true }),
       buildArgs: () => [],

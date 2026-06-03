@@ -4,6 +4,7 @@ import { defaultSummarizeOutput } from '../util/summarize-output.js';
 export class MockProvider implements IProvider {
   readonly key = 'mock';
   readonly installHint = 'mock provider is built in for deterministic no-auth demos';
+  readonly icon = '⚪';
 
   isAvailable(): boolean {
     return true;
