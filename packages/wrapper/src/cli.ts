@@ -25,6 +25,10 @@ import { renderRuntimeDashboard } from './runtime/dashboard.js';
 import { formatAuthStatus } from './runtime/auth-display.js';
 import { invokeProviderForSession } from './runtime/provider-session-runner.js';
 import { terminateProviderProcess } from './runtime/provider-process.js';
+import {
+  createProviderCancellationHandler,
+  type ProviderCancellationState,
+} from './runtime/provider-cancellation.js';
 import { resolveRunPromptTemplate } from './runtime/run-prompt-template.js';
 import {
   parseProviderTimeoutFlag,
@@ -229,15 +233,14 @@ async function cmdRun(args: string[]): Promise<void> {
   process.stderr.write(renderRuntimeDashboard(runtimeContext) + '\n');
 
   const tee = sessionStore.createOutputTee(session.id);
-  let activePid: number | undefined;
-  const handleSignal = (signal: NodeJS.Signals): void => {
-    if (activePid !== undefined) {
-      terminateProviderProcess(activePid, signal);
-    }
-    sessionStore.markCancelled(session.id).finally(() => {
-      process.exit(EXIT_ERROR);
-    });
+  const cancellationState: ProviderCancellationState = {
+    activePid: undefined,
+    sessionId: session.id,
   };
+  const handleSignal = createProviderCancellationHandler({
+    state: cancellationState,
+    markCancelled: (sessionId) => sessionStore.markCancelled(sessionId),
+  });
   process.on('SIGINT', handleSignal);
   process.on('SIGTERM', handleSignal);
   const runResult = await invokeProviderForSession({
@@ -254,7 +257,7 @@ async function cmdRun(args: string[]): Promise<void> {
     ...(model ? { model } : {}),
     envPolicy: 'allowlist',
     onPid: (pid) => {
-      activePid = pid;
+      cancellationState.activePid = pid;
     },
   });
   process.off('SIGINT', handleSignal);

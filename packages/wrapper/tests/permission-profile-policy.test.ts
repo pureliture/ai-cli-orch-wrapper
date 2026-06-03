@@ -9,8 +9,9 @@
  */
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { execFile, spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, delimiter } from 'node:path';
 import { Writable } from 'node:stream';
@@ -22,6 +23,12 @@ import { invokeProviderForSession } from '../src/runtime/provider-session-runner
 import { SessionStore } from '../src/session/store';
 import { checkProviderProfileSupport } from '../src/runtime/provider-profile-guard';
 import { terminateProviderProcess } from '../src/runtime/provider-process';
+import { resolveProvidersForAsk } from '../src/commands/ask';
+import {
+  createProviderCancellationHandler,
+  type ProviderCancellationState,
+} from '../src/runtime/provider-cancellation';
+import { ProviderRegistry } from '../src/providers/registry';
 
 // ── 헬퍼 ──────────────────────────────────────────────────────────────────────
 
@@ -269,6 +276,96 @@ describe('permission-profile 미지원 provider 차단', () => {
   });
 });
 
+// ── 2.7 미지원 차단 — 실제 ask resolveProviders 경로가 차단을 강제한다 ──────────
+//
+// Concern #1 fix: checkProviderProfileSupport가 ask.ts의 provider 해석 경로
+// (resolveProvidersForAsk)에서 호출되어, 미지원 profile이면 명확한 에러로 차단된다.
+
+describe('미지원 provider 차단 — ask 실제 경로(resolveProvidersForAsk)', () => {
+  function makeRegistryWith(provider: IProvider): ProviderRegistry {
+    const registry = new ProviderRegistry();
+    registry.register(provider.key, provider);
+    return registry;
+  }
+
+  it('resolveProvidersForAsk는 미지원 profile provider를 throw로 차단한다', () => {
+    const restrictedUnsupported: IProvider & {
+      supportsPermissionProfile(profile: PermissionProfile): boolean;
+    } = {
+      key: 'no-restricted',
+      installHint: 'test only',
+      isAvailable: () => true,
+      async checkAuth() {
+        return { ok: true, method: 'cli-fallback' as const };
+      },
+      buildArgs() {
+        return [];
+      },
+      async *invoke(): AsyncIterable<string> {
+        yield 'should not run';
+      },
+      supportsPermissionProfile(profile: PermissionProfile): boolean {
+        return profile !== 'restricted';
+      },
+    };
+
+    const registry = makeRegistryWith(restrictedUnsupported);
+
+    assert.throws(
+      () => resolveProvidersForAsk(['no-restricted'], 'restricted', registry),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.match(
+          err.message,
+          /no-restricted.*restricted/i,
+          `Error must name provider and profile. Got: ${err.message}`
+        );
+        return true;
+      },
+      'resolveProvidersForAsk must block unsupported profile'
+    );
+  });
+
+  it('resolveProvidersForAsk는 지원 profile은 통과시킨다', () => {
+    const supported: IProvider & {
+      supportsPermissionProfile(profile: PermissionProfile): boolean;
+    } = {
+      key: 'all-profiles',
+      installHint: 'test only',
+      isAvailable: () => true,
+      async checkAuth() {
+        return { ok: true, method: 'cli-fallback' as const };
+      },
+      buildArgs() {
+        return [];
+      },
+      async *invoke(): AsyncIterable<string> {
+        yield 'ok';
+      },
+      supportsPermissionProfile(): boolean {
+        return true;
+      },
+    };
+
+    const registry = makeRegistryWith(supported);
+
+    assert.doesNotThrow(() => {
+      const resolved = resolveProvidersForAsk(['all-profiles'], 'restricted', registry);
+      assert.equal(resolved.length, 1);
+      assert.equal(resolved[0].key, 'all-profiles');
+    });
+  });
+
+  it('resolveProvidersForAsk는 supportsPermissionProfile 없는 provider를 통과시킨다 (backward compat)', () => {
+    const registry = makeRegistryWith(new MockProvider());
+
+    assert.doesNotThrow(() => {
+      const resolved = resolveProvidersForAsk(['mock'], 'restricted', registry);
+      assert.equal(resolved[0].key, 'mock');
+    });
+  });
+});
+
 // ── 2.8 최소 컨텍스트 전달 — diff/branch 강제 수집 없음 ──────────────────────
 
 describe('최소 컨텍스트 — ask는 task 문자열만 전달하고 diff/branch를 강제 수집하지 않는다', () => {
@@ -394,6 +491,209 @@ describe('취소 정책 — provider 프로세스 안전 종료', () => {
     );
 
     assert.equal(result.code, 1, 'forced failure must exit 1');
+  });
+});
+
+// ── 2.9 취소 핸들러 — SIGINT/SIGTERM 수신 시 자식 정리·세션 cancelled ─────────
+//
+// Concern #2 fix: ask.ts에 signal 핸들러를 추가해, 사용자 취소 시 진행 중인 자식
+// provider 프로세스를 terminateProviderProcess로 정리하고 세션을 cancelled로 기록한다.
+// createProviderCancellationHandler를 seam으로 분리해 정리 경로가 호출됨을 단언한다.
+
+describe('취소 핸들러 — createProviderCancellationHandler', () => {
+  it('활성 PID가 있으면 시그널 수신 시 terminateProviderProcess를 호출한다', () => {
+    const terminated: Array<{ pid: number; signal: NodeJS.Signals }> = [];
+    let cancelledSessionId: string | undefined;
+
+    const state: ProviderCancellationState = { activePid: 4242, sessionId: 'sess-1' };
+    const handler = createProviderCancellationHandler({
+      state,
+      terminate: (pid, signal) => {
+        terminated.push({ pid, signal });
+        return true;
+      },
+      markCancelled: async (sessionId) => {
+        cancelledSessionId = sessionId;
+      },
+      exit: () => {
+        /* exit를 막아 테스트가 끝까지 실행되도록 한다 */
+      },
+    });
+
+    handler('SIGINT');
+
+    assert.equal(terminated.length, 1, 'terminate must be called once');
+    assert.equal(terminated[0].pid, 4242, 'terminate must target the active PID');
+    assert.equal(terminated[0].signal, 'SIGINT', 'terminate must forward the received signal');
+
+    return new Promise<void>((resolveDone) => {
+      setImmediate(() => {
+        assert.equal(
+          cancelledSessionId,
+          'sess-1',
+          'markCancelled must be called with the active session id'
+        );
+        resolveDone();
+      });
+    });
+  });
+
+  it('활성 PID가 없으면 terminate를 호출하지 않지만 세션은 cancelled로 기록한다', () => {
+    const terminated: number[] = [];
+    let cancelledSessionId: string | undefined;
+
+    const state: ProviderCancellationState = { activePid: undefined, sessionId: 'sess-2' };
+    const handler = createProviderCancellationHandler({
+      state,
+      terminate: (pid) => {
+        terminated.push(pid);
+        return true;
+      },
+      markCancelled: async (sessionId) => {
+        cancelledSessionId = sessionId;
+      },
+      exit: () => {},
+    });
+
+    handler('SIGTERM');
+
+    assert.equal(terminated.length, 0, 'terminate must not be called when no active PID');
+
+    return new Promise<void>((resolveDone) => {
+      setImmediate(() => {
+        assert.equal(cancelledSessionId, 'sess-2', 'markCancelled must still record cancellation');
+        resolveDone();
+      });
+    });
+  });
+
+  it('sessionId가 없으면 markCancelled를 호출하지 않는다 (실행 전 시그널)', () => {
+    let markCalled = false;
+
+    const state: ProviderCancellationState = { activePid: undefined, sessionId: undefined };
+    const handler = createProviderCancellationHandler({
+      state,
+      terminate: () => true,
+      markCancelled: async () => {
+        markCalled = true;
+      },
+      exit: () => {},
+    });
+
+    handler('SIGINT');
+
+    return new Promise<void>((resolveDone) => {
+      setImmediate(() => {
+        assert.equal(markCalled, false, 'markCancelled must be skipped when no session exists');
+        resolveDone();
+      });
+    });
+  });
+});
+
+// ── 2.9 취소 통합 — aco ask가 SIGINT 시 자식 정리·세션 cancelled ──────────────
+//
+// Concern #2 통합 검증: 실제 `aco ask --yes` 프로세스를 spawn하고, provider 자식
+// 프로세스가 뜬 뒤 SIGINT를 보내면 세션이 cancelled로 기록되고 프로세스가 종료된다.
+
+describe('취소 통합 — aco ask SIGINT 시 세션 cancelled', () => {
+  async function makeFakeAgyBin(): Promise<string> {
+    const dir = await mkdtemp(join(tmpdir(), 'aco-ask-cancel-bin-'));
+    const body = [
+      "if (process.argv.includes('--version')) {",
+      "  process.stdout.write('agy-test 0.0.0\\n');",
+      '  process.exit(0);',
+      '}',
+      "process.stdout.write('provider started\\n');",
+      // SIGTERM 수신 시 잠시 후 종료 (안전 종료 경로 확인)
+      "process.on('SIGTERM', () => setTimeout(() => process.exit(0), 50));",
+      'setInterval(() => {}, 1000);',
+    ].join('\n');
+    await writeFile(join(dir, 'agy'), `#!/usr/bin/env node\n${body}\n`, { mode: 0o755 });
+    return dir;
+  }
+
+  async function waitForAskSessionWithPid(
+    home: string
+  ): Promise<{ id: string; pid: number }> {
+    const deadline = Date.now() + 4_000;
+    const root = join(home, '.aco', 'sessions');
+    while (Date.now() < deadline) {
+      if (existsSync(root)) {
+        const ids = await readdir(root);
+        for (const id of ids) {
+          try {
+            const task = JSON.parse(
+              await readFile(join(root, id, 'task.json'), 'utf8')
+            ) as { pid?: unknown };
+            if (typeof task.pid === 'number') return { id, pid: task.pid };
+          } catch {
+            /* task.json이 아직 안 써진 상태 — 재시도 */
+          }
+        }
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+    throw new Error('Timed out waiting for ask session PID');
+  }
+
+  it('SIGINT 수신 시 ask 세션을 cancelled로 기록하고 종료한다', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'aco-ask-cancel-home-'));
+    const binDir = await makeFakeAgyBin();
+    const cliRoot = resolve(__dirname, '..');
+    const cliPath = join(cliRoot, 'src', 'cli.ts');
+    const tsxRegister = require.resolve('tsx/cjs');
+
+    const child = spawn(
+      process.execPath,
+      [
+        '--require',
+        tsxRegister,
+        cliPath,
+        'ask',
+        '--providers',
+        'antigravity',
+        '--task',
+        'cancellation integration test',
+        '--yes',
+        '--output-mode',
+        'save-only',
+        '--timeout',
+        '30',
+      ],
+      {
+        cwd: cliRoot,
+        env: {
+          ...process.env,
+          HOME: home,
+          USERPROFILE: home,
+          NO_COLOR: '1',
+          PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+        },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }
+    );
+
+    const { id } = await waitForAskSessionWithPid(home);
+    child.kill('SIGINT');
+
+    const exitCode = await new Promise<number | null>((resolveExit, rejectExit) => {
+      const timer = setTimeout(() => rejectExit(new Error('aco ask did not exit after SIGINT')), 5_000);
+      child.once('exit', (code) => {
+        clearTimeout(timer);
+        resolveExit(code);
+      });
+    });
+
+    const task = JSON.parse(
+      await readFile(join(home, '.aco', 'sessions', id, 'task.json'), 'utf8')
+    ) as { status: string };
+
+    assert.notEqual(exitCode, 0, 'cancelled ask must exit non-zero');
+    assert.equal(task.status, 'cancelled', 'session must be marked cancelled on SIGINT');
+
+    await rm(home, { recursive: true, force: true });
+    await rm(binDir, { recursive: true, force: true });
   });
 });
 

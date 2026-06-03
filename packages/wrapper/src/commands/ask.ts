@@ -9,8 +9,13 @@ import process from 'node:process';
 import { providerRegistry } from '../providers/registry.js';
 import { isCredentialLikePath, findCredentialEnvKeys } from '../util/credential-guard.js';
 import { sessionStore } from '../session/store.js';
-import type { OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
+import type { IProvider, OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
+import { checkProviderProfileSupport } from '../runtime/provider-profile-guard.js';
+import {
+  createProviderCancellationHandler,
+  type ProviderCancellationState,
+} from '../runtime/provider-cancellation.js';
 import {
   parseProviderTimeoutFlag,
   resolveProviderExecutionControl,
@@ -101,7 +106,13 @@ export async function cmdAsk(args: string[]): Promise<void> {
   }
   validateAskOptions(options);
 
-  const providers = resolveProviders(options.providers);
+  let providers: IProvider[];
+  try {
+    providers = resolveProvidersForAsk(options.providers, options.permissionProfile);
+  } catch (err) {
+    // checkProviderProfileSupport는 미지원 profile에 대해 Error를 throw한다.
+    fail(err instanceof Error ? err.message : String(err));
+  }
   const input = await collectInput(options);
   const preset = options.preset ? await loadPreset(options.preset) : undefined;
   const prompt = buildPrompt(options, preset);
@@ -155,126 +166,152 @@ export async function cmdAsk(args: string[]): Promise<void> {
 
   const inputHashValue = sha256Hex(input);
 
+  // 사용자 취소(SIGINT/SIGTERM) 시 진행 중인 provider 자식 프로세스를 정리하고
+  // 현재 세션을 cancelled로 기록한다. state는 루프에서 활성 PID/세션을 갱신한다.
+  const cancellationState: ProviderCancellationState = {
+    activePid: undefined,
+    sessionId: undefined,
+  };
+  const handleSignal = createProviderCancellationHandler({
+    state: cancellationState,
+    markCancelled: (sessionId) => sessionStore.markCancelled(sessionId),
+  });
+  process.on('SIGINT', handleSignal);
+  process.on('SIGTERM', handleSignal);
+
   const sessions: AskSessionLedger[] = [];
-  for (const provider of providers) {
-    const session = await sessionStore.create(
-      provider.key,
-      'ask',
-      undefined,
-      options.permissionProfile
-    );
-    const sessionDir = sessionStore.sessionDir(session.id);
-    await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
+  try {
+    for (const provider of providers) {
+      const session = await sessionStore.create(
+        provider.key,
+        'ask',
+        undefined,
+        options.permissionProfile
+      );
+      cancellationState.sessionId = session.id;
+      cancellationState.activePid = undefined;
+      const sessionDir = sessionStore.sessionDir(session.id);
+      await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
 
-    const outputLog = sessionStore.outputLogPath(session.id);
-    const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });
-    const outputBuffer = resolveAskOutputBuffering(options.outputMode);
-    if (outputBuffer.mode === 'bounded') {
-      outputBuffer.snapshot = { value: '' };
-    }
-    let error: string | undefined;
-    let status: AskSessionLedger['status'] = 'done';
-    const runResult = await invokeProviderForSession({
-      provider,
-      command: 'ask',
-      prompt,
-      content: input,
-      permissionProfile: options.permissionProfile,
-      sessionId: session.id,
-      output: outputStream,
-      outputBuffer,
-      maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
-      timeoutMs: options.executionControl.timeoutMs,
-      killGraceMs: options.executionControl.killGraceMs,
-      ...(options.model ? { model: options.model } : {}),
-      envPolicy: 'allowlist',
-      onChunk:
-        options.outputMode === 'full'
-          ? (chunk) => {
-              process.stdout.write(chunk);
-            }
-          : undefined,
-    });
+      const outputLog = sessionStore.outputLogPath(session.id);
+      const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });
+      const outputBuffer = resolveAskOutputBuffering(options.outputMode);
+      if (outputBuffer.mode === 'bounded') {
+        outputBuffer.snapshot = { value: '' };
+      }
+      let error: string | undefined;
+      let status: AskSessionLedger['status'] = 'done';
+      const runResult = await invokeProviderForSession({
+        provider,
+        command: 'ask',
+        prompt,
+        content: input,
+        permissionProfile: options.permissionProfile,
+        sessionId: session.id,
+        output: outputStream,
+        outputBuffer,
+        maxOutputBuffer: SUMMARY_SOURCE_CHAR_LIMIT,
+        timeoutMs: options.executionControl.timeoutMs,
+        killGraceMs: options.executionControl.killGraceMs,
+        ...(options.model ? { model: options.model } : {}),
+        envPolicy: 'allowlist',
+        onPid: (pid) => {
+          cancellationState.activePid = pid;
+        },
+        onChunk:
+          options.outputMode === 'full'
+            ? (chunk) => {
+                process.stdout.write(chunk);
+              }
+            : undefined,
+      });
+      cancellationState.activePid = undefined;
 
-    if (!runResult.error) {
-      const latest = await sessionStore.read(session.id);
-      if (latest.status === 'cancelled') {
-        status = 'cancelled';
-        error = 'Session was cancelled before provider completion.';
+      if (!runResult.error) {
+        const latest = await sessionStore.read(session.id);
+        if (latest.status === 'cancelled') {
+          status = 'cancelled';
+          error = 'Session was cancelled before provider completion.';
+          await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
+        } else {
+          await sessionStore.markDone(session.id);
+        }
+      } else {
+        const err = runResult.error;
+        error = err instanceof Error ? err.message : String(err);
         await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
-      } else {
-        await sessionStore.markDone(session.id);
+        const latest = await sessionStore.read(session.id).catch(() => undefined);
+        if (latest?.status === 'cancelled') {
+          status = 'cancelled';
+        } else {
+          status = 'failed';
+          await sessionStore.markFailed(session.id);
+        }
       }
-    } else {
-      const err = runResult.error;
-      error = err instanceof Error ? err.message : String(err);
-      await writeFile(sessionStore.errorLogPath(session.id), `${error}\n`, { mode: 0o600 });
-      const latest = await sessionStore.read(session.id).catch(() => undefined);
-      if (latest?.status === 'cancelled') {
-        status = 'cancelled';
-      } else {
-        status = 'failed';
-        await sessionStore.markFailed(session.id);
+
+      const usage = await collectUsage(provider.key, session.id);
+
+      const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
+      const stderrContent = runResult.stderrContent;
+      const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
+      const warningCount = countWarnings(runResult.stderrContent);
+      const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
+
+      let stderrArtifactPath: string | undefined;
+      if (stderrBytes > 0) {
+        const stderrPath = join(sessionDir, 'stderr.log');
+        await writeFile(stderrPath, stderrContent, { mode: 0o600 });
+        stderrArtifactPath = stderrPath;
       }
+
+      const summary = summarizeProviderOutput(runResult.fullOutput, provider);
+      const brief = renderSessionBrief({
+        runId,
+        task: options.task ?? '',
+        provider: provider.key,
+        sessionId: session.id,
+        outputLog,
+        status,
+        summary,
+        error,
+      });
+      const briefPath = join(sessionDir, 'brief.md');
+      await writeFile(briefPath, brief, { mode: 0o600 });
+
+      sessions.push({
+        id: session.id,
+        provider: provider.key,
+        status,
+        outputLog,
+        briefPath,
+        summary,
+        ...(error ? { error } : {}),
+        usageStatus: usage.usageStatus,
+        ...(usage.model !== undefined ? { model: usage.model } : {}),
+        ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
+        ...(usage.outputTokens !== undefined ? { outputTokens: usage.outputTokens } : {}),
+        ...(usage.nativeSessionPath !== undefined
+          ? { nativeSessionPath: usage.nativeSessionPath }
+          : {}),
+        hasOutput: runResult.hasOutput,
+        outputBytes,
+        stderrBytes,
+        warningCount,
+        resultQuality,
+        ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
+        canonicalInputPath,
+        inputHash: inputHashValue,
+        // true only when the summarizer applied char-limit truncation,
+        // not when the provider simply reformats/filters output
+        summaryTruncated: summary.includes('...[truncated to'),
+        topFindings: extractTopFindings(runResult.fullOutput),
+      });
     }
-
-    const usage = await collectUsage(provider.key, session.id);
-
-    const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
-    const stderrContent = runResult.stderrContent;
-    const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
-    const warningCount = countWarnings(runResult.stderrContent);
-    const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
-
-    let stderrArtifactPath: string | undefined;
-    if (stderrBytes > 0) {
-      const stderrPath = join(sessionDir, 'stderr.log');
-      await writeFile(stderrPath, stderrContent, { mode: 0o600 });
-      stderrArtifactPath = stderrPath;
-    }
-
-    const summary = summarizeProviderOutput(runResult.fullOutput, provider);
-    const brief = renderSessionBrief({
-      runId,
-      task: options.task ?? '',
-      provider: provider.key,
-      sessionId: session.id,
-      outputLog,
-      status,
-      summary,
-      error,
-    });
-    const briefPath = join(sessionDir, 'brief.md');
-    await writeFile(briefPath, brief, { mode: 0o600 });
-
-    sessions.push({
-      id: session.id,
-      provider: provider.key,
-      status,
-      outputLog,
-      briefPath,
-      summary,
-      ...(error ? { error } : {}),
-      usageStatus: usage.usageStatus,
-      ...(usage.model !== undefined ? { model: usage.model } : {}),
-      ...(usage.inputTokens !== undefined ? { inputTokens: usage.inputTokens } : {}),
-      ...(usage.outputTokens !== undefined ? { outputTokens: usage.outputTokens } : {}),
-      ...(usage.nativeSessionPath !== undefined
-        ? { nativeSessionPath: usage.nativeSessionPath }
-        : {}),
-      hasOutput: runResult.hasOutput,
-      outputBytes,
-      stderrBytes,
-      warningCount,
-      resultQuality,
-      ...(stderrArtifactPath !== undefined ? { stderrArtifactPath } : {}),
-      canonicalInputPath,
-      inputHash: inputHashValue,
-      // true only when the summarizer applied char-limit truncation,
-      // not when the provider simply reformats/filters output
-      summaryTruncated: summary.includes('...[truncated to'),
-      topFindings: extractTopFindings(runResult.fullOutput),
-    });
+  } finally {
+    cancellationState.activePid = undefined;
+    cancellationState.sessionId = undefined;
+    process.off('SIGINT', handleSignal);
+    process.off('SIGTERM', handleSignal);
   }
 
   const endedAt = new Date().toISOString();
@@ -378,10 +415,23 @@ function validateAskOptions(options: AskOptions): void {
   }
 }
 
-function resolveProviders(keys: string[]) {
+/**
+ * provider key 목록을 IProvider 인스턴스로 해석하고, 각 provider가 요청된
+ * permission profile을 지원하는지 검증한다. 미지원 profile이면 Error를 throw해
+ * 실행을 차단한다 (checkProviderProfileSupport).
+ *
+ * registry 인자는 테스트에서 격리된 registry를 주입하기 위한 seam이며,
+ * 기본값은 전역 providerRegistry다.
+ */
+export function resolveProvidersForAsk(
+  keys: string[],
+  permissionProfile: PermissionProfile,
+  registry: { get(key: string): IProvider | undefined } = providerRegistry
+): IProvider[] {
   return keys.map((key) => {
-    const provider = providerRegistry.get(key);
+    const provider = registry.get(key);
     if (!provider) fail(`Unknown provider: ${key}`);
+    checkProviderProfileSupport(provider, permissionProfile);
     return provider;
   });
 }
