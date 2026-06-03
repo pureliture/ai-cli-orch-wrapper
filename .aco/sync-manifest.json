@@ -1,8 +1,8 @@
 {
   "version": "5",
-  "generatedAt": "2026-06-03T02:31:13.933Z",
+  "generatedAt": "2026-06-03T12:11:32.603Z",
   "sourceHashes": {
-    ".claude/skills/aco-delegation/SKILL.md": "25e6e8f42f60183232d51e5eb9945148cf1d68fd5b29c59c8289e12f2c095f39",
+    ".claude/skills/aco-delegation/SKILL.md": "9baf406952129806d87738afedac1caf3812461c077f3446fc8e318cf486044e",
     ".claude/skills/gh-issue/SKILL.md": "16eab5668a5520c3cf20864dd635b85a418e957f90c803f75cde1ee3006261ca",
     ".claude/skills/gh-pr/SKILL.md": "cff001a7c0735dcb6572ed12e3b5738878fbb3279418064c07f6165e56544e3f",
     ".claude/skills/gh-pr-followup/SKILL.md": "d7cdc4509550a6c73411e306c92e5e76b76e768be895a62014a2beb6b178541f",
@@ -37,7 +37,7 @@
     ".claude/agents/typescript-reviewer.md": "fd60a12dc5b804ebac6849942e4f08f7063e869ac9fde8576ebda188deefa061"
   },
   "targetHashes": {
-    ".agents/skills/aco-delegation": "1aff6b6901a6c63d7b2f8a0d4d341197458089edf2d23d03407385ecd8e90ec9",
+    ".agents/skills/aco-delegation": "eae9d72b20e7a0bc5c9064318b92021407dec1c9475a1cf22ad75e1343530a7d",
     ".agents/skills/github-kanban-ops": "8a715728d245786eaad5f0dc7122c9746d8c566df3ebd3f35c838aa64c74cdcd",
     ".agents/skills/improve-codebase-architecture": "0a631ec35d893d9b1ff6d67b64de36649212d4014a30fa83baf6e957a444aa3f",
     ".codex/agents/architect.toml": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
@@ -59,24 +59,24 @@
   },
   "targets": {
     ".agents/skills/aco-delegation": {
-      "hash": "1aff6b6901a6c63d7b2f8a0d4d341197458089edf2d23d03407385ecd8e90ec9",
+      "hash": "eae9d72b20e7a0bc5c9064318b92021407dec1c9475a1cf22ad75e1343530a7d",
       "owner": "aco",
       "kind": "shared-skill",
-      "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/feat-146/.claude/skills/aco-delegation",
+      "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.claude/worktrees/claude+aco-delegation-visibility/.claude/skills/aco-delegation",
       "hashFormat": "directory"
     },
     ".agents/skills/github-kanban-ops": {
       "hash": "8a715728d245786eaad5f0dc7122c9746d8c566df3ebd3f35c838aa64c74cdcd",
       "owner": "aco",
       "kind": "shared-skill",
-      "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/feat-146/.claude/skills/github-kanban-ops",
+      "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.claude/worktrees/claude+aco-delegation-visibility/.claude/skills/github-kanban-ops",
       "hashFormat": "directory"
     },
     ".agents/skills/improve-codebase-architecture": {
       "hash": "0a631ec35d893d9b1ff6d67b64de36649212d4014a30fa83baf6e957a444aa3f",
       "owner": "aco",
       "kind": "shared-skill",
-      "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/feat-146/.claude/skills/improve-codebase-architecture",
+      "source": "/Users/ddalkak/Projects/ai-cli-orch-wrapper/.claude/worktrees/claude+aco-delegation-visibility/.claude/skills/improve-codebase-architecture",
       "hashFormat": "directory"
     },
     ".codex/agents/architect.toml": {
