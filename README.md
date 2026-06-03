@@ -77,7 +77,7 @@
 #### 🟣 Harness / Generated 분리
 
 `.claude/`는 **사람이 관리하는 기준 자산**.<br/>
-Codex·Antigravity 대상 파일은 생성 산출물로 관리되어 운영 중 수동 수정과 자동 생성의 경계가 분명합니다.
+Codex 구조적 표면(`.codex/agents/`·hooks)은 생성 산출물로 관리되고, `AGENTS.md`는 사람이 직접 유지보수하는 peer 문서입니다. 운영 중 수동 수정과 자동 생성의 경계가 분명합니다.
 
 </td>
 <td width="50%" valign="top">
