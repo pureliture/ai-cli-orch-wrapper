@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { access, mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { access, mkdtemp, writeFile, rm, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnStream } from '../src/util/spawn-stream.js';
@@ -136,6 +136,29 @@ process.stdout.write('started');
       await assert.rejects(access(markerPath), /ENOENT/);
     } finally {
       await rm(tmpBin, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('spawnStream working directory', () => {
+  it('runs the child process in the provided cwd', async () => {
+    const tmpBin = await mkdtemp(join(tmpdir(), 'aco-spawn-cwd-bin-'));
+    const tmpCwd = await realpath(await mkdtemp(join(tmpdir(), 'aco-spawn-cwd-run-')));
+    const binary = await makeScriptBinary(tmpBin, 'print-cwd', 'process.stdout.write(process.cwd());');
+
+    try {
+      const chunks: string[] = [];
+      for await (const chunk of spawnStream(binary, [], {
+        processName: 'print-cwd',
+        stdin: 'ignore',
+        cwd: tmpCwd,
+      })) {
+        chunks.push(chunk);
+      }
+      assert.equal(await realpath(chunks.join('').trim()), tmpCwd);
+    } finally {
+      await rm(tmpBin, { recursive: true, force: true });
+      await rm(tmpCwd, { recursive: true, force: true });
     }
   });
 });

@@ -1,6 +1,6 @@
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { AntigravityProvider } from '../src/providers/antigravity';
+import { AntigravityProvider, agyWorkspaceDir } from '../src/providers/antigravity';
 import { CodexProvider } from '../src/providers/codex';
 import { MockProvider } from '../src/providers/mock';
 import { ProviderRegistry } from '../src/providers/registry';
@@ -144,6 +144,72 @@ describe('AntigravityProvider', () => {
 
   it('key is "antigravity"', () => {
     assert.equal(new AntigravityProvider().key, 'antigravity');
+  });
+
+  it('agyWorkspaceDir() is a stable neutral dir under ~/.aco (not an ephemeral cwd)', () => {
+    const dir = agyWorkspaceDir();
+    assert.equal(dir, path.join(os.homedir(), '.aco', 'agy-workspace'));
+    // Stable across calls — agy must register the same single project, not the cwd.
+    assert.equal(dir, agyWorkspaceDir());
+    assert.notEqual(dir, process.cwd());
+  });
+
+  it('invoke() runs agy in the neutral workspace dir, not the inherited cwd', async () => {
+    // Integration guard: a refactor that drops the cwd wiring must fail here.
+    // Fake `agy` prints its own process.cwd(); we assert it ran in agyWorkspaceDir().
+    const binDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-agy-fake-'));
+    const fakeAgy = path.join(binDir, 'agy');
+    await fs.writeFile(fakeAgy, '#!/usr/bin/env node\nprocess.stdout.write(process.cwd());\n', {
+      mode: 0o755,
+    });
+    const origPath = process.env.PATH;
+    process.env.PATH = `${binDir}${path.delimiter}${origPath ?? ''}`;
+    try {
+      const chunks: string[] = [];
+      for await (const c of new AntigravityProvider().invoke('review', 'p', 'c', {
+        permissionProfile: 'restricted',
+      })) {
+        chunks.push(c);
+      }
+      const childCwd = await fs.realpath(chunks.join('').trim());
+      assert.equal(childCwd, await fs.realpath(agyWorkspaceDir()));
+    } finally {
+      process.env.PATH = origPath;
+      await fs.rm(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it('resolves a PATH-relative agy binary to absolute before switching cwd (no ENOENT)', async () => {
+    // Repro: PATH contains a relative entry (e.g. node_modules/.bin). which() returns
+    // a relative path; without absolute-resolution the new cwd breaks binary lookup.
+    const runRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-agy-relpath-'));
+    const relBinName = 'relbin';
+    await fs.mkdir(path.join(runRoot, relBinName), { recursive: true });
+    await fs.writeFile(
+      path.join(runRoot, relBinName, 'agy'),
+      '#!/usr/bin/env node\nprocess.stdout.write(process.cwd());\n',
+      { mode: 0o755 }
+    );
+    const origPath = process.env.PATH;
+    const origCwd = process.cwd();
+    process.chdir(runRoot);
+    // relative entry FIRST (which() returns it, relative) + original PATH so the
+    // fake script's `#!/usr/bin/env node` shebang still resolves node.
+    process.env.PATH = `${relBinName}${path.delimiter}${origPath ?? ''}`;
+    try {
+      const chunks: string[] = [];
+      for await (const c of new AntigravityProvider().invoke('review', 'p', 'c', {
+        permissionProfile: 'restricted',
+      })) {
+        chunks.push(c);
+      }
+      // No ENOENT, and agy still ran in the neutral workspace dir.
+      assert.equal(await fs.realpath(chunks.join('').trim()), await fs.realpath(agyWorkspaceDir()));
+    } finally {
+      process.chdir(origCwd);
+      process.env.PATH = origPath;
+      await fs.rm(runRoot, { recursive: true, force: true });
+    }
   });
 
   it('installHint contains curl', () => {

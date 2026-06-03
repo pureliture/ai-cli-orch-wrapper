@@ -1,9 +1,25 @@
+import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import { buildProviderEnv } from '../util/provider-env.js';
 import type { AuthResult, InvokeOptions, IProvider, PermissionProfile } from './interface.js';
 import { readVersion } from '../util/read-version.js';
 import { defaultSummarizeOutput } from '../util/summarize-output.js';
+
+/**
+ * Stable, neutral working directory for `agy` invocations.
+ *
+ * agy persists every cwd it runs in as a project in `~/.gemini/antigravity-cli`,
+ * so inheriting aco's cwd (often an ephemeral temp/session/job dir) floods the
+ * Antigravity sidebar with junk projects. Pinning a single fixed directory keeps
+ * exactly one stable entry instead. Review content is passed via `-p`/stdin, not
+ * read from cwd, so this does not affect delegation output.
+ */
+export function agyWorkspaceDir(): string {
+  return join(homedir(), '.aco', 'agy-workspace');
+}
 
 export class AntigravityProvider implements IProvider {
   readonly key = 'antigravity';
@@ -71,6 +87,11 @@ export class AntigravityProvider implements IProvider {
   ): AsyncIterable<string> {
     const binary = which('agy');
     if (!binary) throw new Error('agy CLI not found in PATH');
+    // which() may return a PATH-relative path when PATH contains relative entries.
+    // Resolve to absolute against the current cwd BEFORE switching the child's cwd:
+    // a relative binary would otherwise be re-resolved against agyWorkspaceDir() and
+    // fail with ENOENT.
+    const resolvedBinary = resolve(binary);
 
     // agy는 OS Keyring 인증 방식을 사용하므로 auth env var가 필요 없다.
     // buildProviderEnv([])는 BASE_ENV_KEYS(PATH, HOME 등 기반 키)만 전달하고
@@ -78,7 +99,26 @@ export class AntigravityProvider implements IProvider {
     const env = buildProviderEnv([]);
     const combined = content ? `${prompt}\n\n${content}` : prompt;
     const args = [...this.buildArgs(command, options), combined];
-    yield* spawnStream(binary, args, { processName: 'agy', stdin: 'pipe', env }, options);
+    // Pin agy to a stable neutral cwd so ephemeral invocation dirs are not
+    // registered as Antigravity projects. See agyWorkspaceDir() above.
+    // If the workspace dir cannot be created (path is a file, parent not writable),
+    // fall back to the inherited cwd so the delegation still runs — a cosmetic
+    // project-pollution risk must not become a hard delegation failure.
+    // agyWorkspaceDir() (os.homedir()) can throw in restricted environments, so it
+    // lives inside the try with mkdir — failure falls back to the inherited cwd.
+    let cwd: string | undefined;
+    try {
+      cwd = agyWorkspaceDir();
+      await mkdir(cwd, { recursive: true });
+    } catch {
+      cwd = undefined;
+    }
+    yield* spawnStream(
+      resolvedBinary,
+      args,
+      { processName: 'agy', stdin: 'pipe', env, cwd },
+      options
+    );
   }
 
   summarizeOutput(output: string, maxLength: number): string {
