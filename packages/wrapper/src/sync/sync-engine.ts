@@ -772,7 +772,10 @@ async function computeTransformPlan(
         hash: o.hash,
         owner: o.owner ?? 'aco',
         kind: o.assetKind ?? 'shared-skill',
-        source: o.sourcePath,
+        // Store a repo-relative source so committed manifests stay portable
+        // across checkouts (no machine-specific absolute paths). Mirrors the
+        // relative() normalization used elsewhere in this engine.
+        source: o.sourcePath ? relative(repoRoot, o.sourcePath) || o.sourcePath : o.sourcePath,
         hashFormat: o.kind === 'directory' ? 'directory' : undefined,
       };
     }

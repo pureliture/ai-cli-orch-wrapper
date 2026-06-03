@@ -46,6 +46,20 @@ aco result --session <id>
 
 Use `--output-mode full` only when the user explicitly wants full provider output in the current Claude Code session.
 
+## Visibility
+
+The `aco` runtime session dashboard renders only on an interactive TTY (stderr),
+so it stays invisible when `aco ask` runs through a non-TTY host such as the
+Claude Code Bash tool or an IDE wrapper. To keep delegation explicit to the
+user, announce it in the session text instead of relying on the dashboard.
+
+- Before the live call: print a one-line banner naming the provider and task,
+  e.g. `🛰️ aco delegation → <provider>: <task>`.
+- After the call returns: state which provider contributed what in a short
+  summary (a small markdown table when several providers run). External output
+  stays advisory; the main session remains the final synthesizer.
+- The goal is that the user notices every external delegation as it happens.
+
 ## Safety Notes
 
 - Default permission profile is `restricted`.

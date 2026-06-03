@@ -441,6 +441,59 @@ describe('runSync: portable target keys across checkout locations', () => {
 });
 
 // ---------------------------------------------------------------------------
+// 4.7  sync-engine: manifest target `source` field is repo-relative
+// ---------------------------------------------------------------------------
+
+describe('runSync: manifest target source field is portable', () => {
+  it('writes repo-relative targets[].source (no machine-specific absolute path)', async () => {
+    const root = await realpath(await mkdtemp(join(tmpdir(), 'aco-tgt-src-')));
+    try {
+      // A skill source produces a shared-skill target whose manifest record
+      // carries a `source` field; it must not leak the absolute checkout path.
+      await writeFile(join(root, 'CLAUDE.md'), '');
+      const skillDir = join(root, '.claude', 'skills', 'portable-skill');
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(
+        join(skillDir, 'SKILL.md'),
+        '---\nname: portable-skill\n---\n\n# Portable Skill'
+      );
+
+      await mkdir(join(root, '.aco'), { recursive: true });
+      await writeFile(
+        join(root, '.aco', 'sync.yaml'),
+        'skills:\n  include:\n    - portable-skill\n  exclude:\n    - openspec-*\n    - superpowers-*\n    - gh-*\n'
+      );
+
+      await runSync(root, { dryRun: false });
+
+      const manifestRaw = await readFile(join(root, '.aco', 'sync-manifest.json'), 'utf-8');
+      const manifest = JSON.parse(manifestRaw) as SyncManifest;
+
+      const withSource = Object.entries(manifest.targets).filter(
+        ([, rec]) => typeof (rec as { source?: string }).source === 'string'
+      );
+      assert.ok(
+        withSource.length > 0,
+        `Expected at least one target with a source field, got: ${JSON.stringify(Object.keys(manifest.targets))}`
+      );
+      for (const [key, rec] of withSource) {
+        const source = (rec as { source?: string }).source as string;
+        assert.ok(
+          !source.startsWith('/'),
+          `targets["${key}"].source must be repo-relative, got absolute: "${source}"`
+        );
+        assert.ok(
+          !source.startsWith(root),
+          `targets["${key}"].source must not contain the checkout path, got: "${source}"`
+        );
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Phase 2 (Task 3): v4 → v5 manifest migration
 // ---------------------------------------------------------------------------
 
