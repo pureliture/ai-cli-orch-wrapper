@@ -68,9 +68,11 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<Pac
   const commandsSrc = join(TEMPLATES_DIR, 'commands');
   const promptsSrc = join(TEMPLATES_DIR, 'prompts');
   const tasksSrc = join(TEMPLATES_DIR, 'tasks');
+  const skillsSrc = join(TEMPLATES_DIR, 'skills');
   const commandsDest = join(targetBase, 'commands');
   const promptsDest = join(targetBase, 'aco', 'prompts');
   const tasksDest = join(targetBase, 'aco', 'tasks');
+  const skillsDest = join(targetBase, 'skills');
 
   console.log(`Installing aco command pack to ${targetBase} …\n`);
 
@@ -84,6 +86,17 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<Pac
     installedFiles
   );
   await copyTree(tasksSrc, tasksDest, options.force ?? false, 'task preset', installedFiles);
+
+  // Skills install only in --global mode. Non-global writes would land in
+  // `<cwd>/.claude/skills/`, which is exactly the directory `aco sync` reads as
+  // its source. Since `pack setup` chains `runSync` right after install, a
+  // non-global skill copy would let sync re-emit `.agents/skills/` from the
+  // overwritten source. Restricting to --global keeps the sync source intact.
+  if (options.global) {
+    await copyTree(skillsSrc, skillsDest, options.force ?? false, 'skill', installedFiles);
+  } else if (existsSync(skillsSrc)) {
+    console.log('  [skip] skills install only with --global (user-level ~/.claude/skills)');
+  }
 
   const manifestPath = MANIFEST_PATH(targetBase);
   let existingFiles: string[] = [];

@@ -211,6 +211,9 @@ node packages/wrapper/dist/cli.js sync --check
 </details>
 
 `aco pack setup`은 `.claude/commands`, `.claude/aco/prompts`, `.claude/aco/tasks`를 설치한다.
+`--global`로 설치하면 큐레이션된 skill(`aco-delegation` 등)을 `~/.claude/skills/`에도 배포하므로
+repo clone 없이 `npx … pack install --global`만으로 skill까지 설치·버전업할 수 있다. skill은
+`--global`에서만 복사되어 repo-local `aco sync` source를 건드리지 않는다.
 패키지에 포함된 task preset은 `review`, `spec-critique`, `plan-critique`, `tdd`,
 `code-simplify`, `default`이며, provider 실행 없이 다음처럼 확인할 수 있다.
 설치 후 sync가 실패하면 출력된 manifest 경로를 확인하고 setup에 사용한 것과 같은

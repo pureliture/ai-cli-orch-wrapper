@@ -33,6 +33,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsx scripts/verify-contract.ts
+      - name: skill-templates parity (templates/skills matches .claude/skills + sync allowlist)
+        run: npm run check:skill-templates
 
   typecheck:
     name: typecheck

@@ -26,8 +26,10 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
   const targetBase = options.global ? join(homedir(), '.claude') : join(process.cwd(), '.claude');
   const commandsSrc = join(TEMPLATES_DIR, 'commands');
   const promptsSrc = join(TEMPLATES_DIR, 'prompts');
+  const skillsSrc = join(TEMPLATES_DIR, 'skills');
   const commandsDest = join(targetBase, 'commands');
   const promptsDest = join(targetBase, 'aco', 'prompts');
+  const skillsDest = join(targetBase, 'skills');
 
   console.log(`Installing aco command pack to ${targetBase} …\n`);
 
@@ -40,6 +42,15 @@ export async function packInstall(options: PackInstallOptions = {}): Promise<voi
     'prompt template',
     installedFiles
   );
+
+  // Skills install only in --global mode, mirroring the wrapper entrypoint:
+  // a non-global copy would overwrite `<cwd>/.claude/skills/`, the source
+  // `aco sync` reads from. Keep the sync source untouched for repo-local runs.
+  if (options.global) {
+    await copyTree(skillsSrc, skillsDest, options.force ?? false, 'skill', installedFiles);
+  } else if (existsSync(skillsSrc)) {
+    console.log('  [skip] skills install only with --global (user-level ~/.claude/skills)');
+  }
 
   // Write manifest for selective uninstall
   const manifestPath = MANIFEST_PATH(targetBase);
