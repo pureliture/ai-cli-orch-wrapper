@@ -35,15 +35,13 @@ const LEGACY_HOOK_TARGETS = new Set([
   '.gemini/settings.json',
 ]);
 
-// Source kinds that drive a structured-surface output (skills, Codex agents,
-// hooks). Guideline kinds (`config` = CLAUDE.md, `rule` = .claude/rules/*) are
-// intentionally excluded: they no longer produce any synced output. Used by the
-// no-source guard in runSync. See OpenSpec change aco-sync-narrow-scope.
-const STRUCTURED_SOURCE_KINDS: ReadonlySet<SyncSource['kind']> = new Set([
-  'skill',
-  'agent',
-  'settings',
-]);
+// Source kinds that drive a structured-surface output (skills, Codex agents).
+// Guideline kinds (`config` = CLAUDE.md, `rule` = .claude/rules/*) are intentionally
+// excluded: they no longer produce any synced output. `settings` is also excluded —
+// hook sync is not wired into discoverSources/computeTransformPlan, so no source ever
+// carries that kind today. Used by the no-source guard in runSync. See OpenSpec
+// change aco-sync-narrow-scope.
+const STRUCTURED_SOURCE_KINDS: ReadonlySet<SyncSource['kind']> = new Set(['skill', 'agent']);
 
 function isErrorWithCode(err: unknown): err is ErrorWithCode {
   return err instanceof Error && 'code' in err;
@@ -349,9 +347,9 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   const existingManifest = await readManifest(repoRoot);
   const legacyCleanupManifest = await readManifestForLegacyCleanup(repoRoot);
 
-  // `aco sync` only generates structured-surface targets (skills, Codex agents,
-  // hooks). Guideline sources (`config` = CLAUDE.md, `rule` = .claude/rules/*) no
-  // longer produce any output since AGENTS.md generation was removed, so a fresh repo
+  // `aco sync` only generates structured-surface targets (skills, Codex agents).
+  // Guideline sources (`config` = CLAUDE.md, `rule` = .claude/rules/*) no longer
+  // produce any output since AGENTS.md generation was removed, so a fresh repo
   // with only those would otherwise write an empty manifest and exit 0. Hard-fail when
   // there is nothing to sync AND no prior manifest state to reconcile — i.e. a
   // genuinely structureless repo. A repo that previously synced (existing manifest) or
@@ -366,8 +364,8 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   ) {
     throw new Error(
       'No sync sources found. aco sync generates only structured-surface targets ' +
-        '(skills, Codex agents, hooks); CLAUDE.md and .claude/rules/ alone produce no ' +
-        'output. Ensure .claude/skills/, .claude/agents/, or hook settings exist.'
+        '(skills, Codex agents); CLAUDE.md and .claude/rules/ alone produce no ' +
+        'output. Ensure .claude/skills/ or .claude/agents/ exist.'
     );
   }
 

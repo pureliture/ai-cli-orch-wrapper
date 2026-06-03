@@ -15,7 +15,7 @@ The system SHALL provide an `aco sync` command that explicitly synchronizes Clau
 - **AND** read and write project-level files relative to that root
 
 #### Scenario: No structured sources
-- **WHEN** a repository has no structured sync source (`.claude/skills/`, `.claude/agents/`, or hook settings) — for example only `CLAUDE.md` and/or `.claude/rules/` — **AND** there is no prior sync manifest or legacy aco-owned target to reconcile
+- **WHEN** a repository has no structured sync source (`.claude/skills/` or `.claude/agents/`) — for example only `CLAUDE.md` and/or `.claude/rules/` — **AND** there is no prior sync manifest or legacy aco-owned target to reconcile
 - **THEN** `aco sync` SHALL fail with a clear "No sync sources found" message instead of writing an empty manifest and exiting 0
 - **AND** guideline sources (`CLAUDE.md`, `.claude/rules/`) alone SHALL NOT satisfy this requirement, because they no longer produce any synced output
 
