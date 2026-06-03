@@ -615,4 +615,134 @@ describe('pack template runtime contract', () => {
       await rm(binDir, { recursive: true, force: true });
     }
   });
+
+  it('installs skills only under --global into the user-level skills dir', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-skill-global-'));
+    const home = await mkdtemp(join(tmpdir(), 'aco-pack-skill-global-home-'));
+    const profile = await mkdtemp(join(tmpdir(), 'aco-pack-skill-global-profile-'));
+    const binDir = await makeFakeAcoBinary('aco-test-local');
+    try {
+      const result = await runCli(
+        ['pack', 'install', '--global', '--binary-name', 'aco-test-local'],
+        {
+          cwd: workspace,
+          env: {
+            HOME: home,
+            USERPROFILE: profile,
+            PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+          },
+        }
+      );
+      assert.equal(result.code, 0, result.stdout + result.stderr);
+      assert.equal(
+        existsSync(join(home, '.claude', 'skills', 'aco-delegation', 'SKILL.md')),
+        true,
+        'expected aco-delegation skill installed to user-level ~/.claude/skills'
+      );
+      const manifest = JSON.parse(
+        await readFile(join(home, '.claude', 'aco', 'aco-manifest.json'), 'utf8')
+      ) as { files?: string[] };
+      assert.ok(
+        (manifest.files ?? []).some((f) => f.includes(join('skills', 'aco-delegation'))),
+        'manifest must record installed skill files'
+      );
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+      await rm(home, { recursive: true, force: true });
+      await rm(profile, { recursive: true, force: true });
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not write skills into the sync source on non-global install', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-skill-local-'));
+    const home = await mkdtemp(join(tmpdir(), 'aco-pack-skill-local-home-'));
+    const profile = await mkdtemp(join(tmpdir(), 'aco-pack-skill-local-profile-'));
+    const binDir = await makeFakeAcoBinary('aco-test-local');
+    try {
+      const result = await runCli(['pack', 'install', '--binary-name', 'aco-test-local'], {
+        cwd: workspace,
+        env: {
+          HOME: home,
+          USERPROFILE: profile,
+          PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+        },
+      });
+      assert.equal(result.code, 0, result.stdout + result.stderr);
+      // Commands still install non-globally; skills must not (sync source guard).
+      assert.equal(existsSync(join(workspace, '.claude', 'commands', 'aco.md')), true);
+      assert.equal(existsSync(join(workspace, '.claude', 'skills')), false);
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+      await rm(home, { recursive: true, force: true });
+      await rm(profile, { recursive: true, force: true });
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps the sync source skills dir intact across non-global pack setup', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-skill-sync-'));
+    const home = await mkdtemp(join(tmpdir(), 'aco-pack-skill-sync-home-'));
+    const profile = await mkdtemp(join(tmpdir(), 'aco-pack-skill-sync-profile-'));
+    const binDir = await makeFakeAcoBinary('aco-test-local');
+    const sentinelBody = '---\nname: local-only\n---\nlocal sentinel\n';
+    try {
+      await writeFile(join(workspace, 'CLAUDE.md'), '# Source context\n');
+      await mkdir(join(workspace, '.claude', 'skills', 'local-only'), { recursive: true });
+      const sentinel = join(workspace, '.claude', 'skills', 'local-only', 'SKILL.md');
+      await writeFile(sentinel, sentinelBody);
+
+      const result = await runCli(['pack', 'setup', '--binary-name', 'aco-test-local'], {
+        cwd: workspace,
+        env: {
+          HOME: home,
+          USERPROFILE: profile,
+          PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+        },
+      });
+      assert.equal(result.code, 0, result.stdout + result.stderr);
+      // The local sync source skill must be byte-for-byte untouched.
+      assert.equal(await readFile(sentinel, 'utf8'), sentinelBody);
+      // No template skill may be injected into the sync source.
+      assert.equal(existsSync(join(workspace, '.claude', 'skills', 'aco-delegation')), false);
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+      await rm(home, { recursive: true, force: true });
+      await rm(profile, { recursive: true, force: true });
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
+
+  it('removes installed skills on global uninstall via manifest', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'aco-pack-skill-uninstall-'));
+    const home = await mkdtemp(join(tmpdir(), 'aco-pack-skill-uninstall-home-'));
+    const profile = await mkdtemp(join(tmpdir(), 'aco-pack-skill-uninstall-profile-'));
+    const binDir = await makeFakeAcoBinary('aco-test-local');
+    try {
+      const env = {
+        HOME: home,
+        USERPROFILE: profile,
+        PATH: `${binDir}${delimiter}${process.env.PATH ?? ''}`,
+      };
+      const install = await runCli(
+        ['pack', 'install', '--global', '--binary-name', 'aco-test-local'],
+        { cwd: workspace, env }
+      );
+      assert.equal(install.code, 0, install.stdout + install.stderr);
+      assert.equal(existsSync(join(home, '.claude', 'skills', 'aco-delegation')), true);
+
+      const uninstall = await runCli(['pack', 'uninstall', '--global'], { cwd: workspace, env });
+      assert.equal(uninstall.code, 0, uninstall.stdout + uninstall.stderr);
+      assert.equal(
+        existsSync(join(home, '.claude', 'skills', 'aco-delegation', 'SKILL.md')),
+        false,
+        'global uninstall must remove manifest-tracked skill files'
+      );
+    } finally {
+      await rm(workspace, { recursive: true, force: true });
+      await rm(home, { recursive: true, force: true });
+      await rm(profile, { recursive: true, force: true });
+      await rm(binDir, { recursive: true, force: true });
+    }
+  });
 });

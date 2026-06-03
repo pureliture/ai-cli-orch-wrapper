@@ -35,6 +35,7 @@ This repo is an npm workspace with the following layout:
 - New providers implement `IProvider` in `packages/wrapper/src/providers/<name>.ts` and register in `registry.ts`.
 - Keep `.claude/commands/gh-*.md` and `templates/commands/gh-*.md` byte-for-byte aligned unless an intentional compatibility exception is documented.
 - Keep `.agents/skills/github-kanban-ops/` and `.claude/skills/github-kanban-ops/` aligned when changing shared GitHub PM policy or scripts.
+- Do not hand-edit `templates/skills/`; it is generated from `.claude/skills/` by `npm run build:skill-templates` using the `.aco/sync.yaml` `skills.include` allowlist. After changing a distributed skill or the allowlist, regenerate and commit. CI gates this with `npm run check:skill-templates` (`git diff` parity).
 - Keep Codex `$gh-*` wrapper skills intentionally thin; workflow policy belongs in `github-kanban-ops`.
 - Do not reintroduce sprint, story, or spike concepts into the GitHub PM harness.
 - Do not encode workflow state or priority in labels. GitHub Project `Status` and `Priority` fields are the source of truth.

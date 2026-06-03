@@ -164,6 +164,11 @@ provider-specific command (예: `.claude/commands/gh-issue.md`)는 해당 provid
 - `templates/commands/**` -> `.claude/commands/**`
 - `templates/prompts/**` -> `.claude/aco/prompts/**`
 - `templates/tasks/**` -> `.claude/aco/tasks/**`
+- `templates/skills/**` -> `<targetBase>/skills/**` (`--global`에서만)
+
+`templates/skills/`는 배포 생성물이고 `.agents/skills/`는 sync 생성물로, 서로 다른 표면이다. 전자는 `.claude/skills/`(source of truth)에서 `build:skill-templates` 생성기로 파생되어 `aco pack install`이 유저레벨 `~/.claude/skills/`로 배포한다. 후자는 `aco sync`가 `.claude/skills/`를 읽어 Codex 공유 표면으로 미러한 결과다. 두 목록은 모두 `.aco/sync.yaml`의 `skills.include`에서 파생되므로 정합이 유지된다.
+
+skill 설치는 `--global` 모드에서만 일어난다. non-global `pack install`/`pack setup`이 skill을 복사하면 `<cwd>/.claude/skills/`(= `aco sync`의 read source)를 덮어쓰고, `pack setup`이 직후 `aco sync`를 실행하므로 sync source 오염이 `.agents/skills/`로 전파된다. 이를 막기 위해 non-global 실행은 skill 복사를 skip한다.
 
 설치된 task preset은 `aco ask --preset <name>`이 읽는 advisory prompt source이며, 그 자체로 provider를 실행하지 않는다. 실제 provider 실행은 `aco ask --yes` 또는 `aco run <provider> <command>`에서만 발생한다.
 
