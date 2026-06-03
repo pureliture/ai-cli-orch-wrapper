@@ -361,7 +361,9 @@ export async function cmdAsk(args: string[]): Promise<void> {
 
         const usage = await collectUsage(provider.key, session.id);
 
-        const outputBytes = Buffer.byteLength(runResult.fullOutput, 'utf8');
+        // stream-only 모드(save-only/full)에서 runResult.fullOutput은 16KB capture
+        // 상한으로 잘리므로, 실제 출력 바이트 수는 runner가 카운트한 outputBytes를 쓴다.
+        const outputBytes = runResult.outputBytes;
         const stderrContent = runResult.stderrContent;
         const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
         const warningCount = countWarnings(runResult.stderrContent);
