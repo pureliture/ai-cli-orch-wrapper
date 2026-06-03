@@ -38,6 +38,32 @@ if [ -z "$ARGS" ]; then
   exit 1
 fi
 
+# ── 금지 subcommand 가드레일 ──────────────────────────────────────────
+# 첫 토큰이 status|result|cancel|delegate이면 위임하지 않고 하부 CLI 안내
+_ACO_FIRST_TOKEN=$(echo "$ARGS" | awk '{print $1}')
+case "$_ACO_FIRST_TOKEN" in
+  status|result|cancel|delegate)
+    cat <<GUARDRAIL_MSG
+/aco 는 자연어 위임 진입점입니다. '$_ACO_FIRST_TOKEN' 는 자연어 task가 아닌 하부 CLI subcommand입니다.
+
+세션 운영 명령은 하부 CLI를 직접 사용하세요:
+  aco $_ACO_FIRST_TOKEN [옵션]
+
+예시:
+  aco status              — 진행 중인 세션 목록 조회
+  aco result --session ID — 세션 결과 조회
+  aco cancel --session ID — 세션 취소
+  aco delegate <agent-id> --input "..." — 로컬 named-agent 프롬프트 빌드
+
+외부 AI 위임이 필요하면 자연어로 입력하세요:
+  /aco 이 PR을 리뷰해줘
+  /aco antigravity로 아키텍처 분석해줘
+GUARDRAIL_MSG
+    exit 0
+    ;;
+esac
+# ─────────────────────────────────────────────────────────────────────
+
 aco ask --task "$ARGS" --dry-run
 ```
 

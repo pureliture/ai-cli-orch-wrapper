@@ -8,6 +8,23 @@ description: Codex command-alias skill for Claude /aco parity. Use when invoked 
 Claude `/aco`와 동일한 ACO delegation 흐름을 Codex 세션에서 미러링하는 thin wrapper 스킬이다.
 위임 정책의 전체 내용은 `.claude/skills/aco-delegation/SKILL.md`에 있다. 이 스킬은 정책을 중복하지 않는다.
 
+## 금지 subcommand 가드레일
+
+`$aco`에 전달된 첫 토큰이 `status`·`result`·`cancel`·`delegate`이면 자연어 위임으로 처리하지 않고 하부 CLI 사용을 안내한다.
+
+```bash
+_ACO_FIRST_TOKEN=$(echo "$ARGS" | awk '{print $1}')
+case "$_ACO_FIRST_TOKEN" in
+  status|result|cancel|delegate)
+    # 위임 차단 — 하부 CLI 안내 출력 후 종료
+    echo "/$_ACO_FIRST_TOKEN 는 하부 CLI subcommand입니다. 'aco $_ACO_FIRST_TOKEN [옵션]'을 직접 사용하세요."
+    exit 0
+    ;;
+esac
+```
+
+이 검사는 반드시 위임 실행 전에 수행해야 한다.
+
 ## 흐름 (model A)
 
 1. **컨텍스트 파악.** 인자를 파싱하고 관련 프로젝트 파일(diff, architecture docs 등)을 읽어 작업 범위를 결정한다.
