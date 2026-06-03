@@ -33,6 +33,20 @@ function parseMarkdownFrontmatter(markdown: string): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+/**
+ * Seed a minimal structured source (a Codex agent) so runSync passes the
+ * no-structured-source hard-fail guard. Used by fixtures that exercise
+ * legacy/duplicate/hook/migration behavior on an otherwise CLAUDE.md-only repo
+ * with no prior manifest. See OpenSpec change aco-sync-narrow-scope.
+ */
+async function seedAnchorAgent(repoRoot: string): Promise<void> {
+  await mkdir(join(repoRoot, '.claude', 'agents'), { recursive: true });
+  await writeFile(
+    join(repoRoot, '.claude', 'agents', '_anchor.md'),
+    '---\nid: _anchor\nwhen: anchor structured source for sync tests\n---\nAnchor.'
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Agent parse + transform fixtures (Task 4.6)
 // ---------------------------------------------------------------------------
@@ -188,6 +202,7 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
   it('runSync produces neither AGENTS.md nor GEMINI.md (guideline md projection removed)', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-agents-only-'));
     try {
+      await seedAnchorAgent(tmpDir);
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# Project context\n\nSome rules.');
 
       const result = await runSync(tmpDir, { dryRun: false });
@@ -207,6 +222,7 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
   it('runSync does NOT create or modify AGENTS.md on disk', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-agents-untouched-'));
     try {
+      await seedAnchorAgent(tmpDir);
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# Project context\n\nSome rules.');
       // Pre-existing hand-maintained AGENTS.md with stale managed-block markers
       const handAgents =
@@ -225,6 +241,7 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
   it('manifest version is "5" after sync', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-manifest-v5-'));
     try {
+      await seedAnchorAgent(tmpDir);
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
 
       await runSync(tmpDir, { dryRun: false });
@@ -241,6 +258,7 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
   it('manifest targets do NOT include GEMINI.md key after sync', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-no-gemini-target-'));
     try {
+      await seedAnchorAgent(tmpDir);
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
 
       await runSync(tmpDir, { dryRun: false });
@@ -395,6 +413,53 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
       assert.equal('GEMINI.md' in updatedManifest.targetHashes, false);
       assert.equal('.gemini/agents/helper.md' in updatedManifest.targets, false);
       assert.equal('.gemini/agents/helper.md' in updatedManifest.targetHashes, false);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('No structured sources hard-fail', () => {
+  it('runSync fails when only CLAUDE.md exists (no structured source)', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-claude-only-fail-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# Project context\n\nSome rules.');
+      await assert.rejects(
+        async () => runSync(tmpDir, { dryRun: false }),
+        /No sync sources found/,
+        'CLAUDE.md-only repo must hard-fail'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('runSync fails when only CLAUDE.md and .claude/rules exist (no structured source)', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-rules-only-fail-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
+      await mkdir(join(tmpDir, '.claude', 'rules'), { recursive: true });
+      await writeFile(join(tmpDir, '.claude', 'rules', 'core.md'), '# core rule');
+      await assert.rejects(
+        async () => runSync(tmpDir, { dryRun: false }),
+        /No sync sources found/,
+        'CLAUDE.md + rules-only repo must hard-fail'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('runSync succeeds when a structured source (agent) is present', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-agent-ok-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
+      await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.claude', 'agents', 'helper.md'),
+        '---\nid: helper\nwhen: Help with tasks\n---\nYou are a helper.'
+      );
+      await assert.doesNotReject(async () => runSync(tmpDir, { dryRun: false }));
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }
@@ -1364,6 +1429,7 @@ describe('Skill Sync', () => {
   it('--strict mode promotes duplicate warnings to errors', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-strict-'));
     try {
+      await seedAnchorAgent(tmpDir);
       // Create enough source files for sync to run
       await writeFile(join(tmpDir, 'CLAUDE.md'), '');
 
@@ -1624,6 +1690,7 @@ describe('Skill Sync', () => {
     //      Without the fix the condition only checks isDrift || conflicts → passes silently.
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-check-legacy-removal-'));
     try {
+      await seedAnchorAgent(tmpDir);
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
 
       // Step 1: real sync to get correct v5 manifest on disk
@@ -1664,6 +1731,7 @@ describe('Skill Sync', () => {
   it('--check converges: passes after real sync removes v4 legacy Gemini targets', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-check-legacy-converge-'));
     try {
+      await seedAnchorAgent(tmpDir);
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
 
       // Establish a clean v5 baseline
@@ -1784,6 +1852,7 @@ describe('Skill Sync', () => {
   it('detectDuplicates handles Codex skills and Claude commands in index', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-fullidx-'));
     try {
+      await seedAnchorAgent(tmpDir);
       await mkdir(join(tmpDir, '.codex', 'skills', 'openspec-test'), { recursive: true });
       await writeFile(
         join(tmpDir, '.codex', 'skills', 'openspec-test', 'SKILL.md'),
@@ -2074,6 +2143,7 @@ describe('Skill Sync', () => {
   it('does not sync project hooks from .claude/settings.json', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-ignore-hooks-'));
     try {
+      await seedAnchorAgent(tmpDir);
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# Project context');
       await mkdir(join(tmpDir, '.claude'), { recursive: true });
       await writeFile(

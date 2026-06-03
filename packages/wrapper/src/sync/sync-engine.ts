@@ -334,16 +334,34 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   // 2. Discover sources
   const sources = await discoverSources(repoRoot);
 
-  if (sources.length === 0) {
-    throw new Error(
-      'No sync sources found. Ensure CLAUDE.md, .claude/rules/, .claude/agents/, or .claude/skills/ exists.'
-    );
-  }
-
   // 3. Read existing manifest (fully migrated) plus a pre-v5 view used only to plan
   //    on-disk cleanup of legacy aco-owned Gemini targets that the v5 migration drops.
   const existingManifest = await readManifest(repoRoot);
   const legacyCleanupManifest = await readManifestForLegacyCleanup(repoRoot);
+
+  // `aco sync` only generates structured-surface targets (skills, Codex agents,
+  // hooks). Guideline sources (`config` = CLAUDE.md, `rule` = .claude/rules/*) no
+  // longer produce any output since AGENTS.md generation was removed, so a fresh repo
+  // with only those would otherwise write an empty manifest and exit 0. Hard-fail when
+  // there is nothing to sync AND no prior manifest state to reconcile — i.e. a
+  // genuinely structureless repo. A repo that previously synced (existing manifest) or
+  // carries legacy aco-owned targets is still allowed through so stale-target and
+  // legacy Gemini cleanup can complete even after all structured sources are removed.
+  // See OpenSpec change aco-sync-narrow-scope.
+  const structuredSources = sources.filter(
+    (s) => s.kind === 'skill' || s.kind === 'agent' || s.kind === 'settings'
+  );
+  if (
+    structuredSources.length === 0 &&
+    existingManifest === null &&
+    legacyCleanupManifest === null
+  ) {
+    throw new Error(
+      'No sync sources found. aco sync generates only structured-surface targets ' +
+        '(skills, Codex agents, hooks); CLAUDE.md and .claude/rules/ alone produce no ' +
+        'output. Ensure .claude/skills/, .claude/agents/, or hook settings exist.'
+    );
+  }
 
   // 4. Compute transform plan (pure planning pass)
   const plan = await computeTransformPlan(
