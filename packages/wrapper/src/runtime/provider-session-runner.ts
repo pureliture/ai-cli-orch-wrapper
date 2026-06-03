@@ -43,6 +43,13 @@ export interface ProviderSessionRunOptions {
 
 export interface ProviderSessionRunResult {
   fullOutput: string;
+  /**
+   * Total number of UTF-8 bytes streamed from the provider, counted before any
+   * in-memory capture truncation. Reflects the real bytes written to the output
+   * log even when `fullOutput` is empty (no-capture run path) or bounded
+   * (ask save-only/full path with a capture limit).
+   */
+  outputBytes: number;
   hasOutput: boolean;
   error?: unknown;
   /**
@@ -83,6 +90,7 @@ export async function invokeProviderForSession(
     : 0;
   const outputCapture = maxBuffer > 0 ? createBoundedOutputCapture(maxBuffer) : undefined;
   let hasOutput = false;
+  let outputBytes = 0;
   let error: unknown;
   let capturedStderr = '';
 
@@ -114,6 +122,7 @@ export async function invokeProviderForSession(
     )) {
       await writeChunk(options.output, chunk);
       outputCapture?.append(chunk);
+      outputBytes += Buffer.byteLength(chunk, 'utf8');
       hasOutput = true;
       await options.onChunk?.(chunk);
     }
@@ -125,6 +134,7 @@ export async function invokeProviderForSession(
 
   return {
     fullOutput: outputCapture?.value() ?? '',
+    outputBytes,
     hasOutput,
     stderrContent: capturedStderr,
     ...(error ? { error } : {}),
