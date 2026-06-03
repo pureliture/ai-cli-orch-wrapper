@@ -154,6 +154,31 @@ describe('AntigravityProvider', () => {
     assert.notEqual(dir, process.cwd());
   });
 
+  it('invoke() runs agy in the neutral workspace dir, not the inherited cwd', async () => {
+    // Integration guard: a refactor that drops the cwd wiring must fail here.
+    // Fake `agy` prints its own process.cwd(); we assert it ran in agyWorkspaceDir().
+    const binDir = await fs.mkdtemp(path.join(os.tmpdir(), 'aco-agy-fake-'));
+    const fakeAgy = path.join(binDir, 'agy');
+    await fs.writeFile(fakeAgy, '#!/usr/bin/env node\nprocess.stdout.write(process.cwd());\n', {
+      mode: 0o755,
+    });
+    const origPath = process.env.PATH;
+    process.env.PATH = `${binDir}${path.delimiter}${origPath ?? ''}`;
+    try {
+      const chunks: string[] = [];
+      for await (const c of new AntigravityProvider().invoke('review', 'p', 'c', {
+        permissionProfile: 'restricted',
+      })) {
+        chunks.push(c);
+      }
+      const childCwd = await fs.realpath(chunks.join('').trim());
+      assert.equal(childCwd, await fs.realpath(agyWorkspaceDir()));
+    } finally {
+      process.env.PATH = origPath;
+      await fs.rm(binDir, { recursive: true, force: true });
+    }
+  });
+
   it('installHint contains curl', () => {
     assert.ok(new AntigravityProvider().installHint.includes('curl'));
   });

@@ -96,9 +96,21 @@ export class AntigravityProvider implements IProvider {
     const args = [...this.buildArgs(command, options), combined];
     // Pin agy to a stable neutral cwd so ephemeral invocation dirs are not
     // registered as Antigravity projects. See agyWorkspaceDir() above.
-    const cwd = agyWorkspaceDir();
-    await mkdir(cwd, { recursive: true });
-    yield* spawnStream(binary, args, { processName: 'agy', stdin: 'pipe', env, cwd }, options);
+    // If the workspace dir cannot be created (path is a file, parent not writable),
+    // fall back to the inherited cwd so the delegation still runs — a cosmetic
+    // project-pollution risk must not become a hard delegation failure.
+    let cwd: string | undefined = agyWorkspaceDir();
+    try {
+      await mkdir(cwd, { recursive: true });
+    } catch {
+      cwd = undefined;
+    }
+    yield* spawnStream(
+      binary,
+      args,
+      { processName: 'agy', stdin: 'pipe', env, ...(cwd !== undefined && { cwd }) },
+      options
+    );
   }
 
   summarizeOutput(output: string, maxLength: number): string {
