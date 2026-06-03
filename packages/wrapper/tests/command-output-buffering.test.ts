@@ -131,4 +131,79 @@ describe('command invocation output buffering policy', () => {
     // outputBytes must equal the real streamed size, not the bounded capture.
     assert.equal(result.outputBytes, total);
   });
+
+  it('counts UTF-8 byte length, not UTF-16 string length, for multibyte output', async () => {
+    const payload = '안녕하세요 🚀'.repeat(100);
+    const expectedBytes = Buffer.byteLength(payload, 'utf8');
+    // Guard the test itself: byte length must differ from string length,
+    // otherwise the assertion would not distinguish byteLength from .length.
+    assert.notEqual(expectedBytes, payload.length);
+
+    const provider: IProvider = {
+      key: 'mock',
+      installHint: 'mock',
+      icon: '⚪',
+      isAvailable: () => true,
+      checkAuth: async () => ({ ok: true }),
+      buildArgs: () => [],
+      invoke: async function* () {
+        yield payload;
+      },
+    };
+    const output = new Writable({
+      write(_chunk, _encoding, callback) {
+        callback();
+      },
+    });
+
+    const result = await invokeProviderForSession({
+      provider,
+      command: 'run',
+      prompt: 'prompt',
+      content: 'content',
+      permissionProfile: 'restricted',
+      sessionId: 'test-session',
+      output,
+      outputBuffer: resolveRunOutputBuffering(),
+    });
+
+    assert.equal(result.outputBytes, expectedBytes);
+  });
+
+  it('reports bytes streamed before a mid-stream provider error', async () => {
+    const chunk = 'Z'.repeat(2048);
+    const provider: IProvider = {
+      key: 'mock',
+      installHint: 'mock',
+      icon: '⚪',
+      isAvailable: () => true,
+      checkAuth: async () => ({ ok: true }),
+      buildArgs: () => [],
+      invoke: async function* () {
+        yield chunk;
+        throw new Error('provider aborted mid-stream');
+      },
+    };
+    const output = new Writable({
+      write(_chunk, _encoding, callback) {
+        callback();
+      },
+    });
+
+    const result = await invokeProviderForSession({
+      provider,
+      command: 'run',
+      prompt: 'prompt',
+      content: 'content',
+      permissionProfile: 'restricted',
+      sessionId: 'test-session',
+      output,
+      outputBuffer: resolveRunOutputBuffering(),
+    });
+
+    // The error is captured, and outputBytes reflects what reached the output
+    // before the abort — not silently reset to 0.
+    assert.ok(result.error instanceof Error);
+    assert.equal(result.outputBytes, Buffer.byteLength(chunk, 'utf8'));
+  });
 });
