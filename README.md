@@ -77,7 +77,7 @@
 #### 🟣 Harness / Generated 분리
 
 `.claude/`는 **사람이 관리하는 기준 자산**.<br/>
-Codex·Antigravity 대상 파일은 생성 산출물로 관리되어 운영 중 수동 수정과 자동 생성의 경계가 분명합니다.
+Codex 구조적 표면(`.codex/agents/`·hooks)은 생성 산출물로 관리되고, `AGENTS.md`는 사람이 직접 유지보수하는 peer 문서입니다. 운영 중 수동 수정과 자동 생성의 경계가 분명합니다.
 
 </td>
 <td width="50%" valign="top">
@@ -452,7 +452,7 @@ AI CLI workflow를 처음 도입하는 저장소
 ```
 
 **✨ 결과**
-`~/.aco/sessions/`에 session 로그 생성, `AGENTS.md` 자동 생성
+`~/.aco/sessions/`에 session 로그 생성
 
 </td>
 <td valign="top">
@@ -603,7 +603,6 @@ PR 머지 전 Antigravity와 Codex **양쪽 리뷰**를 받고 싶을 때
 ### ⚪ Generated Targets (managed by `aco sync`)
 
 ```
-📄 AGENTS.md               # Codex 프로젝트 지침
 📁 .agents/skills/         # Codex·Antigravity 공유 (ACO-owned only)
 📁 .codex/agents/          # Codex custom agent
 🗂️ .aco/sync-manifest.json  # Drift tracking
@@ -611,6 +610,8 @@ PR 머지 전 Antigravity와 Codex **양쪽 리뷰**를 받고 싶을 때
 
 > **`aco sync`가 관리하는 영역**<br/>
 > 수동 편집 시 drift 경고가 발생합니다.
+
+`AGENTS.md`는 `aco sync`가 생성하지 않습니다. 사람이 직접 유지보수하는 peer 문서입니다.
 
 Hook 설정은 provider별 user-level runtime 설정으로 취급하며 `aco sync`가 생성하지 않습니다.
 

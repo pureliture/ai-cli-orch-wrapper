@@ -12,13 +12,13 @@ repo-level instructions from `CLAUDE.md`.
 - provider-neutral wrapper 구조와 context-sync surface 경계를 따른다. 관련 없는 리팩터링, 포맷 변경, dead code 삭제는 하지 않는다.
 - 모든 변경 라인은 사용자 요청, runtime compatibility, 또는 검증 필요성과 직접 연결되어야 한다.
 - 비사소한 변경은 성공 기준과 검증 명령을 먼저 정하고, 완료 전에 실제 결과를 확인한다.
-- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`의 generated block은 sync contract를 먼저 확인하고, 불가피할 때만 손으로 수정한다.
+- `AGENTS.md`는 `aco sync`가 생성하지 않는 hand-maintained 문서다. sync가 생성하는 구조적 표면(skills/codex agents/hooks) 산출물은 sync contract를 먼저 확인하고 불가피할 때만 손으로 수정한다.
 
 ## Codex-Specific Guidance
 
 - Use the local `.agents/skills/*/SKILL.md` files when a task names a skill or clearly matches one.
 - For GitHub PM tasks, use `github-kanban-ops` for policy details. Codex `$gh-*` command alias UX is deferred to a future Codex-only design.
-- Do not create `.codex/skills/` copies unless Codex runtime or packaging proves they are required.
+- Do not create `.codex/skills/` copies unless they are a proven Codex-native need. Exception: `.codex/skills/aco/` is the first-class Codex `$aco` entrypoint — hand-maintained, not an `aco sync` shared copy.
 - Treat `AGENTS.md` as the root instruction surface for Codex, but keep durable workflow policy in skills and docs.
 
 ## Worktree Policy
@@ -42,7 +42,6 @@ Rules:
   - test commands and results
   - PR URL if created
 
-<!-- BEGIN ACO GENERATED CONTEXT -->
 ## CLAUDE.md
 
 # ai-cli-orch-wrapper
@@ -106,7 +105,7 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 - Source order starts with root `CLAUDE.md`, then optional `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, and hooks.
 - Codex project instructions live in root `AGENTS.md`.
 - Shared skills live in `.agents/skills/<skill>/`, but only explicitly allowed ACO-owned skills are synced. `.agents/skills/` is not a mirror of `.claude/skills/`.
-- Do not hand-maintain `.codex/skills/` copies unless the runtime requirement is proven.
+- Do not hand-maintain `.codex/skills/` copies unless the runtime requirement is proven. Exception: `.codex/skills/aco/` is an approved Codex-native first-class `$aco` entrypoint (not a sync-generated shared copy).
 - Use `aco sync --check` to detect stale generated targets and `aco sync --force` only when overwriting managed drift is intentional.
 - Use `aco sync --check --strict` to fail on duplicate provider-surface warnings in CI.
 
@@ -115,10 +114,11 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 Codex는 `$aco`를 통해 ACO delegation을 실행할 수 있다. 이는 Claude의 `/aco` slash command와 동일한 consent-gated delegation 흐름을 Codex 세션에서 미러링한다.
 
 - **`$aco`**: `aco ask` 기반 consent-gated delegation 실행. peers = `antigravity`/`mock`. 실행에는 `--yes` 동의가 필요하다.
-- Claude entrypoints: `/aco` (단일 generic delegation command)
-- Codex entrypoints: `$aco` (위와 동일한 `aco ask` 흐름, Codex 세션 내에서 실행)
+- **`aco delegate <agent-id>`**: `.claude/agents/<agent-id>.md` spec과 seed를 `--input`과 합쳐 stdout에 출력하는 로컬 prompt 빌더. 외부 호출 없음, Agent tool 자동 인터셉트 없음.
+- Claude entrypoints: `/aco` (단일 generic delegation command) + `aco delegate`.
+- Codex entrypoints: `$aco` (위와 동일한 `aco ask`/`aco delegate` 흐름). 일급 스킬 파일: `.codex/skills/aco/SKILL.md`.
 - `$aco`는 task-specific subcommand를 만들지 않는다. task 내용은 자연어 task text, CLI flag, preset으로 전달한다.
-- `/aco` command file: `.claude/commands/aco.md`. Codex용 별도 파일은 없다. 위임 정책은 `.claude/skills/aco-delegation/SKILL.md`가 담당한다.
+- 위임 정책 정본: `.claude/skills/aco-delegation/SKILL.md` + `.claude/commands/aco.md`. Codex 일급 진입점은 `.codex/skills/aco/`가 미러한다.
 
 ## Commit Message Policy
 
@@ -233,4 +233,3 @@ bash -n scripts/pm-hook.sh scripts/setup-github-labels.sh scripts/setup-github-p
 - New sprint-based planning surfaces.
 - Extra GitHub label taxonomies that duplicate Project fields.
 - Windows 지원. macOS/Linux만 보장한다. `chmod`, shebang, POSIX 권한·시그널 모델 등의 POSIX 의존 패턴은 그대로 사용하며, Windows 호환성 제안(예: cross-platform shim, polyfill, `mode` 옵션 제거, shebang 우회)은 won't fix로 처리한다.
-<!-- END ACO GENERATED CONTEXT -->

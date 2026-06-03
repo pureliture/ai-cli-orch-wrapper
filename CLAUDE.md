@@ -60,19 +60,18 @@ Use `github-kanban-ops` as the canonical model for repository PM automation.
 - Source order starts with root `CLAUDE.md`, then optional `.claude/CLAUDE.md`, `.claude/rules/*.md`, skills, agents, and hooks.
 - Codex project instructions live in root `AGENTS.md`.
 - Shared skills live in `.agents/skills/<skill>/`, but only explicitly allowed ACO-owned skills are synced. `.agents/skills/` is not a mirror of `.claude/skills/`.
-- Do not hand-maintain `.codex/skills/` copies unless the runtime requirement is proven.
+- Do not hand-maintain `.codex/skills/` copies unless the runtime requirement is proven. Exception: `.codex/skills/aco/` is an approved Codex-native first-class `$aco` entrypoint (not a sync-generated shared copy).
 - Use `aco sync --check` to detect stale generated targets and `aco sync --force` only when overwriting managed drift is intentional.
 - Use `aco sync --check --strict` to fail on duplicate provider-surface warnings in CI.
 
-## Codex `$aco` Entrypoint
+## ACO Delegation (`/aco`)
 
-Codex는 `$aco`를 통해 ACO delegation을 실행할 수 있다. 이는 Claude의 `/aco` slash command와 동일한 consent-gated delegation 흐름을 Codex 세션에서 미러링한다.
+Claude Code 세션은 `/aco`로 외부 AI provider에 advisory 작업을 위임한다. consent-gated 흐름이라 `aco ask --dry-run`으로 계획을 본 뒤 명시 동의(`--yes`) 시에만 provider를 실행한다. peers = `antigravity`/`mock`.
 
-- **`$aco`**: `aco ask` 기반 consent-gated delegation 실행. peers = `antigravity`/`mock`. 실행에는 `--yes` 동의가 필요하다.
-- Claude entrypoints: `/aco` (단일 generic delegation command)
-- Codex entrypoints: `$aco` (위와 동일한 `aco ask` 흐름, Codex 세션 내에서 실행)
-- `$aco`는 task-specific subcommand를 만들지 않는다. task 내용은 자연어 task text, CLI flag, preset으로 전달한다.
-- `/aco` command file: `.claude/commands/aco.md`. Codex용 별도 파일은 없다. 위임 정책은 `.claude/skills/aco-delegation/SKILL.md`가 담당한다.
+- **`/aco`**: 단일 generic delegation command. task는 자연어 text, CLI flag, preset으로 전달하며 task-specific subcommand를 만들지 않는다.
+- **`aco delegate <agent-id>`**: `.claude/agents/<agent-id>.md` spec 기반 로컬 prompt 빌더(외부 호출 없음).
+- `/aco` command file: `.claude/commands/aco.md`. 위임 정책 정본: `.claude/skills/aco-delegation/SKILL.md`.
+- Codex 세션의 동등 진입점(`$aco` / `aco delegate`)은 `AGENTS.md`와 `.codex/skills/aco/`가 소유한다(hand-maintained).
 
 ## Commit Message Policy
 

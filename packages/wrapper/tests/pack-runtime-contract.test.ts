@@ -432,8 +432,18 @@ describe('pack template runtime contract', () => {
     const binDir = await makeFakeAcoBinary('aco');
     try {
       await writeFile(join(workspace, 'CLAUDE.md'), '# Source context\n');
-      await writeFile(join(workspace, 'AGENTS.md'), '# Locked generated target\n');
-      await chmod(join(workspace, 'AGENTS.md'), 0o444);
+      // Force a post-install sync WRITE failure deterministically — independent of
+      // process privileges (root in CI/Docker bypasses directory permission bits).
+      // A source agent drives a `.codex/agents/*.toml` write, and `.codex/agents` is
+      // pre-created as a FILE so sync's `mkdir(.codex/agents)` always fails
+      // (ENOTDIR/EEXIST) after pack templates have already been installed.
+      await mkdir(join(workspace, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(workspace, '.claude', 'agents', 'reviewer.md'),
+        '---\nid: reviewer\nwhen: Review code\n---\nYou are a reviewer.\n'
+      );
+      await mkdir(join(workspace, '.codex'), { recursive: true });
+      await writeFile(join(workspace, '.codex', 'agents'), 'not a directory\n');
 
       const result = await runCli(['pack', 'setup'], {
         cwd: workspace,
@@ -451,7 +461,6 @@ describe('pack template runtime contract', () => {
       assert.match(result.stdout + result.stderr, /same entrypoint used for setup/);
       assert.match(result.stdout + result.stderr, /Recovery command: aco pack uninstall/);
     } finally {
-      await chmod(join(workspace, 'AGENTS.md'), 0o644).catch(() => undefined);
       await rm(workspace, { recursive: true, force: true });
       await rm(binDir, { recursive: true, force: true });
     }
@@ -463,8 +472,18 @@ describe('pack template runtime contract', () => {
     const binDir = await makeFakeAcoBinary('aco-test-local');
     try {
       await writeFile(join(workspace, 'CLAUDE.md'), '# Source context\n');
-      await writeFile(join(workspace, 'AGENTS.md'), '# Locked generated target\n');
-      await chmod(join(workspace, 'AGENTS.md'), 0o444);
+      // Force a post-install sync WRITE failure deterministically — independent of
+      // process privileges (root in CI/Docker bypasses directory permission bits).
+      // A source agent drives a `.codex/agents/*.toml` write, and `.codex/agents` is
+      // pre-created as a FILE so sync's `mkdir(.codex/agents)` always fails
+      // (ENOTDIR/EEXIST) after pack templates have already been installed.
+      await mkdir(join(workspace, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(workspace, '.claude', 'agents', 'reviewer.md'),
+        '---\nid: reviewer\nwhen: Review code\n---\nYou are a reviewer.\n'
+      );
+      await mkdir(join(workspace, '.codex'), { recursive: true });
+      await writeFile(join(workspace, '.codex', 'agents'), 'not a directory\n');
 
       const result = await runCli(
         ['pack', 'setup', '--global', '--binary-name', 'aco-test-local'],
@@ -486,7 +505,6 @@ describe('pack template runtime contract', () => {
       );
       assert.match(result.stdout + result.stderr, /Recovery command: aco-test-local pack uninstall --global/);
     } finally {
-      await chmod(join(workspace, 'AGENTS.md'), 0o644).catch(() => undefined);
       await rm(workspace, { recursive: true, force: true });
       await rm(home, { recursive: true, force: true });
       await rm(binDir, { recursive: true, force: true });
@@ -498,8 +516,18 @@ describe('pack template runtime contract', () => {
     const emptyBinDir = await mkdtemp(join(tmpdir(), 'aco-pack-neutral-empty-bin-'));
     try {
       await writeFile(join(workspace, 'CLAUDE.md'), '# Source context\n');
-      await writeFile(join(workspace, 'AGENTS.md'), '# Locked generated target\n');
-      await chmod(join(workspace, 'AGENTS.md'), 0o444);
+      // Force a post-install sync WRITE failure deterministically — independent of
+      // process privileges (root in CI/Docker bypasses directory permission bits).
+      // A source agent drives a `.codex/agents/*.toml` write, and `.codex/agents` is
+      // pre-created as a FILE so sync's `mkdir(.codex/agents)` always fails
+      // (ENOTDIR/EEXIST) after pack templates have already been installed.
+      await mkdir(join(workspace, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(workspace, '.claude', 'agents', 'reviewer.md'),
+        '---\nid: reviewer\nwhen: Review code\n---\nYou are a reviewer.\n'
+      );
+      await mkdir(join(workspace, '.codex'), { recursive: true });
+      await writeFile(join(workspace, '.codex', 'agents'), 'not a directory\n');
 
       const result = await runCli(['pack', 'setup', '--binary-name', 'missing-aco'], {
         cwd: workspace,
@@ -516,7 +544,6 @@ describe('pack template runtime contract', () => {
       assert.doesNotMatch(result.stdout + result.stderr, /Recovery command: aco pack uninstall/);
       assert.doesNotMatch(result.stdout + result.stderr, /missing-aco pack uninstall/);
     } finally {
-      await chmod(join(workspace, 'AGENTS.md'), 0o644).catch(() => undefined);
       await rm(workspace, { recursive: true, force: true });
       await rm(emptyBinDir, { recursive: true, force: true });
     }
