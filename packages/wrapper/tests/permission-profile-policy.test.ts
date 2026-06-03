@@ -686,6 +686,47 @@ describe('취소 핸들러 — createProviderCancellationHandler', () => {
       });
     });
   });
+
+  // Fix 1: markCancelled가 reject해도 unhandled rejection 없이 exit가 진행되어야 한다.
+  // 취소 경로가 ledger write 실패로 프로세스를 크래시시키면 안 된다.
+  it('markCancelled가 reject해도 unhandled rejection 없이 exit가 호출된다', () => {
+    const rejections: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => {
+      rejections.push(reason);
+    };
+    process.on('unhandledRejection', onUnhandled);
+
+    let exited = false;
+    const state: ProviderCancellationState = { activePid: undefined, sessionId: 'sess-rej' };
+    const handler = createProviderCancellationHandler({
+      state,
+      terminate: () => true,
+      // ledger write 실패를 모사: rejected promise를 반환한다.
+      markCancelled: async () => {
+        throw new Error('ledger write failed');
+      },
+      exit: () => {
+        exited = true;
+      },
+      scheduleKill: () => undefined,
+    });
+
+    handler('SIGINT');
+
+    return new Promise<void>((resolveDone) => {
+      // microtask + macrotask를 모두 비운 뒤 검증한다.
+      setTimeout(() => {
+        process.off('unhandledRejection', onUnhandled);
+        assert.equal(
+          rejections.length,
+          0,
+          `markCancelled rejection must be absorbed, got: ${rejections.map(String).join(',')}`
+        );
+        assert.equal(exited, true, 'exit must still be called after markCancelled rejects');
+        resolveDone();
+      }, 20);
+    });
+  });
 });
 
 // ── P2a: register/cleanup 쌍 — installProviderCancellationHandler ─────────────

@@ -100,10 +100,15 @@ export function createProviderCancellationHandler(
     }
 
     if (sessionId !== undefined) {
-      deps.markCancelled(sessionId).finally(() => {
-        ledgerDone = true;
-        maybeExit();
-      });
+      // ledger write가 실패(reject)해도 취소 종료 절차는 계속 진행해야 한다.
+      // .catch로 reject를 흡수해 unhandled rejection을 막고, 종료는 그대로 진행한다.
+      deps
+        .markCancelled(sessionId)
+        .catch(() => {})
+        .finally(() => {
+          ledgerDone = true;
+          maybeExit();
+        });
     }
 
     // 자식도 세션도 없으면(실행 전 시그널) 즉시 종료한다.

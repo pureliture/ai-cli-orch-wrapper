@@ -225,7 +225,7 @@ export function renderRuntimeRollupDashboard(
     const names = unauthenticated.map((entry) => entry.context.active.provider).join(', ');
     lines.push(
       style.dim(
-        `${warnPrefix}Not authenticated: ${names}. Authenticated providers run in degraded mode; run: aco provider setup`
+        `${warnPrefix}Not authenticated: ${names}. These providers are skipped; the run continues in degraded mode with the authenticated providers. To enable them, run: aco provider setup`
       )
     );
   }

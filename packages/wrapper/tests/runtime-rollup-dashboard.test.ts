@@ -110,6 +110,32 @@ describe('renderRuntimeRollupDashboard', () => {
     assert.match(output, /agy login/);
   });
 
+  it('degraded 안내는 미인증 provider가 skip되고 인증된 provider로 계속됨을 정확히 설명한다', () => {
+    const output = renderRuntimeRollupDashboard(
+      [
+        { context: buildContext('codex'), icon: '🟢' },
+        {
+          context: buildContext('antigravity', {
+            auth: { ok: false, method: 'missing', hint: 'agy login' },
+          }),
+          icon: '🔵',
+        },
+      ],
+      { color: false }
+    );
+
+    // 미인증 provider 이름이 표시된다.
+    assert.match(output, /Not authenticated: antigravity/);
+    // 정확한 degraded 정책: 미인증 provider는 skip되고, 인증된 provider로 run이 계속된다.
+    assert.match(output, /skipped/);
+    assert.match(output, /degraded mode/);
+    assert.match(output, /authenticated providers/);
+    // 논리 반대 문구("Authenticated providers run in degraded mode")는 더 이상 없어야 한다.
+    assert.doesNotMatch(output, /Authenticated providers run in degraded mode/);
+    // setup 안내가 유지된다.
+    assert.match(output, /aco provider setup/);
+  });
+
   it('keeps a single-provider rollup byte-compatible with one provider row', () => {
     const output = renderRuntimeRollupDashboard(
       [{ context: buildContext('mock'), icon: '⚪' }],
