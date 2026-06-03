@@ -199,6 +199,29 @@ describe('aco ask CLI', () => {
     await stat(join(runDir, 'brief.md'));
   });
 
+  it('renders the aco Runtime Session dashboard to stderr (shared kernel)', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'review this demo input',
+      '--input',
+      'demo',
+      '--yes',
+      '--output-mode',
+      'brief',
+    ]);
+
+    assert.equal(result.code, 0);
+    // 대시보드는 stderr에 렌더되어 stdout brief를 손상시키지 않는다.
+    assert.match(result.stderr, /aco Runtime Session/);
+    assert.match(result.stderr, /Provider/);
+    assert.doesNotMatch(result.stdout, /aco Runtime Session/);
+    // stdout brief는 그대로 유지된다.
+    assert.match(result.stdout, /Run:/);
+  });
+
   it('preserves raw inline input including leading spaces and trailing newline', async () => {
     const rawInput = '  leading spaces stay\ntrailing newline stays\n';
 

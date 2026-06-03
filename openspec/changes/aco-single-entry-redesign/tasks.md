@@ -22,12 +22,12 @@
 
 ## 3. 공통 runtime 커널 추출 + ask 대시보드 (C)
 
-- [ ] 3.1 `renderRuntimeDashboard`·`collectRuntimeContext`를 `cmdRun`에서 공통 `runtime/` 모듈로 추출
-- [ ] 3.2 `packages/wrapper/src/commands/ask.ts`에서 커널을 호출해 대시보드 렌더 연결
-- [ ] 3.3 `aco run`(`packages/wrapper/src/cli.ts` `cmdRun`)이 동일 커널을 사용하도록 전환
-- [ ] 3.4 공통 커널에 `getPrimarySession()` 하위호환 헬퍼 제공(단일세션 접근부 회귀 방지)
-- [ ] 3.5 `aco run` 대시보드 회귀 테스트 추가/통과
-- [ ] 3.6 `aco ask` 경로 대시보드 수집·렌더 단위/통합 테스트 추가/통과
+- [x] 3.1 `renderRuntimeDashboard`·`collectRuntimeContext`를 `cmdRun`에서 공통 `runtime/` 모듈로 추출
+- [x] 3.2 `packages/wrapper/src/commands/ask.ts`에서 커널을 호출해 대시보드 렌더 연결
+- [x] 3.3 `aco run`(`packages/wrapper/src/cli.ts` `cmdRun`)이 동일 커널을 사용하도록 전환
+- [x] 3.4 공통 커널에 `getPrimarySession()` 하위호환 헬퍼 제공(단일세션 접근부 회귀 방지)
+- [x] 3.5 `aco run` 대시보드 회귀 테스트 추가/통과
+- [x] 3.6 `aco ask` 경로 대시보드 수집·렌더 단위/통합 테스트 추가/통과
 
 ## 4. 멀티프로바이더 롤업 + provider 아이콘 (C)
 

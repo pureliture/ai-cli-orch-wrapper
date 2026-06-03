@@ -12,6 +12,8 @@ import { sessionStore } from '../session/store.js';
 import type { IProvider, OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
 import { checkProviderProfileSupport } from '../runtime/provider-profile-guard.js';
+import { emitRuntimeDashboard } from '../runtime/session-dashboard.js';
+import { getCachedProviderAuth } from '../providers/auth-cache.js';
 import {
   createProviderCancellationHandler,
   type ProviderCancellationState,
@@ -192,6 +194,19 @@ export async function cmdAsk(args: string[]): Promise<void> {
       cancellationState.activePid = undefined;
       const sessionDir = sessionStore.sessionDir(session.id);
       await writeFile(join(sessionDir, 'prompt.md'), prompt, { mode: 0o600 });
+
+      // 공통 커널로 'aco Runtime Session' 대시보드를 stderr에 렌더한다.
+      // aco run과 동일한 커널을 사용하며, stdout brief는 손상시키지 않는다.
+      // (U7에서 멀티프로바이더 롤업으로 확장된다. 현재는 provider별 단일 행.)
+      const auth = await getCachedProviderAuth(provider, { skipCache: true });
+      const runtimeContext = await emitRuntimeDashboard({
+        provider: provider.key,
+        command: 'ask',
+        sessionId: session.id,
+        permissionProfile: options.permissionProfile,
+        auth,
+      });
+      await sessionStore.update(session.id, { runtimeContext });
 
       const outputLog = sessionStore.outputLogPath(session.id);
       const outputStream = createWriteStream(outputLog, { flags: 'a', mode: 0o600 });

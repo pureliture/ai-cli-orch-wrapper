@@ -20,8 +20,7 @@ import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile, OutputBufferPolicy } from './providers/interface.js';
 import { getCachedProviderAuth } from './providers/auth-cache.js';
-import { collectRuntimeContext } from './runtime/context.js';
-import { renderRuntimeDashboard } from './runtime/dashboard.js';
+import { emitRuntimeDashboard } from './runtime/session-dashboard.js';
 import { formatAuthStatus } from './runtime/auth-display.js';
 import { invokeProviderForSession } from './runtime/provider-session-runner.js';
 import { terminateProviderProcess } from './runtime/provider-process.js';
@@ -221,7 +220,7 @@ async function cmdRun(args: string[]): Promise<void> {
 
   const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
   const auth = await getCachedProviderAuth(provider, { skipCache: true });
-  const runtimeContext = await collectRuntimeContext({
+  const runtimeContext = await emitRuntimeDashboard({
     provider: providerKey,
     command,
     sessionId: session.id,
@@ -230,7 +229,6 @@ async function cmdRun(args: string[]): Promise<void> {
     auth,
   });
   await sessionStore.update(session.id, { runtimeContext });
-  process.stderr.write(renderRuntimeDashboard(runtimeContext) + '\n');
 
   const tee = sessionStore.createOutputTee(session.id);
   const cancellationState: ProviderCancellationState = {
