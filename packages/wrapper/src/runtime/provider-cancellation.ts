@@ -88,27 +88,45 @@ export function createProviderCancellationHandler(
       }
     };
 
+    // terminate가 동기 예외(권한/OS 오류 등)를 던져도 취소 흐름이 차단되거나 고아가
+    // 남지 않도록 예외를 흡수한다.
+    const safeTerminate = (pid: number, signal: NodeJS.Signals): void => {
+      try {
+        terminate(pid, signal);
+      } catch {
+        // 종료 신호 전송 실패는 무시하고 취소 흐름을 계속 진행한다.
+      }
+    };
+
     if (activePid !== undefined) {
       // P1a: graceful 종료를 먼저 시도한다 (raw 신호가 아닌 SIGTERM).
-      terminate(activePid, 'SIGTERM');
+      safeTerminate(activePid, 'SIGTERM');
       // grace 후에도 자식이 남아 있으면 SIGKILL로 escalate한 뒤에야 종료를 허용한다.
       scheduleKill(() => {
-        terminate(activePid, 'SIGKILL');
+        safeTerminate(activePid, 'SIGKILL');
         cleanupDone = true;
         maybeExit();
       }, killGraceMs);
     }
 
     if (sessionId !== undefined) {
-      // ledger write가 실패(reject)해도 취소 종료 절차는 계속 진행해야 한다.
-      // .catch로 reject를 흡수해 unhandled rejection을 막고, 종료는 그대로 진행한다.
-      deps
-        .markCancelled(sessionId)
-        .catch(() => {})
-        .finally(() => {
-          ledgerDone = true;
-          maybeExit();
-        });
+      // ledger write가 실패해도 취소 종료 절차는 계속 진행해야 한다.
+      // - async reject는 .catch로 흡수한다.
+      // - markCancelled가 promise 반환 전에 동기 throw하면 .catch로 못 잡으므로
+      //   호출 전체를 try-catch로 감싸 ledgerDone 진행을 보장한다.
+      try {
+        deps
+          .markCancelled(sessionId)
+          .catch(() => {})
+          .finally(() => {
+            ledgerDone = true;
+            maybeExit();
+          });
+      } catch {
+        // 동기 throw: ledger 기록은 실패했지만 종료는 그대로 진행한다.
+        ledgerDone = true;
+        maybeExit();
+      }
     }
 
     // 자식도 세션도 없으면(실행 전 시그널) 즉시 종료한다.

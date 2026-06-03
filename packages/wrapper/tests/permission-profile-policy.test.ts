@@ -727,6 +727,91 @@ describe('취소 핸들러 — createProviderCancellationHandler', () => {
       }, 20);
     });
   });
+
+  // Bot review [0]: terminate가 동기 예외(권한/OS 오류 등)를 던져도 취소 흐름이
+  // 차단되거나 고아가 남지 않아야 한다. SIGTERM/SIGKILL terminate를 각각 try-catch로
+  // 흡수하고도 cleanupDone 진행 + exit가 호출되어야 한다.
+  it('terminate가 동기 throw해도 hang 없이 cleanup 진행 + exit가 호출된다', () => {
+    let scheduledKill: (() => void) | undefined;
+    let exited = false;
+
+    const state: ProviderCancellationState = { activePid: 5555, sessionId: 'sess-term-throw' };
+    const handler = createProviderCancellationHandler({
+      state,
+      // SIGTERM·SIGKILL 양쪽에서 동기 예외를 던진다 (권한/OS 오류 모사).
+      terminate: () => {
+        throw new Error('EPERM: operation not permitted');
+      },
+      markCancelled: async () => {},
+      exit: () => {
+        exited = true;
+      },
+      // SIGKILL escalation 타이머를 캡처해 수동 발화한다.
+      scheduleKill: (cb) => {
+        scheduledKill = cb;
+        return undefined;
+      },
+    });
+
+    // SIGTERM terminate가 throw해도 핸들러가 예외를 전파하지 않아야 한다(hang/크래시 방지).
+    assert.doesNotThrow(() => handler('SIGINT'), 'SIGTERM terminate throw must be absorbed');
+
+    // 아직 SIGKILL escalation 전이므로 cleanup 미완료 → exit 미호출.
+    assert.equal(exited, false, 'exit must wait for SIGKILL escalation when activePid is set');
+    assert.ok(scheduledKill, 'SIGKILL escalation must be scheduled');
+
+    // grace 만료 시뮬레이션: SIGKILL terminate도 throw하지만 흡수되어야 한다.
+    assert.doesNotThrow(() => scheduledKill?.(), 'SIGKILL terminate throw must be absorbed');
+
+    return new Promise<void>((resolveDone) => {
+      setImmediate(() => {
+        // terminate가 양쪽에서 throw해도 cleanupDone+ledgerDone이 되어 exit가 호출된다.
+        assert.equal(exited, true, 'exit must still be called after terminate throws');
+        resolveDone();
+      });
+    });
+  });
+
+  // Bot review [1]: markCancelled가 promise 반환 전에 동기 throw해도 .catch()가
+  // 못 잡는다. 호출 전체를 try-catch로 감싸 unhandled 없이 ledgerDone 진행 + exit.
+  it('markCancelled가 동기 throw해도 unhandled 없이 exit가 호출된다', () => {
+    const rejections: unknown[] = [];
+    const onUnhandled = (reason: unknown): void => {
+      rejections.push(reason);
+    };
+    process.on('unhandledRejection', onUnhandled);
+
+    let exited = false;
+    const state: ProviderCancellationState = { activePid: undefined, sessionId: 'sess-sync-throw' };
+    const handler = createProviderCancellationHandler({
+      state,
+      terminate: () => true,
+      // async 함수가 아닌 동기 throw: promise 반환 전에 throw하므로 .catch()로 못 잡는다.
+      markCancelled: (() => {
+        throw new Error('sync ledger write failed');
+      }) as unknown as (sessionId: string) => Promise<void>,
+      exit: () => {
+        exited = true;
+      },
+      scheduleKill: () => undefined,
+    });
+
+    // 동기 throw가 핸들러 밖으로 전파되면 안 된다.
+    assert.doesNotThrow(() => handler('SIGINT'), 'markCancelled sync throw must be absorbed');
+
+    return new Promise<void>((resolveDone) => {
+      setTimeout(() => {
+        process.off('unhandledRejection', onUnhandled);
+        assert.equal(
+          rejections.length,
+          0,
+          `no unhandled rejection allowed, got: ${rejections.map(String).join(',')}`
+        );
+        assert.equal(exited, true, 'exit must still be called after markCancelled sync throw');
+        resolveDone();
+      }, 20);
+    });
+  });
 });
 
 // ── P2a: register/cleanup 쌍 — installProviderCancellationHandler ─────────────
