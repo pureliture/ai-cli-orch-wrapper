@@ -123,9 +123,11 @@ describe('command invocation output buffering policy', () => {
       maxOutputBuffer: captureLimit,
     });
 
-    // fullOutput stays bounded by the capture limit (memory safety).
+    // fullOutput stays bounded by the capture limit (memory safety). The bound is
+    // a character (UTF-16 code-unit) limit, matching createBoundedOutputCapture's
+    // .length-based slicing — not a byte limit — so assert on length, not byteLength.
     assert.ok(
-      Buffer.byteLength(result.fullOutput, 'utf8') <= captureLimit,
+      result.fullOutput.length <= captureLimit,
       'fullOutput must stay within the capture limit'
     );
     // outputBytes must equal the real streamed size, not the bounded capture.
