@@ -31,7 +31,7 @@
   <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
   <img src="docs/images/claudecode-icon.png" height="28" alt="Claude" />&nbsp;<b>Claude</b>
   &nbsp;&nbsp;<img src="docs/images/antigravity-icon.png" height="28" alt="Antigravity" />&nbsp;<b>Antigravity</b>
-  &nbsp;&nbsp;<img src="docs/images/codex-icon.webp" height="28" alt="Codex" />&nbsp;<b>Codex</b>
+  &nbsp;&nbsp;<img src="docs/images/openai-icon.png" height="28" alt="Codex" />&nbsp;<b>Codex</b>
 </p>
 
 <br/>
@@ -160,7 +160,7 @@ Codex 구조적 표면(`.codex/agents/`·hooks)은 생성 산출물로 관리되
 <td><code>curl -fsSL https://antigravity.google/cli/install.sh | bash</code></td>
 </tr>
 <tr>
-<td><img src="docs/images/codex-icon.webp" height="22" alt="Codex CLI" />&nbsp;<b>Codex CLI</b></td>
+<td><img src="docs/images/openai-icon.png" height="22" alt="Codex CLI" />&nbsp;<b>Codex CLI</b></td>
 <td>🟡 Provider별</td>
 <td>Codex provider 사용 시</td>
 <td><code>npm i -g @openai/codex</code></td>
@@ -253,7 +253,7 @@ npx @pureliture/ai-cli-orch-wrapper --version
 <td>OS Keyring (no API key env required)</td>
 </tr>
 <tr>
-<td align="center"><img src="docs/images/codex-icon.webp" height="30" alt="Codex" /><br/><b>Codex</b></td>
+<td align="center"><img src="docs/images/openai-icon.png" height="30" alt="Codex" /><br/><b>Codex</b></td>
 <td><code>npm install -g @openai/codex</code></td>
 <td><code>OPENAI_API_KEY</code> · <code>~/.codex/auth.json</code></td>
 </tr>
