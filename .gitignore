@@ -91,3 +91,7 @@ templates/skills/improve-codebase-architecture/
 .claude/skills/openspec-*/
 .claude/commands/opsx/
 .codex/skills/openspec-*/
+
+# Local scratch / runtime cruft (not part of the repo)
+/commit.msg
+/cache/
