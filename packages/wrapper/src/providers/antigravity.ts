@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import { buildProviderEnv } from '../util/provider-env.js';
@@ -87,6 +87,11 @@ export class AntigravityProvider implements IProvider {
   ): AsyncIterable<string> {
     const binary = which('agy');
     if (!binary) throw new Error('agy CLI not found in PATH');
+    // which() may return a PATH-relative path when PATH contains relative entries.
+    // Resolve to absolute against the current cwd BEFORE switching the child's cwd:
+    // a relative binary would otherwise be re-resolved against agyWorkspaceDir() and
+    // fail with ENOENT.
+    const resolvedBinary = resolve(binary);
 
     // agy는 OS Keyring 인증 방식을 사용하므로 auth env var가 필요 없다.
     // buildProviderEnv([])는 BASE_ENV_KEYS(PATH, HOME 등 기반 키)만 전달하고
@@ -99,16 +104,19 @@ export class AntigravityProvider implements IProvider {
     // If the workspace dir cannot be created (path is a file, parent not writable),
     // fall back to the inherited cwd so the delegation still runs — a cosmetic
     // project-pollution risk must not become a hard delegation failure.
-    let cwd: string | undefined = agyWorkspaceDir();
+    // agyWorkspaceDir() (os.homedir()) can throw in restricted environments, so it
+    // lives inside the try with mkdir — failure falls back to the inherited cwd.
+    let cwd: string | undefined;
     try {
+      cwd = agyWorkspaceDir();
       await mkdir(cwd, { recursive: true });
     } catch {
       cwd = undefined;
     }
     yield* spawnStream(
-      binary,
+      resolvedBinary,
       args,
-      { processName: 'agy', stdin: 'pipe', env, ...(cwd !== undefined && { cwd }) },
+      { processName: 'agy', stdin: 'pipe', env, cwd },
       options
     );
   }
