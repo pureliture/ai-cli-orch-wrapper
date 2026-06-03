@@ -1568,16 +1568,45 @@ describe('Skill Sync', () => {
     }
   });
 
-  it('--check fails when a source has changed', async () => {
+  it('--check fails when a structured source (agent) has changed', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-check-stale-'));
     try {
       await writeFile(join(tmpDir, 'CLAUDE.md'), '# Test Repo');
+      await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.claude', 'agents', 'helper.md'),
+        '---\nid: helper\nwhen: Help with tasks\n---\nYou are a helper.'
+      );
       // First sync
       await runSync(tmpDir, { dryRun: false });
-      // Modify a source file
-      await writeFile(join(tmpDir, 'CLAUDE.md'), '# Updated Repo\n\nNew content.');
+      // Modify a structured source file (drives a .codex/agents/*.toml target)
+      await writeFile(
+        join(tmpDir, '.claude', 'agents', 'helper.md'),
+        '---\nid: helper\nwhen: Help differently\n---\nYou are an updated helper.'
+      );
 
       await assert.rejects(async () => runSync(tmpDir, { check: true }), /Sync check failed/);
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it('--check does NOT fail when only a guideline source (CLAUDE.md) changes', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-check-guideline-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# Test Repo');
+      await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.claude', 'agents', 'helper.md'),
+        '---\nid: helper\nwhen: Help with tasks\n---\nYou are a helper.'
+      );
+      await runSync(tmpDir, { dryRun: false });
+
+      // Editing only CLAUDE.md/rules produces no structured-surface output, so it must
+      // not be treated as drift (sync no longer projects guideline markdown).
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# Test Repo\n\nNew guideline content.');
+
+      await assert.doesNotReject(async () => runSync(tmpDir, { check: true }));
     } finally {
       await rm(tmpDir, { recursive: true, force: true });
     }

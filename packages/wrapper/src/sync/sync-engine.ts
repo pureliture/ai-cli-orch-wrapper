@@ -632,8 +632,13 @@ async function computeTransformPlan(
   const targets: Record<string, ManifestTargetRecord> = {};
   const skipped: SyncManifest['skipped'] = [];
 
-  // Record source hashes
+  // Record source hashes only for sources that drive a structured-surface output
+  // (skills, codex agents). Guideline sources (`config` = CLAUDE.md, `rule` =
+  // .claude/rules/*) no longer produce any target since AGENTS.md generation was
+  // removed, so tracking their hashes would make `aco sync --check` false-fail on
+  // edits that change no synced output. See OpenSpec change aco-sync-narrow-scope.
   for (const source of sources) {
+    if (source.kind === 'config' || source.kind === 'rule') continue;
     sourceHashes[source.path] = source.hash;
   }
 

@@ -26,6 +26,21 @@ export function isRetiredGuidanceTarget(manifestKey: string): boolean {
   return manifestKey === 'AGENTS.md';
 }
 
+/**
+ * Guideline/instruction source files (`CLAUDE.md`, `.claude/CLAUDE.md`,
+ * `.claude/rules/*`) that no longer drive any synced output. They are not recorded
+ * in new manifests, so a legacy manifest may still list their source hashes;
+ * `calculateDrift` tolerates such stale source keys so `aco sync --check` does not
+ * false-positive after upgrade (the next write-sync drops them).
+ */
+export function isGuidanceSource(sourceKey: string): boolean {
+  return (
+    sourceKey === 'CLAUDE.md' ||
+    sourceKey === '.claude/CLAUDE.md' ||
+    sourceKey.startsWith('.claude/rules/')
+  );
+}
+
 export async function readManifest(rootPath: string): Promise<SyncManifest | null> {
   try {
     const path = join(rootPath, MANIFEST_DIR, MANIFEST_FILE);
@@ -72,8 +87,15 @@ export function calculateDrift(current: SyncManifest | null, updated: SyncManife
     if (current.sourceHashes[path] !== hash) return true;
   }
 
-  // Check for removed sources
-  if (Object.keys(current.sourceHashes).length !== Object.keys(updated.sourceHashes).length) {
+  // Check for removed sources. Ignore guideline sources (CLAUDE.md / .claude/rules)
+  // that a legacy manifest may still list but no longer drive any synced output.
+  const staleSources = Object.keys(current.sourceHashes).filter(
+    (k) => isGuidanceSource(k) && !(k in updated.sourceHashes)
+  ).length;
+  if (
+    Object.keys(current.sourceHashes).length - staleSources !==
+    Object.keys(updated.sourceHashes).length
+  ) {
     return true;
   }
 
