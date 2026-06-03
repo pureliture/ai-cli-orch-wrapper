@@ -31,6 +31,9 @@ npm run --silent format:check
 step "contract — Go/Node IProvider parity (CI: contract)"
 npx tsx scripts/verify-contract.ts
 
+step "skill-templates parity — templates/skills matches source (CI: contract)"
+npm run --silent check:skill-templates
+
 step "build wrapper (CI: typecheck/test prereq)"
 npm run --silent build --workspace=packages/wrapper
 

@@ -2,6 +2,7 @@ skills:
   include:
     - github-kanban-ops
     - improve-codebase-architecture
+    - aco-delegation
   exclude:
     - openspec-*
     - superpowers-*
