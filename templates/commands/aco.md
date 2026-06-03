@@ -117,6 +117,28 @@ supplied input, and prints the result to stdout. No provider is invoked.
 
 ---
 
+## Failure and concurrency policy
+
+### 자연어 의도 해석 실패
+
+`/aco`가 작업이나 provider를 결정하지 못하면 외부 위임을 실행하지 않고 사용자에게 명확화(clarification)를 요청한다. 예시:
+
+```
+작업 내용이나 대상 provider를 결정하지 못했습니다. 다음처럼 명시해 주세요:
+  /aco antigravity로 PR #42 리뷰해줘
+  /aco mock으로 auth 모듈 보안 검토해줘
+```
+
+### 실행 중 취소
+
+위임 실행 중 사용자가 취소(Ctrl+C / SIGINT)하면 진행 중인 provider 프로세스를 SIGTERM으로 안전하게 종료하고 (grace period 후 SIGKILL fallback), 세션을 `cancelled` 상태로 기록한다.
+
+### 중복 동시 호출
+
+Claude Code 세션은 sequential 실행 모델이므로 동시 `/aco` 호출은 일어나지 않는다. 단, `aco ask --yes`를 직접 병렬 실행하는 경우 각 실행은 독립 session ID를 가지며 서로 간섭하지 않는다. 동시 실행은 지원하되, 결과를 합산할 UI 레이어가 없으면 권장하지 않는다.
+
+---
+
 ## Constraints
 
 - Never invoke a provider without dry-run review and explicit user consent.
