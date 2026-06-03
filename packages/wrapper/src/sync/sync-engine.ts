@@ -35,6 +35,16 @@ const LEGACY_HOOK_TARGETS = new Set([
   '.gemini/settings.json',
 ]);
 
+// Source kinds that drive a structured-surface output (skills, Codex agents,
+// hooks). Guideline kinds (`config` = CLAUDE.md, `rule` = .claude/rules/*) are
+// intentionally excluded: they no longer produce any synced output. Used by the
+// no-source guard in runSync. See OpenSpec change aco-sync-narrow-scope.
+const STRUCTURED_SOURCE_KINDS: ReadonlySet<SyncSource['kind']> = new Set([
+  'skill',
+  'agent',
+  'settings',
+]);
+
 function isErrorWithCode(err: unknown): err is ErrorWithCode {
   return err instanceof Error && 'code' in err;
 }
@@ -348,9 +358,7 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   // carries legacy aco-owned targets is still allowed through so stale-target and
   // legacy Gemini cleanup can complete even after all structured sources are removed.
   // See OpenSpec change aco-sync-narrow-scope.
-  const structuredSources = sources.filter(
-    (s) => s.kind === 'skill' || s.kind === 'agent' || s.kind === 'settings'
-  );
+  const structuredSources = sources.filter((s) => STRUCTURED_SOURCE_KINDS.has(s.kind));
   if (
     structuredSources.length === 0 &&
     existingManifest === null &&

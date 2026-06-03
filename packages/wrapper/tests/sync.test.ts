@@ -464,6 +464,38 @@ describe('No structured sources hard-fail', () => {
       await rm(tmpDir, { recursive: true, force: true });
     }
   });
+
+  it('runSync proceeds (cleanup-only) when no structured source but a prior manifest exists', async () => {
+    // Covers the guard's `existingManifest !== null` escape hatch directly, WITHOUT
+    // an anchor structured source: a repo that previously synced and then had all
+    // structured sources removed must still run so stale-target cleanup can complete.
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-cleanup-only-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
+      // A prior sync manifest on disk — the only reason runSync is allowed through.
+      await mkdir(join(tmpDir, '.aco'), { recursive: true });
+      const priorManifest = {
+        version: '5',
+        generatedAt: new Date().toISOString(),
+        sourceHashes: {},
+        targetHashes: {},
+        targets: {},
+        skipped: [],
+        warnings: [],
+      };
+      await writeFile(
+        join(tmpDir, '.aco', 'sync-manifest.json'),
+        JSON.stringify(priorManifest)
+      );
+
+      await assert.doesNotReject(
+        async () => runSync(tmpDir, { dryRun: false }),
+        'cleanup-only sync (manifest present, zero structured sources) must not hard-fail'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
