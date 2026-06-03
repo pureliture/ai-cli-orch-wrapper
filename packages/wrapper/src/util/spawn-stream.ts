@@ -34,6 +34,13 @@ export interface SpawnStreamConfig {
    * Use buildProviderEnv() to construct an allowlist env.
    */
   env?: NodeJS.ProcessEnv;
+  /**
+   * Working directory for the child process.
+   * If omitted, the child inherits the parent process cwd (legacy behavior).
+   * Providers whose binary derives persistent state from cwd (e.g. agy registers
+   * cwd as an Antigravity project) should pass a stable, neutral directory.
+   */
+  cwd?: string;
 }
 
 /**
@@ -151,6 +158,7 @@ export async function* spawnStream(
       stdio: [stdinValue, 'pipe', 'pipe'],
       detached: process.platform !== 'win32',
       ...(config.env !== undefined && { env: config.env }),
+      ...(config.cwd !== undefined && { cwd: config.cwd }),
     });
   } catch (err) {
     if (stdinFd !== undefined) {
