@@ -81,3 +81,13 @@ packages/wrapper/templates/
 # agy per-project config directory (symlink created by agy when run from cwd)
 # Known agy behavior: agy creates .antigravitycli/ symlink in cwd pointing to ~/.gemini/config/projects/<id>.json
 .antigravitycli/
+
+# Dev-process / repo-specific harness — kept locally, not distributed or pushed
+# improve-codebase-architecture: this-repo-only architecture review skill
+.claude/skills/improve-codebase-architecture/
+.agents/skills/improve-codebase-architecture/
+templates/skills/improve-codebase-architecture/
+# OpenSpec dev tooling (spec-driven workflow used to develop this repo)
+.claude/skills/openspec-*/
+.claude/commands/opsx/
+.codex/skills/openspec-*/

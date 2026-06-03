@@ -1,6 +1,6 @@
 {
   "version": "5",
-  "generatedAt": "2026-06-03T12:31:55.528Z",
+  "generatedAt": "2026-06-03T13:21:19.936Z",
   "sourceHashes": {
     ".claude/skills/aco-delegation/SKILL.md": "9baf406952129806d87738afedac1caf3812461c077f3446fc8e318cf486044e",
     ".claude/skills/gh-issue/SKILL.md": "16eab5668a5520c3cf20864dd635b85a418e957f90c803f75cde1ee3006261ca",
@@ -8,17 +8,6 @@
     ".claude/skills/gh-pr-followup/SKILL.md": "d7cdc4509550a6c73411e306c92e5e76b76e768be895a62014a2beb6b178541f",
     ".claude/skills/gh-start/SKILL.md": "5b1bbb6dbae9ec49fae6f868020348bfc59f7ba710e494a075716e12e8a42b37",
     ".claude/skills/github-kanban-ops/SKILL.md": "de66a63bb9d1efc83ea468c7be019169854047411556db1ebb738eed294448e2",
-    ".claude/skills/improve-codebase-architecture/SKILL.md": "438bc374ac2480d959b6a80345f2b4a6f5ffd7125528d2d121e4b15569eec502",
-    ".claude/skills/openspec-apply-change/SKILL.md": "c30999a1477d6a8377d7aaa02a82ad322206ffa0cca1ddf7d95618c4577ba10f",
-    ".claude/skills/openspec-archive-change/SKILL.md": "dd8783f590c0488b2026bee9aae2adbc3cda1d7152ab04e9b9cf2ff3924fce50",
-    ".claude/skills/openspec-bulk-archive-change/SKILL.md": "f1636af350b977d465a2361dec5104d487883e8ca6dbaefdf438f59e4b65051d",
-    ".claude/skills/openspec-continue-change/SKILL.md": "383848c3fa732a8545b4e5aeb3bd8e83179410c48e47abd1db4afd8b7ddfb6cd",
-    ".claude/skills/openspec-explore/SKILL.md": "4f534b22c2e04839f965186a9dd49129dcef318752260f5d67468d0a8d649826",
-    ".claude/skills/openspec-ff-change/SKILL.md": "107161f1948f4b2dff754a614d52adb000506568e88559246fd0d5ef2ecf55fc",
-    ".claude/skills/openspec-new-change/SKILL.md": "5daea20179a3f93c7ef7ead465d77f3471e827b7640959dabccea6ddfb62f6b2",
-    ".claude/skills/openspec-propose/SKILL.md": "a41d8fda28db18ff9afd548fdc4076c89e492460ac3b8ee0fa4cb33b7034a3e0",
-    ".claude/skills/openspec-sync-specs/SKILL.md": "eb8e97b97a50a2d7b72252b2c702b07b714b3f6101ae031dcfa086ba9f92eadb",
-    ".claude/skills/openspec-verify-change/SKILL.md": "f53dc5d31725d88c1895b5a950a65635276ba321458ae2711ec97c4e82531e0b",
     ".claude/agents/architect.md": "e4c02d466d90f1b70d77a0ad9c23b048d852a1d4e040d33e55ba1a859801a1f0",
     ".claude/agents/chief-of-staff.md": "1a1f971e158824a89b7986f6688fe16d7708b88b0a00631b28bd53956c68e9d2",
     ".claude/agents/code-reviewer.md": "e112e5e0bbc501788e8a3bfd2771d34e31a8564bbd87391bff7401af1509782c",
@@ -39,7 +28,6 @@
   "targetHashes": {
     ".agents/skills/aco-delegation": "eae9d72b20e7a0bc5c9064318b92021407dec1c9475a1cf22ad75e1343530a7d",
     ".agents/skills/github-kanban-ops": "8a715728d245786eaad5f0dc7122c9746d8c566df3ebd3f35c838aa64c74cdcd",
-    ".agents/skills/improve-codebase-architecture": "0a631ec35d893d9b1ff6d67b64de36649212d4014a30fa83baf6e957a444aa3f",
     ".codex/agents/architect.toml": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
     ".codex/agents/chief-of-staff.toml": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
     ".codex/agents/code-reviewer.toml": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
@@ -70,13 +58,6 @@
       "owner": "aco",
       "kind": "shared-skill",
       "source": ".claude/skills/github-kanban-ops",
-      "hashFormat": "directory"
-    },
-    ".agents/skills/improve-codebase-architecture": {
-      "hash": "0a631ec35d893d9b1ff6d67b64de36649212d4014a30fa83baf6e957a444aa3f",
-      "owner": "aco",
-      "kind": "shared-skill",
-      "source": ".claude/skills/improve-codebase-architecture",
       "hashFormat": "directory"
     },
     ".codex/agents/architect.toml": {
@@ -184,66 +165,6 @@
       "owner": "provider-specific",
       "kind": "command-alias-skill",
       "reason": "Provider-specific command-alias skill gh-start is not a shared policy skill; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-apply-change/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-apply-change is not ACO-owned; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-archive-change/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-archive-change is not ACO-owned; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-bulk-archive-change/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-bulk-archive-change is not ACO-owned; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-continue-change/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-continue-change is not ACO-owned; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-explore/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-explore is not ACO-owned; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-ff-change/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-ff-change is not ACO-owned; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-new-change/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-new-change is not ACO-owned; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-propose/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-propose is not ACO-owned; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-sync-specs/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-sync-specs is not ACO-owned; skipped."
-    },
-    {
-      "path": ".claude/skills/openspec-verify-change/SKILL.md",
-      "owner": "external",
-      "kind": "external-skill",
-      "reason": "External skill openspec-verify-change is not ACO-owned; skipped."
     }
   ],
   "warnings": []
