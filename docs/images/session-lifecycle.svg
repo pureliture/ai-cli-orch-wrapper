@@ -47,15 +47,15 @@
   <!-- 1. User -> Skill : user types /aco -->
   <circle cx="70" cy="130" r="9" fill="#ec4899"></circle>
   <text x="70" y="130" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">1</text>
-  <rect x="78" y="119" width="129" height="18" rx="9" fill="white" stroke="#818cf8" stroke-width="1"></rect>
-  <text x="142" y="128" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">/aco "&lt;task in natural language&gt;"</text>
+  <rect x="83" y="119" width="172" height="18" rx="9" fill="white" stroke="#818cf8" stroke-width="1"></rect>
+  <text x="169" y="128" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="500" fill="#1e293b">/aco "&lt;task in natural language&gt;"</text>
   <line x1="80" y1="148" x2="209" y2="148" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arr-v-sl)"></line>
 
   <!-- 2. Skill to aco CLI : skill runs dry-run internally -->
   <circle cx="215" cy="170" r="9" fill="#4f46e5"></circle>
   <text x="215" y="170" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">2</text>
-  <rect x="232" y="159" width="131" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"></rect>
-  <text x="297" y="168" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">aco ask --dry-run (internal)</text>
+  <rect x="232" y="159" width="138" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"></rect>
+  <text x="301" y="168" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="500" fill="#1e293b">aco ask --dry-run (internal)</text>
   <line x1="225" y1="188" x2="374" y2="188" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr-b-sl)"></line>
 
   <!-- 3. aco CLI -> User (dashed back) : plan shown, no execution -->
@@ -75,22 +75,22 @@
   <!-- 5. aco CLI -> Provider : invoke advisory provider -->
   <circle cx="380" cy="290" r="9" fill="#3b82f6"></circle>
   <text x="380" y="290" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">5</text>
-  <rect x="385" y="279" width="155" height="18" rx="9" fill="white" stroke="#34d399" stroke-width="1"></rect>
-  <text x="462" y="288" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">invoke advisory provider</text>
+  <rect x="393" y="279" width="148" height="18" rx="9" fill="white" stroke="#34d399" stroke-width="1"></rect>
+  <text x="467" y="288" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">invoke advisory provider</text>
   <line x1="390" y1="308" x2="539" y2="308" stroke="#10b981" stroke-width="1.5" marker-end="url(#arr-g-sl)"></line>
 
   <!-- 6. Provider -> Artifacts : write ledger + brief + logs -->
   <circle cx="545" cy="330" r="9" fill="#10b981"></circle>
   <text x="545" y="330" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">6</text>
-  <rect x="540" y="319" width="160" height="18" rx="9" fill="white" stroke="#2dd4bf" stroke-width="1"></rect>
-  <text x="620" y="328" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">write ledger + brief + logs</text>
+  <rect x="558" y="319" width="160" height="18" rx="9" fill="white" stroke="#2dd4bf" stroke-width="1"></rect>
+  <text x="638" y="328" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">write ledger + brief + logs</text>
   <line x1="555" y1="348" x2="684" y2="348" stroke="#0d9488" stroke-width="1.5" marker-end="url(#arr-t-sl)"></line>
 
   <!-- 7. Skill -> User (dashed back) : return summary -->
   <circle cx="215" cy="385" r="9" fill="#4f46e5"></circle>
   <text x="215" y="385" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">7</text>
-  <rect x="80" y="374" width="150" height="18" rx="9" fill="white" stroke="#818cf8" stroke-width="1"></rect>
-  <text x="155" y="383" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">return summary / paths</text>
+  <rect x="62" y="374" width="140" height="18" rx="9" fill="white" stroke="#818cf8" stroke-width="1"></rect>
+  <text x="132" y="383" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">return summary / paths</text>
   <line x1="207" y1="403" x2="76" y2="403" stroke="#4f46e5" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-v-sl)"></line>
 
   <!-- legend -->
