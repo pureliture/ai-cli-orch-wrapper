@@ -47,15 +47,15 @@
   <!-- 1. User -> Skill : user types /aco -->
   <circle cx="70" cy="130" r="9" fill="#ec4899"></circle>
   <text x="70" y="130" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">1</text>
-  <rect x="83" y="119" width="129" height="18" rx="9" fill="white" stroke="#818cf8" stroke-width="1"></rect>
-  <text x="147" y="128" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">/aco "&lt;task in natural language&gt;"</text>
+  <rect x="83" y="119" width="172" height="18" rx="9" fill="white" stroke="#818cf8" stroke-width="1"></rect>
+  <text x="169" y="128" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="500" fill="#1e293b">/aco "&lt;task in natural language&gt;"</text>
   <line x1="80" y1="148" x2="209" y2="148" stroke="#4f46e5" stroke-width="1.5" marker-end="url(#arr-v-sl)"></line>
 
   <!-- 2. Skill to aco CLI : skill runs dry-run internally -->
   <circle cx="215" cy="170" r="9" fill="#4f46e5"></circle>
   <text x="215" y="170" text-anchor="middle" dominant-baseline="middle" font-size="10" font-weight="700" fill="white">2</text>
-  <rect x="232" y="159" width="131" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"></rect>
-  <text x="297" y="168" text-anchor="middle" dominant-baseline="middle" font-size="9.5" font-weight="500" fill="#1e293b">aco ask --dry-run (internal)</text>
+  <rect x="232" y="159" width="138" height="18" rx="9" fill="white" stroke="#60a5fa" stroke-width="1"></rect>
+  <text x="301" y="168" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="500" fill="#1e293b">aco ask --dry-run (internal)</text>
   <line x1="225" y1="188" x2="374" y2="188" stroke="#3b82f6" stroke-width="1.5" marker-end="url(#arr-b-sl)"></line>
 
   <!-- 3. aco CLI -> User (dashed back) : plan shown, no execution -->
