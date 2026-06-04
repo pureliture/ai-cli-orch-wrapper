@@ -235,6 +235,8 @@ CI 환경에서는 Codex에 `OPENAI_API_KEY`를 우선 사용한다.
 - Exposed: provider agents, shared skills, hook/settings files
 - Auth: `ready`/`not ready`와 method (`api-key`, `oauth`, `cli-fallback`, `missing`)
 
+`aco ask`는 비-TTY host(Claude `/aco`, Codex `$aco`)로 실행되면 stderr live 프레임이 억제된다. 이때 `--runtime-banner`를 붙이면 동일한 rollup 대시보드를 ANSI-free 블록으로 stdout에 1회 출력해 host가 캡처·표시할 수 있다. `--host claude|codex`는 배너 헤더의 위임 host를 표시한다(표시 전용). 두 플래그는 `/aco`·`$aco` 커맨드 본문이 자동으로 부착한다.
+
 ### 설치 후 slash command가 보이지 않는 경우
 
 ```bash

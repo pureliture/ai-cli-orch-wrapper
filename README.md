@@ -399,7 +399,9 @@ aco delegate <agent-id> --input-file context.txt
 <details>
 <summary>⚙️ 내부 Plumbing 실행 및 대시보드 예시</summary>
 
-`aco run` 또는 `aco ask` 실행 시 백그라운드 런타임이 출력하는 세션 대시보드:
+`aco run`이 인터랙티브 TTY(stderr)에서 출력하는 세션 대시보드 예시입니다. `aco ask`를
+Claude `/aco`·Codex `$aco`처럼 비-TTY host로 위임할 때는 `--runtime-banner`로 동일한
+정보를 stdout에 ANSI-free로 출력해 host가 사용자에게 표시합니다:
 
 ```text
 🛰️  aco Runtime Session

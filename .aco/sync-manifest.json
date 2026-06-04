@@ -1,8 +1,8 @@
 {
   "version": "5",
-  "generatedAt": "2026-06-04T01:16:24.482Z",
+  "generatedAt": "2026-06-04T03:13:59.645Z",
   "sourceHashes": {
-    ".claude/skills/aco-delegation/SKILL.md": "9baf406952129806d87738afedac1caf3812461c077f3446fc8e318cf486044e",
+    ".claude/skills/aco-delegation/SKILL.md": "a4e98a035904622f34bf01defc44150a570b3c7087d952aefa06766a644d5328",
     ".claude/skills/gh-issue/SKILL.md": "16eab5668a5520c3cf20864dd635b85a418e957f90c803f75cde1ee3006261ca",
     ".claude/skills/gh-pr/SKILL.md": "cff001a7c0735dcb6572ed12e3b5738878fbb3279418064c07f6165e56544e3f",
     ".claude/skills/gh-pr-followup/SKILL.md": "d7cdc4509550a6c73411e306c92e5e76b76e768be895a62014a2beb6b178541f",
@@ -10,12 +10,12 @@
     ".claude/skills/github-kanban-ops/SKILL.md": "de66a63bb9d1efc83ea468c7be019169854047411556db1ebb738eed294448e2"
   },
   "targetHashes": {
-    ".agents/skills/aco-delegation": "eae9d72b20e7a0bc5c9064318b92021407dec1c9475a1cf22ad75e1343530a7d",
+    ".agents/skills/aco-delegation": "58987b328ad2f1afb9f2e27061d6f9f76ce24764fcb927a75427fbc0ccece7cd",
     ".agents/skills/github-kanban-ops": "8a715728d245786eaad5f0dc7122c9746d8c566df3ebd3f35c838aa64c74cdcd"
   },
   "targets": {
     ".agents/skills/aco-delegation": {
-      "hash": "eae9d72b20e7a0bc5c9064318b92021407dec1c9475a1cf22ad75e1343530a7d",
+      "hash": "58987b328ad2f1afb9f2e27061d6f9f76ce24764fcb927a75427fbc0ccece7cd",
       "owner": "aco",
       "kind": "shared-skill",
       "source": ".claude/skills/aco-delegation",

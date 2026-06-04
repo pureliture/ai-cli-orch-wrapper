@@ -33,7 +33,7 @@ aco ask --task "<natural language task>" --dry-run
 Only run providers after explicit user consent:
 
 ```bash
-aco ask --providers mock --task "<natural language task>" --input "<text>" --yes
+aco ask --providers mock --task "<natural language task>" --input "<text>" --yes --runtime-banner
 ```
 
 ## Output Rule
@@ -48,13 +48,18 @@ Use `--output-mode full` only when the user explicitly wants full provider outpu
 
 ## Visibility
 
-The `aco` runtime session dashboard renders only on an interactive TTY (stderr),
-so it stays invisible when `aco ask` runs through a non-TTY host such as the
-Claude Code Bash tool or an IDE wrapper. To keep delegation explicit to the
-user, announce it in the session text instead of relying on the dashboard.
+The `aco` runtime session dashboard renders to stderr only on an interactive
+TTY, so it stays invisible when `aco ask` runs through a non-TTY host such as
+the Claude Code Bash tool or an IDE wrapper. Pass `--runtime-banner` on the live
+call: `aco` then emits the same rollup (host header, per-provider session and
+auth rows) as an ANSI-free block on stdout, which the host captures and can
+surface to the user.
 
-- Before the live call: print a one-line banner naming the provider and task,
-  e.g. `🛰️ aco delegation → <provider>: <task>`.
+- On the live call, always pass `--runtime-banner`. Command bodies also pass the
+  delegating host (`--host claude` for `/aco`, `--host codex` for `$aco`) so the
+  banner header reflects the actual host.
+- Surface that banner to the user as the activation indicator before the advisory
+  summary — render it verbatim or as colored provider dots.
 - After the call returns: state which provider contributed what in a short
   summary (a small markdown table when several providers run). External output
   stays advisory; the main session remains the final synthesizer.
