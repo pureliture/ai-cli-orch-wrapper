@@ -1,9 +1,9 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync, createWriteStream, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { homedir } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { Writable } from 'node:stream';
+import { acoHome } from '../util/aco-home.js';
 import type { RuntimeContext } from '../runtime/types.js';
 
 export type SessionStatus = 'running' | 'done' | 'failed' | 'cancelled';
@@ -37,7 +37,7 @@ export class SessionStore {
   private readonly baseDir: string;
 
   constructor(baseDir?: string) {
-    this.baseDir = baseDir ?? join(homedir(), '.aco', 'sessions');
+    this.baseDir = baseDir ?? join(acoHome(), 'sessions');
   }
 
   async create(

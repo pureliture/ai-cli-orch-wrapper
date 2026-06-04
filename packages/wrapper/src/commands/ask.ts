@@ -9,6 +9,7 @@ import process from 'node:process';
 import { providerRegistry } from '../providers/registry.js';
 import { isCredentialLikePath, findCredentialEnvKeys } from '../util/credential-guard.js';
 import { sessionStore } from '../session/store.js';
+import { acoHome } from '../util/aco-home.js';
 import type { IProvider, OutputBufferPolicy, PermissionProfile } from '../providers/interface.js';
 import { invokeProviderForSession } from '../runtime/provider-session-runner.js';
 import { checkProviderProfileSupport } from '../runtime/provider-profile-guard.js';
@@ -181,7 +182,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
   }
 
   const runId = randomUUID();
-  const runDir = join(homedir(), '.aco', 'runs', runId);
+  const runDir = join(acoHome(), 'runs', runId);
   await mkdir(runDir, { recursive: true, mode: 0o700 });
 
   const startedAt = new Date().toISOString();

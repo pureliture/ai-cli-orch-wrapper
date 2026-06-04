@@ -1,6 +1,6 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { dirname, resolve } from 'node:path';
+import { dirname, join } from 'node:path';
+import { acoHome } from '../util/aco-home.js';
 import type { AuthResult } from './interface.js';
 import type { IProvider } from './interface.js';
 
@@ -15,7 +15,7 @@ type AuthCacheRecord = {
 type AuthCache = Record<string, AuthCacheRecord>;
 
 function cachePath(): string {
-  return resolve(homedir(), '.aco', 'provider-auth-cache.json');
+  return join(acoHome(), 'provider-auth-cache.json');
 }
 
 function readCache(path: string): Promise<AuthCache> {

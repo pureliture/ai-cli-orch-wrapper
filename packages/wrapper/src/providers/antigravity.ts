@@ -1,6 +1,6 @@
 import { mkdir } from 'node:fs/promises';
-import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { acoHome } from '../util/aco-home.js';
 import { which } from '../util/which.js';
 import { spawnStream } from '../util/spawn-stream.js';
 import { buildProviderEnv } from '../util/provider-env.js';
@@ -18,7 +18,7 @@ import { defaultSummarizeOutput } from '../util/summarize-output.js';
  * read from cwd, so this does not affect delegation output.
  */
 export function agyWorkspaceDir(): string {
-  return join(homedir(), '.aco', 'agy-workspace');
+  return join(acoHome(), 'agy-workspace');
 }
 
 export class AntigravityProvider implements IProvider {
