@@ -372,6 +372,19 @@ describe('renderRuntimeRollupDashboard host icon (host header)', () => {
     // host 미지정 + 비-unicode는 기존 [HOST] 라벨을 유지한다.
     assert.match(generic, /\[HOST\]/);
   });
+
+  it('falls back to the generic header for an unknown host (no undefined leak)', () => {
+    // 타입 단언 등으로 HostKey가 아닌 임의 문자열이 들어와도 깨진 헤더를 만들지 않는다.
+    const output = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: true,
+      host: 'gemini' as unknown as 'claude',
+    });
+    assert.match(output, /🟠\s+aco Runtime Session/);
+    assert.doesNotMatch(output, /undefined/);
+    // 미상 host는 Host 줄도 추가하지 않는다.
+    assert.doesNotMatch(output, /Host:/);
+  });
 });
 
 describe('aco ask: --host wires the banner host header (integration)', () => {
@@ -412,6 +425,25 @@ describe('aco ask: --host wires the banner host header (integration)', () => {
 
     assert.notEqual(result.code, 0);
     assert.match(result.stderr, /Invalid --host/);
+  });
+
+  it('rejects --host when the flag is present without a value', async () => {
+    // `--host`가 마지막 토큰이면 값이 없다 — 조용히 무시하지 않고 실패해야 한다.
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'missing host value',
+      '--input',
+      'x',
+      '--yes',
+      '--runtime-banner',
+      '--host',
+    ]);
+
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /Invalid --host: missing value/);
   });
 });
 

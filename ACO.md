@@ -89,7 +89,7 @@ aco ask --task <text>
 - `--output-mode` — `brief`(기본값, 전체 출력은 아티팩트로 저장) | `save-only` | `full`
 - `--model` — provider가 지원하는 경우 모델 지정
 - `--runtime-banner` — 비-TTY 실행에서 런타임 롤업 대시보드를 stdout에 ANSI-free로 1회 출력(host 위임 표시용). `/aco`·`$aco`가 자동으로 부착한다.
-- `--host` — 배너 헤더에 표시할 위임 host(`claude` | `codex`). 표시 전용이며 기본값은 `claude`. `/aco`는 `claude`, `$aco`는 `codex`를 전달한다.
+- `--host` — 배너 헤더에 표시할 위임 host(`claude` | `codex`). 표시 전용. 미지정 시 legacy generic 헤더(🟠, `Host:` 줄 없음)를 유지하며 값을 빈 채로 전달하면 거부한다. `/aco`는 `claude`, `$aco`는 `codex`를 전달한다.
 - `--dry-run` — 실행 계획만 출력, provider 호출 없음
 - `--yes` — 동의 프롬프트 없이 즉시 실행
 

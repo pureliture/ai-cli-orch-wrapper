@@ -131,7 +131,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
   } catch (err) {
     fail(err instanceof Error ? err.message : String(err));
   }
-  validateAskOptions(options);
+  validateAskOptions(options, args);
 
   let providers: IProvider[];
   try {
@@ -245,7 +245,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
     process.stderr.write(
       renderRuntimeRollupDashboard(rollupEntries, {
         unicode: !options.noUnicode,
-        ...(options.host ? { host: options.host } : {}),
+        host: options.host,
       }) + '\n'
     );
   } else if (options.runtimeBanner && options.outputMode !== 'save-only') {
@@ -257,7 +257,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       renderRuntimeRollupDashboard(rollupEntries, {
         unicode: !options.noUnicode,
         color: false,
-        ...(options.host ? { host: options.host } : {}),
+        host: options.host,
       }) + '\n\n'
     );
   }
@@ -537,13 +537,20 @@ function parseAskOptions(args: string[]): AskOptions {
   };
 }
 
-function validateAskOptions(options: AskOptions): void {
+function validateAskOptions(options: AskOptions, args: string[]): void {
   if (options.yes && options.dryRun) {
     fail('Invalid options: --yes and --dry-run are mutually exclusive');
   }
 
   if (!options.task && !options.preset) {
     fail('Error: aco ask requires --task or --preset');
+  }
+
+  // `--host`가 값 없이 전달되면(예: 마지막 토큰) parseFlag가 undefined를 돌려줘
+  // "플래그 없음"과 구분되지 않는다. 잘못된 호출이 host 브랜딩을 조용히 잃지 않도록
+  // 플래그 존재 + 값 부재를 명시적으로 거부한다.
+  if (args.includes('--host') && options.host === undefined) {
+    fail('Invalid --host: missing value. Expected one of: claude, codex');
   }
 
   if (options.host !== undefined && options.host !== 'claude' && options.host !== 'codex') {
@@ -770,7 +777,7 @@ Options:
   --runtime-banner                Emit the runtime rollup dashboard to stdout in non-TTY runs
                                     (for host delegation: Claude /aco, Codex $aco)
   --host <agent>                  Delegating host agent for the banner header: claude|codex
-                                    (display only; defaults to claude)
+                                    (display only; unset keeps the legacy generic header)
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
 }

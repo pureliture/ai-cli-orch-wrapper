@@ -210,7 +210,10 @@ export function renderRuntimeRollupDashboard(
   const color = isColorEnabled(options.color);
   const style = makeStyle(color);
   const useUnicode = options.unicode !== false;
-  const host = options.host;
+  // host가 알려진 HostKey일 때만 host별 아이콘/라벨/Host 줄을 쓰고, 미상 host(타입
+  // 단언 등으로 들어온 임의 문자열)는 legacy generic 헤더(🟠 / [HOST])로 안전하게
+  // 폴백한다 — 'undefined  aco Runtime Session' 같은 깨진 출력 방지.
+  const host = options.host && options.host in HOST_ICONS ? options.host : undefined;
   const hostGlyph = host
     ? useUnicode
       ? HOST_ICONS[host]
