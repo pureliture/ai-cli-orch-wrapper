@@ -73,21 +73,28 @@ async function runAskCli(
   const cliPath = join(cliRoot, 'src', 'cli.ts');
   const tsxRegister = require.resolve('tsx/cjs');
 
-  return new Promise((res) => {
-    execFile(
-      process.execPath,
-      ['--require', tsxRegister, cliPath, ...args],
-      {
-        cwd: options.cwd ?? cliRoot,
-        env: { ...process.env, NO_COLOR: '1', ...options.env },
-        timeout: 8000,
-      },
-      (error, stdout, stderr) => {
-        const code = error && 'code' in error ? (error as NodeJS.ErrnoException & { code?: number }).code as number | null : 0;
-        res({ code, stdout, stderr });
-      }
-    );
-  });
+  // Redirect aco state into a throwaway dir so these CLI runs do not write run
+  // ledgers into the developer's real ~/.aco (the source of stale mock-run noise).
+  const acoTestHome = await mkdtemp(join(tmpdir(), 'aco-guard-home-'));
+  try {
+    return await new Promise((res) => {
+      execFile(
+        process.execPath,
+        ['--require', tsxRegister, cliPath, ...args],
+        {
+          cwd: options.cwd ?? cliRoot,
+          env: { ...process.env, NO_COLOR: '1', ACO_HOME: acoTestHome, ...options.env },
+          timeout: 8000,
+        },
+        (error, stdout, stderr) => {
+          const code = error && 'code' in error ? (error as NodeJS.ErrnoException & { code?: number }).code as number | null : 0;
+          res({ code, stdout, stderr });
+        }
+      );
+    });
+  } finally {
+    await rm(acoTestHome, { recursive: true, force: true });
+  }
 }
 
 describe('ask --input-file credential guard: CLI behavior', () => {

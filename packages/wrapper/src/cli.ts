@@ -20,6 +20,7 @@ import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile, OutputBufferPolicy } from './providers/interface.js';
 import { getCachedProviderAuth } from './providers/auth-cache.js';
+import { acoHome } from './util/aco-home.js';
 import { emitRuntimeDashboard } from './runtime/session-dashboard.js';
 import { formatAuthStatus } from './runtime/auth-display.js';
 import { invokeProviderForSession } from './runtime/provider-session-runner.js';
@@ -376,7 +377,7 @@ async function cmdResult(args: string[]): Promise<void> {
 
   // --run flag takes precedence over --session
   if (runFlag !== undefined) {
-    const runsDir = join(homedir(), '.aco', 'runs');
+    const runsDir = join(acoHome(), 'runs');
     let runId = runFlag;
 
     if (runId === 'latest') {
@@ -446,7 +447,7 @@ async function cmdStatus(args: string[]): Promise<void> {
 
   // --run flag takes precedence over --session
   if (runFlag !== undefined) {
-    const runsDir = join(homedir(), '.aco', 'runs');
+    const runsDir = join(acoHome(), 'runs');
     let runId = runFlag;
 
     if (runId === 'latest') {
