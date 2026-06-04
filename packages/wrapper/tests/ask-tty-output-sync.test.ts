@@ -261,6 +261,189 @@ describe('aco ask: non-TTY stderr suppresses dashboard (5.1 integration)', () =>
     assert.match(result.stdout, /Run:/);
     assert.match(result.stdout, /Session:/);
     assert.match(result.stdout, /Provider: mock/);
+    // 5.1 유지: --runtime-banner 없으면 stdout에도 대시보드가 새지 않는다.
+    assert.doesNotMatch(
+      result.stdout,
+      /aco Runtime Session/,
+      'runtime dashboard must not leak to stdout without --runtime-banner'
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// host 위임 표면: --runtime-banner가 비-TTY stdout에 롤업 대시보드를 emit한다
+// (Claude /aco, Codex $aco가 비-TTY 서브프로세스 출력을 캡처해 surface하기 위함)
+// ---------------------------------------------------------------------------
+describe('aco ask: --runtime-banner emits rollup dashboard to non-TTY stdout', () => {
+  it('writes the runtime rollup dashboard to stdout when --runtime-banner is set', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'runtime banner test',
+      '--input',
+      'banner input',
+      '--yes',
+      '--runtime-banner',
+      '--output-mode',
+      'brief',
+    ]);
+
+    assert.equal(result.code, 0);
+    // 대시보드 롤업이 stdout에 ANSI-free로 출력된다(헤더 + provider 행).
+    assert.match(result.stdout, /aco Runtime Session/);
+    assert.match(result.stdout, /Session ID/);
+    // 색 escape 없이 평문이어야 한다.
+    assert.doesNotMatch(result.stdout, /\x1b\[/);
+    // 비-TTY이므로 stderr 프레임은 여전히 억제된다(중복 렌더 없음).
+    assert.doesNotMatch(result.stderr, /aco Runtime Session/);
+    // brief도 그대로 함께 출력된다.
+    assert.match(result.stdout, /Provider: mock/);
+  });
+
+  it('does not duplicate the dashboard: save-only mode skips the stdout banner', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'runtime banner save-only',
+      '--input',
+      'banner input',
+      '--yes',
+      '--runtime-banner',
+      '--output-mode',
+      'save-only',
+    ]);
+
+    assert.equal(result.code, 0);
+    // save-only는 순수 artifact 경로 — 배너를 stdout에 찍지 않는다.
+    assert.doesNotMatch(result.stdout, /aco Runtime Session/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// host 아이콘: 헤더 글리프와 Host 줄이 위임 host(claude|codex)를 반영한다.
+// 미지정이면 기존 동작 유지(claude 🟠 / [HOST], Host 줄 없음 — back-compat).
+// ---------------------------------------------------------------------------
+describe('renderRuntimeRollupDashboard host icon (host header)', () => {
+  it('uses the codex host glyph and adds a Host line when host=codex', () => {
+    const output = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: true,
+      host: 'codex',
+    });
+    assert.match(output, /🟢\s+aco Runtime Session/);
+    assert.match(output, /Host: codex/);
+  });
+
+  it('uses the claude host glyph when host=claude', () => {
+    const output = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: true,
+      host: 'claude',
+    });
+    assert.match(output, /🟠\s+aco Runtime Session/);
+    assert.match(output, /Host: claude/);
+  });
+
+  it('falls back to the legacy generic host header when host is unset (back-compat)', () => {
+    const output = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: true,
+    });
+    assert.match(output, /🟠\s+aco Runtime Session/);
+    // host 미지정이면 Host 줄을 추가하지 않는다.
+    assert.doesNotMatch(output, /Host:/);
+  });
+
+  it('uses ASCII host labels under --no-unicode', () => {
+    const codex = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: false,
+      host: 'codex',
+    });
+    assert.match(codex, /\[CODEX\]/);
+    const generic = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: false,
+    });
+    // host 미지정 + 비-unicode는 기존 [HOST] 라벨을 유지한다.
+    assert.match(generic, /\[HOST\]/);
+  });
+
+  it('falls back to the generic header for an unknown host (no undefined leak)', () => {
+    // 타입 단언 등으로 HostKey가 아닌 임의 문자열이 들어와도 깨진 헤더를 만들지 않는다.
+    const output = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: true,
+      host: 'gemini' as unknown as 'claude',
+    });
+    assert.match(output, /🟠\s+aco Runtime Session/);
+    assert.doesNotMatch(output, /undefined/);
+    // 미상 host는 Host 줄도 추가하지 않는다.
+    assert.doesNotMatch(output, /Host:/);
+  });
+});
+
+describe('aco ask: --host wires the banner host header (integration)', () => {
+  it('renders the codex host glyph and Host line with --host codex --runtime-banner', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'host icon test',
+      '--input',
+      'x',
+      '--yes',
+      '--runtime-banner',
+      '--host',
+      'codex',
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.match(result.stdout, /🟢\s+aco Runtime Session/);
+    assert.match(result.stdout, /Host: codex/);
+  });
+
+  it('rejects an unknown --host value', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'bad host',
+      '--input',
+      'x',
+      '--yes',
+      '--runtime-banner',
+      '--host',
+      'gemini',
+    ]);
+
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /Invalid --host/);
+  });
+
+  it('rejects --host when the flag is present without a value', async () => {
+    // `--host`가 마지막 토큰이면 값이 없다 — 조용히 무시하지 않고 실패해야 한다.
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'missing host value',
+      '--input',
+      'x',
+      '--yes',
+      '--runtime-banner',
+      '--host',
+    ]);
+
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /Invalid --host: missing value/);
   });
 });
 
