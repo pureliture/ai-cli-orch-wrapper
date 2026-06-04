@@ -144,4 +144,12 @@ export interface SyncConfig {
     include?: string[];
     exclude?: string[];
   };
+  /**
+   * Agent (`.claude/agents/*.md`) sync controls. Default (absent) syncs all
+   * discovered agents to `.codex/agents/`. `exclude` glob-matches agent ids to
+   * skip; e.g. `["*"]` opts a repo out of agent sync entirely.
+   */
+  agents?: {
+    exclude?: string[];
+  };
 }

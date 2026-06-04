@@ -51,6 +51,14 @@ function parseSyncConfig(content: string): SyncConfig {
     }
   }
 
+  if (raw.agents && typeof raw.agents === 'object') {
+    const agents = raw.agents as Record<string, unknown>;
+    config.agents = {};
+    if (Array.isArray(agents.exclude)) {
+      config.agents.exclude = agents.exclude.map((v) => String(v));
+    }
+  }
+
   return config;
 }
 
@@ -83,4 +91,15 @@ export function isExcluded(name: string, config: SyncConfig): boolean {
     return false;
   }
   return config.skills.exclude.some((pattern) => matchesGlob(name, pattern));
+}
+
+/**
+ * Determine if an agent id is excluded from sync. Default (no config) syncs all
+ * agents; `agents.exclude: ["*"]` opts a repo out of agent sync entirely.
+ */
+export function isAgentExcluded(name: string, config: SyncConfig): boolean {
+  if (!config.agents?.exclude || config.agents.exclude.length === 0) {
+    return false;
+  }
+  return config.agents.exclude.some((pattern) => matchesGlob(name, pattern));
 }
