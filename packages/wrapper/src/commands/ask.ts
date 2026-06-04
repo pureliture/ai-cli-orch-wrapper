@@ -71,6 +71,15 @@ interface AskOptions {
   model?: string;
   /** --no-unicode 플래그 또는 비-UTF-8 locale 감지 시 true. 4.6 배선. */
   noUnicode: boolean;
+  /**
+   * --runtime-banner: 비-TTY(host 위임) 환경에서 런타임 롤업 대시보드를 stdout에
+   * ANSI-free 1회 emit한다. host 에이전트(Claude `/aco`, Codex `$aco`)가 aco를
+   * 비-TTY 서브프로세스로 실행할 때 그 출력을 캡처해 사용자에게 surface하기 위한
+   * opt-in 표면이다. 플래그가 없으면 stdout 기본 동작은 변하지 않는다(5.1 유지:
+   * bare pipe/CI는 brief만 출력). TTY에서는 stderr 라이브 프레임이 이미 보여주므로
+   * 중복을 피해 stdout emit을 생략한다.
+   */
+  runtimeBanner: boolean;
 }
 
 interface AskSessionLedger {
@@ -230,6 +239,17 @@ export async function cmdAsk(args: string[]): Promise<void> {
       renderRuntimeRollupDashboard(rollupEntries, {
         unicode: !options.noUnicode,
       }) + '\n'
+    );
+  } else if (options.runtimeBanner && options.outputMode !== 'save-only') {
+    // host 위임 표면(B): 비-TTY라 stderr 라이브 프레임이 억제될 때, host 에이전트가
+    // 캡처할 수 있도록 동일한 롤업 대시보드를 ANSI-free로 stdout에 1회 emit한다.
+    // brief/full 같은 viewer-facing 모드에서만; save-only는 순수 artifact 경로라 제외.
+    // 색 escape를 강제로 끄고(color:false) brief보다 먼저 출력해 activation 배너로 둔다.
+    process.stdout.write(
+      renderRuntimeRollupDashboard(rollupEntries, {
+        unicode: !options.noUnicode,
+        color: false,
+      }) + '\n\n'
     );
   }
 
@@ -503,6 +523,7 @@ function parseAskOptions(args: string[]): AskOptions {
     executionControl: resolveProviderExecutionControl(timeoutFlag),
     model: parseFlag(args, '--model'),
     noUnicode: noUnicodeFlag || noUnicodeLocale,
+    runtimeBanner: args.includes('--runtime-banner'),
   };
 }
 
@@ -732,6 +753,8 @@ Options:
   --timeout <seconds>             Provider execution timeout (default: 300, env: ACO_TIMEOUT_SECONDS)
   --model <model>                 Model identifier passed to the provider binary via -m flag
   --no-unicode                    Use ASCII fallback labels instead of emoji icons in dashboard
+  --runtime-banner                Emit the runtime rollup dashboard to stdout in non-TTY runs
+                                    (for host delegation: Claude /aco, Codex $aco)
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
 }

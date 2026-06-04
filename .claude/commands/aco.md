@@ -20,10 +20,16 @@ the provider and return a brief summary.
 5. **Execute on consent.** Only after the user confirms, run:
 
    ```bash
-   aco ask --providers <provider> --task "<task>" --input "<input>" --yes
+   aco ask --providers <provider> --task "<task>" --input "<input>" --yes --runtime-banner
    ```
 
-6. **Return brief.** Synthesize the provider output into a concise summary.
+6. **Surface the runtime banner.** aco prints a runtime rollup dashboard
+   (`🟠  aco Runtime Session`, provider rows with session id and auth) to stdout
+   because the live frame can never reach a TTY when aco runs as a non-TTY
+   subprocess. Show that block to the user as the activation banner — render it
+   verbatim or reformat it into the colored provider dots — before the summary.
+   See **Runtime banner** below.
+7. **Return brief.** Synthesize the provider output into a concise summary.
    Full output is saved as a session artifact; use `aco result --session <id>`
    to retrieve it later.
 
@@ -93,8 +99,8 @@ fi
 After the dry-run, Claude presents the plan and waits for approval. If a
 provider was detected in `$ARGS`, the dry-run pins it via `--providers`; on
 consent, Claude reuses that same provider for the live call. On consent, Claude
-calls `aco ask --providers <provider> --task "<task>" --input "<input>" --yes`
-and returns a brief summary to the user.
+calls `aco ask --providers <provider> --task "<task>" --input "<input>" --yes --runtime-banner`,
+surfaces the runtime banner from stdout, and returns a brief summary to the user.
 
 ---
 
@@ -120,6 +126,22 @@ then retry /aco.
 Do not silently fall back to another provider. Do not run the live call.
 
 ---
+
+## Runtime banner
+
+The live, color runtime dashboard (`renderRuntimeRollupDashboard`) only paints
+to stderr when stderr is an interactive TTY. When Claude runs `aco` through a
+tool call, that subprocess is non-TTY, so the live frame is suppressed by design
+and never reaches the user. The `--runtime-banner` flag makes aco emit the same
+rollup — host header plus one row per provider (icon, session id, auth) — as an
+ANSI-free block on stdout instead, so Claude captures it and shows it to the user.
+
+- Always pass `--runtime-banner` on the live `aco ask --yes` call.
+- The banner is the activation indicator; surface it to the user (verbatim or as
+  colored provider dots: 🔵 antigravity · 🟢 codex · ⚪ mock · 🟠 claude host)
+  before the advisory summary.
+- This is a display surface only. It does not change consent, permission, or
+  provider behavior, and no Claude Code hook is involved.
 
 ## Output mode
 

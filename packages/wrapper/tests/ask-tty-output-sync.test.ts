@@ -261,6 +261,65 @@ describe('aco ask: non-TTY stderr suppresses dashboard (5.1 integration)', () =>
     assert.match(result.stdout, /Run:/);
     assert.match(result.stdout, /Session:/);
     assert.match(result.stdout, /Provider: mock/);
+    // 5.1 유지: --runtime-banner 없으면 stdout에도 대시보드가 새지 않는다.
+    assert.doesNotMatch(
+      result.stdout,
+      /aco Runtime Session/,
+      'runtime dashboard must not leak to stdout without --runtime-banner'
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// host 위임 표면: --runtime-banner가 비-TTY stdout에 롤업 대시보드를 emit한다
+// (Claude /aco, Codex $aco가 비-TTY 서브프로세스 출력을 캡처해 surface하기 위함)
+// ---------------------------------------------------------------------------
+describe('aco ask: --runtime-banner emits rollup dashboard to non-TTY stdout', () => {
+  it('writes the runtime rollup dashboard to stdout when --runtime-banner is set', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'runtime banner test',
+      '--input',
+      'banner input',
+      '--yes',
+      '--runtime-banner',
+      '--output-mode',
+      'brief',
+    ]);
+
+    assert.equal(result.code, 0);
+    // 대시보드 롤업이 stdout에 ANSI-free로 출력된다(헤더 + provider 행).
+    assert.match(result.stdout, /aco Runtime Session/);
+    assert.match(result.stdout, /Session ID/);
+    // 색 escape 없이 평문이어야 한다.
+    assert.doesNotMatch(result.stdout, /\x1b\[/);
+    // 비-TTY이므로 stderr 프레임은 여전히 억제된다(중복 렌더 없음).
+    assert.doesNotMatch(result.stderr, /aco Runtime Session/);
+    // brief도 그대로 함께 출력된다.
+    assert.match(result.stdout, /Provider: mock/);
+  });
+
+  it('does not duplicate the dashboard: save-only mode skips the stdout banner', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'runtime banner save-only',
+      '--input',
+      'banner input',
+      '--yes',
+      '--runtime-banner',
+      '--output-mode',
+      'save-only',
+    ]);
+
+    assert.equal(result.code, 0);
+    // save-only는 순수 artifact 경로 — 배너를 stdout에 찍지 않는다.
+    assert.doesNotMatch(result.stdout, /aco Runtime Session/);
   });
 });
 
