@@ -1,49 +1,17 @@
 {
   "version": "5",
-  "generatedAt": "2026-06-03T13:21:19.936Z",
+  "generatedAt": "2026-06-04T01:00:31.185Z",
   "sourceHashes": {
     ".claude/skills/aco-delegation/SKILL.md": "9baf406952129806d87738afedac1caf3812461c077f3446fc8e318cf486044e",
     ".claude/skills/gh-issue/SKILL.md": "16eab5668a5520c3cf20864dd635b85a418e957f90c803f75cde1ee3006261ca",
     ".claude/skills/gh-pr/SKILL.md": "cff001a7c0735dcb6572ed12e3b5738878fbb3279418064c07f6165e56544e3f",
     ".claude/skills/gh-pr-followup/SKILL.md": "d7cdc4509550a6c73411e306c92e5e76b76e768be895a62014a2beb6b178541f",
     ".claude/skills/gh-start/SKILL.md": "5b1bbb6dbae9ec49fae6f868020348bfc59f7ba710e494a075716e12e8a42b37",
-    ".claude/skills/github-kanban-ops/SKILL.md": "de66a63bb9d1efc83ea468c7be019169854047411556db1ebb738eed294448e2",
-    ".claude/agents/architect.md": "e4c02d466d90f1b70d77a0ad9c23b048d852a1d4e040d33e55ba1a859801a1f0",
-    ".claude/agents/chief-of-staff.md": "1a1f971e158824a89b7986f6688fe16d7708b88b0a00631b28bd53956c68e9d2",
-    ".claude/agents/code-reviewer.md": "e112e5e0bbc501788e8a3bfd2771d34e31a8564bbd87391bff7401af1509782c",
-    ".claude/agents/doc-updater.md": "a0b96a358534fc9cefc33355b73d8b232132754283c3f335907468cb98ee021d",
-    ".claude/agents/docs-lookup.md": "2e6cb9b0168e83c66b201bc155506d7aa0050108684ec844f79803d9aba4f4fb",
-    ".claude/agents/executor.md": "99b9d9737d56cf07900fb3d392b178ca586bcec9e916af60961753c5ac4323ae",
-    ".claude/agents/go-build-resolver.md": "f331c2a89232b8d24712b4ceb6a63f4180eab6e81cbe75dc13390947ac3fd4a9",
-    ".claude/agents/go-reviewer.md": "979f7047acaad318ccb9bfa2d0704932a8de2b5e98d99a236181214d56ab6b1b",
-    ".claude/agents/harness-optimizer.md": "a0f42e525781a1fc4a2305ef4b5d055f296a04b9814ff81b7d1d99be93c48b58",
-    ".claude/agents/planner.md": "b4ab1263bcd0257cfd7f99075f1cae6ea17cb32f37235fbb76fdf71bc3b21c4e",
-    ".claude/agents/python-reviewer.md": "e2cf129892998841b01817e03736a9b5f9598681a096e28afbc12577d3ed9adf",
-    ".claude/agents/pytorch-build-resolver.md": "7ac671d451e70433514c6f52aa2d0291ec9d40c840488048d6507aaef1cb4533",
-    ".claude/agents/researcher.md": "6c8b1ec034e574b546396503a843261418722f8f83dc84e817d28f35ec29fba3",
-    ".claude/agents/reviewer.md": "e96f310278c514207ae5b1af363fdbfe2550cc4c901983ec395542c3e473db0a",
-    ".claude/agents/tdd-guide.md": "de339a6158d7708000ef796f8bd5e6d7ed45fe744f443d2d84739470ba4c5f2c",
-    ".claude/agents/typescript-reviewer.md": "fd60a12dc5b804ebac6849942e4f08f7063e869ac9fde8576ebda188deefa061"
+    ".claude/skills/github-kanban-ops/SKILL.md": "de66a63bb9d1efc83ea468c7be019169854047411556db1ebb738eed294448e2"
   },
   "targetHashes": {
     ".agents/skills/aco-delegation": "eae9d72b20e7a0bc5c9064318b92021407dec1c9475a1cf22ad75e1343530a7d",
-    ".agents/skills/github-kanban-ops": "8a715728d245786eaad5f0dc7122c9746d8c566df3ebd3f35c838aa64c74cdcd",
-    ".codex/agents/architect.toml": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
-    ".codex/agents/chief-of-staff.toml": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
-    ".codex/agents/code-reviewer.toml": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
-    ".codex/agents/doc-updater.toml": "9777056bfb4c9554d5a9179a8e6ac20f8b9dd2b051191b32bed4d4e4e3f4c849",
-    ".codex/agents/docs-lookup.toml": "b453bc451481376e497cf503c823bc2d70fee9f5c0c4b7a109f971267b6d4e88",
-    ".codex/agents/executor.toml": "8a52944e0bb23bb0a7a3f1f7d569950a03400a54acd780ff9eab4dba953bd788",
-    ".codex/agents/go-build-resolver.toml": "923ccc942758f496a792f7f64a21b5fa05d18d778f45b6949679196c14a71432",
-    ".codex/agents/go-reviewer.toml": "dd3a916e0f3ebeee6ffee235314a8b88d651d08c0670bf0f8051c75e11c84b98",
-    ".codex/agents/harness-optimizer.toml": "bfcd41d46634782588a69d188f8ebde881c852a52f4488a6498ca47dd47c123b",
-    ".codex/agents/planner.toml": "93dd1db5cb2e3037cb5088553ebede1af33388fdbc6ce94d660dba67a859e428",
-    ".codex/agents/python-reviewer.toml": "3fcaee94269d55e386e8e9f9df414de3ad6bce922f8c26cd15879c8da68a8d34",
-    ".codex/agents/pytorch-build-resolver.toml": "c8bf2ca9dad8e5815c74131fa2588a42e42a9337201911cdaf5c436ed309b648",
-    ".codex/agents/researcher.toml": "fe0bc4cc5a5b3792d1e875998c91a3d4d1b1a9a1441ead35210c3fefed9f4521",
-    ".codex/agents/reviewer.toml": "0a321de5a768646d1710fde4c91c33e9c30057a41780386605d39528d8023b9d",
-    ".codex/agents/tdd-guide.toml": "f7a0b7a5be0bb90baf445e52a1bd558aa9787fb43d0e434b700ce5d0cae9fc2e",
-    ".codex/agents/typescript-reviewer.toml": "77a6debda380ce64745047f6215865614064c849169087475487acb24b0155ee"
+    ".agents/skills/github-kanban-ops": "8a715728d245786eaad5f0dc7122c9746d8c566df3ebd3f35c838aa64c74cdcd"
   },
   "targets": {
     ".agents/skills/aco-delegation": {
@@ -59,86 +27,6 @@
       "kind": "shared-skill",
       "source": ".claude/skills/github-kanban-ops",
       "hashFormat": "directory"
-    },
-    ".codex/agents/architect.toml": {
-      "hash": "6ea336126c152b0a80491e114b033c7f6fddf88a41922528cede75f32c3fa4d5",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/chief-of-staff.toml": {
-      "hash": "55302ddb595c4534d365658cf439ff7ef458999db191132c0c45f9a81d16baa2",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/code-reviewer.toml": {
-      "hash": "f2fbf69f92340d46cc5be1f03a81b85fddc7dca8772b189a7da89acc85a5065e",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/doc-updater.toml": {
-      "hash": "9777056bfb4c9554d5a9179a8e6ac20f8b9dd2b051191b32bed4d4e4e3f4c849",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/docs-lookup.toml": {
-      "hash": "b453bc451481376e497cf503c823bc2d70fee9f5c0c4b7a109f971267b6d4e88",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/executor.toml": {
-      "hash": "8a52944e0bb23bb0a7a3f1f7d569950a03400a54acd780ff9eab4dba953bd788",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/go-build-resolver.toml": {
-      "hash": "923ccc942758f496a792f7f64a21b5fa05d18d778f45b6949679196c14a71432",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/go-reviewer.toml": {
-      "hash": "dd3a916e0f3ebeee6ffee235314a8b88d651d08c0670bf0f8051c75e11c84b98",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/harness-optimizer.toml": {
-      "hash": "bfcd41d46634782588a69d188f8ebde881c852a52f4488a6498ca47dd47c123b",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/planner.toml": {
-      "hash": "93dd1db5cb2e3037cb5088553ebede1af33388fdbc6ce94d660dba67a859e428",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/python-reviewer.toml": {
-      "hash": "3fcaee94269d55e386e8e9f9df414de3ad6bce922f8c26cd15879c8da68a8d34",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/pytorch-build-resolver.toml": {
-      "hash": "c8bf2ca9dad8e5815c74131fa2588a42e42a9337201911cdaf5c436ed309b648",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/researcher.toml": {
-      "hash": "fe0bc4cc5a5b3792d1e875998c91a3d4d1b1a9a1441ead35210c3fefed9f4521",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/reviewer.toml": {
-      "hash": "0a321de5a768646d1710fde4c91c33e9c30057a41780386605d39528d8023b9d",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/tdd-guide.toml": {
-      "hash": "f7a0b7a5be0bb90baf445e52a1bd558aa9787fb43d0e434b700ce5d0cae9fc2e",
-      "owner": "aco",
-      "kind": "agent"
-    },
-    ".codex/agents/typescript-reviewer.toml": {
-      "hash": "77a6debda380ce64745047f6215865614064c849169087475487acb24b0155ee",
-      "owner": "aco",
-      "kind": "agent"
     }
   },
   "skipped": [
