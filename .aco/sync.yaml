@@ -6,3 +6,9 @@ skills:
     - openspec-*
     - superpowers-*
     - gh-*
+# This repo's .claude/agents are gitignored local-only dev subagents and are not
+# product surfaces; opt out of agent sync so they are never read or written to
+# .codex/agents and never re-enter the committed manifest.
+agents:
+  exclude:
+    - "*"

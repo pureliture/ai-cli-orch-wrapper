@@ -9,10 +9,10 @@ import {
   isLegacyGeminiTarget,
 } from './manifest.js';
 import { computeHash } from './hash.js';
-import { loadSyncConfig } from './sync-config.js';
+import { loadSyncConfig, isAgentExcluded } from './sync-config.js';
 import { detectDuplicates } from './duplicate-detector.js';
 import { readFile, mkdir, writeFile, cp, rm } from 'node:fs/promises';
-import { dirname, join, normalize, relative, isAbsolute } from 'node:path';
+import { dirname, join, normalize, relative, isAbsolute, basename } from 'node:path';
 import type {
   SyncSource,
   SyncOptions,
@@ -421,8 +421,14 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   // 1. Load sync config
   const config = await loadSyncConfig(repoRoot);
 
-  // 2. Discover sources
-  const sources = await discoverSources(repoRoot);
+  // 2. Discover sources. Agent sources excluded via `agents.exclude` in
+  //    .aco/sync.yaml are dropped here so they are never read, hashed, or
+  //    written to .codex/agents/ — keeping the manifest stable even when the
+  //    excluded agent files remain on disk (e.g. gitignored local-only agents).
+  const sources = (await discoverSources(repoRoot)).filter((s) => {
+    if (s.kind !== 'agent') return true;
+    return !isAgentExcluded(basename(s.path).replace(/\.md$/, ''), config);
+  });
 
   // 3. Read existing manifest (fully migrated) plus a pre-v5 view used only to plan
   //    on-disk cleanup of legacy aco-owned Gemini targets that the v5 migration drops.

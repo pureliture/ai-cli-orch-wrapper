@@ -96,3 +96,10 @@ templates/skills/improve-codebase-architecture/
 /commit.msg
 /cache/
 /pr-body.md
+
+# Dev-process harness — this-repo subagents & local config (kept local, not pushed)
+.claude/agents/
+.codex/agents/
+.claude/settings.json
+/.claude/commands/pm-status.md
+/.claude/commands/pm-triage.md

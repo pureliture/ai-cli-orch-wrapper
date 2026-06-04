@@ -311,6 +311,58 @@ describe('Phase 2: AGENTS.md-only sync output', () => {
     }
   });
 
+  it('agents.exclude in sync.yaml skips agent discovery (no .codex/agents, no manifest source)', async () => {
+    const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-agents-exclude-'));
+    try {
+      await writeFile(join(tmpDir, 'CLAUDE.md'), '# context');
+      await mkdir(join(tmpDir, '.claude', 'agents'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.claude', 'agents', 'helper.md'),
+        '---\nid: helper\nwhen: Help with tasks\n---\nYou are a helper.'
+      );
+      // A skill keeps at least one structured source so sync runs; only agents are excluded.
+      await mkdir(join(tmpDir, '.claude', 'skills', 'keep-skill'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.claude', 'skills', 'keep-skill', 'SKILL.md'),
+        '---\nname: keep-skill\n---\n\n# Keep'
+      );
+      await mkdir(join(tmpDir, '.aco'), { recursive: true });
+      await writeFile(
+        join(tmpDir, '.aco', 'sync.yaml'),
+        'skills:\n  include:\n    - keep-skill\nagents:\n  exclude:\n    - "*"\n'
+      );
+
+      await runSync(tmpDir, { dryRun: false });
+      const manifest = JSON.parse(
+        await readFile(join(tmpDir, '.aco', 'sync-manifest.json'), 'utf-8')
+      );
+
+      const codexAgentKey = join('.codex', 'agents', 'helper.toml');
+      assert.equal(
+        codexAgentKey in manifest.targets,
+        false,
+        'excluded agent must NOT produce a .codex/agents target'
+      );
+      assert.ok(
+        '.agents/skills/keep-skill' in manifest.targets,
+        'non-agent sources must still sync when agents are excluded'
+      );
+      assert.equal(
+        '.claude/agents/helper.md' in manifest.sourceHashes,
+        false,
+        'excluded agent must NOT be tracked as a sync source'
+      );
+      const { existsSync } = await import('node:fs');
+      assert.equal(
+        existsSync(join(tmpDir, '.codex', 'agents', 'helper.toml')),
+        false,
+        '.codex/agents/helper.toml must not be written to disk'
+      );
+    } finally {
+      await rm(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it('sync --check tolerates a stale aco-owned AGENTS.md entry in a legacy manifest', async () => {
     const tmpDir = await mkdtemp(join(tmpdir(), 'aco-test-stale-agents-'));
     try {
