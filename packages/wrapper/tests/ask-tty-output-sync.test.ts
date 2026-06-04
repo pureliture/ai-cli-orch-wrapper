@@ -324,6 +324,98 @@ describe('aco ask: --runtime-banner emits rollup dashboard to non-TTY stdout', (
 });
 
 // ---------------------------------------------------------------------------
+// host 아이콘: 헤더 글리프와 Host 줄이 위임 host(claude|codex)를 반영한다.
+// 미지정이면 기존 동작 유지(claude 🟠 / [HOST], Host 줄 없음 — back-compat).
+// ---------------------------------------------------------------------------
+describe('renderRuntimeRollupDashboard host icon (host header)', () => {
+  it('uses the codex host glyph and adds a Host line when host=codex', () => {
+    const output = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: true,
+      host: 'codex',
+    });
+    assert.match(output, /🟢\s+aco Runtime Session/);
+    assert.match(output, /Host: codex/);
+  });
+
+  it('uses the claude host glyph when host=claude', () => {
+    const output = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: true,
+      host: 'claude',
+    });
+    assert.match(output, /🟠\s+aco Runtime Session/);
+    assert.match(output, /Host: claude/);
+  });
+
+  it('falls back to the legacy generic host header when host is unset (back-compat)', () => {
+    const output = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: true,
+    });
+    assert.match(output, /🟠\s+aco Runtime Session/);
+    // host 미지정이면 Host 줄을 추가하지 않는다.
+    assert.doesNotMatch(output, /Host:/);
+  });
+
+  it('uses ASCII host labels under --no-unicode', () => {
+    const codex = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: false,
+      host: 'codex',
+    });
+    assert.match(codex, /\[CODEX\]/);
+    const generic = renderRuntimeRollupDashboard([{ context: buildContext('mock'), icon: '⚪' }], {
+      color: false,
+      unicode: false,
+    });
+    // host 미지정 + 비-unicode는 기존 [HOST] 라벨을 유지한다.
+    assert.match(generic, /\[HOST\]/);
+  });
+});
+
+describe('aco ask: --host wires the banner host header (integration)', () => {
+  it('renders the codex host glyph and Host line with --host codex --runtime-banner', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'host icon test',
+      '--input',
+      'x',
+      '--yes',
+      '--runtime-banner',
+      '--host',
+      'codex',
+    ]);
+
+    assert.equal(result.code, 0);
+    assert.match(result.stdout, /🟢\s+aco Runtime Session/);
+    assert.match(result.stdout, /Host: codex/);
+  });
+
+  it('rejects an unknown --host value', async () => {
+    const result = await runCli([
+      'ask',
+      '--providers',
+      'mock',
+      '--task',
+      'bad host',
+      '--input',
+      'x',
+      '--yes',
+      '--runtime-banner',
+      '--host',
+      'gemini',
+    ]);
+
+    assert.notEqual(result.code, 0);
+    assert.match(result.stderr, /Invalid --host/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 4.6 통합 테스트: --no-unicode CLI 플래그가 대시보드에 전달됨
 // ---------------------------------------------------------------------------
 describe('aco ask: --no-unicode flag wires ASCII fallback (4.6 integration)', () => {

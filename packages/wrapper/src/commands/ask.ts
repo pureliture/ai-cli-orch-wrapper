@@ -18,6 +18,7 @@ import {
   shouldRenderDashboardFromEnv,
   isUnicodeLocaleFromEnv,
   type RuntimeRollupEntry,
+  type HostKey,
 } from '../runtime/dashboard.js';
 import { getPrimarySession } from '../runtime/session-dashboard.js';
 import { getCachedProviderAuth } from '../providers/auth-cache.js';
@@ -80,6 +81,12 @@ interface AskOptions {
    * 중복을 피해 stdout emit을 생략한다.
    */
   runtimeBanner: boolean;
+  /**
+   * --host: aco를 위임 실행하는 host 에이전트(claude|codex). 런타임 배너 헤더
+   * 아이콘과 `Host:` 줄에만 쓰인다(표시 전용). aco 서브프로세스는 host를 스스로
+   * 알 수 없어 커맨드 본문이 전달한다. 미지정이면 기존 동작 유지(claude 🟠).
+   */
+  host?: HostKey;
 }
 
 interface AskSessionLedger {
@@ -238,6 +245,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
     process.stderr.write(
       renderRuntimeRollupDashboard(rollupEntries, {
         unicode: !options.noUnicode,
+        ...(options.host ? { host: options.host } : {}),
       }) + '\n'
     );
   } else if (options.runtimeBanner && options.outputMode !== 'save-only') {
@@ -249,6 +257,7 @@ export async function cmdAsk(args: string[]): Promise<void> {
       renderRuntimeRollupDashboard(rollupEntries, {
         unicode: !options.noUnicode,
         color: false,
+        ...(options.host ? { host: options.host } : {}),
       }) + '\n\n'
     );
   }
@@ -524,6 +533,7 @@ function parseAskOptions(args: string[]): AskOptions {
     model: parseFlag(args, '--model'),
     noUnicode: noUnicodeFlag || noUnicodeLocale,
     runtimeBanner: args.includes('--runtime-banner'),
+    host: parseFlag<HostKey>(args, '--host'),
   };
 }
 
@@ -534,6 +544,10 @@ function validateAskOptions(options: AskOptions): void {
 
   if (!options.task && !options.preset) {
     fail('Error: aco ask requires --task or --preset');
+  }
+
+  if (options.host !== undefined && options.host !== 'claude' && options.host !== 'codex') {
+    fail(`Invalid --host: ${options.host}. Expected one of: claude, codex`);
   }
 
   if (options.providers.length === 0) {
@@ -755,6 +769,8 @@ Options:
   --no-unicode                    Use ASCII fallback labels instead of emoji icons in dashboard
   --runtime-banner                Emit the runtime rollup dashboard to stdout in non-TTY runs
                                     (for host delegation: Claude /aco, Codex $aco)
+  --host <agent>                  Delegating host agent for the banner header: claude|codex
+                                    (display only; defaults to claude)
   --dry-run                       Print execution plan without invoking providers
   --yes                           Explicitly consent to provider execution`);
 }

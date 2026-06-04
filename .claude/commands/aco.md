@@ -20,7 +20,7 @@ the provider and return a brief summary.
 5. **Execute on consent.** Only after the user confirms, run:
 
    ```bash
-   aco ask --providers <provider> --task "<task>" --input "<input>" --yes --runtime-banner
+   aco ask --providers <provider> --task "<task>" --input "<input>" --yes --runtime-banner --host claude
    ```
 
 6. **Surface the runtime banner.** aco prints a runtime rollup dashboard
@@ -99,7 +99,7 @@ fi
 After the dry-run, Claude presents the plan and waits for approval. If a
 provider was detected in `$ARGS`, the dry-run pins it via `--providers`; on
 consent, Claude reuses that same provider for the live call. On consent, Claude
-calls `aco ask --providers <provider> --task "<task>" --input "<input>" --yes --runtime-banner`,
+calls `aco ask --providers <provider> --task "<task>" --input "<input>" --yes --runtime-banner --host claude`,
 surfaces the runtime banner from stdout, and returns a brief summary to the user.
 
 ---

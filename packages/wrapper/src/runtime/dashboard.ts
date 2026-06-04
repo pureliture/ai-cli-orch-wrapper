@@ -136,6 +136,25 @@ const HOST_ICON = '🟠';
 const HOST_ICON_ASCII = '[HOST]';
 
 /**
+ * aco를 위임 실행하는 host 에이전트 식별자. host는 provider가 아니라 "누가 aco를
+ * 띄웠는가"이며, aco 서브프로세스는 이를 스스로 알 수 없으므로 커맨드 본문이
+ * `--host`로 전달한다(Claude `/aco` → claude, Codex `$aco` → codex).
+ */
+export type HostKey = 'claude' | 'codex';
+
+/** host별 색동그라미 헤더 아이콘. 미지정/미상 host는 claude 🟠로 폴백한다. */
+const HOST_ICONS: Record<HostKey, string> = {
+  claude: '🟠',
+  codex: '🟢',
+};
+
+/** 비-unicode 폴백용 host ASCII 라벨. */
+const HOST_ASCII: Record<HostKey, string> = {
+  claude: '[CLAUDE]',
+  codex: '[CODEX]',
+};
+
+/**
  * provider key를 ASCII 라벨로 매핑한다(`--no-unicode`/비-UTF-8 폴백).
  * 알려지지 않은 provider는 key 앞 2글자 대문자로 폴백한다.
  */
@@ -166,6 +185,12 @@ export interface RuntimeRollupDashboardOptions {
    * 기본값은 true(유니코드 사용).
    */
   unicode?: boolean;
+  /**
+   * aco를 위임 실행하는 host 에이전트(claude|codex). 지정 시 헤더 아이콘이 해당
+   * host 색으로 바뀌고 Rollup에 `Host:` 줄이 추가된다. 미지정이면 기존 동작을
+   * 유지한다(claude 🟠 / `[HOST]`, Host 줄 없음 — back-compat).
+   */
+  host?: HostKey;
 }
 
 /**
@@ -185,7 +210,14 @@ export function renderRuntimeRollupDashboard(
   const color = isColorEnabled(options.color);
   const style = makeStyle(color);
   const useUnicode = options.unicode !== false;
-  const hostGlyph = useUnicode ? HOST_ICON : HOST_ICON_ASCII;
+  const host = options.host;
+  const hostGlyph = host
+    ? useUnicode
+      ? HOST_ICONS[host]
+      : HOST_ASCII[host]
+    : useUnicode
+      ? HOST_ICON
+      : HOST_ICON_ASCII;
 
   const rollupLabel = useUnicode ? '🛰️  Rollup' : 'Rollup';
   const warnPrefix = useUnicode ? '⚠️  ' : '';
@@ -197,6 +229,7 @@ export function renderRuntimeRollupDashboard(
   if (first) {
     lines.push(
       style.label(rollupLabel),
+      ...(host ? [`  ${style.label('Host')}: ${style.value(host)}`] : []),
       `  ${style.label('Command')}: ${style.value(first.command)}`,
       `  ${style.label('Working Dir')}: ${style.value(first.cwd)}`,
       `  ${style.label('Branch')}: ${style.value(formatValue(first.branch))}`,
