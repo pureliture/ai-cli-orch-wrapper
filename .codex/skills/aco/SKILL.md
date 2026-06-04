@@ -126,8 +126,8 @@ aco ask --task "auth 모듈 아키텍처 리뷰" --dry-run
 # 동의 후 실행
 aco ask --providers mock --task "auth 모듈 아키텍처 리뷰" --input "$(cat docs/architecture.md)" --yes
 
-# named agent 프롬프트 빌드 (로컬, 외부 호출 없음)
-aco delegate reviewer --input "PR #42 변경 내용 검토"
+# named agent 프롬프트 빌드 (로컬, 외부 호출 없음 — <agent-id>는 프로젝트의 .claude/agents/<id>.md)
+aco delegate <agent-id> --input "PR #42 변경 내용 검토"
 ```
 
 ## 금지 사항

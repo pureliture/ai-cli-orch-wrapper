@@ -388,11 +388,11 @@ aco doctor
 <summary>로컬 프롬프트 빌더(aco delegate) CLI 예시</summary>
 
 ```bash
-# agent spec과 seed를 결합한 프롬프트를 stdout에 출력
-aco delegate reviewer --input "$(git diff HEAD)"
+# 프로젝트의 .claude/agents/<agent-id>.md spec과 seed를 결합한 프롬프트를 stdout에 출력
+aco delegate <agent-id> --input "$(git diff HEAD)"
 
 # 입력 내용을 파일에서 로드하여 프롬프트 빌드
-aco delegate researcher --input-file context.txt
+aco delegate <agent-id> --input-file context.txt
 ```
 </details>
 
