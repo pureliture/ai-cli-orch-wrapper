@@ -106,74 +106,122 @@ export class SessionOrchestrator {
       undefined,
       permissionProfile
     );
-    const auth = await getCachedProviderAuth(provider, { skipCache: true });
-    const runtimeContext = await emitRuntimeDashboard({
-      provider: providerKey,
-      command,
-      sessionId: session.id,
-      permissionProfile,
-      promptTemplatePath,
-      auth,
-    });
-    await this.sessionStore.update(session.id, { runtimeContext });
 
-    const tee = this.sessionStore.createOutputTee(session.id);
-    const cancellationState: ProviderCancellationState = {
-      activePid: undefined,
-      sessionId: session.id,
-    };
-    const cancellation = this.cancellationInstaller.install({
-      state: cancellationState,
-      markCancelled: (sessionId) => this.sessionStore.markCancelled(sessionId),
-      killGraceMs,
-    });
-
-    let runResult: ProviderSessionRunResult;
+    // Any rejection after create() must leave the session in a terminal state
+    // with an error log, rather than stranding it as 'running' forever.
     try {
-      runResult = await this.providerRunner.run({
-        provider,
+      const auth = await getCachedProviderAuth(provider, { skipCache: true });
+      const runtimeContext = await emitRuntimeDashboard({
+        provider: providerKey,
         command,
-        prompt,
-        content: inputContent,
-        permissionProfile,
         sessionId: session.id,
-        output: tee,
-        outputBuffer: { mode: 'stream-only' },
-        timeoutMs,
-        killGraceMs,
-        ...(model ? { model } : {}),
-        envPolicy: 'allowlist',
-        onPid: (pid) => {
-          cancellationState.activePid = pid;
-        },
+        permissionProfile,
+        promptTemplatePath,
+        auth,
       });
-    } finally {
-      cancellationState.activePid = undefined;
-      cancellation.dispose();
+      await this.sessionStore.update(session.id, { runtimeContext });
+
+      const tee = this.sessionStore.createOutputTee(session.id);
+      const cancellationState: ProviderCancellationState = {
+        activePid: undefined,
+        sessionId: session.id,
+      };
+      const cancellation = this.cancellationInstaller.install({
+        state: cancellationState,
+        markCancelled: (sessionId) => this.sessionStore.markCancelled(sessionId),
+        killGraceMs,
+      });
+
+      let runResult: ProviderSessionRunResult;
+      try {
+        runResult = await this.providerRunner.run({
+          store: this.sessionStore,
+          provider,
+          command,
+          prompt,
+          content: inputContent,
+          permissionProfile,
+          sessionId: session.id,
+          output: tee,
+          outputBuffer: { mode: 'stream-only' },
+          timeoutMs,
+          killGraceMs,
+          ...(model ? { model } : {}),
+          envPolicy: 'allowlist',
+          onPid: (pid) => {
+            cancellationState.activePid = pid;
+          },
+        });
+      } finally {
+        cancellationState.activePid = undefined;
+        cancellation.dispose();
+      }
+
+      const runError = runResult.error;
+      const latest = await this.sessionStore.read(session.id).catch(() => undefined);
+
+      if (latest?.status === 'cancelled') {
+        throw new Error(`Session ${session.id} cancelled.`);
+      }
+
+      if (runError) {
+        const msg = runError instanceof Error ? runError.message : String(runError);
+        await this.appendErrorLog(session.id, msg + '\n');
+        await this.sessionStore.markFailed(session.id);
+        throw new Error(`Error: ${msg}`);
+      }
+
+      if (!runResult.hasOutput && permissionProfile === 'restricted') {
+        await this.appendErrorLog(
+          session.id,
+          'Permission profile: restricted — output may be blocked\n'
+        );
+      }
+
+      await this.sessionStore.markDone(session.id);
+    } catch (err) {
+      await this.finalizeFailure(session.id, err);
+      throw err;
     }
+  }
 
-    const runError = runResult.error;
-    const latest = await this.sessionStore.read(session.id).catch(() => undefined);
-
-    if (latest?.status === 'cancelled') {
-      throw new Error(`Session ${session.id} cancelled.`);
-    }
-
-    if (runError) {
-      const msg = runError instanceof Error ? runError.message : String(runError);
-      await appendFile(this.sessionStore.errorLogPath(session.id), msg + '\n', { mode: 0o600 });
-      await this.sessionStore.markFailed(session.id);
-      throw new Error(`Error: ${msg}`);
-    }
-
-    if (!runResult.hasOutput && permissionProfile === 'restricted') {
-      await appendFile(
-        this.sessionStore.errorLogPath(session.id),
-        'Permission profile: restricted — output may be blocked\n',
-        { mode: 0o600 }
+  /**
+   * Appends to the session error log, swallowing filesystem failures so they
+   * never mask the real run error or skip the failed-state transition.
+   */
+  private async appendErrorLog(sessionId: string, message: string): Promise<void> {
+    try {
+      await appendFile(this.sessionStore.errorLogPath(sessionId), message, { mode: 0o600 });
+    } catch (fileErr) {
+      console.warn(
+        `Failed to write session error log: ${
+          fileErr instanceof Error ? fileErr.message : String(fileErr)
+        }`
       );
     }
+  }
 
-    await this.sessionStore.markDone(session.id);
+  /**
+   * Records a post-create failure as the terminal session state. Preserves an
+   * already-terminal status (failed/cancelled/done) so it is neither
+   * double-logged nor overwritten. Wraps markFailed in try/catch to defend
+   * against both synchronous throws and async rejections on the cleanup path.
+   */
+  private async finalizeFailure(sessionId: string, err: unknown): Promise<void> {
+    const latest = await this.sessionStore.read(sessionId).catch(() => undefined);
+    if (latest && latest.status !== 'running') {
+      return;
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    await this.appendErrorLog(sessionId, msg + '\n');
+    try {
+      await this.sessionStore.markFailed(sessionId);
+    } catch (markErr) {
+      console.warn(
+        `Failed to mark session failed: ${
+          markErr instanceof Error ? markErr.message : String(markErr)
+        }`
+      );
+    }
   }
 }

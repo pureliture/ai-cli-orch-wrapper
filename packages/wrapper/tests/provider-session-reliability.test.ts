@@ -283,11 +283,10 @@ describe('provider session reliability CLI contract', () => {
         id,
         provider,
         command,
-        status: 'pending',
+        status: 'running',
         pid,
         permissionProfile: permissionProfile as any,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        startedAt: new Date().toISOString(),
       };
       this.sessions.set(id, record);
       return record;
@@ -296,7 +295,7 @@ describe('provider session reliability CLI contract', () => {
     async update(id: string, patch: Partial<TaskRecord>): Promise<TaskRecord> {
       const record = this.sessions.get(id);
       if (!record) throw new Error(`Session not found: ${id}`);
-      const updated = { ...record, ...patch, updatedAt: new Date().toISOString() };
+      const updated = { ...record, ...patch };
       this.sessions.set(id, updated);
       return updated;
     }
@@ -308,15 +307,15 @@ describe('provider session reliability CLI contract', () => {
     }
 
     async markDone(id: string): Promise<void> {
-      await this.update(id, { status: 'done' });
+      await this.update(id, { status: 'done', endedAt: new Date().toISOString() });
     }
 
     async markFailed(id: string): Promise<void> {
-      await this.update(id, { status: 'failed' });
+      await this.update(id, { status: 'failed', endedAt: new Date().toISOString() });
     }
 
     async markCancelled(id: string): Promise<void> {
-      await this.update(id, { status: 'cancelled' });
+      await this.update(id, { status: 'cancelled', endedAt: new Date().toISOString() });
     }
 
     errorLogPath(id: string): string {
@@ -553,6 +552,32 @@ describe('provider session reliability CLI contract', () => {
 
       const logContent = await readFile(store.errorLogPath(sessions[0].id), 'utf8');
       assert.match(logContent, /timed out/);
+    });
+
+    it('transitions to failed when the runner rejects outright', async () => {
+      runner.runImplementation = async (options) => {
+        if (options.onPid) options.onPid(12345);
+        throw new Error('mock runner rejection');
+      };
+
+      await assert.rejects(
+        orchestrator.run({
+          providerKey: 'mock-provider',
+          command: 'review-in-memory',
+          permissionProfile: 'default',
+          inputContent: 'hello',
+          cwd: tmpDir,
+          home: tmpDir,
+        }),
+        /mock runner rejection/
+      );
+
+      const sessions = Array.from(store.sessions.values());
+      assert.equal(sessions.length, 1);
+      assert.equal(sessions[0].status, 'failed');
+
+      const logContent = await readFile(store.errorLogPath(sessions[0].id), 'utf8');
+      assert.match(logContent, /mock runner rejection/);
     });
   });
 

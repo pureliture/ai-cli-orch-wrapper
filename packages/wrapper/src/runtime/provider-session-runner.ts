@@ -6,7 +6,17 @@ import {
   type OutputBufferPolicy,
   type PermissionProfile,
 } from '../providers/interface.js';
-import { sessionStore, SessionStore } from '../session/store.js';
+import { sessionStore } from '../session/store.js';
+import type { TaskRecord } from '../session/store.js';
+
+/**
+ * Minimal session-store surface the runner needs for ledger writes (envPolicy/pid).
+ * Both the concrete {@link SessionStore} and the orchestrator's injected
+ * `ISessionStore` satisfy this, so a non-global store can be threaded through.
+ */
+export interface SessionLedgerStore {
+  update(id: string, patch: Partial<TaskRecord>): Promise<TaskRecord>;
+}
 
 export interface ProviderSessionRunOptions {
   provider: IProvider;
@@ -36,9 +46,9 @@ export interface ProviderSessionRunOptions {
   envPolicy?: string;
   /**
    * Session store to use for ledger updates. Defaults to the global sessionStore.
-   * Primarily used in tests to inject an isolated store instance.
+   * Used to inject an isolated store instance (tests, orchestrator DI).
    */
-  store?: SessionStore;
+  store?: SessionLedgerStore;
 }
 
 export interface ProviderSessionRunResult {
