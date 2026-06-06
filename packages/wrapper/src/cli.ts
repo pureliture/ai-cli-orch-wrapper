@@ -194,6 +194,14 @@ async function cmdRun(args: string[]): Promise<void> {
     process.exit(EXIT_ERROR);
   }
 
+  // Validate the provider before draining stdin. The orchestrator re-checks this,
+  // but reading stdin first means a bad provider on a non-terminating pipe
+  // (e.g. `yes | aco run typo review`) would hang instead of failing fast.
+  if (!providerRegistry.get(providerKey)) {
+    console.error(`Unknown provider: ${providerKey}`);
+    process.exit(EXIT_ERROR);
+  }
+
   let content = inputFlag;
   if (!content && !process.stdin.isTTY) {
     const chunks: Buffer[] = [];
