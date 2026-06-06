@@ -19,17 +19,12 @@ import { cmdDoctor } from './commands/doctor.js';
 import { providerRegistry } from './providers/registry.js';
 import { sessionStore } from './session/store.js';
 import type { PermissionProfile, OutputBufferPolicy } from './providers/interface.js';
-import { getCachedProviderAuth } from './providers/auth-cache.js';
 import { acoHome } from './util/aco-home.js';
-import { emitRuntimeDashboard } from './runtime/session-dashboard.js';
 import { formatAuthStatus } from './runtime/auth-display.js';
 import { invokeProviderForSession } from './runtime/provider-session-runner.js';
 import { terminateProviderProcess } from './runtime/provider-process.js';
-import {
-  installProviderCancellationHandler,
-  type ProviderCancellationState,
-} from './runtime/provider-cancellation.js';
-import { resolveRunPromptTemplate } from './runtime/run-prompt-template.js';
+import { installProviderCancellationHandler } from './runtime/provider-cancellation.js';
+import { SessionOrchestrator } from './runtime/session-orchestrator.js';
 import {
   parseProviderTimeoutFlag,
   resolveProviderExecutionControl,
@@ -178,12 +173,6 @@ async function cmdRun(args: string[]): Promise<void> {
     process.exit(EXIT_ERROR);
   }
 
-  const provider = providerRegistry.get(providerKey);
-  if (!provider) {
-    console.error(`Unknown provider: ${providerKey}`);
-    process.exit(EXIT_ERROR);
-  }
-
   const permissionProfile = parseFlag<PermissionProfile>(args, '--permission-profile') ?? 'default';
   if (!VALID_PERMISSION_PROFILES.includes(permissionProfile)) {
     console.error(
@@ -205,6 +194,14 @@ async function cmdRun(args: string[]): Promise<void> {
     process.exit(EXIT_ERROR);
   }
 
+  // Validate the provider before draining stdin. The orchestrator re-checks this,
+  // but reading stdin first means a bad provider on a non-terminating pipe
+  // (e.g. `yes | aco run typo review`) would hang instead of failing fast.
+  if (!providerRegistry.get(providerKey)) {
+    console.error(`Unknown provider: ${providerKey}`);
+    process.exit(EXIT_ERROR);
+  }
+
   let content = inputFlag;
   if (!content && !process.stdin.isTTY) {
     const chunks: Buffer[] = [];
@@ -212,84 +209,33 @@ async function cmdRun(args: string[]): Promise<void> {
     content = Buffer.concat(chunks).toString();
   }
 
-  const { prompt, promptTemplatePath } = await resolveRunPromptTemplate({
-    cwd: process.cwd(),
-    home: homedir(),
-    providerKey,
-    command,
+  const orchestrator = new SessionOrchestrator({
+    sessionStore,
+    providerRegistry,
+    providerRunner: {
+      run: (opts) => invokeProviderForSession(opts),
+    },
+    cancellationInstaller: {
+      install: (deps) => installProviderCancellationHandler(deps),
+    },
   });
 
-  const session = await sessionStore.create(providerKey, command, undefined, permissionProfile);
-  const auth = await getCachedProviderAuth(provider, { skipCache: true });
-  const runtimeContext = await emitRuntimeDashboard({
-    provider: providerKey,
-    command,
-    sessionId: session.id,
-    permissionProfile,
-    promptTemplatePath,
-    auth,
-  });
-  await sessionStore.update(session.id, { runtimeContext });
-
-  const tee = sessionStore.createOutputTee(session.id);
-  const cancellationState: ProviderCancellationState = {
-    activePid: undefined,
-    sessionId: session.id,
-  };
-  const cancellation = installProviderCancellationHandler({
-    state: cancellationState,
-    markCancelled: (sessionId) => sessionStore.markCancelled(sessionId),
-    killGraceMs: executionControl.killGraceMs,
-  });
-  let runResult: Awaited<ReturnType<typeof invokeProviderForSession>>;
   try {
-    runResult = await invokeProviderForSession({
-      provider,
+    await orchestrator.run({
+      providerKey,
       command,
-      prompt,
-      content,
       permissionProfile,
-      sessionId: session.id,
-      output: tee,
-      outputBuffer: resolveRunOutputBuffering(),
       timeoutMs: executionControl.timeoutMs,
       killGraceMs: executionControl.killGraceMs,
-      ...(model ? { model } : {}),
-      envPolicy: 'allowlist',
-      onPid: (pid) => {
-        cancellationState.activePid = pid;
-      },
+      inputContent: content,
+      model: model ?? undefined,
+      cwd: process.cwd(),
+      home: homedir(),
     });
-  } finally {
-    // P1b/P2a: 정상·예외 경로 모두에서 활성 PID를 리셋하고 리스너를 해제한다.
-    cancellationState.activePid = undefined;
-    cancellation.dispose();
-  }
-  const runError = runResult.error;
-  const latest = await sessionStore.read(session.id).catch(() => undefined);
-
-  if (latest?.status === 'cancelled') {
-    console.error(`Session ${session.id} cancelled.`);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
     process.exit(EXIT_ERROR);
   }
-
-  if (runError) {
-    const msg = runError instanceof Error ? runError.message : String(runError);
-    await appendFile(sessionStore.errorLogPath(session.id), msg + '\n', { mode: 0o600 });
-    await sessionStore.markFailed(session.id);
-    console.error(`Error: ${msg}`);
-    process.exit(EXIT_ERROR);
-  }
-
-  if (!runResult.hasOutput && permissionProfile === 'restricted') {
-    await appendFile(
-      sessionStore.errorLogPath(session.id),
-      'Permission profile: restricted — output may be blocked\n',
-      { mode: 0o600 }
-    );
-  }
-
-  await sessionStore.markDone(session.id);
 }
 
 // ---------------------------------------------------------------------------
