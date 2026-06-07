@@ -878,6 +878,30 @@ describe('aco ask CLI', () => {
       assert.equal(result.code, 0);
     });
 
+    it('fails when --paths only matches directories', async () => {
+      const home = await makeHome();
+      const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-dir-paths-'));
+      await mkdir(join(workspace, 'some-dir'));
+
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'mock',
+          '--task',
+          'directory paths test',
+          '--paths',
+          'some-dir',
+          '--yes',
+        ],
+        { home, cwd: workspace }
+      );
+
+      assert.equal(result.code, 1);
+      assert.match(result.stderr, /No files matched the pattern 'some-dir'/);
+      assert.equal(existsSync(join(home, '.aco', 'sessions')), false);
+    });
+
     // 2. credential check on glob files
     it('blocks credential-like files in --paths unless --allow-sensitive is set', async () => {
       const home = await makeHome();
