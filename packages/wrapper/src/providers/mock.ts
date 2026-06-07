@@ -36,10 +36,7 @@ export class MockProvider implements IProvider {
       }
     }
 
-    if (process.env.ACO_MOCK_STDERR && options?.onStderrComplete) {
-      options.onStderrComplete(process.env.ACO_MOCK_STDERR);
-    }
-
+    // IProvider 계약 위반이므로 테스트 목적의 onStderrComplete 강제 호출 제거.
     const input = content.length > 0 ? content : '(empty input)';
     yield [
       'Provider: mock',

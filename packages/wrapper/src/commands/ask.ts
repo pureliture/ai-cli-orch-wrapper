@@ -661,6 +661,7 @@ async function collectInput(options: AskOptions): Promise<string> {
     matchedFiles.sort();
 
     const pathChunks: string[] = [];
+    let totalBytes = 0;
     for (const file of matchedFiles) {
       const stat = statSync(file);
       if (stat.isDirectory()) {
@@ -688,19 +689,21 @@ async function collectInput(options: AskOptions): Promise<string> {
         }
       );
 
-      if (Buffer.byteLength(fileContent, 'utf8') > 1024 * 1024) {
+      const bytes = Buffer.byteLength(fileContent, 'utf8');
+      if (bytes > 1024 * 1024) {
         fail(`Error: Matched file '${file}' exceeds 1MB limit`);
+      }
+
+      totalBytes += bytes + (pathChunks.length > 0 ? 2 : 0);
+      if (totalBytes > 1024 * 1024) {
+        fail(`Error: Merged files from --paths exceed 1MB limit`);
       }
 
       pathChunks.push(fileContent);
     }
 
     if (pathChunks.length > 0) {
-      const mergedPathsContent = pathChunks.join('\n\n');
-      if (Buffer.byteLength(mergedPathsContent, 'utf8') > 1024 * 1024) {
-        fail(`Error: Merged files from --paths exceed 1MB limit`);
-      }
-      chunks.push(mergedPathsContent);
+      chunks.push(pathChunks.join('\n\n'));
     }
   }
 
@@ -740,8 +743,9 @@ function resolveRelativePathsInText(text: string): string {
       const targetPath = resolve(process.cwd(), cleanToken);
       const exists = existsSync(targetPath);
 
-      if (isExplicitRelative || (hasSlash && exists) || exists) {
-        return quote + targetPath + quote;
+      if (isExplicitRelative || (hasSlash && exists)) {
+        const trailingSlash = cleanToken.endsWith('/') && !targetPath.endsWith('/') ? '/' : '';
+        return quote + targetPath + trailingSlash + quote;
       }
     }
 

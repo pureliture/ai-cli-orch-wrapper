@@ -982,16 +982,13 @@ describe('aco ask CLI', () => {
           'mock',
           '--task',
           'tool failure test',
+          '--input',
+          'Error: permission denied or tool failure occurred',
           '--yes',
           '--output-mode',
           'save-only',
         ],
-        {
-          home,
-          env: {
-            ACO_MOCK_STDERR: 'Error: permission denied or tool failure occurred',
-          }
-        }
+        { home }
       );
 
       assert.equal(result.code, 0);
@@ -1021,7 +1018,7 @@ describe('aco ask CLI', () => {
       assert.equal(result.code, 0);
       // prompt should contain resolved absolute path for ./src/ and src/
       const expectedPath = resolve(workspace, 'src');
-      assert.ok(result.stdout.includes(expectedPath));
+      assert.ok(result.stdout.includes(expectedPath + '/'));
     });
   });
 });
