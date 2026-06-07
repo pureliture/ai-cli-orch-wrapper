@@ -649,8 +649,8 @@ async function collectInput(options: AskOptions): Promise<string> {
       fail(`Failed to read --input-file '${options.inputFile}': ${message}`);
     });
 
-    if (Buffer.byteLength(fileInput, 'utf8') > 1024 * 1024) {
-      fail(`Error: File '${options.inputFile}' exceeds 1MB limit`);
+    if (Buffer.byteLength(fileInput, 'utf8') > 5 * 1024 * 1024) {
+      fail(`Error: File '${options.inputFile}' exceeds 5MB limit`);
     }
 
     chunks.push(fileInput);
@@ -690,13 +690,13 @@ async function collectInput(options: AskOptions): Promise<string> {
       );
 
       const bytes = Buffer.byteLength(fileContent, 'utf8');
-      if (bytes > 1024 * 1024) {
-        fail(`Error: Matched file '${file}' exceeds 1MB limit`);
+      if (bytes > 5 * 1024 * 1024) {
+        fail(`Error: Matched file '${file}' exceeds 5MB limit`);
       }
 
       totalBytes += bytes + (pathChunks.length > 0 ? 2 : 0);
-      if (totalBytes > 1024 * 1024) {
-        fail(`Error: Merged files from --paths exceed 1MB limit`);
+      if (totalBytes > 5 * 1024 * 1024) {
+        fail(`Error: Merged files from --paths exceed 5MB limit`);
       }
 
       pathChunks.push(fileContent);

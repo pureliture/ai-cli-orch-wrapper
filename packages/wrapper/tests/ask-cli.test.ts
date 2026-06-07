@@ -902,11 +902,11 @@ describe('aco ask CLI', () => {
       assert.match(result.stderr, /Blocked:/);
     });
 
-    // 3. 1MB limit for glob merged or individual files
-    it('fails when merged glob files or individual file exceeds 1MB', async () => {
+    // 3. 5MB limit for glob merged or individual files
+    it('fails when merged glob files or individual file exceeds 5MB', async () => {
       const home = await makeHome();
       const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-limit-'));
-      const largeContent = 'x'.repeat(1.1 * 1024 * 1024);
+      const largeContent = 'x'.repeat(5.1 * 1024 * 1024);
       await writeFile(join(workspace, 'large.txt'), largeContent);
 
       const result = await runCli(
@@ -924,7 +924,7 @@ describe('aco ask CLI', () => {
       );
 
       assert.equal(result.code, 1);
-      assert.match(result.stderr, /exceeds 1MB/i);
+      assert.match(result.stderr, /exceeds 5MB/i);
     });
 
     // 4. directory warning for literal --input
