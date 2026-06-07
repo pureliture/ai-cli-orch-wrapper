@@ -1,5 +1,12 @@
 # @pureliture/ai-cli-orch-wrapper
 
+## 0.7.2
+
+### Patch Changes
+
+- Fix `aco ask --paths` so Node 18 installs stay compatible and directory-only
+  matches fail instead of sending empty input to providers.
+
 ## 0.7.1
 
 ### Patch Changes

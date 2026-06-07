@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { createWriteStream, existsSync } from 'node:fs';
+import { createWriteStream, existsSync, statSync } from 'node:fs';
+import { globSync } from 'glob';
 import { randomUUID, createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -62,6 +63,7 @@ interface AskOptions {
   task?: string;
   input?: string;
   inputFile?: string;
+  paths?: string;
   allowSensitive: boolean;
   preset?: string;
   permissionProfile: PermissionProfile;
@@ -143,6 +145,9 @@ export async function cmdAsk(args: string[]): Promise<void> {
   }
   const input = await collectInput(options);
   const preset = options.preset ? await loadPreset(options.preset) : undefined;
+  if (options.task && options.providers.includes('antigravity')) {
+    options.task = resolveRelativePathsInText(options.task);
+  }
   const prompt = buildPrompt(options, preset);
 
   // F-c: --model이 설정되어 있고 antigravity provider가 포함된 경우 경고 출력.
@@ -397,7 +402,13 @@ export async function cmdAsk(args: string[]): Promise<void> {
         const stderrContent = runResult.stderrContent;
         const stderrBytes = Buffer.byteLength(stderrContent, 'utf8');
         const warningCount = countWarnings(runResult.stderrContent);
-        const resultQuality = resolveResultQuality(status, runResult.hasOutput, warningCount);
+        const resultQuality = resolveResultQuality(
+          status,
+          runResult.hasOutput,
+          warningCount,
+          runResult.fullOutput,
+          stderrContent
+        );
 
         let stderrArtifactPath: string | undefined;
         if (stderrBytes > 0) {
@@ -523,6 +534,7 @@ function parseAskOptions(args: string[]): AskOptions {
     task: parseFlag(args, '--task'),
     input: parseFlag(args, '--input'),
     inputFile: parseFlag(args, '--input-file'),
+    paths: parseFlag(args, '--paths') ?? parseFlag(args, '--input-path'),
     allowSensitive: args.includes('--allow-sensitive'),
     preset: parseFlag(args, '--preset'),
     permissionProfile: parseFlag<PermissionProfile>(args, '--permission-profile') ?? 'restricted',
@@ -610,6 +622,11 @@ async function collectInput(options: AskOptions): Promise<string> {
   const chunks: string[] = [];
 
   if (options.input) {
+    if (existsSync(options.input) && statSync(options.input).isDirectory()) {
+      process.stderr.write(
+        'Warning: `--input` looks like a directory. Did you mean to use `--paths`?\n'
+      );
+    }
     chunks.push(options.input);
   }
 
@@ -632,7 +649,67 @@ async function collectInput(options: AskOptions): Promise<string> {
       const message = err instanceof Error ? err.message : String(err);
       fail(`Failed to read --input-file '${options.inputFile}': ${message}`);
     });
+
+    if (Buffer.byteLength(fileInput, 'utf8') > 5 * 1024 * 1024) {
+      fail(`Error: File '${options.inputFile}' exceeds 5MB limit`);
+    }
+
     chunks.push(fileInput);
+  }
+
+  if (options.paths) {
+    const matchedFiles = globSync(options.paths, { cwd: process.cwd() });
+    if (matchedFiles.length === 0) {
+      fail(`Error: No files matched the pattern '${options.paths}'`);
+    }
+    matchedFiles.sort();
+
+    const pathChunks: string[] = [];
+    let totalBytes = 0;
+    for (const file of matchedFiles) {
+      const stat = statSync(file, { throwIfNoEntry: false });
+      if (!stat || stat.isDirectory()) {
+        continue;
+      }
+
+      if (isCredentialLikePath(file)) {
+        if (options.allowSensitive) {
+          process.stderr.write(
+            `[aco] warning: Matched file '${file}' looks like a credential or secret file. ` +
+              `Proceeding because --allow-sensitive was specified.\n`
+          );
+        } else {
+          fail(
+            `Blocked: Matched file '${file}' looks like a credential or secret file. ` +
+              `Pass --allow-sensitive to override.`
+          );
+        }
+      }
+
+      const fileContent = await readFile(resolve(process.cwd(), file), 'utf8').catch(
+        (err: unknown) => {
+          const message = err instanceof Error ? err.message : String(err);
+          fail(`Failed to read matched file '${file}': ${message}`);
+        }
+      );
+
+      const bytes = Buffer.byteLength(fileContent, 'utf8');
+      if (bytes > 5 * 1024 * 1024) {
+        fail(`Error: Matched file '${file}' exceeds 5MB limit`);
+      }
+
+      totalBytes += bytes + (pathChunks.length > 0 ? 2 : 0);
+      if (totalBytes > 5 * 1024 * 1024) {
+        fail(`Error: Merged files from --paths exceed 5MB limit`);
+      }
+
+      pathChunks.push(fileContent);
+    }
+
+    if (pathChunks.length === 0) {
+      fail(`Error: No files matched the pattern '${options.paths}'`);
+    }
+    chunks.push(pathChunks.join('\n\n'));
   }
 
   return chunks.join('\n\n');
@@ -649,6 +726,37 @@ async function loadPreset(name: string): Promise<string> {
   }
 
   fail(`Preset not found: ${name}`);
+}
+
+function resolveRelativePathsInText(text: string): string {
+  return text.replace(/("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`[^`]*`|[\w\-\.\/]+)/g, (match) => {
+    let cleanToken = match;
+    let quote = '';
+    if (
+      (match.startsWith('"') && match.endsWith('"')) ||
+      (match.startsWith("'") && match.endsWith("'")) ||
+      (match.startsWith('`') && match.endsWith('`'))
+    ) {
+      quote = match[0];
+      cleanToken = match.slice(1, -1);
+    }
+
+    const isExplicitRelative = cleanToken.startsWith('./') || cleanToken.startsWith('../');
+    const hasSlash = cleanToken.includes('/');
+    const hasSpace = /\s/.test(cleanToken);
+
+    if (cleanToken && !cleanToken.startsWith('/') && !hasSpace) {
+      const targetPath = resolve(process.cwd(), cleanToken);
+      const exists = existsSync(targetPath);
+
+      if (isExplicitRelative || (hasSlash && exists)) {
+        const trailingSlash = cleanToken.endsWith('/') && !targetPath.endsWith('/') ? '/' : '';
+        return quote + targetPath + trailingSlash + quote;
+      }
+    }
+
+    return match;
+  });
 }
 
 function buildPrompt(options: AskOptions, preset: string | undefined): string {
@@ -675,12 +783,23 @@ function printDryRun(options: AskOptions, input: string, preset: string | undefi
   console.log('Dry run: aco ask would invoke external providers only with --yes.');
   console.log(`Providers: ${options.providers.join(',')}`);
   console.log(`Permission profile: ${options.permissionProfile}`);
+  if (options.permissionProfile === 'restricted') {
+    console.log('restricted: repository file access is disabled (read-only advisory)');
+  }
   console.log(`Output mode: ${options.outputMode}`);
   console.log(`Timeout seconds: ${options.timeoutSeconds}`);
   if (options.preset) console.log(`Preset: ${options.preset}`);
   console.log(`Task: ${options.task ?? '(preset only)'}`);
   console.log(`Input bytes: ${Buffer.byteLength(input, 'utf8')}`);
   if (preset) console.log(`Preset bytes: ${Buffer.byteLength(preset, 'utf8')}`);
+
+  options.providers.forEach((p) => {
+    const providerCwd =
+      p === 'antigravity' ? join(homedir(), '.aco', 'agy-workspace') : process.cwd();
+    console.log(`Provider '${p}' cwd: ${providerCwd}`);
+  });
+  console.log(`Current invocation cwd: ${process.cwd()}`);
+
   console.log('Provider execution: skipped');
 }
 
@@ -905,10 +1024,13 @@ export function extractTopFindings(output: string): string[] | null {
 function resolveResultQuality(
   status: AskSessionLedger['status'],
   hasOutput: boolean,
-  warningCount: number
+  warningCount: number,
+  outputContent: string,
+  stderrContent: string
 ): 'complete' | 'empty' | 'warning_heavy' | 'error' {
   if (status === 'failed' || status === 'cancelled') return 'error';
   if (!hasOutput) return 'empty';
-  if (warningCount > 3) return 'warning_heavy';
+  const hasToolFailure = /tool failure|permission denied|API error/i.test(stderrContent);
+  if (warningCount > 3 || hasToolFailure) return 'warning_heavy';
   return 'complete';
 }
