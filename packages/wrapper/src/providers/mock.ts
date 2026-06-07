@@ -27,7 +27,7 @@ export class MockProvider implements IProvider {
     command: string,
     prompt: string,
     content: string,
-    options?: import('./interface.js').InvokeOptions
+    options?: InvokeOptions
   ): AsyncIterable<string> {
     if (process.env.ACO_MOCK_DELAY_MS) {
       const delayMs = Number.parseInt(process.env.ACO_MOCK_DELAY_MS, 10);

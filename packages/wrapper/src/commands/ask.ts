@@ -659,13 +659,16 @@ async function collectInput(options: AskOptions): Promise<string> {
 
   if (options.paths) {
     const matchedFiles = globSync(options.paths, { cwd: process.cwd() });
+    if (matchedFiles.length === 0) {
+      fail(`Error: No files matched the pattern '${options.paths}'`);
+    }
     matchedFiles.sort();
 
     const pathChunks: string[] = [];
     let totalBytes = 0;
     for (const file of matchedFiles) {
-      const stat = statSync(file);
-      if (stat.isDirectory()) {
+      const stat = statSync(file, { throwIfNoEntry: false });
+      if (!stat || stat.isDirectory()) {
         continue;
       }
 
@@ -739,8 +742,9 @@ function resolveRelativePathsInText(text: string): string {
 
     const isExplicitRelative = cleanToken.startsWith('./') || cleanToken.startsWith('../');
     const hasSlash = cleanToken.includes('/');
+    const hasSpace = /\s/.test(cleanToken);
 
-    if (cleanToken && !cleanToken.startsWith('/')) {
+    if (cleanToken && !cleanToken.startsWith('/') && !hasSpace) {
       const targetPath = resolve(process.cwd(), cleanToken);
       const exists = existsSync(targetPath);
 
@@ -1026,7 +1030,6 @@ function resolveResultQuality(
   if (status === 'failed' || status === 'cancelled') return 'error';
   if (!hasOutput) return 'empty';
   const hasToolFailure =
-    /tool failure|permission denied|API error/i.test(outputContent) ||
     /tool failure|permission denied|API error/i.test(stderrContent);
   if (warningCount > 3 || hasToolFailure) return 'warning_heavy';
   return 'complete';
