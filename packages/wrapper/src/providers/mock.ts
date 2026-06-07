@@ -23,7 +23,12 @@ export class MockProvider implements IProvider {
     return ['mock', command];
   }
 
-  async *invoke(command: string, prompt: string, content: string): AsyncIterable<string> {
+  async *invoke(
+    command: string,
+    prompt: string,
+    content: string,
+    options?: InvokeOptions
+  ): AsyncIterable<string> {
     if (process.env.ACO_MOCK_DELAY_MS) {
       const delayMs = Number.parseInt(process.env.ACO_MOCK_DELAY_MS, 10);
       if (Number.isFinite(delayMs) && delayMs > 0) {
@@ -31,6 +36,7 @@ export class MockProvider implements IProvider {
       }
     }
 
+    // IProvider 계약 위반이므로 테스트 목적의 onStderrComplete 강제 호출 제거.
     const input = content.length > 0 ? content : '(empty input)';
     yield [
       'Provider: mock',

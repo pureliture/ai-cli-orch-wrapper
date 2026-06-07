@@ -819,4 +819,230 @@ describe('aco ask CLI', () => {
     assert.ok(runResult.hasOutput);
     assert.equal(sawDrainBeforeSecondChunk, true);
   });
+
+  describe('aco ask Improvements (#185)', () => {
+    // 1. --paths / --input-path glob matching & merging
+    it('matches and merges files using --paths glob', async () => {
+      const home = await makeHome();
+      const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-improvements-'));
+      await writeFile(join(workspace, 'test1.log'), 'Content 1');
+      await writeFile(join(workspace, 'test2.log'), 'Content 2');
+
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'mock',
+          '--task',
+          'glob test',
+          '--paths',
+          '*.log',
+          '--yes',
+          '--output-mode',
+          'save-only',
+        ],
+        { home, cwd: workspace }
+      );
+
+      assert.equal(result.code, 0);
+      const runId = await latestRunId(home);
+      const savedInput = await readFile(
+        join(home, '.aco', 'runs', runId, 'input.md'),
+        'utf8'
+      );
+      assert.ok(savedInput.includes('Content 1'));
+      assert.ok(savedInput.includes('Content 2'));
+    });
+
+    it('matches and merges files using --input-path glob', async () => {
+      const home = await makeHome();
+      const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-improvements2-'));
+      await writeFile(join(workspace, 'test1.log'), 'Content 1');
+
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'mock',
+          '--task',
+          'glob test 2',
+          '--input-path',
+          'test1.log',
+          '--yes',
+          '--output-mode',
+          'save-only',
+        ],
+        { home, cwd: workspace }
+      );
+
+      assert.equal(result.code, 0);
+    });
+
+    it('fails when --paths only matches directories', async () => {
+      const home = await makeHome();
+      const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-dir-paths-'));
+      await mkdir(join(workspace, 'some-dir'));
+
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'mock',
+          '--task',
+          'directory paths test',
+          '--paths',
+          'some-dir',
+          '--yes',
+        ],
+        { home, cwd: workspace }
+      );
+
+      assert.equal(result.code, 1);
+      assert.match(result.stderr, /No files matched the pattern 'some-dir'/);
+      assert.equal(existsSync(join(home, '.aco', 'sessions')), false);
+    });
+
+    // 2. credential check on glob files
+    it('blocks credential-like files in --paths unless --allow-sensitive is set', async () => {
+      const home = await makeHome();
+      const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-cred-'));
+      await writeFile(join(workspace, 'id_rsa'), 'private key data');
+
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'mock',
+          '--task',
+          'cred test',
+          '--paths',
+          'id_rsa',
+          '--yes',
+        ],
+        { home, cwd: workspace }
+      );
+
+      assert.equal(result.code, 1);
+      assert.match(result.stderr, /Blocked:/);
+    });
+
+    // 3. 5MB limit for glob merged or individual files
+    it('fails when merged glob files or individual file exceeds 5MB', async () => {
+      const home = await makeHome();
+      const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-limit-'));
+      const largeContent = 'x'.repeat(5.1 * 1024 * 1024);
+      await writeFile(join(workspace, 'large.txt'), largeContent);
+
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'mock',
+          '--task',
+          'limit test',
+          '--paths',
+          'large.txt',
+          '--yes',
+        ],
+        { home, cwd: workspace }
+      );
+
+      assert.equal(result.code, 1);
+      assert.match(result.stderr, /exceeds 5MB/i);
+    });
+
+    // 4. directory warning for literal --input
+    it('warns when --input is a directory path', async () => {
+      const home = await makeHome();
+      const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-dir-'));
+      const dirPath = join(workspace, 'some-dir');
+      await mkdir(dirPath);
+
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'mock',
+          '--task',
+          'dir warning test',
+          '--input',
+          dirPath,
+          '--yes',
+          '--output-mode',
+          'save-only',
+        ],
+        { home, cwd: workspace }
+      );
+
+      assert.match(result.stderr, /Warning: `--input` looks like a directory\. Did you mean to use `--paths`\?/);
+    });
+
+    // 5. dry-run outputs improvements (CWD & permission notice)
+    it('prints cwd and process.cwd() in dry-run with restricted notice', async () => {
+      const home = await makeHome();
+      const result = await runCli([
+        'ask',
+        '--providers',
+        'mock',
+        '--task',
+        'dry-run improvements',
+        '--dry-run',
+        '--permission-profile',
+        'restricted',
+      ], { home });
+
+      assert.equal(result.code, 0);
+      assert.match(result.stdout, /Current invocation cwd/i);
+      assert.match(result.stdout, /restricted: repository file access is disabled \(read-only advisory\)/);
+    });
+
+    // 6. resolveResultQuality ignores tool failures echoed in stdout
+    it('resolves result quality as complete when tool failure is detected in stdout only', async () => {
+      const home = await makeHome();
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'mock',
+          '--task',
+          'tool failure test',
+          '--input',
+          'Error: permission denied or tool failure occurred',
+          '--yes',
+          '--output-mode',
+          'save-only',
+        ],
+        { home }
+      );
+
+      assert.equal(result.code, 0);
+      const runId = await latestRunId(home);
+      const ledger = JSON.parse(await readFile(join(home, '.aco', 'runs', runId, 'ledger.json'), 'utf8'));
+      assert.equal(ledger.sessions[0].resultQuality, 'complete');
+    });
+
+    // 7. Antigravity path replacement
+    it('replaces relative path to absolute in buildPrompt when using antigravity', async () => {
+      const home = await makeHome();
+      const workspace = await mkdtemp(join(tmpdir(), 'aco-ask-agy-'));
+      await mkdir(join(workspace, 'src'));
+
+      const result = await runCli(
+        [
+          'ask',
+          '--providers',
+          'antigravity',
+          '--task',
+          'review ./src/ and src/ please',
+          '--dry-run',
+        ],
+        { home, cwd: workspace }
+      );
+
+      assert.equal(result.code, 0);
+      // prompt should contain resolved absolute path for ./src/ and src/
+      const expectedPath = resolve(workspace, 'src');
+      assert.ok(result.stdout.includes(expectedPath + '/'));
+    });
+  });
 });

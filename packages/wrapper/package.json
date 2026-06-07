@@ -1,6 +1,6 @@
 {
   "name": "@pureliture/ai-cli-orch-wrapper",
-  "version": "0.7.1",
+  "version": "0.7.2",
   "description": "Installable aco CLI for consent-gated external AI delegation, provider setup, doctor checks, and session artifacts.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -34,6 +34,7 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
+    "glob": "^10.5.0",
     "js-yaml": "^4.1.1"
   }
 }

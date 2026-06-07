@@ -73,6 +73,10 @@ Default permission profile is `restricted`.
 
 `restricted` means the wrapper requests the safest available provider behavior and includes advisory prompt instructions such as not modifying files. It is not a complete OS-level sandbox and does not prove that a provider cannot modify files if the provider CLI ignores the requested behavior.
 
+실질적으로 권한 모델은 **2-tier** 구조로 축소되어 이해할 수 있습니다:
+- **Restricted**: 저장소 파일에 대한 수정 권한을 차단하고 읽기 전용 자문(advisory) 모델로 동작합니다.
+- **Unrestricted / Default**: `default`와 `unrestricted` 프로필은 실질적으로 동일하게 동작합니다. 외부 프로바이더가 제한 없이 로컬 파일 시스템에 접근 및 수정할 수 있으며, 자동 승인(auto-approved) 모드로 처리됩니다.
+
 Do not enable broader permission profiles unless the task requires it and the provider behavior is understood.
 
 ## Timeout And Cancellation Boundary

@@ -359,6 +359,9 @@ wrapper입니다. provider 실행은 명시적 동의 없이는 시작되지 않
 # 실행 계획만 확인하고 provider는 호출하지 않음
 aco ask --providers mock --task "review this demo input" --input "demo" --dry-run
 
+# 다중 파일(glob)과 단일 파일 입력 (5MB 제한, credential 감지 시 --allow-sensitive 필요)
+aco ask --providers mock --task "review files" --paths "src/**/*.ts" --input-file ".env.example" --allow-sensitive --yes
+
 # 명시 동의 후 실행. full output은 session artifact에 저장되고 stdout에는 brief만 출력
 aco ask --providers mock --task "review this demo input" --input "demo" --yes --output-mode brief
 
