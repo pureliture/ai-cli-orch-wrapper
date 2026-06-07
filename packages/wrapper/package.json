@@ -34,6 +34,7 @@
     "typescript": "^6.0.2"
   },
   "dependencies": {
+    "glob": "^13.0.6",
     "js-yaml": "^4.1.1"
   }
 }

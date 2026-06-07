@@ -1,5 +1,6 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { createWriteStream, existsSync, globSync, statSync } from 'node:fs';
+import { createWriteStream, existsSync, statSync } from 'node:fs';
+import { globSync } from 'glob';
 import { randomUUID, createHash } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
