@@ -972,8 +972,8 @@ describe('aco ask CLI', () => {
       assert.match(result.stdout, /restricted: repository file access is disabled \(read-only advisory\)/);
     });
 
-    // 6. resolveResultQuality detects tool failures
-    it('resolves result quality as warning_heavy when tool failure is detected in stderr/stdout', async () => {
+    // 6. resolveResultQuality ignores tool failures echoed in stdout
+    it('resolves result quality as complete when tool failure is detected in stdout only', async () => {
       const home = await makeHome();
       const result = await runCli(
         [
@@ -994,7 +994,7 @@ describe('aco ask CLI', () => {
       assert.equal(result.code, 0);
       const runId = await latestRunId(home);
       const ledger = JSON.parse(await readFile(join(home, '.aco', 'runs', runId, 'ledger.json'), 'utf8'));
-      assert.equal(ledger.sessions[0].resultQuality, 'warning_heavy');
+      assert.equal(ledger.sessions[0].resultQuality, 'complete');
     });
 
     // 7. Antigravity path replacement
