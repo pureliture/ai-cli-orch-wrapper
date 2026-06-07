@@ -706,9 +706,10 @@ async function collectInput(options: AskOptions): Promise<string> {
       pathChunks.push(fileContent);
     }
 
-    if (pathChunks.length > 0) {
-      chunks.push(pathChunks.join('\n\n'));
+    if (pathChunks.length === 0) {
+      fail(`Error: No files matched the pattern '${options.paths}'`);
     }
+    chunks.push(pathChunks.join('\n\n'));
   }
 
   return chunks.join('\n\n');
@@ -1029,8 +1030,7 @@ function resolveResultQuality(
 ): 'complete' | 'empty' | 'warning_heavy' | 'error' {
   if (status === 'failed' || status === 'cancelled') return 'error';
   if (!hasOutput) return 'empty';
-  const hasToolFailure =
-    /tool failure|permission denied|API error/i.test(stderrContent);
+  const hasToolFailure = /tool failure|permission denied|API error/i.test(stderrContent);
   if (warningCount > 3 || hasToolFailure) return 'warning_heavy';
   return 'complete';
 }
