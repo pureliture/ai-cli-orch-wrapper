@@ -23,12 +23,21 @@ export class MockProvider implements IProvider {
     return ['mock', command];
   }
 
-  async *invoke(command: string, prompt: string, content: string): AsyncIterable<string> {
+  async *invoke(
+    command: string,
+    prompt: string,
+    content: string,
+    options?: import('./interface.js').InvokeOptions
+  ): AsyncIterable<string> {
     if (process.env.ACO_MOCK_DELAY_MS) {
       const delayMs = Number.parseInt(process.env.ACO_MOCK_DELAY_MS, 10);
       if (Number.isFinite(delayMs) && delayMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, delayMs));
       }
+    }
+
+    if (process.env.ACO_MOCK_STDERR && options?.onStderrComplete) {
+      options.onStderrComplete(process.env.ACO_MOCK_STDERR);
     }
 
     const input = content.length > 0 ? content : '(empty input)';
