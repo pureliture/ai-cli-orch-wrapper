@@ -4,7 +4,7 @@
 
 - Issue: #105
 - Change: `add-provider-smoke-timeout-session-reliability`
-- Worktree: `/Users/ddalkak/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-provider-smoke-timeout-session`
+- Worktree: `/Users/example/Projects/ai-cli-orch-wrapper/.aco-worktrees/fix-provider-smoke-timeout-session`
 - Branch: `fix/provider-smoke-timeout-session`
 
 ## Repo-Local Deterministic Evidence

@@ -849,7 +849,7 @@ Use this start command in a fresh session:
 Goal: Execute docs/plans/gray-box-workflows/introduce-ubiquitous-language-implementation-plan.md task-by-task.
 
 Context:
-- Repo: /Users/ddalkak/Projects/ai-cli-orch-wrapper/.worktrees/gray-box-kickoff-docs
+- Repo: /Users/example/Projects/ai-cli-orch-wrapper/.worktrees/gray-box-kickoff-docs
 - OpenSpec change: openspec/changes/introduce-ubiquitous-language/
 - Plan: docs/plans/gray-box-workflows/introduce-ubiquitous-language-implementation-plan.md
 

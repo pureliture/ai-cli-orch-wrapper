@@ -2,7 +2,7 @@
 
 작성일: 2026-05-08
 작업 브랜치: `codex/consent-gated-delegation-mvp`
-작업트리: `/Users/ddalkak/Projects/ai-cli-orch-wrapper/.worktrees/consent-gated-delegation-mvp`
+작업트리: `/Users/example/Projects/ai-cli-orch-wrapper/.worktrees/consent-gated-delegation-mvp`
 
 ## Product Thesis
 

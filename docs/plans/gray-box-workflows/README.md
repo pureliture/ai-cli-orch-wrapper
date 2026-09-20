@@ -62,7 +62,7 @@ Use this prompt when starting a new session for any one workflow:
 Goal: Execute exactly one gray-box hardening workflow from ai-cli-orch-wrapper.
 
 Context:
-- Repo: /Users/ddalkak/Projects/ai-cli-orch-wrapper
+- Repo: /Users/example/Projects/ai-cli-orch-wrapper
 - Start from origin/main in an isolated worktree.
 - Pick one OpenSpec change only:
   - introduce-ubiquitous-language

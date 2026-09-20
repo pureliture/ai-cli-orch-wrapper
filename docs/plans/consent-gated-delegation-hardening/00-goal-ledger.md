@@ -20,7 +20,7 @@ Goal 2는 PR #92 MVP를 open-source quality 기준으로 단단하게 만든다.
 | PR #92 head              | `codex/consent-gated-delegation-mvp` at `f075e4e460d3f1b6398ff521ed3662f3dd2f9e6f`             |
 | PR #92 base              | `main` at `e9bdc6f5ca38fcb80d9b18d7e6808cfe78c0d846`                                           |
 | Goal 2 strategy          | PR #92가 아직 merge되지 않았으므로 PR #92 head에서 stacked branch 생성                         |
-| Worktree                 | `/Users/ddalkak/Projects/ai-cli-orch-wrapper/.worktrees/codex-92-consent-delegation-hardening` |
+| Worktree                 | `/Users/example/Projects/ai-cli-orch-wrapper/.worktrees/codex-92-consent-delegation-hardening` |
 | Node                     | `v25.8.1`                                                                                      |
 | npm                      | `11.11.0`                                                                                      |
 | `docs/case-study.md`     | 존재함. Goal 1 이전 planned wording이 남아 있어 refresh 필요                                   |
